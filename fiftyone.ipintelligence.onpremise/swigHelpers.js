@@ -56,7 +56,7 @@ module.exports = {
       output.push({
         value: item.getValue(),
         weight: item.getWeight(),
-        rawWeight: item.getRawWeight()
+        rawWeight: item.getShortRawWeight()
       });
     }
 

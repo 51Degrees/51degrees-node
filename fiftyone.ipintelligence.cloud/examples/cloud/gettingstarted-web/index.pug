@@ -1,0 +1,115 @@
+doctype html
+html
+  head
+    title Web Integration Example
+    style.
+      a {
+        color: #0366d6;
+      }
+
+      html {
+        font-size: 14px;
+      }
+      @media (min-width: 768px) {
+        html {
+          font-size: 16px;
+        }
+      }
+
+      html {
+        position: relative;
+        min-height: 100%;
+      }
+
+      body {
+        margin-bottom: 60px;
+      }
+
+      .example-alert {
+        border: 2px solid red;
+      }
+
+      .used-evidence {
+        background-color: lightgreen;
+      }
+
+  body
+    h2 Web Integration Example
+    p
+      | This example demonstrates the use of the Pipeline API to perform IP
+      | intelligence using the 51Degrees cloud service within a simple Node
+      | web server. The IP address of the requesting client is used as
+      | evidence, so the results below describe the network, and location
+      | that the request came from.
+    p
+      | Note that when running locally, the client IP address will be a
+      | loopback address, which will not produce any results. Supply an IP
+      | address with the 'client-ip' query parameter to look up a specific
+      | address. For example, '?client-ip=8.8.8.8'.
+
+    div(id='content')
+      div(id='evidence')
+        p Evidence values used:
+        table
+          tr
+            th Key
+            th Value
+          each value, key in allEvidence
+            if evidenceUsed[key] !== undefined
+              tr(class="used-evidence")
+                td #{key}
+                td #{value}
+            else
+              tr
+                td #{key}
+                td #{value}
+
+      p
+        | The following values are determined by the 51Degrees cloud
+        | service:
+
+      table
+        tr
+          th Key
+          th Value
+        tr
+          td
+            b Registered Name:
+          td #{registeredName}
+        tr
+          td
+            b Registered Owner:
+          td #{registeredOwner}
+        tr
+          td
+            b Registered Country:
+          td #{registeredCountry}
+        tr
+          td
+            b IP Range Start:
+          td #{ipRangeStart}
+        tr
+          td
+            b IP Range End:
+          td #{ipRangeEnd}
+        tr
+          td
+            b Country:
+          td #{country}
+        tr
+          td
+            b Country Code:
+          td #{countryCode}
+        tr
+          td
+            b Town:
+          td #{town}
+        tr
+          td
+            b Latitude:
+          td #{latitude}
+        tr
+          td
+            b Longitude:
+          td #{longitude}
+      br
