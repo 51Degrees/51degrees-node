@@ -1,0 +1,229 @@
+{
+    'variables': {
+        'encoding': [
+            '_UNICODE',
+            'UNICODE'
+        ],
+        'module_name': 'FiftyOneIpIntelligenceIpiV41',
+        'core_lib_name': '<(module_name)Core',
+        'win_warning_level': 4,
+        'win_exception_handling': 1,
+        'win_warn_as_error': 'true',
+        'win_warning_ignore_list': [4100, 4127, 4244, 4302, 4311, 4459, 4996], # Only used for SWIG generated files
+        'win_debug_additional_ignore_list': [4701, 4702], # Only used for SWIG generated files
+        'linux_mac_c_std': '-std=gnu11',
+        'linux_mac_cpp_std': '-std=gnu++17',
+        'linux_mac_c_common_flags': [
+            "<!(node -e \"\
+            var v8Version = process.versions.v8;\
+            var string = '-DSWIG_V8_VERSION=0x';\
+            var arr = v8Version.split('.');\
+            for (var i = 0; i < 3; i++) {\
+                if (arr[i].length === 1) {\
+                    string += '0';\
+                    }\
+                string += arr[i];\
+            }\
+            console.log(string);\")",
+            "-Wall"
+        ],
+        'linux_mac_c_core_additional_flags': [
+            "-Wno-unused-variable",
+            "-Wno-unused-result",
+            "-Wno-strict-aliasing",
+            "-Wno-ignored-qualifiers",
+            "-Wno-missing-braces",
+            "-Wno-attributes",
+			"-Wno-atomic-alignment"
+        ],
+        'linux_mac_c_wrapper_additional_flags': [
+            "-Wno-ignored-qualifiers",
+            "-Wno-unused-result",
+            "-Wno-attributes",
+            "-Wno-deprecated-declarations"
+        ],
+        'linux_specific_c_core_additional_flags': [
+            "-Wno-unused-but-set-variable"
+        ],
+        'linux_specific_c_wrapper_additional_flags': '-Wno-cast-function-type',
+        'mac_specific_flags': [
+            "-arch x86_64",
+            "-arch arm64"
+        ]
+    },
+    'targets': [
+        {
+            'target_name': '<(core_lib_name)',
+            'sources': [
+                # Common C
+                "<!@(node -p \"d='ip-intelligence-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                # Common C++
+                "<!@(node -p \"d='ip-intelligence-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                # IP Graph C
+                "<!@(node -p \"d='ip-intelligence-cxx/src/ip-graph-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                # IP Intelligence C
+                "<!@(node -p \"d='ip-intelligence-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                # IP Intelligence C++
+                "<!@(node -p \"d='ip-intelligence-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+            ],
+            'type': 'static_library',
+            'conditions': [
+                ['OS=="win"', {
+				    'msvs_version':'2019',
+				    'msvs_target_platform_minversion':'10.0.18362.0',
+                    'configurations': {
+                        'Debug': {
+                            'msvs_settings': {
+                                'VCCLCompilerTool': {
+                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'WarningLevel': '<(win_warning_level)',
+                                    'ExceptionHandling': '<(win_exception_handling)',
+                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'PreprocessorDefinitions': [
+                                        '<@(encoding)'
+                                    ]
+                                },
+                                'VCLinkerTool': {
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
+                                }
+                            }
+                        },
+                        'Release': {
+                            'msvs_settings': {
+                                'VCCLCompilerTool': {
+                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'WarningLevel': '<(win_warning_level)',
+                                    'ExceptionHandling': '<(win_exception_handling)',
+                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'PreprocessorDefinitions': [
+                                        '<@(encoding)'
+                                    ]
+                                },
+                                'VCLinkerTool': {
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
+                                }
+                            }
+                        }
+                    }
+                }],
+                ['OS=="mac"', {
+                    "xcode_settings": {
+                        "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "OTHER_CFLAGS": [
+                            '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_c_core_additional_flags)',
+                            '<@(mac_specific_flags)',
+                            '<(linux_mac_c_std)'],
+                        "OTHER_CPLUSPLUSFLAGS": [
+                            '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_c_core_additional_flags)',
+                            '<@(mac_specific_flags)',
+                            '<(linux_mac_cpp_std)']
+                    }
+                }],
+                ['OS=="linux"', {
+                    'cflags_cc!': ["-fno-exceptions"],
+                    'cflags_cc': ['<(linux_mac_cpp_std)'],
+                    'cflags_c': ['<(linux_mac_c_std)'],
+                    'cflags': [
+                        '<@(linux_mac_c_common_flags)',
+                        '<@(linux_mac_c_core_additional_flags)',
+                        '<@(linux_specific_c_core_additional_flags)'
+                    ],
+                    'libraries': ["-latomic"]
+                }]
+            ],
+        },
+        {
+            'target_name': '<(module_name)',
+            'sources': [
+                # Node Wrapper
+                "ipi_node_wrap.cxx",
+            ],
+            'dependencies': ['<(core_lib_name)'],
+            'conditions': [
+                ['OS=="win"', {
+                    'libraries': ['<(core_lib_name).lib'],
+                    'configurations': {
+                        'Debug': {
+                            'msvs_settings': {
+                                'VCCLCompilerTool': {
+                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'WarningLevel': '<(win_warning_level)',
+                                    'ExceptionHandling': '<(win_exception_handling)',
+                                    'DisableSpecificWarnings': [
+                                        '<@(win_warning_ignore_list)',
+                                        '<@(win_debug_additional_ignore_list)'
+                                    ],
+                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'PreprocessorDefinitions': [
+                                        '<@(encoding)'
+                                    ]
+                                },
+                                'VCLinkerTool': {
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
+                                    'LinkIncremental': 1
+                                }
+                            }
+                        },
+                        'Release': {
+                            'msvs_settings': {
+                                'VCCLCompilerTool': {
+                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'WarningLevel': '<(win_warning_level)',
+                                    'ExceptionHandling': '<(win_exception_handling)',
+                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'DisableSpecificWarnings': [
+                                        '<@(win_warning_ignore_list)'
+                                    ],
+                                    'PreprocessorDefinitions': [
+                                        '<@(encoding)'
+                                    ]
+                                },
+                                'VCLinkerTool': {
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
+                                }
+                            }
+                        }
+                    }
+                }],
+                ['OS!="win"', {
+                    'libraries': ['<(PRODUCT_DIR)/<(core_lib_name).a'],
+                }],
+                ['OS=="mac"', {
+                    "xcode_settings": {
+                        "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "OTHER_CFLAGS": [
+                            '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_c_wrapper_additional_flags)',
+                            '<@(mac_specific_flags)',
+                            '<(linux_mac_c_std)'
+                        ],
+                        "OTHER_CPLUSPLUSFLAGS": [
+                            '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_c_wrapper_additional_flags)',
+                            '<@(mac_specific_flags)',
+                            '<(linux_mac_cpp_std)'
+                        ],
+                        "OTHER_LDFLAGS": [
+                            '<@(mac_specific_flags)'
+                        ]
+                    },
+                }],
+                ['OS=="linux"', {
+                    'cflags_cc!': ['-fno-exceptions'],
+                    'cflags_cc': ['<(linux_mac_cpp_std)'],
+                    'cflags_c': ['<(linux_mac_c_std)'],
+                    'cflags': [
+                        '<@(linux_mac_c_common_flags)',
+                        '<@(linux_mac_c_wrapper_additional_flags)',
+                        '<@(linux_specific_c_wrapper_additional_flags)'
+                    ],
+                    'libraries': ["-latomic"]
+                }]
+            ],
+        }
+    ]
+}
