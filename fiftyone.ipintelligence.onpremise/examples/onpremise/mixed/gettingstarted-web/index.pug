@@ -1,0 +1,167 @@
+doctype html
+html
+  head
+    title Mixed Web Integration Example
+    style.
+      a {
+        color: #0366d6;
+      }
+
+      html {
+        font-size: 14px;
+      }
+      @media (min-width: 768px) {
+        html {
+          font-size: 16px;
+        }
+      }
+
+      html {
+        position: relative;
+        min-height: 100%;
+      }
+
+      body {
+        margin-bottom: 60px;
+      }
+
+      .example-alert {
+        border: 2px solid red;
+      }
+
+      .used-evidence {
+        background-color: lightgreen;
+      }
+
+  body
+    h2 Mixed Web Integration Example
+    p
+      | This example demonstrates the use of the Pipeline API to perform both
+      | device detection and IP intelligence within a simple Node web server.
+      | The User-Agent and IP address of the requesting client are used as
+      | evidence, so the results below describe the device, network, and
+      | location that the request came from.
+    p
+      | Note that when running locally, the client IP address will be a
+      | loopback address, which will not produce any results. Supply an IP
+      | address with the 'client-ip' query parameter to look up a specific
+      | address. For example, '?client-ip=8.8.8.8'.
+
+    if (new Date().getTime() > dataFilePublishedTime + dataFileAgeWarning)
+      div(class='example-alert')
+        | WARNING: This example is using a data file that is more than
+        | #{dataFileAgeWarning} days old. A more recent data file may be needed
+        | to correctly determine the details of the latest devices and IP
+        | ranges. The latest lite IP intelligence data file is available from
+        | the
+        | #[a(href='https://github.com/51Degrees/ip-intelligence-data') ip-intelligence-data]
+        | repository on Github. Find out about the
+        | Enterprise data file, which includes automatic daily updates, on our
+        | #[a(href='https://51degrees.com/pricing') pricing page].
+
+    div(id='content')
+      div(id='evidence')
+        p Evidence values used:
+        table
+          tr
+            th Key
+            th Value
+          each value, key in allEvidence
+            if evidenceUsed[key] !== undefined
+              tr(class="used-evidence")
+                td #{key}
+                td #{value}
+            else
+              tr
+                td #{key}
+                td #{value}
+
+      p
+        | The following values are determined by server-side device detection
+        | on the first request:
+
+      table
+        tr
+          th Key
+          th Value
+        tr
+          td
+            b Mobile Device:
+          td #{isMobile}
+        tr
+          td
+            b Platform Name:
+          td #{platformName}
+        tr
+          td
+            b Platform Version:
+          td #{platformVersion}
+        tr
+          td
+            b Browser Name:
+          td #{browserName}
+        tr
+          td
+            b Browser Version:
+          td #{browserVersion}
+        tr
+          td
+            b Device Type:
+          td #{deviceType}
+      br
+
+      p
+        | The following values are determined by server-side IP intelligence
+        | on the first request:
+
+      table
+        tr
+          th Key
+          th Value
+        tr
+          td
+            b Registered Name:
+          td #{registeredName}
+        tr
+          td
+            b Registered Owner:
+          td #{registeredOwner}
+        tr
+          td
+            b Registered Country:
+          td #{registeredCountry}
+        tr
+          td
+            b IP Range Start:
+          td #{ipRangeStart}
+        tr
+          td
+            b IP Range End:
+          td #{ipRangeEnd}
+        tr
+          td
+            b Country:
+          td #{country}
+        tr
+          td
+            b Country Code:
+          td #{countryCode}
+        tr
+          td
+            b Town:
+          td #{town}
+        tr
+          td
+            b Latitude:
+          td #{latitude}
+        tr
+          td
+            b Longitude:
+          td #{longitude}
+      br
+
+      if (dataSourceTier === 'Lite')
+        div(class='example-alert')
+          | WARNING: You are using the free 'Lite' data file. This includes a
+          | restricted set of properties. Find out about the Enterprise
+          | data file on our #[a(href='https://51degrees.com/pricing') pricing page].

@@ -230,32 +230,38 @@ describe('ipIntelligenceOnPremise', () => {
       requestsMade++;
       res.writeHead(304);
       res.end();
-    }).listen(HTTP_PORT);
+    });
 
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise.IpIntelligenceOnPremisePipelineBuilder({
-      dataFile: DataFile,
-      updateOnStart: true,
-      autoUpdate: true,
-      shareUsage: false,
-      dataUpdateUrl: `http://localhost:${HTTP_PORT}/temp`,
-      dataUpdateVerifyMd5: false,
-      dataUpdateUseUrlFormatter: false,
-      createTempDataCopy: true,
-      tempDataDir
-    }).build();
+    // Only build the pipeline once the server is accepting connections,
+    // otherwise the update request made on start can be refused. The
+    // IPv4 loopback address is used on both sides as 'localhost' can
+    // resolve to either address family depending on the platform.
+    server.listen(HTTP_PORT, '127.0.0.1', () => {
+      const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise.IpIntelligenceOnPremisePipelineBuilder({
+        dataFile: DataFile,
+        updateOnStart: true,
+        autoUpdate: true,
+        shareUsage: false,
+        dataUpdateUrl: `http://127.0.0.1:${HTTP_PORT}/temp`,
+        dataUpdateVerifyMd5: false,
+        dataUpdateUseUrlFormatter: false,
+        createTempDataCopy: true,
+        tempDataDir
+      }).build();
 
-    pipeline.on('error', console.error);
-    pipeline.on('info', console.info);
+      pipeline.on('error', console.error);
+      pipeline.on('info', console.info);
 
-    const tryForRequestInterval = setInterval(() => {
-      if (requestsMade > 0) {
-        clearInterval(tryForRequestInterval);
-        setTimeout(() => {
-          expect(pipeline.flowElements.ip.engine).toBeDefined();
-          done();
-        }, 200);
-      }
-    }, 100);
+      const tryForRequestInterval = setInterval(() => {
+        if (requestsMade > 0) {
+          clearInterval(tryForRequestInterval);
+          setTimeout(() => {
+            expect(pipeline.flowElements.ip.engine).toBeDefined();
+            done();
+          }, 200);
+        }
+      }, 100);
+    });
   }, 30000);
 });
 

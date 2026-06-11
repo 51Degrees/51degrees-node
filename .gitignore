@@ -112,6 +112,10 @@ fiftyone.ipintelligence/test_results.xml
 *.ipi
 *.ipi.gz
 
+# Device detection data files used by the mixed examples
+*.hash
+*.hash.gz
+
 # Development root package.json is created by ci/setup-environment.ps1
 /package.json
 

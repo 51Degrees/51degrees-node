@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package includes a pipeline builder that can toggle between the cloud and on-premise IP intelligence engines with simple parameter changes.
 
-- If a `resourceKey` is supplied then a cloud pipeline is created. A resource key can be obtained from the [51Degrees configurator](https://configure.51degrees.com/).
+- If a `resourceKey` is supplied then a cloud pipeline is created. A resource key can be obtained from the [51Degrees configurator](https://configure.51degrees.com/1QWJwHxl).
 - If a `dataFile` is supplied then an on-premise pipeline is created. A free 'Lite' data file can be obtained from the [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository.
 
 It can be used like this:

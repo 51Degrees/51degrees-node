@@ -39,7 +39,7 @@
     "fiftyone.pipeline.engines": "^4.4.7",
     "fiftyone.pipeline.engines.fiftyone": "^4.4.7",
     "js-yaml": "^4.1.0",
-    "n-readlines": "^1.0.1",
+    "n-readlines": "^1.0.3",
     "pug": "^3.0.2",
     "supertest": "^6.1.6"
   },

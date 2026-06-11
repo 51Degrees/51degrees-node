@@ -80,7 +80,7 @@ const setPipeline = (options) => {
       'see ' +
       'https://51degrees.com/documentation/_info__resource_keys.html. ' +
       'A resource key with the properties required by this example can be ' +
-      'created for free at https://configure.51degrees.com. ' +
+      'created for free at https://configure.51degrees.com/1QWJwHxl. ' +
       'Once complete, populate the config file or environment variable ' +
       'mentioned at the start of this message with the key.';
   }

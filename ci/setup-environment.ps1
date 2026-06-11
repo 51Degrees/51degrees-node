@@ -15,7 +15,11 @@ $packageJSON = @"
     "test": "tests"
   },
   "scripts": {
+    "pretest": "node ensure-native-module.js",
+    "test": "jest --ci --reporters=default --runInBand --forceExit --testPathIgnorePatterns=\"performance.test.js\"",
+    "preunit-test": "node ensure-native-module.js",
     "unit-test": "jest --ci --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/*|performance.test.js)\"",
+    "preintegration-test": "node ensure-native-module.js",
     "integration-test": "jest --ci --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/*)\" --testPathIgnorePatterns=\"(performance.test.js|tests/*)\"",
     "lint": "eslint . --ext .js",
     "tsc": "tsc -b --force"
@@ -29,6 +33,8 @@ $packageJSON = @"
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
+    "fiftyone.devicedetection.cloud": "^4.5.52",
+    "fiftyone.devicedetection.onpremise": "^4.5.52",
     "fiftyone.pipeline.cloudrequestengine": "^4.4.7",
     "fiftyone.pipeline.core": "^4.4.7",
     "fiftyone.pipeline.engines": "^4.4.7",

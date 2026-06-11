@@ -36,7 +36,7 @@ The API can either use our cloud service to get its data or it can use a local (
 
 You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/), see our
+[configurator](https://configure.51degrees.com/1QWJwHxl), see our
 [documentation](https://51degrees.com/documentation/_concepts__configurator.html) on how to use this.
 
 #### On-Premise
@@ -86,7 +86,7 @@ section explains how to do this.
 - Navigate to fiftyone.ipintelligence.onpremise
 - Rename the `binding.51d` to `binding.gyp`
 - Run `npm install`
-  - Alternatively this step can be replaced by the followings:
+  - Alternatively this step can be replaced by the following:
     - Create a folder named `build`.
     - Run `node-gyp configure`
     - Run `node-gyp build`
@@ -121,7 +121,10 @@ The tables below describe the examples that are available.
 |----------------------------------------|-------------|
 | [gettingstarted-console](/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-console)                 | How to use the 51Degrees Cloud service to determine details about the network, and location associated with an IP address. |
 | [gettingstarted-web](/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-web)                     | How to use the 51Degrees Cloud service to determine details about the source of a web request as part of a simple web server. |
+| [getallproperties-console](/fiftyone.ipintelligence.cloud/examples/cloud/getallproperties-console)               | How to retrieve and enumerate all the IP intelligence properties available from the 51Degrees Cloud service. |
 | [metadata-console](/fiftyone.ipintelligence.cloud/examples/cloud/metadata-console)                       | How to access the meta-data that relates to the IP intelligence algorithm. |
+| [mixed/gettingstarted-console](/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-console)            | How to use both device detection and IP intelligence from the 51Degrees Cloud service in a single pipeline. |
+| [mixed/gettingstarted-web](/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-web)                | How to use both device detection and IP intelligence from the 51Degrees Cloud service as part of a simple web server. |
 
 #### On-Premise
 
@@ -130,11 +133,17 @@ The tables below describe the examples that are available.
 | [automaticupdates/dataFileSystemWatcher.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js) | How to configure automatic updates using the file system watcher to monitor for changes to the data file. |
 | [automaticupdates/updateOnStartUp.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js)    | How to configure the Pipeline to automatically update the IP intelligence data file on startup. |
 | [automaticupdates/updatePollingInterval.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js) | How to configure and verify the various automatic data file update settings. |
+| [compare-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console)                        | How to compare the results of the IP intelligence service against a CSV file of known and true IP-Location records. |
 | [gettingstarted-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-console)                | How to use the 51Degrees on-premise IP intelligence API to determine details about the network, and location associated with an IP address. |
 | [gettingstarted-web](/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-web)                     | How to use the 51Degrees on-premise IP intelligence API to determine details about the source of a web request as part of a simple web server. |
 | [metadata-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/metadata-console)                       | How to access the meta-data that relates to the IP intelligence algorithm. |
+| [metrics-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/metrics-console)                        | How to compile metrics describing the geographic areas returned for public IP addresses. Used to verify the published metrics for the IP intelligence service. |
+| [mixed/gettingstarted-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-console)            | How to use both device detection and IP intelligence engines in a single pipeline. |
+| [mixed/gettingstarted-web](/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-web)                | How to use both device detection and IP intelligence engines as part of a simple web server. |
+| [mixed/gettingstarted-api](/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api)                | How to run a local version of the 51Degrees cloud API using the device detection and IP intelligence on-premise engines. |
 | [offlineprocessing-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console)              | How to process data for later viewing using an IP intelligence data file. |
 | [performance-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console)                    | How to run a simple performance test against an IP intelligence data file. |
+| [suspicious-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/suspicious-console)                     | How to combine IP intelligence properties to determine whether an IP is likely to be the source of suspicious requests. |
 | [updatedatafile-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/updatedatafile-console)                 | This example illustrates various parameters that can be adjusted when using the on-premise IP intelligence engine, and controls when a new data file is sought and when it is loaded by the IP intelligence software. |
 
 #### IP Intelligence
@@ -146,21 +155,24 @@ The tables below describe the examples that are available.
 ## Tests
 
 In this repository, there are tests for the examples.
-You will need to install jest to run them:
+Install the dependencies, which include jest, by running the following
+command in the root directory:
 
 ```
-npm install jest --global
+npm install
 ```
 
-You will also need to install any required packages for the examples in the **Examples** section.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
+The on-premise tests use the native module, which is built for Node 20 and 22 only. Make sure one of these versions is active (for example `nvm use 22`) before running the tests.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
 
 ```
 npm test
 ```
+
+This runs the unit tests and the example tests together. They can also be run separately with `npm run unit-test` and `npm run integration-test`.
 
 ## Native code updates
 

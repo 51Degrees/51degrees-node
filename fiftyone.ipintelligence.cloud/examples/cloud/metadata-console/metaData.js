@@ -112,7 +112,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     'For more information ' +
     'see https://51degrees.com/documentation/_info__resource_keys.html. ' +
     'A resource key with the properties required by this example can be ' +
-    'created for free at https://configure.51degrees.com. You can now ' +
+    'created for free at https://configure.51degrees.com/1QWJwHxl. You can now ' +
     'populate the environment variable mentioned at the start of this ' +
     'message with the resource key or pass it as the first argument on ' +
     'the command line.');

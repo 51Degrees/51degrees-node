@@ -131,6 +131,41 @@ class ExampleUtils {
     tupleArray.sort(sortFunc);
     return new Map(tupleArray);
   }
+
+  // Get the value of a property as a single value, or the supplied
+  // default where no value is available. Most IP intelligence values are
+  // lists of weighted values, in which case the value with the highest
+  // weight is returned.
+  static getSingleValue (elementData, propertyName, defaultValue) {
+    let property;
+    try {
+      property = elementData[propertyName];
+    } catch (e) {
+      return defaultValue;
+    }
+    if (property === undefined ||
+      property === null ||
+      property.hasValue === false) {
+      return defaultValue;
+    }
+    let value = property.value;
+    if (Array.isArray(value)) {
+      let best;
+      for (const item of value) {
+        if (best === undefined || item.weight > best.weight) {
+          best = item;
+        }
+      }
+      value = best !== undefined && best.value !== undefined
+        ? best.value
+        : best;
+    } else if (value !== null &&
+      typeof value === 'object' &&
+      value.value !== undefined) {
+      value = value.value;
+    }
+    return value === undefined || value === null ? defaultValue : value;
+  }
 }
 
 module.exports = {

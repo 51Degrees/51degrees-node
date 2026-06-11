@@ -68,7 +68,7 @@
             ],
             'type': 'static_library',
             # The IP intelligence data format uses 64 bit file offsets.
-            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT' ],
+            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT', 'FIFTYONE_DEGREES_REDUCED_FILE' ],
             'conditions': [
                 ['OS=="win"', {
 				    'msvs_version':'2019',
@@ -144,7 +144,7 @@
             ],
             'dependencies': ['<(core_lib_name)'],
             # The IP intelligence data format uses 64 bit file offsets.
-            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT' ],
+            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT', 'FIFTYONE_DEGREES_REDUCED_FILE' ],
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],

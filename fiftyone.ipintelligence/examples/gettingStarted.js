@@ -49,14 +49,14 @@ const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpInt
 
 // Create the IP intelligence pipeline with the desired settings.
 
-// You need to create a resource key at https://configure.51degrees.com
+// You need to create a resource key at https://configure.51degrees.com/1QWJwHxl
 // and paste it into the code, replacing !!YOUR_RESOURCE_KEY!! below.
 
 const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com and paste it into the code, ' +
+        'https://configure.51degrees.com/1QWJwHxl and paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
   console.log('Make sure to include the country property ' +
         'as it is used by this example.');
