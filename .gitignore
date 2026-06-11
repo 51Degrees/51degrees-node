@@ -112,6 +112,16 @@ fiftyone.ipintelligence/test_results.xml
 *.ipi
 *.ipi.gz
 
+# Development root package.json is created by ci/setup-environment.ps1
+/package.json
+
+# Generated from binding.51d when building the native module
+fiftyone.ipintelligence.onpremise/binding.gyp
+fiftyone.ipintelligence.onpremise/binding.gyp.bak
+
+# Temporary directory used by data file update tests
+fiftyone.ipintelligence.onpremise/tests/tmp/
+
 #docs
 4.1/*
 package-lock.json

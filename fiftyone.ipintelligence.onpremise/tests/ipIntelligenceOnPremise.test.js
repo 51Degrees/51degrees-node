@@ -33,6 +33,7 @@ const FiftyOneDegreesIpIntelligenceOnPremise = require51('fiftyone.ipintelligenc
 const EngineBuilder = require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremise;
 
 const http = require('http');
+const fs = require('fs');
 let server;
 
 const HTTP_PORT = 8080;
@@ -222,6 +223,9 @@ describe('ipIntelligenceOnPremise', () => {
   test('Initialise engine with updateOnStart and 304 status code', done => {
     let requestsMade = 0;
 
+    const tempDataDir = path.join(__dirname, 'tmp');
+    fs.mkdirSync(tempDataDir, { recursive: true });
+
     server = http.createServer((req, res) => {
       requestsMade++;
       res.writeHead(304);
@@ -237,7 +241,7 @@ describe('ipIntelligenceOnPremise', () => {
       dataUpdateVerifyMd5: false,
       dataUpdateUseUrlFormatter: false,
       createTempDataCopy: true,
-      tempDataDir: './tests/tmp'
+      tempDataDir
     }).build();
 
     pipeline.on('error', console.error);

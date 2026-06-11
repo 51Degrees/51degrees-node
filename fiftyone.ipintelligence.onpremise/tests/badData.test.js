@@ -97,9 +97,16 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  fs.unlinkSync(BadVersionDataFile);
-  fs.unlinkSync(BadHeaderDataFile);
-  fs.unlinkSync(SmallDataFile);
+  // The native engine may hold a handle to a bad data file for a
+  // short time after a failed creation, so tolerate failures when
+  // removing the temporary files.
+  for (const file of [BadVersionDataFile, BadHeaderDataFile, SmallDataFile]) {
+    try {
+      fs.unlinkSync(file);
+    } catch (e) {
+      console.warn(`Could not remove '${file}': ${e.message}`);
+    }
+  }
 });
 
 describe('Bad data file error messages', () => {

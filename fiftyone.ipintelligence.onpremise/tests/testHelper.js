@@ -63,12 +63,23 @@ const getDataFilePath = function (fileName) {
 const getTestDataFile = function () {
   if (testDataFile === undefined) {
     for (const f of datafiles) {
-      const fullPath = getDataFilePath(f);
+      let fullPath;
+      try {
+        fullPath = getDataFilePath(f);
+      } catch (e) {
+        // try the next data file
+        continue;
+      }
       if (fullPath !== undefined) {
         testDataFile = fullPath;
         break;
       }
     };
+    if (testDataFile === undefined) {
+      throw (`No data file found. Looked for
+        '${datafiles.join(', ')}' at
+        '${fileDirs.join(', ')}'!`);
+    }
   }
   return testDataFile;
 };

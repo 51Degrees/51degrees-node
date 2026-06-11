@@ -67,6 +67,8 @@
                 "<!@(node -p \"d='ip-intelligence-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
             ],
             'type': 'static_library',
+            # The IP intelligence data format uses 64 bit file offsets.
+            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT' ],
             'conditions': [
                 ['OS=="win"', {
 				    'msvs_version':'2019',
@@ -141,6 +143,8 @@
                 "ipi_node_wrap.cxx",
             ],
             'dependencies': ['<(core_lib_name)'],
+            # The IP intelligence data format uses 64 bit file offsets.
+            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT' ],
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],

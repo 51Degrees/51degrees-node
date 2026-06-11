@@ -229,7 +229,10 @@ class IpIntelligenceOnPremise extends Engine {
             err);
         }
       }
-      dataFileType = 'IpiV41';
+      // Matches the value returned by the native engine's getType
+      // method, which is used by the distributor when checking for
+      // a newer data file.
+      dataFileType = 'IPIV41';
     } else {
       throw errorMessages.invalidFileExtension;
     }
