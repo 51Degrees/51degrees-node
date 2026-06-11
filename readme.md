@@ -127,10 +127,14 @@ The tables below describe the examples that are available.
 
 | Example                                | Description |
 |----------------------------------------|-------------|
+| [automaticupdates/dataFileSystemWatcher.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js) | How to configure automatic updates using the file system watcher to monitor for changes to the data file. |
+| [automaticupdates/updateOnStartUp.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js)    | How to configure the Pipeline to automatically update the IP intelligence data file on startup. |
+| [automaticupdates/updatePollingInterval.js](/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js) | How to configure and verify the various automatic data file update settings. |
 | [gettingstarted-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-console)                | How to use the 51Degrees on-premise IP intelligence API to determine details about the network, and location associated with an IP address. |
 | [gettingstarted-web](/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-web)                     | How to use the 51Degrees on-premise IP intelligence API to determine details about the source of a web request as part of a simple web server. |
 | [metadata-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/metadata-console)                       | How to access the meta-data that relates to the IP intelligence algorithm. |
 | [offlineprocessing-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console)              | How to process data for later viewing using an IP intelligence data file. |
+| [performance-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console)                    | How to run a simple performance test against an IP intelligence data file. |
 | [updatedatafile-console](/fiftyone.ipintelligence.onpremise/examples/onpremise/updatedatafile-console)                 | This example illustrates various parameters that can be adjusted when using the on-premise IP intelligence engine, and controls when a new data file is sought and when it is loaded by the IP intelligence software. |
 
 #### IP Intelligence

@@ -39,8 +39,8 @@
  * Processing
  * Average [...] lookups per second.
  * Average [...] ms per IP address.
- * iprangestart = known : [...]
- * iprangestart = unknown : [...]
+ * registeredname = known : [...]
+ * registeredname = unknown : [...]
  *
  * ```
  *
@@ -111,8 +111,8 @@ if (!fs.existsSync(evidenceFile)) {
 }
 
 let ipsProcessed = 0;
-let rangeKnown = 0;
-let rangeUnknown = 0;
+let nameKnown = 0;
+let nameUnknown = 0;
 let ipsCount = 0;
 let startExecutionTime;
 
@@ -135,8 +135,8 @@ eventEmitter.on('FinishProcessing', () => {
     'Average ' +
     `${executionTimeInMilliseconds / ipsCount} ` +
     'ms per IP address.');
-  console.log(`iprangestart = known : ${rangeKnown}`);
-  console.log(`iprangestart = unknown : ${rangeUnknown}`);
+  console.log(`registeredname = known : ${nameKnown}`);
+  console.log(`registeredname = unknown : ${nameUnknown}`);
 
   if (jsonoutput) {
     fs.writeFileSync(jsonoutput, JSON.stringify({
@@ -162,7 +162,7 @@ eventEmitter.on('WarmupFinished', () => {
 const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
   performanceProfile: 'MaxPerformance',
   dataFile: datafile,
-  restrictedProperties: ['iprangestart'],
+  restrictedProperties: ['registeredname'],
   autoUpdate: false,
   shareUsage: false,
   addJavaScriptBuilder: false
@@ -196,12 +196,12 @@ const processIp = async function (ipAddress, warmup) {
   await flowData.process();
 
   // Construct the output line
-  const rangeStart = flowData.ip.iprangestart;
+  const registeredName = flowData.ip.registeredname;
 
-  if (rangeStart.hasValue) {
-    rangeKnown++;
+  if (registeredName.hasValue) {
+    nameKnown++;
   } else {
-    rangeUnknown++;
+    nameUnknown++;
   }
 
   if (warmup) {
@@ -227,7 +227,7 @@ const run = function (callback) {
 
   // Reset IP addresses processed count and start time
   ipsProcessed = 0;
-  rangeKnown = rangeUnknown = 0;
+  nameKnown = nameUnknown = 0;
   startExecutionTime = process.hrtime();
   line = liner.next();
   while (line) {
