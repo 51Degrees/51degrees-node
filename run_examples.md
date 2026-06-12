@@ -22,7 +22,7 @@ Install the required packages:
 npm install
 ```
 
-Navigate to the sub folder `examples\[cloud|onpremise]` and run the example:
+Navigate to the sub folder `examples/[cloud|onpremise]` and run the example:
 
 e.g.
 

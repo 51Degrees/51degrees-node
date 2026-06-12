@@ -48,7 +48,9 @@ The native module is built from the [ip-intelligence-cxx](https://github.com/51D
 - node-gyp (`npm install -g node-gyp`)
 - A C/C++ tool chain. For example, MSVC build tools on Windows or g++ and make on Linux.
 
-Then, from this directory:
+When working inside this repository, run `node ensure-native-module.js` from the repository
+root to perform all of the following steps automatically. The script works on Windows, Linux
+(including WSL) and MacOS. The manual steps from this directory are:
 
 1. Ensure the `ip-intelligence-cxx` submodule is checked out, including its own submodules.
 2. Copy `binding.51d` to `binding.gyp`.

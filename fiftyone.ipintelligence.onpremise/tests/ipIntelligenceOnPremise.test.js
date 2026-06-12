@@ -36,7 +36,6 @@ const http = require('http');
 const fs = require('fs');
 let server;
 
-const HTTP_PORT = 8080;
 const DataFile = path.resolve((process.env.directory || __dirname) + '/../ip-intelligence-cxx/ip-intelligence-data/51Degrees-LiteV41.ipi');
 
 describe('ipIntelligenceOnPremise', () => {
@@ -236,13 +235,17 @@ describe('ipIntelligenceOnPremise', () => {
     // otherwise the update request made on start can be refused. The
     // IPv4 loopback address is used on both sides as 'localhost' can
     // resolve to either address family depending on the platform.
-    server.listen(HTTP_PORT, '127.0.0.1', () => {
+    // Port 0 lets the operating system assign a free ephemeral port,
+    // which avoids clashing with services that commonly occupy fixed
+    // ports such as 8080 (for example nginx in a WSL distribution).
+    server.listen(0, '127.0.0.1', () => {
+      const assignedPort = server.address().port;
       const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise.IpIntelligenceOnPremisePipelineBuilder({
         dataFile: DataFile,
         updateOnStart: true,
         autoUpdate: true,
         shareUsage: false,
-        dataUpdateUrl: `http://127.0.0.1:${HTTP_PORT}/temp`,
+        dataUpdateUrl: `http://127.0.0.1:${assignedPort}/temp`,
         dataUpdateVerifyMd5: false,
         dataUpdateUseUrlFormatter: false,
         createTempDataCopy: true,
@@ -262,7 +265,14 @@ describe('ipIntelligenceOnPremise', () => {
         }
       }, 100);
     });
-  }, 30000);
+    // The engine build copies and loads a large data file synchronously,
+    // which can block the event loop for over a minute on slow storage
+    // (for example a Windows drive mounted in WSL). The timeout must not
+    // expire while that happens. Where it does, jest closes the server
+    // via afterEach with the engine's update request still queued, the
+    // queued connection is reset and the unhandled request error brings
+    // down the whole jest process.
+  }, 120000);
 });
 
 afterEach(() => {

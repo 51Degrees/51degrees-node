@@ -83,6 +83,17 @@ section explains how to do this.
 
 #### Build Steps
 
+When working inside this repository, the whole build can be performed with a single command
+from the repository root. The script copies `binding.51d` to `binding.gyp`, runs `node-gyp`
+and stages the resulting module in `build` using the naming convention described below. It
+works on Windows, Linux (including WSL) and MacOS.
+
+```
+node ensure-native-module.js
+```
+
+The manual steps are as follows.
+
 - Navigate to fiftyone.ipintelligence.onpremise
 - Rename the `binding.51d` to `binding.gyp`
 - Run `npm install`
@@ -165,6 +176,8 @@ npm install
 Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
 
 The on-premise tests use the native module, which is built for Node 20 and 22 only. Make sure one of these versions is active (for example `nvm use 22`) before running the tests.
+
+The tests also run on Linux and on WSL. When the repository is on a Windows drive mounted in WSL (for example under `/mnt/d`), reading the large data file is considerably slower than on a native Linux filesystem, so engine initialisation can take tens of seconds per test. The test timeouts allow for this. Copy the repository to the Linux filesystem where faster runs are needed.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
 

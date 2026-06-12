@@ -83,5 +83,8 @@ describe('Examples', () => {
     expect(keysResponse.statusCode).toBe(200);
     const keys = JSON.parse(keysResponse.text);
     expect(keys.length).toBeGreaterThan(0);
-  }, 60000);
+    // Building the pipeline loads both the device detection and the IP
+    // intelligence data files synchronously, which can take over a minute
+    // on slow storage (for example a Windows drive mounted in WSL).
+  }, 180000);
 });
