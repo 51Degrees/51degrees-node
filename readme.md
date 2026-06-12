@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=repository&utm_content=readme_main&utm_campaign=node-open-source "Data rewards the curious") **Node IP Intelligence**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=repository&utm_content=documentation&utm_campaign=node-open-source "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
@@ -23,8 +23,8 @@ Both options use the same evidence values and expose (almost all) the same prope
 
 ### Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html) page.
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html) page shows
+For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=dependencies) page.
+The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=dependencies) page shows
 the Node versions that we currently test against. The software may run fine against other
 versions, but additional caution should be applied.
 
@@ -34,10 +34,10 @@ The API can either use our cloud service to get its data or it can use a local (
 
 #### Cloud
 
-You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html)
+You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/1QWJwHxl), see our
-[documentation](https://51degrees.com/documentation/_concepts__configurator.html) on how to use this.
+[configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud), see our
+[documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 #### On-Premise
 
@@ -45,7 +45,7 @@ In order to perform IP intelligence on-premise, you will need to use a 51Degrees
 A free, 'lite' file can be obtained from the
 [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository. It has a
 significantly reduced set of properties. To obtain a file with a more complete set of
-properties see the [51Degrees website](https://51degrees.com/pricing).
+properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=on-premise).
 
 ### Installation
 
@@ -117,7 +117,7 @@ The manual steps are as follows.
   - MacOS:
     - FiftyOneIpIntelligenceIpiV41-darwin-[ arch ]-[ Node version ].node
       - e.g. FiftyOneIpIntelligenceIpiV41-darwin-arm64-20.node for Node 20 on Apple silicon.
-  - Please see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html) for Node versions that we currently test against. The software may run fine against other versions, but extra caution should be applied.
+  - Please see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=build-steps) for Node versions that we currently test against. The software may run fine against other versions, but extra caution should be applied.
   - You can optionally clear up by removing all the build files and folders except for the *.node file that's been created.
   - `WARNING`: `npm install` removes this copied file, so you will need to do the above steps again after running `npm install`
 
@@ -173,7 +173,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
 
 The on-premise tests use the native module, which is built for Node 20 and 22 only. Make sure one of these versions is active (for example `nvm use 22`) before running the tests.
 
