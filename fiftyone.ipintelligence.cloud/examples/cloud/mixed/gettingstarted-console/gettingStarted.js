@@ -174,10 +174,16 @@ const run = async function (options, output) {
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
       'https://51degrees.com/documentation/_info__resource_keys.html. ' +
-      'A resource key with the properties required by this example can be ' +
-      'created for free at https://configure.51degrees.com/1QWJwHxl. ' +
-      'Once complete, populate the config file or environment variable ' +
-      'mentioned at the start of this message with the key.'
+      'A resource key with everything this example displays can be ' +
+      'created at https://configure.51degrees.com/hYzn3TV3 with a paid ' +
+      'subscription. A free key created at ' +
+      'https://configure.51degrees.com/Wkqxf3Bs populates only the ' +
+      'free properties, which for IP intelligence are Country, ' +
+      'LocationConfidence, Ip and IpV6. See ' +
+      'https://51degrees.com/pricing to get a paid subscription with ' +
+      'more properties. Once complete, populate the config file or ' +
+      'environment variable mentioned at the start of this message ' +
+      'with the key.'
     );
     return;
   }

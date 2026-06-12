@@ -111,11 +111,15 @@ if (process.env.JEST_WORKER_ID === undefined) {
     'The 51Degrees cloud service is accessed using a \'ResourceKey\'. ' +
     'For more information ' +
     'see https://51degrees.com/documentation/_info__resource_keys.html. ' +
-    'A resource key with the properties required by this example can be ' +
-    'created for free at https://configure.51degrees.com/1QWJwHxl. You can now ' +
-    'populate the environment variable mentioned at the start of this ' +
-    'message with the resource key or pass it as the first argument on ' +
-    'the command line.');
+    'A resource key with everything this example displays can be ' +
+    'created at https://configure.51degrees.com/hYzn3TV3 with a paid ' +
+    'subscription. A free key created at ' +
+    'https://configure.51degrees.com/Wkqxf3Bs populates only the ' +
+    'Country, LocationConfidence, Ip and IpV6 properties. See ' +
+    'https://51degrees.com/pricing to get a paid subscription with ' +
+    'more properties. You can now populate the environment variable ' +
+    'mentioned at the start of this message with the resource key or ' +
+    'pass it as the first argument on the command line.');
   }
 };
 

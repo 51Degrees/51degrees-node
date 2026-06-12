@@ -93,22 +93,38 @@ const analyse = async function (evidence, pipeline, output) {
   // asking for the 'ip' data.
   const ip = data.ip;
 
+  // Track whether any property is left without a value, which is
+  // usually because the resource key does not include the property.
+  let anyValueMissing = false;
+  const getValue = function (propertyName) {
+    try {
+      const property = ip[propertyName];
+      if (!property || property.hasValue !== true) {
+        anyValueMissing = true;
+      }
+    } catch (e) {
+      anyValueMissing = true;
+    }
+    return DataExtension.getValueHelper(ip, propertyName);
+  };
+
   // Display the results of the lookup, which are called
   // IP intelligence properties. See the property dictionary at
   // https://51degrees.com/developers/property-dictionary
   // for details of all available properties.
-  message += outputValue('Registered Name', DataExtension.getValueHelper(ip, 'registeredname'));
-  message += outputValue('Registered Owner', DataExtension.getValueHelper(ip, 'registeredowner'));
-  message += outputValue('Registered Country', DataExtension.getValueHelper(ip, 'registeredcountry'));
-  message += outputValue('IP Range Start', DataExtension.getValueHelper(ip, 'iprangestart'));
-  message += outputValue('IP Range End', DataExtension.getValueHelper(ip, 'iprangeend'));
-  message += outputValue('Country', DataExtension.getValueHelper(ip, 'country'));
-  message += outputValue('Country Code', DataExtension.getValueHelper(ip, 'countrycode'));
-  message += outputValue('Town', DataExtension.getValueHelper(ip, 'town'));
-  message += outputValue('Latitude', DataExtension.getValueHelper(ip, 'latitude'));
-  message += outputValue('Longitude', DataExtension.getValueHelper(ip, 'longitude'));
+  message += outputValue('Registered Name', getValue('registeredname'));
+  message += outputValue('Registered Owner', getValue('registeredowner'));
+  message += outputValue('Registered Country', getValue('registeredcountry'));
+  message += outputValue('IP Range Start', getValue('iprangestart'));
+  message += outputValue('IP Range End', getValue('iprangeend'));
+  message += outputValue('Country', getValue('country'));
+  message += outputValue('Country Code', getValue('countrycode'));
+  message += outputValue('Town', getValue('town'));
+  message += outputValue('Latitude', getValue('latitude'));
+  message += outputValue('Longitude', getValue('longitude'));
   message += '\n\n';
   output.write(message);
+  return anyValueMissing;
 };
 
 const run = async function (options, output) {
@@ -122,10 +138,15 @@ const run = async function (options, output) {
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
       'https://51degrees.com/documentation/_info__resource_keys.html. ' +
-      'A resource key with the properties required by this example can be ' +
-      'created for free at https://configure.51degrees.com/1QWJwHxl. ' +
-      'Once complete, populate the config file or environment variable ' +
-      'mentioned at the start of this message with the key.'
+      'A resource key with everything this example displays can be ' +
+      'created at https://configure.51degrees.com/hYzn3TV3 with a paid ' +
+      'subscription. A free key created at ' +
+      'https://configure.51degrees.com/Wkqxf3Bs populates only the ' +
+      'Country, LocationConfidence, Ip and IpV6 properties. See ' +
+      'https://51degrees.com/pricing to get a paid subscription with ' +
+      'more properties. Once complete, populate the config file or ' +
+      'environment variable mentioned at the start of this message ' +
+      'with the key.'
     );
     return;
   }
@@ -137,8 +158,17 @@ const run = async function (options, output) {
   pipeline.on('error', console.error);
 
   // carry out some sample lookups
+  let anyValueMissing = false;
   for (const values of exampleConstants.defaultEvidenceValues) {
-    await analyse(values, pipeline, output);
+    if (await analyse(values, pipeline, output)) {
+      anyValueMissing = true;
+    }
+  }
+
+  // If any property was left without a value then show the common
+  // pricing message once after the results.
+  if (anyValueMissing) {
+    output.write(ExampleUtils.PRICING_MESSAGE + '\n');
   }
 };
 

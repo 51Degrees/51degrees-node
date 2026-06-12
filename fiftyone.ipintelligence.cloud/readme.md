@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package uses the 51Degrees cloud service to determine properties of the network, and location associated with an IP address.
 
-A resource key is needed to use the cloud service. You can obtain one from the [51Degrees configurator](https://configure.51degrees.com/1QWJwHxl).
+A resource key is needed to use the cloud service. You can obtain one covering everything the examples display from the [51Degrees configurator](https://configure.51degrees.com/hYzn3TV3) with a paid subscription. A free key from [https://configure.51degrees.com/Wkqxf3Bs](https://configure.51degrees.com/Wkqxf3Bs) populates only the Country, LocationConfidence, Ip and IpV6 properties.
 
 It can be used like this:
 
