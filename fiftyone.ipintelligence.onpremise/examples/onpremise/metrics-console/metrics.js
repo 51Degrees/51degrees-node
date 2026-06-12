@@ -430,12 +430,13 @@ const run = async function (
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
-  // Use the supplied path for the data file or find the enterprise
+  // Use the supplied path for the data file, the path in the
+  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
   // file in the project space. The lite file does not contain the
   // properties needed by this example.
   const dataFile = args.length > 0
     ? args[0]
-    : ExampleUtils.findFile(ENTERPRISE_V_4_1_IPI);
+    : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
 
   // Get the location for the output file.
   const outputFile = args.length > 1 ? args[1] : 'metrics-output.csv';

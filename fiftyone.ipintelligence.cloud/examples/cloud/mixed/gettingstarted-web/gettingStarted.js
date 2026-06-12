@@ -160,12 +160,12 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // Load the configuration options from config file.
   const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 
-  // Use the resource key from the environment variable if one
+  // Use the resource key from the environment variables if one
   // is not present in the configuration.
   const resourceKeyFromConfig = optionsExtension.getResourceKey(options);
   if (!resourceKeyFromConfig || resourceKeyFromConfig.startsWith('!!')) {
     optionsExtension.setResourceKey(
-      options, process.env[ExampleUtils.RESOURCE_KEY_ENV_VAR]);
+      options, ExampleUtils.getResourceKeyFromEnv());
   }
 
   setPipeline(options);

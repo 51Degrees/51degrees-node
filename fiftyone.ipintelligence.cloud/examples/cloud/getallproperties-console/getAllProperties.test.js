@@ -33,6 +33,8 @@ const fs = require('fs');
 
 const example = require(path.join(__dirname, '/getAllProperties.js'));
 
+const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
+
 // Test constants
 const tc = require51('fiftyone.ipintelligence.shared').testConstants;
 
@@ -46,7 +48,7 @@ describe('Examples', () => {
     OptionsExtension.updateElementPath(options, __dirname);
     OptionsExtension.setResourceKey(
       options, process.env[tc.envVars.superResourceKeyEnvVar] ||
-        process.env.RESOURCE_KEY);
+        ExampleUtils.getResourceKeyFromEnv());
     await example.run(options, process.stdout);
     expect(true);
   });

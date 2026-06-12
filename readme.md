@@ -39,6 +39,10 @@ to use the Cloud API. You can create resource keys using our
 [configurator](https://configure.51degrees.com/1QWJwHxl), see our
 [documentation](https://51degrees.com/documentation/_concepts__configurator.html) on how to use this.
 
+When running the cloud examples, the resource key can be supplied in the
+`51DEGREES_RESOURCE_KEY` environment variable. The legacy `RESOURCE_KEY`
+name is still supported and is checked second.
+
 #### On-Premise
 
 In order to perform IP intelligence on-premise, you will need to use a 51Degrees data file.
@@ -46,6 +50,18 @@ A free, 'lite' file can be obtained from the
 [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository. It has a
 significantly reduced set of properties. To obtain a file with a more complete set of
 properties see the [51Degrees website](https://51degrees.com/pricing).
+
+The on-premise examples locate the IP intelligence data file in the following order:
+
+1. The `51DEGREES_IPI_PATH` environment variable, which can be set to an explicit path to
+   the data file. The mixed examples also need a device detection data file, for which the
+   `51DEGREES_DD_PATH` environment variable can be set in the same way.
+2. A search of the folder hierarchy, walking up from the working directory, for the
+   expected data file name.
+3. The free 'Lite' data file in its expected location, which is the
+   [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) submodule of
+   this repository. Make sure submodules have been updated by running
+   `git submodule update --init --recursive`.
 
 ### Installation
 
@@ -162,7 +178,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl) and assign it to the environment variable `51DEGREES_RESOURCE_KEY` in your test environment. The legacy `RESOURCE_KEY` name is still supported and is checked second.
 
 The on-premise tests use the native module, which is built for Node 20 and 22 only. Make sure one of these versions is active (for example `nvm use 22`) before running the tests.
 
