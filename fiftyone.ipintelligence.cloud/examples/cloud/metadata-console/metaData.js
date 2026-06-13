@@ -110,9 +110,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
     `the environment variable '${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. ` +
     'The 51Degrees cloud service is accessed using a \'ResourceKey\'. ' +
     'For more information ' +
-    'see https://51degrees.com/documentation/_info__resource_keys.html. ' +
+    'see https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required. ' +
     'A resource key with the properties required by this example can be ' +
-    'created for free at https://configure.51degrees.com/1QWJwHxl. You can now ' +
+    'created for free at https://configure.51degrees.com/1QWJwHxl?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required. You can now ' +
     'populate the environment variable mentioned at the start of this ' +
     'message with the resource key or pass it as the first argument on ' +
     'the command line.');

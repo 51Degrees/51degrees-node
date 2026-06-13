@@ -12,8 +12,8 @@ The following secrets are required:
 The following secrets are required to run tests:
 
 - `IP_INTELLIGENCE_URL` - URL to download the enterprise IP intelligence data file from.
-- `TEST_RESOURCE_KEY` - [Resource key](https://51degrees.com/documentation/_info__resource_keys.html) for cloud tests.
-- `TEST_LICENSE_KEY` - [License key](https://51degrees.com/pricing) for data file update tests.
+- `TEST_RESOURCE_KEY` - [Resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=ci-readme.md&utm_term=api-specific-ci-cd-approach) for cloud tests.
+- `TEST_LICENSE_KEY` - [License key](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=ci-readme.md&utm_term=api-specific-ci-cd-approach) for data file update tests.
 
 ## Differences from common-ci
 
