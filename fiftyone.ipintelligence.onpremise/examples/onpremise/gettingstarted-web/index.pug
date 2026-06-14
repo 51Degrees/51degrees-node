@@ -1,131 +1,129 @@
 doctype html
 html
   head
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
     title Web Integration Example
-    style.
-      a {
-        color: #0366d6;
-      }
-
-      html {
-        font-size: 14px;
-      }
-      @media (min-width: 768px) {
-        html {
-          font-size: 16px;
-        }
-      }
-
-      html {
-        position: relative;
-        min-height: 100%;
-      }
-
-      body {
-        margin-bottom: 60px;
-      }
-
-      .example-alert {
-        border: 2px solid red;
-      }
-
-      .used-evidence {
-        background-color: lightgreen;
-      }
+    link(rel='stylesheet', href='/css/examples-main.min.css')
+    link(rel='stylesheet', href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css')
 
   body
-    h2 Web Integration Example
-    p
-      | This example demonstrates the use of the Pipeline API to perform IP
-      | intelligence within a simple Node web server. The IP address of the
-      | requesting client is used as evidence, so the results below describe
-      | the network, and location that the request came from.
-    p
-      | Note that when running locally, the client IP address will be a
-      | loopback address, which will not produce any results. Supply an IP
-      | address with the 'client-ip' query parameter to look up a specific
-      | address. For example, '?client-ip=8.8.8.8'.
+    .c-eg-page
+      if (new Date().getTime() > dataFilePublishedTime + dataFileAgeWarning)
+        .c-eg-alert
+          | WARNING: This example is using a data file that is more than
+          | #{dataFileAgeWarning} days old. A more recent data file may be needed
+          | to correctly determine the details of the latest IP ranges. The
+          | latest lite data file is available from the
+          | #[a(href='https://github.com/51Degrees/ip-intelligence-data') ip-intelligence-data]
+          | repository on Github. Find out about the
+          | Enterprise data file, which includes automatic daily updates, on our
+          | #[a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=web-integration-example') pricing page].
 
-    if (new Date().getTime() > dataFilePublishedTime + dataFileAgeWarning)
-      div(class='example-alert')
-        | WARNING: This example is using a data file that is more than
-        | #{dataFileAgeWarning} days old. A more recent data file may be needed
-        | to correctly determine the details of the latest IP ranges. The
-        | latest lite data file is available from the
-        | #[a(href='https://github.com/51Degrees/ip-intelligence-data') ip-intelligence-data]
-        | repository on Github. Find out about the
-        | Enterprise data file, which includes automatic daily updates, on our
-        | #[a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=web-integration-example') pricing page].
+      h2.c-eg-page__title IP intelligence web integration example
+      p.c-eg-page__lead
+        | This example demonstrates the use of the Pipeline API to perform IP
+        | intelligence within a simple Node web server. The IP address of the
+        | requesting client is used as evidence, so the results below describe
+        | the network, and location that the request came from.
+      p.c-eg-page__lead
+        | Note that when running locally, the client IP address will be a
+        | loopback address, which will not produce any results. Supply an IP
+        | address with the 'client-ip' query parameter to look up a specific
+        | address. For example, '?client-ip=8.8.8.8'.
 
-    div(id='content')
-      div(id='evidence')
-        p Evidence values used:
-        table
-          tr
-            th Key
-            th Value
-          each value, key in allEvidence
-            if evidenceUsed[key] !== undefined
-              tr(class="used-evidence")
-                td #{key}
-                td #{value}
-            else
-              tr
-                td #{key}
-                td #{value}
+      noscript
+        .c-eg-alert
+          | WARNING: JavaScript is disabled in your browser.
 
-      p
-        | The following values are determined by server-side IP intelligence
-        | on the first request:
+      #content
+        h3.c-eg-page__heading IP intelligence lookup
+        form.c-eg-form(method='get')
+          .c-eg-form__row
+            label.b-label(for='client-ip') Enter IP Address:
+            input.b-input(type='text', id='client-ip', name='client-ip', value=inputIpAddress, placeholder='e.g., 8.8.8.8')
+            button.b-btn(type='submit') Look Up
 
-      table
-        tr
-          th Key
-          th Value
-        tr
-          td
-            b Registered Name:
-          td #{registeredName}
-        tr
-          td
-            b Registered Owner:
-          td #{registeredOwner}
-        tr
-          td
-            b Registered Country:
-          td #{registeredCountry}
-        tr
-          td
-            b IP Range Start:
-          td #{ipRangeStart}
-        tr
-          td
-            b IP Range End:
-          td #{ipRangeEnd}
-        tr
-          td
-            b Country:
-          td #{country}
-        tr
-          td
-            b Country Code:
-          td #{countryCode}
-        tr
-          td
-            b Town:
-          td #{town}
-        tr
-          td
-            b Latitude:
-          td #{latitude}
-        tr
-          td
-            b Longitude:
-          td #{longitude}
-      br
+        h3.c-eg-page__heading Detection results
+        p.c-eg-page__lead
+          | The following values are determined by server-side IP intelligence
+          | on the first request.
+        table.c-eg-table
+          thead.c-eg-table__head
+            tr.c-eg-table__row
+              th.c-eg-table__cell Property
+              th.c-eg-table__cell Value
+          tbody
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Registered Name:
+              td.c-eg-table__cell #{registeredName}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Registered Owner:
+              td.c-eg-table__cell #{registeredOwner}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Registered Country:
+              td.c-eg-table__cell #{registeredCountry}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key IP Range Start:
+              td.c-eg-table__cell #{ipRangeStart}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key IP Range End:
+              td.c-eg-table__cell #{ipRangeEnd}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Country:
+              td.c-eg-table__cell #{country}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Country Code:
+              td.c-eg-table__cell #{countryCode}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Town:
+              td.c-eg-table__cell #{town}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Latitude:
+              td.c-eg-table__cell #{latitude}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Longitude:
+              td.c-eg-table__cell #{longitude}
+
+        h3.c-eg-page__heading Evidence used
+        p.c-eg-legend
+          | Evidence was
+          span.c-eg-legend__swatch.c-eg-legend__swatch--used used
+          | /
+          span.c-eg-legend__swatch.c-eg-legend__swatch--present present
+          | for detection
+        table.c-eg-table
+          thead.c-eg-table__head
+            tr.c-eg-table__row
+              th.c-eg-table__cell Key
+              th.c-eg-table__cell Value
+          tbody
+            each value, key in allEvidence
+              if evidenceUsed[key] !== undefined
+                tr.c-eg-table__row.c-eg-table__row--used
+                  td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                  td.c-eg-table__cell #{value}
+              else
+                tr.c-eg-table__row.c-eg-table__row--present
+                  td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                  td.c-eg-table__cell #{value}
+
+        #map-section.c-eg-map(style='display: none;')
+          h3.c-eg-map__title Location Map
+          #map.c-eg-map__canvas
 
       if (dataSourceTier === 'Lite')
-        div(class='example-alert')
-          | WARNING: You are using the free 'Lite' data file. This includes a
-          | restricted set of properties. Find out about the Enterprise
-          | data file on our #[a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=lite-data-file') pricing page].
+        .c-eg-message
+          p.c-eg-message__text Need more on-premise properties and features? #[a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=on-premise-properties') Contact us] to explore the options.
+          a.b-btn.c-eg-message__cta(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=on-premise-properties') Contact us
+
+    script(src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
+    script(src='https://unpkg.com/wellknown@0.5.0/wellknown.js')
+    script(src='/js/examples.min.js')
+    script.
+      window.onload = function () {
+        fodExamples.initLocationMap({
+          areasWkt: '#{areas}',
+          latitude: '#{latitude}',
+          longitude: '#{longitude}'
+        });
+      };

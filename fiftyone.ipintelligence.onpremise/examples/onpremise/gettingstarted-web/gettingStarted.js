@@ -112,7 +112,18 @@ const setPipeline = (options) => {
   pipeline.on('error', console.error);
 };
 
+// Directory holding the shared pattern-library assets (CSS and JS) that
+// are served at '/css/...' and '/js/...'.
+const publicDir = path.join(__dirname, '/public');
+
 const server = http.createServer((req, res) => {
+  // Serve the shared example assets before running the pipeline. When the
+  // request is for one of those files the response is sent here and we
+  // return early.
+  if (ExampleUtils.serveStaticAsset(req, res, publicDir)) {
+    return;
+  }
+
   // FlowData is a data structure that is used to convey
   // information required for detection and the results of the
   // detection through the pipeline.
@@ -134,6 +145,12 @@ const server = http.createServer((req, res) => {
       pipeline.getElement('ip').evidenceKeyFilter.filterEvidence(
         allEvidence);
 
+    // The IP address supplied through the lookup form, used to
+    // pre-populate the input on the rendered page.
+    const inputIpAddress =
+      (allEvidence['query.client-ip'] ||
+        allEvidence['header.x-forwarded-for'] || '');
+
     // Compile a response
     res.end(compiledFunction(
       {
@@ -141,6 +158,8 @@ const server = http.createServer((req, res) => {
         dataFileAgeWarning: DATA_FILE_AGE_WARNING,
         evidenceUsed: evidences,
         allEvidence,
+        inputIpAddress,
+        areas: dataExtension.getValueHelper(flowData.ip, 'areas'),
         dataSourceTier: ExampleUtils.getDataTier(pipeline),
         registeredName: dataExtension.getValueHelper(flowData.ip, 'registeredname'),
         registeredOwner: dataExtension.getValueHelper(flowData.ip, 'registeredowner'),
