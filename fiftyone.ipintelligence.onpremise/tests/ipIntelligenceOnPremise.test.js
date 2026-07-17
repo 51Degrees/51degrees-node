@@ -38,6 +38,31 @@ let server;
 
 const DataFile = path.resolve((process.env.directory || __dirname) + '/../ip-intelligence-cxx/ip-intelligence-data/51Degrees-LiteV41.ipi');
 
+// A small but valid data file for tests that exercise engine
+// construction rather than data content. The updateOnStart test copies
+// its data file to a temporary location, and in CI the file behind the
+// Lite name is a multi gigabyte enterprise file that does not fit in
+// the disk space left on hosted runners.
+const SmallDataFile = path.resolve((process.env.directory || __dirname) + '/../ip-intelligence-cxx/ip-intelligence-data/51Degrees-IPIV4AsnIpiV41.ipi');
+
+// A single pipeline shared by the tests that only read engine state.
+// Each engine holds a large amount of native memory for the data file,
+// so building one per test can exhaust memory where the enterprise
+// file is used.
+let sharedPipeline;
+
+beforeAll(() => {
+  sharedPipeline = new FiftyOneDegreesIpIntelligenceOnPremise
+    .IpIntelligenceOnPremisePipelineBuilder({
+      performanceProfile: 'Balanced',
+      dataFile: DataFile,
+      shareUsage: false,
+      autoUpdate: false,
+      updateOnStart: false,
+      fileSystemWatcher: false
+    }).build();
+});
+
 describe('ipIntelligenceOnPremise', () => {
   // Check that an exception is thrown if license key is not
   // specified when creating an on-premise engine.
@@ -101,14 +126,7 @@ describe('ipIntelligenceOnPremise', () => {
   // Check that if no evidence is provided for the IP intelligence
   // engine, accessing a valid property will return HasValue=false
   test('No evidence error message', done => {
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
-      .IpIntelligenceOnPremisePipelineBuilder({
-        performanceProfile: 'Balanced',
-        dataFile: DataFile,
-        autoUpdate: false,
-        shareUsage: false
-      }).build();
-    const flowData = pipeline.createFlowData();
+    const flowData = sharedPipeline.createFlowData();
 
     flowData.process().then(function () {
       const registeredName = flowData.ip.registeredname;
@@ -153,12 +171,7 @@ describe('ipIntelligenceOnPremise', () => {
 
   // Check if components are set correctly
   test('Components for on-premise engine', done => {
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
-      .IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
-        shareUsage: false
-      }).build();
-    const ip = pipeline.getElement('ip');
+    const ip = sharedPipeline.getElement('ip');
     expect(Object.entries(ip.components).length).toBeGreaterThan(0);
     for (const component of Object.values(ip.components)) {
       const properties = component.getProperties();
@@ -171,24 +184,14 @@ describe('ipIntelligenceOnPremise', () => {
 
   // Check if properties are set correctly
   test('Properties for on-premise engine', done => {
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
-      .IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
-        shareUsage: false
-      }).build();
-    const ip = pipeline.getElement('ip');
+    const ip = sharedPipeline.getElement('ip');
     expect(Object.entries(ip.properties).length).toBeGreaterThan(0);
     done();
   });
 
   // Check that profiles can be iterated
   test('profiles for on-premise engine', done => {
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
-      .IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
-        shareUsage: false
-      }).build();
-    const ip = pipeline.getElement('ip');
+    const ip = sharedPipeline.getElement('ip');
     const profiles = ip.profiles();
     let count = 0;
     while (profiles.next() !== undefined && count < 20) {
@@ -202,12 +205,7 @@ describe('ipIntelligenceOnPremise', () => {
   // Check that the evidence key filter contains the expected
   // client IP keys.
   test('key filter has client IP keys', done => {
-    const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
-      .IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
-        shareUsage: false
-      }).build();
-    const ipKeyFilter = pipeline.getElement('ip').evidenceKeyFilter.list;
+    const ipKeyFilter = sharedPipeline.getElement('ip').evidenceKeyFilter.list;
 
     expect(ipKeyFilter.length).toBeGreaterThan(0);
     // At least one accepted evidence key should relate to
@@ -241,7 +239,7 @@ describe('ipIntelligenceOnPremise', () => {
     server.listen(0, '127.0.0.1', () => {
       const assignedPort = server.address().port;
       const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise.IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
+        dataFile: SmallDataFile,
         updateOnStart: true,
         autoUpdate: true,
         shareUsage: false,

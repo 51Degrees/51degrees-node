@@ -12,8 +12,14 @@ $moduleName = "FiftyOneIpIntelligenceIpiV41"
 
 Write-Output "Building extension for $PackageName"
 
-# Installing binary builder
-npm i -g node-gyp
+# node-gyp 12 or newer is required to recognise Visual Studio 2026 (v18),
+# which ships on the current windows-latest image. Older node-gyp reports it
+# as "unknown version" and fails to find a compiler. node-gyp 12 requires
+# Node ^20.17.0 or >=22.9.0, so ci/options.json pins the matrix to "20" and
+# "22" (latest of each) rather than the old 22.5.1, which falls in the
+# unsupported gap. Invoke through npx so this pinned version is used rather
+# than any node-gyp already on the PATH.
+$nodeGyp = "node-gyp@12"
 
 # Determine the operating system
 if ($IsMacOS) {
@@ -35,10 +41,10 @@ New-Item -ItemType Directory -Path build -Force | Out-Null
 Copy-Item binding.51d binding.gyp
 
 # Run configuration
-node-gyp configure
+npx --yes $nodeGyp configure
 
 # Build configuration
-node-gyp build
+npx --yes $nodeGyp build
 
 # Getting major node version
 $nodeVersion = node --version

@@ -1,0 +1,28 @@
+# Temporary workflow to validate PR 8 on its own without building the
+# other open pull requests. Only this PR branch carries the file, so it
+# runs on pushes to this PR alone. Remove before merge.
+name: PR 8 Scoped Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  PR8:
+    name: PR 8 Scoped Test
+    uses: 51Degrees/common-ci/.github/workflows/nightly-pull-request.yml@main
+    with:
+      repo-name: ${{ github.event.repository.name }}
+      org-name: ${{ github.event.repository.owner.login }}
+      pull-request-id: 8
+      branch: main
+      cache-assets: true
+      skip-compare-performance: true
+    secrets:
+      token: ${{ secrets.ACCESS_TOKEN }}
+      IpIntelligence: ${{ secrets.DEVICE_DETECTION_KEY }}
+      IpIntelligenceUrl: ${{ secrets.IPI_DATA_FILE_URL }}
+      TestResourceKey: ${{ secrets.SUPER_RESOURCE_KEY }}
+      TestSuperResourceKey: ${{ secrets.SUPER_RESOURCE_KEY }}
+      TestLicenseKey: ${{ secrets.DEVICE_DETECTION_KEY }}
