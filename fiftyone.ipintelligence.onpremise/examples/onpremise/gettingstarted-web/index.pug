@@ -75,14 +75,56 @@ html
               td.c-eg-table__cell.c-eg-table__cell--key Country Code:
               td.c-eg-table__cell #{countryCode}
             tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Country Code 3:
+              td.c-eg-table__cell #{countryCode3}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Region:
+              td.c-eg-table__cell #{region}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key State:
+              td.c-eg-table__cell #{state}
+            tr.c-eg-table__row.c-eg-table__row--alt
               td.c-eg-table__cell.c-eg-table__cell--key Town:
               td.c-eg-table__cell #{town}
-            tr.c-eg-table__row.c-eg-table__row--alt
+            tr.c-eg-table__row
               td.c-eg-table__cell.c-eg-table__cell--key Latitude:
               td.c-eg-table__cell #{latitude}
-            tr.c-eg-table__row
+            tr.c-eg-table__row.c-eg-table__row--alt
               td.c-eg-table__cell.c-eg-table__cell--key Longitude:
               td.c-eg-table__cell #{longitude}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Areas:
+              td.c-eg-table__cell #{areas}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Accuracy Radius:
+              td.c-eg-table__cell #{accuracyRadius}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Time Zone Offset:
+              td.c-eg-table__cell #{timeZoneOffset}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Country Codes Geographical:
+              td.c-eg-table__cell
+                ul
+                  each c in countryCodesGeographical
+                    li #{c}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Country Codes Population:
+              td.c-eg-table__cell
+                ul
+                  each c in countryCodesPopulation
+                    li #{c}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Country Names Geographical All Translated:
+              td.c-eg-table__cell
+                select#CountryNamesGeographicalAllTranslated.form-control(name='CountryNamesGeographicalAllTranslated')
+                  each name, i in countryNamesGeographicalAllTranslated
+                    option(value=countryCodesGeographicalAll[i]) #{name}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Country Names Population All Translated:
+              td.c-eg-table__cell
+                select#CountryNamesPopulationAllTranslated.form-control(name='CountryNamesPopulationAllTranslated')
+                  each name, i in countryNamesPopulationAllTranslated
+                    option(value=countryCodesPopulationAll[i]) #{name}
 
         h3.c-eg-page__heading Evidence used
         p.c-eg-legend
