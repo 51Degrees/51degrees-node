@@ -8,7 +8,7 @@
             }
         },
         {
-            "elementName": "../../geoLocationCloud",
+            "elementName": "fiftyone.geolocation/geoLocationCloud",
             "elementParameters": {
                 "locationProvider": "fiftyonedegrees"
             }
