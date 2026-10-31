@@ -133,7 +133,7 @@ let pipeline;
 const setPipeline = (resourceKey) => {
   // Create a new Device Detection pipeline and set the config.
   // You need to create a resource key at
-  // https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=setpipeline
+  // https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=setpipeline
   // and paste it into the code. This example displays paid properties, so a
   // paid subscription is needed to populate them all.
   pipeline = new DeviceDetectionCloudPipelineBuilder({
@@ -153,10 +153,10 @@ const setPipeline = (resourceKey) => {
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
   process.env.JEST_WORKER_ID === undefined) {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required and paste it into the ' +
+        'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required and paste it into the ' +
         'code, replacing !!YOUR_RESOURCE_KEY!!. This example displays ' +
         'paid properties, so a paid subscription is needed to populate ' +
-        'them all. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required to get a paid ' +
+        'them all. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required to get a paid ' +
         'subscription with more properties.');
 } else {
   const http = require('http');
@@ -181,7 +181,7 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
       // requested. So set whatever headers are required by the browser in
       // order to return the evidence needed by the pipeline.
       // More info on this can be found at
-      // https://51degrees.com/blog/user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=server
+      // https://51degrees.com/blog/user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=server
       core.Helpers.setResponseHeaders(res, flowData);
 
       res.setHeader('Content-Type', 'text/html');

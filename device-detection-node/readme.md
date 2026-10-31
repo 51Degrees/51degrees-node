@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node Device Detection**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node Device Detection**
 
-[Developer Documentation](https://51degrees.com/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees Device Detection engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
@@ -23,10 +23,10 @@ Both options use the same evidence values and expose (almost all) the same prope
 
 ### Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=dependencies) page.
+For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page.
 Testing targets the current Node.js LTS versions. There is no concept of 'supported' versions.
 The software may well run on other versions, but they are not tested. The
-[tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=dependencies) page lists
+[tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page lists
 the versions that we currently test against.
 
 ### Data
@@ -35,10 +35,10 @@ The API can either use our cloud service to get its data or it can use a local (
 
 #### Cloud
 
-You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud)
+You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud), see our
-[documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud) on how to use this.
+[configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
+[documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 The cloud property tiers changed in May 2026. The examples and this documentation
 now reflect what is free and what needs a paid subscription. The free tier includes
@@ -46,22 +46,22 @@ the following device properties used by the examples: IsMobile, DeviceType,
 ScreenPixelsWidth, ScreenPixelsHeight, ScreenPixelsHeightJavaScript, the three
 `SetHeader*Accept-CH` properties, JavascriptGetHighEntropyValues, IsCrawler,
 DeviceId and UserAgents. A resource key that selects these free properties can be
-created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud).
+created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 
 The paid device properties used by the examples are: HardwareVendor, HardwareName,
 HardwareModel, PlatformVendor, PlatformName, PlatformVersion, BrowserVendor,
 BrowserName, BrowserVersion, ScreenPixelsWidthJavaScript and
 JavascriptHardwareProfile, plus the TAC and native model hardware profiles. A
 resource key that selects the free properties plus these paid properties can be
-created [here](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud).
-See [pricing](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=cloud) to get a paid subscription with more properties.
+created [here](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+See [pricing](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) to get a paid subscription with more properties.
 
 #### On-Premise
 
 In order to perform device detection on-premise, you will need to use a 51Degrees data file.
 This repository includes a free, 'lite' file in the 'device-detection-data' sub-module that has a
 significantly reduced set of properties. To obtain a file with a more complete set of device
-properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=on-premise).
+properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=on-premise).
 
 The on-premise examples locate the data file in the following order:
 
@@ -144,7 +144,7 @@ section explains how to do this.
   - MacOS:
     - FiftyOneDeviceDetectionHashV4-darwin-[ arch ]-[ Node major version ].node
   - [ arch ] is the value of `process.arch` (for example x64 or arm64) and [ Node major version ] is the major version of the Node.js runtime the module was built with.
-  - Testing targets the current Node.js LTS versions. There is no concept of 'supported' versions. The software may well run on other versions, but they are not tested. See the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=build-steps) for the versions that we currently test against.
+  - Testing targets the current Node.js LTS versions. There is no concept of 'supported' versions. The software may well run on other versions, but they are not tested. See the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=build-steps) for the versions that we currently test against.
   - You can optionally clear up by removing all the build files and folders except for the *.node file that's been created.
   - `WARNING`: `npm install` removes this copied file, so you will need to do the above steps again after running `npm install`
 
@@ -199,7 +199,7 @@ npm install jest --global
 
 You will also need to install any required packages for the examples in the **Examples** section.
 
-Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment. The legacy environment variable name `RESOURCE_KEY` is still supported and is checked second, after `_51DEGREES_RESOURCE_KEY`.
+Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment. The legacy environment variable name `RESOURCE_KEY` is still supported and is checked second, after `_51DEGREES_RESOURCE_KEY`.
 
 There are other environment variables that you will also need to set in your test environment before running all tests:
 - `TEST_SUPER_RESOURCE_KEY`: This key contains all `SetHeader*` properties.
@@ -221,7 +221,7 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 
 1. Ensure Swig is installed.
    1. Use the 51Degrees fork of Swig, built from source from the `node-24-holder-this` branch of https://github.com/51Degrees/swig.
-   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=device-detection-node&utm_content=readme.md&utm_term=native-code-updates).
+   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=native-code-updates).
    3. All native modules loaded into one Node process must be generated by the same Swig version. Mixing modules generated by different Swig versions (for example this package and fiftyone.ipintelligence.onpremise) can crash the process, so regenerate and release them together.
 2. Update the `cxx` submodule at the root of the repository to reference the relevant commit.
 3. From terminal, navigate to fiftyone.pipeline.devicedetection and run:

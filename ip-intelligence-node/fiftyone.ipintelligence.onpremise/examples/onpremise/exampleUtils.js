@@ -164,14 +164,14 @@ class ExampleUtils {
         'https://github.com/51Degrees/ip-intelligence-data. ' +
         'Find out about the Enterprise data file, which ' +
         'includes automatic daily updates, on our pricing ' +
-        'page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');
+        'page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');
     }
     if (dataTier === 'Lite') {
       console.warn('This example is using the \'Lite\' ' +
         'data file. This is used for illustration, and ' +
         'has limited accuracy and capabilities. Find ' +
         'out about the Enterprise data file on our ' +
-        'pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=lite-data-file');
+        'pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=lite-data-file');
     }
   }
 

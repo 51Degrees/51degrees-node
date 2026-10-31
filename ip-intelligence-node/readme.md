@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
@@ -23,8 +23,8 @@ Both options use the same evidence values and expose (almost all) the same prope
 
 ### Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=dependencies) page.
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=dependencies) page shows
+For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page.
+The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page shows
 the Node versions that we currently test against. The software may run fine against other
 versions, but additional caution should be applied.
 
@@ -34,10 +34,10 @@ The API can either use our cloud service to get its data or it can use a local (
 
 #### Cloud
 
-You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud)
+You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud), see our
-[documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud) on how to use this.
+[configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
+[documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 #### On-Premise
 
@@ -45,7 +45,7 @@ In order to perform IP intelligence on-premise, you will need to use a 51Degrees
 A free, 'lite' file can be obtained from the
 [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository. It has a
 significantly reduced set of properties. To obtain a file with a more complete set of
-properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=on-premise).
+properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=on-premise).
 
 ### Installation
 
@@ -115,7 +115,7 @@ The manual steps are as follows.
   - MacOS:
     - FiftyOneIpIntelligenceIpiV41-darwin-[ arch ]-[ Node version ].node
       - e.g. FiftyOneIpIntelligenceIpiV41-darwin-arm64-20.node for Node 20 on Apple silicon.
-  - Please see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=build-steps) for Node versions that we currently test against. The software may run fine against other versions, but extra caution should be applied.
+  - Please see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=build-steps) for Node versions that we currently test against. The software may run fine against other versions, but extra caution should be applied.
   - You can optionally clear up by removing all the build files and folders except for the *.node file that's been created.
   - `WARNING`: `npm install` removes this copied file, so you will need to do the above steps again after running `npm install`
 
@@ -171,9 +171,9 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
 
-The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
+The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
 
 The tests also run on Linux and on WSL. When the repository is on a Windows drive mounted in WSL (for example under `/mnt/d`), reading the large data file is considerably slower than on a native Linux filesystem, so engine initialisation can take tens of seconds per test. The test timeouts allow for this. Copy the repository to the Linux filesystem where faster runs are needed.
 
@@ -192,7 +192,7 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 
 1. Ensure Swig is installed.
    1. Use the 51Degrees fork of Swig, built from source from the `node-24-holder-this` branch of https://github.com/51Degrees/swig.
-   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tested-versions).
+   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions).
    3. All native modules loaded into one Node process must be generated by the same Swig version. Mixing modules generated by different Swig versions (for example this package and fiftyone.devicedetection.onpremise) can crash the process, so regenerate and release them together.
 2. Update the `cxx` submodule at the root of the repository to reference the relevant commit.
 3. From terminal, navigate to fiftyone.ipintelligence.onpremise and run:

@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=pipeline-node&utm_content=fiftyone.pipeline.engines.fiftyone-readme.md&utm_term=top "Data rewards the curious") **51Degrees Pipeline Engines Fiftyone**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines.fiftyone-readme.md&utm_term=top "Data rewards the curious") **51Degrees Pipeline Engines Fiftyone**
 
-[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=pipeline-node&utm_content=fiftyone.pipeline.engines.fiftyone-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines.fiftyone-readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 

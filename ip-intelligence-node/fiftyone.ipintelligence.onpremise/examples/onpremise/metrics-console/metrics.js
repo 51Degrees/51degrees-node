@@ -39,7 +39,7 @@
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
  * To obtain an enterprise data file for testing, please
- * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=header).
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=header).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)
@@ -67,7 +67,7 @@ const areas = require(path.join(__dirname, '/../areas'));
 // This example requires the enterprise data file as the area properties
 // used are not available in the lite file. To obtain an enterprise data
 // file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise_v_4_1_ipi
+// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise_v_4_1_ipi
 const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
 
 // The percentage of registered IP addresses to randomly include in the
@@ -354,14 +354,14 @@ const run = async function (
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
     // We use the max performance profile for optimal detection speed
     // in this example. See the documentation for more detail on this
     // and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
     performanceProfile: 'MaxPerformance',
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
@@ -383,7 +383,7 @@ const run = async function (
     progress.write('The data file does not contain the \'Areas\' ' +
       'property. An enterprise IP intelligence data file is required ' +
       'for this example. To obtain an enterprise data file for ' +
-      'testing, please contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-areas-property\n');
+      'testing, please contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-areas-property\n');
     return;
   }
   progress.write(`Created index for '${wktAreas.size}' areas\n`);
@@ -466,7 +466,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     console.error('Failed to find an enterprise IP intelligence data ' +
       'file. This example requires an enterprise data file. To obtain ' +
       'one for testing, please contact us: ' +
-      'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-enterprise-data-file. The full path to a data file ' +
+      'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-enterprise-data-file. The full path to a data file ' +
       'can be specified as a command line argument');
   }
 };

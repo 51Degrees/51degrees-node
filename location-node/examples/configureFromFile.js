@@ -35,7 +35,7 @@ properties you are interested in as well as any associated license keys
 that entitle you to increased request limits and/or paid-for properties.
 
 You can create a resource key using the 51Degrees
-[Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-node&utm_content=examples-configurefromfile.js&utm_term=top).
+[Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=top).
 
 Make sure to include the Country property, as it is required to run this
 example.
@@ -92,7 +92,7 @@ if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
     // rest of the example.
     resourceKeySet = false;
     console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and paste it into the 51d.json ' +
+        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and paste it into the 51d.json ' +
         'config file, replacing !!YOUR_RESOURCE_KEY!!.');
   }
 

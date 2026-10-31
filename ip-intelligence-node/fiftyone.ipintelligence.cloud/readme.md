@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence Cloud**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence Cloud**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package uses the 51Degrees cloud service to determine properties of the network, and location associated with an IP address.
 
-A resource key is needed to use the cloud service. You can obtain one from the [51Degrees configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=this-package-fiftyone-ipintelligence-cloud).
+A resource key is needed to use the cloud service. You can obtain one from the [51Degrees configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-readme.md&utm_term=this-package-fiftyone-ipintelligence-cloud).
 
 It can be used like this:
 

@@ -104,7 +104,7 @@ module.exports = {
     }
 
     return message + '. Create a resource key for free at ' +
-      'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.shared-tests-keyutils.js&utm_term=resource-key-required';
+      'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-tests-keyutils.js&utm_term=resource-key-required';
   },
 
   /**

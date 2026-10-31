@@ -33,7 +33,7 @@ This example is available in full on [GitHub](https://github.com/51Degrees/locat
 const FiftyOneDegreesLocation = require((process.env.directory || __dirname) + '/../');
 
 // Obtain a resource key with the properties required to test this
-// example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=location-node&utm_content=examples-webintegration.js&utm_term=top
+// example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
 const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
@@ -44,11 +44,11 @@ let server;
 
 if (myResourceKey.substring(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
+        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
 } else {
   // Create a new pipeline and set the config.
-  // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=location-node&utm_content=examples-webintegration.js&utm_term=top
+  // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
   // and paste it into the code.
   // The JavaScriptBuilderSettings allow you to provide an endpoint
   // which will be requested by the client side JavaScript.

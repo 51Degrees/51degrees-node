@@ -41,7 +41,7 @@ const getResourceKeyFromEnv = function () {
 // The common message shown when a resource key leaves one or more of
 // the properties used by an example without values.
 const PRICING_MESSAGE = 'Some properties used by this example are not ' +
-  'available with a free resource key. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-exampleutils.js&utm_term=resource-key-required ' +
+  'available with a free resource key. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-exampleutils.js&utm_term=resource-key-required ' +
   'to get a paid subscription with more properties.';
 
 module.exports = {

@@ -101,12 +101,12 @@ const run = async function (options, output) {
       `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. ' +
+      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. ' +
       'TAC lookup requires a paid subscription. See ' +
-      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
       'properties. Once subscribed, a resource key with the properties ' +
       'required by this example can be created at ' +
-      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
+      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
       'environment variable mentioned at the start of this message with the ' +
       'resource key or pass it as the first argument on the command line.'
     );
@@ -124,7 +124,7 @@ const run = async function (options, output) {
   // For a demonstration of how to do this in code instead, see the
   // NativeModelLookup example.
   // For more information about builders in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=run
+  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=run
   const pipeline = new PipelineBuilder().buildFromConfiguration(options);
 
   // To monitor the pipeline we can put in listeners for various log events.

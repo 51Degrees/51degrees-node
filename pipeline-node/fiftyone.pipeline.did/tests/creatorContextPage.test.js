@@ -149,7 +149,7 @@ describe('creator context demo page', () => {
   test('the page ends with a Find out more section', () => {
     const page = fs.readFileSync(PAGE, 'utf8');
     expect(page).toContain('Find out more');
-    expect(page).toContain('utm_campaign=pipeline-node');
+    expect(page).toContain('utm_campaign=51degrees-node');
     expect(page).toContain('https://github.com/51Degrees/pipeline-node');
   });
 });

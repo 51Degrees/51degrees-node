@@ -33,7 +33,7 @@ const path = require('path');
 
 // Node major versions targeted for testing, the current LTS versions.
 // The binding may well build against other versions but they are not
-// tested. See https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=comment&utm_campaign=ip-intelligence-node&utm_content=ensure-native-module.js&utm_term=tested-versions
+// tested. See https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=comment&utm_campaign=51degrees-node&utm_content=ensure-native-module.js&utm_term=tested-versions
 const SUPPORTED_NODE_MAJOR_VERSIONS = [22, 24];
 
 const nodeMajor = Number(process.version.split('.')[0].replace('v', ''));

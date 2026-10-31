@@ -55,7 +55,7 @@ const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleCons
 // Note that the Lite data file is only used for illustration, and has
 // limited accuracy and capabilities.
 // Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=lite_v_4_1_ipi
+// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=lite_v_4_1_ipi
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
 const outputValue = function (name, value) {
@@ -103,7 +103,7 @@ const analyse = async function (evidence, pipeline, output) {
 
   // Display the results of the lookup, which are called
   // IP intelligence properties. See the property dictionary at
-  // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=analyse
+  // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=analyse
   // for details of all available properties.
   // Most IP intelligence values are lists of weighted values
   // where the weight indicates the proportion of the result
@@ -126,14 +126,14 @@ const run = async function (dataFile, output) {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
     // We use the balanced profile as its performance is
     // sufficient for this example. See the documentation for
     // more detail on this and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
     performanceProfile: 'Balanced',
     // inhibit sharing usage for this test, usually this
     // should be set 'true'

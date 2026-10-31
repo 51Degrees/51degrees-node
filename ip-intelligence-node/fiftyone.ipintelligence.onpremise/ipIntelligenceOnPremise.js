@@ -119,7 +119,7 @@ class IpIntelligenceOnPremise extends Engine {
    * will be restricted to
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
-   * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
+   * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
    * If you do not wish to use a key then you can specify
    * an empty string, but this will cause automatic updates to
    * be disabled.

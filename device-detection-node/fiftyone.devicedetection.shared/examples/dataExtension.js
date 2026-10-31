@@ -102,7 +102,7 @@ class DataExtension {
   static getNoProfilesMessage () {
     return '\tNo device profiles were returned. The current resource key ' +
       'does not include the hardware properties this example needs. See ' +
-      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.shared-examples-dataextension.js&utm_term=no-profiles\n';
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-examples-dataextension.js&utm_term=no-profiles\n';
   };
 }
 

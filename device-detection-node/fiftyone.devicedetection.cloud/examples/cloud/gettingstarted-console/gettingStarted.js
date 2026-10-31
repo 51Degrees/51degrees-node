@@ -110,7 +110,7 @@ const analyse = async function (evidence, pipeline, output) {
 
   // Display the results of the detection, which are called
   // device properties. See the property dictionary at
-  // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=analyse
+  // https://51degrees.com/developers/property-dictionary?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=analyse
   // for details of all available properties.
   message += outputValue('Mobile Device', getValue('ismobile'));
   message += outputValue('Platform Name', getValue('platformname'));
@@ -132,13 +132,13 @@ const run = async function (options, output) {
       `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +
+      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +
       'A resource key with the free properties used by this example can ' +
-      'be created at https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. A free ' +
+      'be created at https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. A free ' +
       'key populates the free properties only, whilst a key created at ' +
-      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
+      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
       'properties this example displays. See ' +
-      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
       'more properties. Once complete, populate the config file or ' +
       'environment variable mentioned at the start of this message ' +
       'with the key.'
