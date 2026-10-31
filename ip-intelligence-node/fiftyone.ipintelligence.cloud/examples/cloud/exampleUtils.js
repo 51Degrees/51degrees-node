@@ -1,0 +1,84 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+const fs = require('fs');
+
+const path = require('path');
+
+// The default environment variable used to get the resource key
+// to use when running examples.
+const RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
+
+// Content types for the small set of static assets served by the web
+// examples. The shared pattern-library CSS and JS live under each
+// example's 'public' directory.
+const STATIC_CONTENT_TYPES = {
+  '.css': 'text/css',
+  '.js': 'text/javascript'
+};
+
+// Serve a file from the example's 'public' directory when the request
+// path matches one of the static assets. The web examples use a plain
+// Node http server rather than a framework, so this stands in for the
+// 'static file' middleware found in the equivalent .NET examples. Returns
+// true when a response was sent, false when the request should fall
+// through to the example handler.
+const serveStaticAsset = (req, res, publicDir) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return false;
+  }
+
+  const requestPath = (req.url || '').split('?')[0];
+  const ext = path.extname(requestPath).toLowerCase();
+  const contentType = STATIC_CONTENT_TYPES[ext];
+  if (!contentType) {
+    return false;
+  }
+
+  // Resolve the path within 'public' and guard against directory
+  // traversal by rejecting anything that escapes the public directory.
+  const normalised = path
+    .normalize(decodeURIComponent(requestPath))
+    .replace(/^(\.\.[/\\])+/, '');
+  const filePath = path.join(publicDir, normalised);
+  if (!filePath.startsWith(path.resolve(publicDir))) {
+    return false;
+  }
+
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    return false;
+  }
+
+  res.statusCode = 200;
+  res.setHeader('Content-Type', contentType);
+  if (req.method === 'HEAD') {
+    res.end();
+  } else {
+    res.end(fs.readFileSync(filePath));
+  }
+  return true;
+};
+
+module.exports = {
+  RESOURCE_KEY_ENV_VAR,
+  serveStaticAsset
+};

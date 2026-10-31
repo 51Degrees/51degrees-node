@@ -1,0 +1,150 @@
+doctype html
+html
+  head
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title Mixed Web Integration Example
+    link(rel='stylesheet', href='/css/examples-main.min.css')
+    link(rel='stylesheet', href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css')
+
+  body
+    .c-eg-page
+      h2.c-eg-page__title Combined device detection and IP intelligence example
+      p.c-eg-page__lead
+        | This example demonstrates the use of the Pipeline API to perform both
+        | device detection and IP intelligence using the 51Degrees cloud
+        | service within a simple Node web server. The User-Agent and IP
+        | address of the requesting client are used as evidence, so the
+        | results below describe the device, network, and location that the
+        | request came from.
+      p.c-eg-page__lead
+        | Note that when running locally, the client IP address will be a
+        | loopback address, which will not produce any results. Supply an IP
+        | address with the 'client-ip' query parameter to look up a specific
+        | address. For example, '?client-ip=8.8.8.8'.
+
+      noscript
+        .c-eg-alert
+          | WARNING: JavaScript is disabled in your browser. This means that
+          | client-side evidence collection will not work and some device
+          | properties may not be accurately detected.
+
+      #content
+        form.c-eg-form(method='get')
+          .c-eg-form__row
+            label.b-label(for='client-ip') IP Address Lookup:
+            input.b-input(type='text', id='client-ip', name='client-ip', value=inputIpAddress, placeholder='e.g., 8.8.8.8')
+            button.b-btn(type='submit') Look Up
+
+        .c-eg-columns
+          div
+            h3.c-eg-page__heading Device detection results
+            table.c-eg-table
+              thead.c-eg-table__head
+                tr.c-eg-table__row
+                  th.c-eg-table__cell Property
+                  th.c-eg-table__cell Value
+              tbody
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Mobile Device:
+                  td.c-eg-table__cell #{isMobile}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Platform Name:
+                  td.c-eg-table__cell #{platformName}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Platform Version:
+                  td.c-eg-table__cell #{platformVersion}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Browser Name:
+                  td.c-eg-table__cell #{browserName}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Browser Version:
+                  td.c-eg-table__cell #{browserVersion}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Device Type:
+                  td.c-eg-table__cell #{deviceType}
+
+          div
+            h3.c-eg-page__heading IP intelligence results
+            table.c-eg-table
+              thead.c-eg-table__head
+                tr.c-eg-table__row
+                  th.c-eg-table__cell Property
+                  th.c-eg-table__cell Value
+              tbody
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Registered Name:
+                  td.c-eg-table__cell #{registeredName}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Registered Owner:
+                  td.c-eg-table__cell #{registeredOwner}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Registered Country:
+                  td.c-eg-table__cell #{registeredCountry}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key IP Range Start:
+                  td.c-eg-table__cell #{ipRangeStart}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key IP Range End:
+                  td.c-eg-table__cell #{ipRangeEnd}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Country:
+                  td.c-eg-table__cell #{country}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Country Code:
+                  td.c-eg-table__cell #{countryCode}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Town:
+                  td.c-eg-table__cell #{town}
+                tr.c-eg-table__row.c-eg-table__row--alt
+                  td.c-eg-table__cell.c-eg-table__cell--key Latitude:
+                  td.c-eg-table__cell #{latitude}
+                tr.c-eg-table__row
+                  td.c-eg-table__cell.c-eg-table__cell--key Longitude:
+                  td.c-eg-table__cell #{longitude}
+
+        details.c-eg-details
+          summary Evidence used
+          p.c-eg-legend
+            | Evidence was
+            span.c-eg-legend__swatch.c-eg-legend__swatch--used used
+            | /
+            span.c-eg-legend__swatch.c-eg-legend__swatch--present present
+            | for detection
+          table.c-eg-table
+            thead.c-eg-table__head
+              tr.c-eg-table__row
+                th.c-eg-table__cell Key
+                th.c-eg-table__cell Value
+            tbody
+              each value, key in allEvidence
+                if evidenceUsed[key] !== undefined
+                  tr.c-eg-table__row.c-eg-table__row--used
+                    td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                    td.c-eg-table__cell #{value}
+                else
+                  tr.c-eg-table__row.c-eg-table__row--present
+                    td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                    td.c-eg-table__cell #{value}
+
+        #map-section.c-eg-map(style='display: none;')
+          h3.c-eg-map__title Location Map
+          #map.c-eg-map__canvas
+
+      .c-eg-message
+        p.c-eg-message__text Want to try on-premise? #[a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-index.pug&utm_term=try-on-premise') Contact us] to discuss requirements.
+        a.b-btn.c-eg-message__cta(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-index.pug&utm_term=try-on-premise') Contact us
+
+    script(src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
+    script(src='https://unpkg.com/wellknown@0.5.0/wellknown.js')
+    script(src='/js/examples.min.js')
+    script.
+      window.onload = function () {
+        // Refine the device results client side when the 51Degrees client
+        // JavaScript is present. The helper is a safe no-op otherwise.
+        fodExamples.bindDeviceCallback({ targetId: 'content' });
+        fodExamples.initLocationMap({
+          areasWkt: '#{areas}',
+          latitude: '#{latitude}',
+          longitude: '#{longitude}'
+        });
+      };
