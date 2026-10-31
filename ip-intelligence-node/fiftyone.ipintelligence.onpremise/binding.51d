@@ -141,8 +141,8 @@
         },
         {
             'target_name': '<(module_name)',
-            # hash.i and ipi.i include from the root of 51degrees-cxx.
-            'include_dirs': ['../../cxx'],
+            # hash.i and ipi.i include through cxx/.
+            'include_dirs': ['../..'],
             'sources': [
                 # Node Wrapper
                 "ipi_node_wrap.cxx",

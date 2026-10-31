@@ -1576,7 +1576,7 @@ template <typename T> T SwigValueInit() {
 #include <assert.h>
 
 
-#include "src/ipi/EngineIpi.hpp"
+#include "cxx/src/ipi/EngineIpi.hpp"
 
 using namespace FiftyoneDegrees::Common;
 using namespace FiftyoneDegrees::IpIntelligence;

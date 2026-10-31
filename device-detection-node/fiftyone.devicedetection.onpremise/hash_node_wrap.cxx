@@ -1562,9 +1562,9 @@ template <typename T> T SwigValueInit() {
 #include <assert.h>
 
 
-#include "src/dd/hash/EngineHash.hpp"
-#include "src/dd/hash/ResultsHashSerializer.hpp"
-#include "src/dd/Transform.hpp"
+#include "cxx/src/dd/hash/EngineHash.hpp"
+#include "cxx/src/dd/hash/ResultsHashSerializer.hpp"
+#include "cxx/src/dd/Transform.hpp"
 
 using namespace FiftyoneDegrees::Common;
 using namespace FiftyoneDegrees::DeviceDetection;
