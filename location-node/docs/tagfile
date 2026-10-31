@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<tagfile>
+  <compound kind="class">
+    <name>GeoLocationCloud</name>
+    <filename>class_geo_location_cloud.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>GeoLocationPipelineBuilder</name>
+    <filename>class_geo_location_pipeline_builder.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>class_geo_location_pipeline_builder.html</anchorfile>
+      <anchor>aafbc5dc21e2e18a64e0e768b4a75fe45</anchor>
+      <arglist>({ shareUsage=true, resourceKey=null, locationProvider=&apos;fiftyonedegrees&apos;, baseURL=null })</arglist>
+    </member>
+  </compound>
+  <compound kind="page">
+    <name>md_D:_Workspace_V4_documentation_apis_location-node_readme</name>
+    <title>51Degrees Geo-Location Engines</title>
+    <filename>md__d_1__workspace__v4_documentation_apis_location-node_readme</filename>
+  </compound>
+</tagfile>

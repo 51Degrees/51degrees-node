@@ -1,0 +1,18 @@
+{
+    "PipelineOptions": {
+        "Elements": [
+        {
+            "elementName": "fiftyone.pipeline.cloudrequestengine/cloudRequestEngine",
+            "elementParameters": {
+                "resourceKey": "!!YOUR_RESOURCE_KEY!!"
+            }
+        },
+        {
+            "elementName": "../../geoLocationCloud",
+            "elementParameters": {
+                "locationProvider": "fiftyonedegrees"
+            }
+        }
+        ]
+    }
+}
