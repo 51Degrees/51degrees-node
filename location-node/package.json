@@ -26,10 +26,10 @@
     "url": "https://github.com/51Degrees/location-node"
   },
   "dependencies": {
-    "fiftyone.pipeline.cloudrequestengine": "4.4.x",
-    "fiftyone.pipeline.core": "4.4.x",
-    "fiftyone.pipeline.engines": "4.4.x",
-    "fiftyone.pipeline.engines.fiftyone": "4.4.x"
+    "fiftyone.pipeline.cloudrequestengine": "file:../pipeline-node/fiftyone.pipeline.cloudrequestengine",
+    "fiftyone.pipeline.core": "file:../pipeline-node/fiftyone.pipeline.core",
+    "fiftyone.pipeline.engines": "file:../pipeline-node/fiftyone.pipeline.engines",
+    "fiftyone.pipeline.engines.fiftyone": "file:../pipeline-node/fiftyone.pipeline.engines.fiftyone"
   },
   "devDependencies": {
     "@types/node": "^15.14.9",

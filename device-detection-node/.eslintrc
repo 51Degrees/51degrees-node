@@ -61,7 +61,6 @@
     },
     "ignorePatterns": [
         "**/node_modules/**",
-        "**/device-detection-cxx/**",
         "**/*.ts",
         "**/*.min.js"
     ]

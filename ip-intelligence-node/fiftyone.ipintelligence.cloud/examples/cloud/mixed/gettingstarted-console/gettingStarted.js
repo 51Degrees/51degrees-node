@@ -61,7 +61,7 @@ const require51 = (requestedPackage) => {
     return require(path.join(__dirname, '/../../../../node_modules/', requestedPackage));
   } catch (e) {
     try {
-      return require(path.join(__dirname, '/../../../../../', requestedPackage));
+      return require(requestedPackage);
     } catch (e2) {
       return require(requestedPackage);
     }

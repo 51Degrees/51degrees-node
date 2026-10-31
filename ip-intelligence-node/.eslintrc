@@ -61,7 +61,6 @@
     },
     "ignorePatterns": [
         "**/node_modules/**",
-        "**/ip-intelligence-cxx/**",
         "**/*.ts"
     ]
 }

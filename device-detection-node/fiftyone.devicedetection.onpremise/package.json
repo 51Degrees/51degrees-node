@@ -36,9 +36,9 @@
   "dependencies": {
     "argparse": "^2.0.1",
     "fiftyone.devicedetection.shared": "file:../fiftyone.devicedetection.shared",
-    "fiftyone.pipeline.core": "^4.4.7",
-    "fiftyone.pipeline.engines": "^4.4.7",
-    "fiftyone.pipeline.engines.fiftyone": "^4.4.7",
+    "fiftyone.pipeline.core": "file:../../pipeline-node/fiftyone.pipeline.core",
+    "fiftyone.pipeline.engines": "file:../../pipeline-node/fiftyone.pipeline.engines",
+    "fiftyone.pipeline.engines.fiftyone": "file:../../pipeline-node/fiftyone.pipeline.engines.fiftyone",
     "js-yaml": "^4.1.0",
     "n-readlines": "^1.0.1",
     "pug": "^3.0.2",

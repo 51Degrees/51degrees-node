@@ -1,0 +1,5 @@
+cxx/
+**/node_modules/
+**/types/
+coverage/
+**/*.min.js
