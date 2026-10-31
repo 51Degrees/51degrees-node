@@ -1,0 +1,181 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    title Web Integration Example
+    link(rel='stylesheet' href='/css/examples-main.min.css')
+  body
+    .c-eg-page
+      if (new Date().getTime() > dataFilePublishedTime + dataFileAgeWarning)
+        .c-eg-alert
+          | WARNING: This example is using a data file that is more than
+          | #{dataFileAgeWarning} days old. A more recent data file may be needed
+          | to correctly detect the latest devices, browsers, etc. The latest lite
+          | data file is available from the
+          | #[a(href='https://github.com/51Degrees/device-detection-data') device-detection-data]
+          | repository on GitHub. Find out about the Enterprise data file, which
+          | includes automatic daily updates, on our
+          | #[a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=client-hints') pricing page]
+          | .
+
+      h2.c-eg-page__title Web integration example
+      p.c-eg-page__lead
+        | This example demonstrates the use of the Pipeline API to perform device
+        | detection within a simple Node web server. It highlights automatic handling
+        | of the Accept-CH header, used to request User-Agent Client Hints from the
+        | browser, and client-side evidence collection to identify Apple device models
+        | and properties such as screen size.
+
+      noscript
+        .c-eg-alert
+          | WARNING: JavaScript is disabled in your browser. This means that the
+          | callback discussed further down this page will not fire and UACH
+          | headers will not be sent.
+
+      #content
+        h3.c-eg-page__heading Detection results
+        p.c-eg-page__lead
+          | The following values are determined by server-side device detection on the
+          | first request.
+        table.c-eg-table
+          thead.c-eg-table__head
+            tr.c-eg-table__row
+              th.c-eg-table__cell Key
+              th.c-eg-table__cell Value
+          tbody
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Hardware Vendor:
+              td.c-eg-table__cell #{hardwareVendor}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Hardware Name:
+              td.c-eg-table__cell #{hardwareName}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Device Type:
+              td.c-eg-table__cell #{deviceType}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Platform Vendor:
+              td.c-eg-table__cell #{platformVendor}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Platform Name:
+              td.c-eg-table__cell #{platformName}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Platform Version:
+              td.c-eg-table__cell #{platformVersion}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Browser Vendor:
+              td.c-eg-table__cell #{browserVendor}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Browser Name:
+              td.c-eg-table__cell #{browserName}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Browser Version:
+              td.c-eg-table__cell #{browserVersion}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Screen Width:
+              td.c-eg-table__cell #{screenWidth}
+            tr.c-eg-table__row.c-eg-table__row--alt
+              td.c-eg-table__cell.c-eg-table__cell--key Screen Height:
+              td.c-eg-table__cell #{screenHeight}
+            tr.c-eg-table__row
+              td.c-eg-table__cell.c-eg-table__cell--key Device Id:
+              td.c-eg-table__cell #{deviceId}
+
+        h3.c-eg-page__heading Evidence used
+        p.c-eg-legend
+          | Evidence was
+          |
+          span.c-eg-legend__swatch.c-eg-legend__swatch--used used
+          |
+          | /
+          |
+          span.c-eg-legend__swatch.c-eg-legend__swatch--present present
+          |
+          | for detection
+        table.c-eg-table
+          thead.c-eg-table__head
+            tr.c-eg-table__row
+              th.c-eg-table__cell Key
+              th.c-eg-table__cell Value
+          tbody
+            each value, key in allEvidence
+              if evidenceUsed[key] !== undefined
+                tr.c-eg-table__row.c-eg-table__row--used
+                  td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                  td.c-eg-table__cell #{value}
+              else
+                tr.c-eg-table__row.c-eg-table__row--present
+                  td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                  td.c-eg-table__cell #{value}
+
+        h3.c-eg-page__heading Response headers
+        table.c-eg-table
+          thead.c-eg-table__head
+            tr.c-eg-table__row
+              th.c-eg-table__cell Key
+              th.c-eg-table__cell Value
+          tbody
+            each value, key in responseHeaders
+              tr.c-eg-table__row.c-eg-table__row--present
+                td.c-eg-table__cell.c-eg-table__cell--key #{key}
+                td.c-eg-table__cell #{value}
+
+        if (Object.keys(responseHeaders).includes('Accept-CH'))
+          .c-eg-alert
+            | WARNING: There is no Accept-CH header in the response. This may indicate
+            | that your browser does not support User-Agent Client Hints. This is not
+            | necessarily a problem, but if you want to try detection using User-Agent
+            | Client Hints, make sure your browser
+            | #[a(href='https://developer.mozilla.org/en-US/docs/Web/API/User-Agent_Client_Hints_API#browser_compatibility') supports them]
+            | .
+
+        h3.c-eg-page__heading Client-side evidence and Apple models
+        p.c-eg-page__lead
+          | The information below is determined after a callback to the server with
+          | additional evidence gathered by JavaScript on the client. The callback also
+          | includes any additional client hints headers that have been requested. For
+          | Apple devices the server cannot tell the exact model, so the callback shows
+          | a smaller set of possible models than the first request.
+
+      if (dataSourceTier === 'Lite')
+        .c-eg-message
+          p.c-eg-message__text
+            | The paid data file adds daily automatic updates, non-human identification and IP intelligence.
+            |
+            a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=paid-data-file') Contact us
+            |
+            | to explore the options.
+          a.b-btn.c-eg-message__cta(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=paid-data-file') Contact us
+
+      .c-eg-section
+        h3.c-eg-page__heading Find out more
+        ul
+          li
+            | This API:
+            |
+            a(href='https://github.com/51Degrees/device-detection-node') https://github.com/51Degrees/device-detection-node
+          li
+            | The device detection engine:
+            |
+            a(href='https://github.com/51Degrees/device-detection-cxx') https://github.com/51Degrees/device-detection-cxx
+          li
+            | The Pipeline API:
+            |
+            a(href='https://github.com/51Degrees/pipeline-node') https://github.com/51Degrees/pipeline-node
+          li
+            a(href='https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=find-out-more-documentation') Device detection documentation
+          li
+            a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=find-out-more-pricing') Data files and pricing
+          li
+            a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-index.pug&utm_term=find-out-more-contact') Contact us
+
+    //- 51Degrees.core.js is built by the JavaScriptBuilder and served by this example.
+    //- That script sends client-side evidence back to the server and raises the
+    //- 'complete' event with the refined flow data. The shared examples.js helper
+    //- subscribes to it and appends a results table into #content.
+    script(src=coreJsPath)
+    script(src='/js/examples.min.js')
+    script.
+      window.onload = function () {
+        fodExamples.bindDeviceCallback({ targetId: 'content' });
+      };

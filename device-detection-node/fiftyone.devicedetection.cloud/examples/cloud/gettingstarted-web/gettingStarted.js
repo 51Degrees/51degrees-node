@@ -1,0 +1,298 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+/**
+ * @example cloud/gettingstarted-web/gettingStarted.js
+ * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web/gettingStarted.js).
+ *
+ * Required npm Dependencies:
+ * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)
+ * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)
+ * - [fiftyone.pipeline.engines](https://www.npmjs.com/package/fiftyone.pipeline.engines)
+ * - [fiftyone.pipeline.engines.fiftyone](https://www.npmjs.com/package/fiftyone.pipeline.engines.fiftyone)
+ * - [fiftyone.devicedetection.cloud](https://www.npmjs.com/package/fiftyone.devicedetection.cloud)
+ *
+ * ## Overview
+ *
+ * The `flowData.evidence.addFromRequest(request)` is used to extract required
+ * evidence from a Http request. The `Helpers.setResponseHeaders(response, flowData)`
+ * from fiftyone.pipeline.core package is used to add extra headers to a Http
+ * response to request further evidence from the client.
+ * ```
+ * flowData.evidence.addFromRequest(request);
+ *
+ * core.Helpers.setResponseHeaders(response, flowData);
+ * ```
+ *
+ * The results of detection can be accessed by querying the `device` property of
+ * a FlowData object. This can then be used to interrogate the data.
+ * ```
+ * var flowData = pipeline.createFlowData();
+ * var deviceData = pipeline.device;
+ * var hardwareVendor = deviceData.hardwarevendor;
+ * ```
+ *
+ * Results can also be accessed in client-side code by using the `fod` object. See the
+ * [JavaScriptBuilderElement](/documentation/4.5/apis/pipeline-node/class_java_script_builder_element.html)
+ * for details on available settings such as changing the `fod` name.
+ * ```
+ * window.onload = function () {
+ *     fod.complete(function(data) {
+ *         var hardwareName = data.device.hardwarename;
+ *         alert(hardwareName.join(", "));
+ *     }
+ * }
+ * ```
+ */
+const path = require('path');
+const require51 = (requestedPackage) => {
+  try {
+    return require(path.join(__dirname, '/../../../node_modules/', requestedPackage));
+  } catch (e) {
+    return require(path.join(__dirname, '/../../../../', requestedPackage));
+  }
+};
+
+const fs = require('fs');
+const http = require('http');
+const pug = require('pug');
+
+const compiledFunction = pug.compileFile(path.join(__dirname, '/index.pug'));
+
+// Directory holding the shared pattern-library web-example assets
+// (examples-main.min.css and examples.min.js). These are served as static
+// files so the page can reference them with /css and /js URLs, in the same way
+// express.static or an ASP.NET wwwroot folder would expose them.
+const publicDir = path.join(__dirname, '/public');
+
+// Path that the 51Degrees client-side script is served from. The same name is
+// used by the .NET, Java and Rust web integrations.
+const coreJsPath = '/51Degrees.core.js';
+
+// Map of file extensions to the content types used when serving static assets.
+const staticContentTypes = {
+  '.css': 'text/css',
+  '.js': 'text/javascript'
+};
+
+// Serve a file from the public directory. Returns true if the request was a
+// static asset request (whether or not the file was found) so the caller can
+// stop processing it as a detection request.
+const tryServeStatic = (req, res) => {
+  const urlPath = req.url.split('?')[0];
+  if (!urlPath.startsWith('/css/') && !urlPath.startsWith('/js/')) {
+    return false;
+  }
+
+  // Resolve the requested path within the public directory and make sure it
+  // cannot escape it.
+  const filePath = path.join(publicDir, urlPath);
+  if (!filePath.startsWith(publicDir)) {
+    res.statusCode = 403;
+    res.end();
+    return true;
+  }
+
+  fs.readFile(filePath, function (err, content) {
+    if (err) {
+      res.statusCode = 404;
+      res.end();
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type',
+      staticContentTypes[path.extname(filePath)] || 'application/octet-stream');
+    res.end(content);
+  });
+  return true;
+};
+
+const core = require51('fiftyone.pipeline.core');
+
+const OptionsExtension =
+  require51('fiftyone.devicedetection.shared').optionsExtension;
+
+const DataExtension =
+  require51('fiftyone.devicedetection.shared').dataExtension;
+
+const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
+
+// Pipeline variable to be used
+let pipeline;
+
+const setPipeline = (options) => {
+  const resourceKey = OptionsExtension.getResourceKey(options);
+  // If we don't have a resource key then log an error
+  if (!resourceKey) {
+    throw 'No resource key specified in the configuration file ' +
+    '\'51d.json\' or the environment variable ' +
+    `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+    'service is accessed using a \'ResourceKey\'. For more information ' +
+    'see ' +
+    'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+    'A resource key with the free properties used by this example can ' +
+    'be created at https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
+    'key populates the free properties only, whilst a key created at ' +
+    'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
+    'properties this example displays. See ' +
+    'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+    'more properties. Once complete, populate the config file or ' +
+    'environment variable mentioned at the start of this message ' +
+    'with the key.';
+  }
+
+  // 'suppressProcessExceptions' is set to true in 51d.json
+  // (PipelineOptions.BuildParameters) so that if the underlying cloud service fails
+  // during request processing the device-detection pipeline degrades gracefully
+  // instead of returning a 500. Use false while developing to surface mistakes loudly.
+  pipeline = new core.PipelineBuilder({
+    // Enable custom javascript builder
+    addJavaScriptBuilder: true,
+    // Settings for javascript builder
+    javascriptBuilderSettings: {
+      // Custom endpoint to report client-side evidence
+      endPoint: '/json'
+    }
+  }).buildFromConfiguration(options);
+
+  // Logging of errors and other messages.
+  // Valid logs types are info, debug, warn, error
+  pipeline.on('error', console.error);
+};
+
+const server = http.createServer((req, res) => {
+  // Serve the shared CSS/JS assets from the public directory. If this was a
+  // static asset request then there is nothing more to do.
+  if (tryServeStatic(req, res)) {
+    return;
+  }
+
+  // FlowData is a data structure that is used to convey
+  // information required for detection and the results of the
+  // detection through the pipeline.
+  // Information required for detection is called "evidence"
+  // and usually consists of a number of HTTP Header field
+  // values, in this case represented by a
+  // Object of header name/value entries.
+  const flowData = pipeline.createFlowData();
+
+  // Extract required evidence from the Http request.
+  flowData.evidence.addFromRequest(req);
+
+  if (req.url.startsWith('/json')) {
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+
+      res.end(JSON.stringify(flowData.jsonbundler.json));
+    });
+  } else if (req.url.split('?')[0] === coreJsPath) {
+    // Serve the client-side script built by the JavaScriptBuilder as a separate
+    // resource, so that the page can reference it with a <script src> tag. The
+    // web integrations of the other Pipeline APIs expose it at this path, and
+    // serving it per request rather than caching it is what allows it to carry
+    // the results of this request's detection. Query parameters, such as
+    // 'fod-js-enable-cookies', are evidence like any other and are already in
+    // the flow data via addFromRequest.
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/x-javascript');
+
+      res.end(flowData.javascriptbuilder.javascript);
+    });
+  } else {
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/html');
+
+      // Some browsers require that extra HTTP headers are explicitly
+      // requested. So set whatever headers are required by the browser in
+      // order to return the evidence needed by the pipeline.
+      // More info on this can be found at
+      // https://51degrees.com/blog/user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=device-detection-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=server
+      core.Helpers.setResponseHeaders(res, flowData);
+
+      // Obtain all used evidence
+      const allEvidence = flowData.evidence.getAll();
+      const evidences =
+        pipeline.getElement('cloud').evidenceKeyFilter.filterEvidence(
+          allEvidence);
+
+      const device = flowData.device;
+
+      // Compile a response
+      res.end(compiledFunction(
+        {
+          responseHeaders: res.getHeaders(),
+          evidenceUsed: evidences,
+          allEvidence,
+          coreJsPath,
+          hardwareVendor: DataExtension.getValueHelper(device, 'hardwarevendor'),
+          hardwareName: DataExtension.getValueHelper(device, 'hardwarename'),
+          deviceType: DataExtension.getValueHelper(device, 'devicetype'),
+          platformVendor: DataExtension.getValueHelper(device, 'platformvendor'),
+          platformName: DataExtension.getValueHelper(device, 'platformname'),
+          platformVersion: DataExtension.getValueHelper(device, 'platformversion'),
+          browserVendor: DataExtension.getValueHelper(device, 'browservendor'),
+          browserName: DataExtension.getValueHelper(device, 'browsername'),
+          browserVersion: DataExtension.getValueHelper(device, 'browserversion'),
+          screenWidth: DataExtension.getValueHelper(device, 'screenpixelswidth'),
+          screenHeight: DataExtension.getValueHelper(device, 'screenpixelsheight'),
+          // The device id combines the profile ids of the hardware, platform,
+          // browser and crawler components that were matched.
+          deviceId: DataExtension.getValueHelper(device, 'deviceid')
+        })
+      );
+    });
+  }
+});
+
+// Don't run the server if under TEST
+if (process.env.JEST_WORKER_ID === undefined) {
+  const args = process.argv.slice(2);
+  // Use the supplied resource key or try to obtain one
+  // from the environment variables.
+  const resourceKey =
+    args.length > 0 ? args[0] : ExampleUtils.getResourceKeyFromEnv();
+
+  // Load the configuration options from
+  const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
+
+  // If resource key is not set in the config file, set one from console input
+  // or from environment variable.
+  const resourceKeyFromConfig = OptionsExtension.getResourceKey(options);
+  if (!resourceKeyFromConfig || resourceKeyFromConfig.startsWith('!!')) {
+    OptionsExtension.setResourceKey(options, resourceKey);
+  }
+
+  setPipeline(options);
+  const port = process.env.PORT || 3001;
+  const hostname = 'localhost';
+  server.listen(port, hostname);
+  console.log(`Server listening on: http://${hostname}:${port}`);
+}
+
+// Export server object and set pipeline.
+module.exports = {
+  server,
+  setPipeline
+};
