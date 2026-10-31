@@ -61,9 +61,9 @@ if (SUPPORTED_NODE_MAJOR_VERSIONS.includes(nodeMajor) === false) {
 }
 
 if (fs.existsSync(path.join(
-  packageDir, 'ip-intelligence-cxx', 'src')) === false) {
+  packageDir, '..', '..', 'cxx', 'src')) === false) {
   console.error(
-    'ERROR: The ip-intelligence-cxx submodule is missing. Run ' +
+    'ERROR: The cxx submodule is missing. Run ' +
     '\'git submodule update --init --recursive\' and run again.');
   process.exit(1);
 }

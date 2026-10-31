@@ -10,7 +10,7 @@ if ($env:GITHUB_JOB -eq "PreBuild") {
     exit 0
 }
 
-$ipIntelligenceData = "$PSScriptRoot/../fiftyone.ipintelligence.onpremise/ip-intelligence-cxx/ip-intelligence-data"
+$ipIntelligenceData = "$PSScriptRoot/../cxx/ip-intelligence-data"
 
 $assets = @()
 if ($IpIntelligence) {

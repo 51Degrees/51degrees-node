@@ -59,17 +59,17 @@
             'target_name': '<(core_lib_name)',
             'sources': [
                 # Common C
-                "<!@(node -p \"d='device-detection-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/common/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # Common C++
-                "<!@(node -p \"d='device-detection-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/common/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
                 # Device Detection C
-                "<!@(node -p \"d='device-detection-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/dd/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # Device Detection C++
-                "<!@(node -p \"d='device-detection-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/dd/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
                 # Hash C
-                "<!@(node -p \"d='device-detection-cxx/src/hash/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/dd/hash/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # Hash C++
-                "<!@(node -p \"d='device-detection-cxx/src/hash/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/dd/hash/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
             ],
             'type': 'static_library',
             'conditions': [
@@ -141,6 +141,8 @@
         },
         {
             'target_name': '<(module_name)',
+            # hash.i and ipi.i include from the root of 51degrees-cxx.
+            'include_dirs': ['../../cxx'],
             'sources': [
                 # Node Wrapper
                 "hash_node_wrap.cxx",

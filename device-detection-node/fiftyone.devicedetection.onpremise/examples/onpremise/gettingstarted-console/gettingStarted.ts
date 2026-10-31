@@ -47,7 +47,7 @@ const ExampleUtils: {
 
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// fiftyone.devicedetection.onpremise/device-detection-cxx/device-detection-data,
+// cxx/device-detection-data,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has

@@ -38,8 +38,8 @@ const zlib = require('zlib');
 let server;
 
 const HTTP_PORT = 8080;
-const DataFile = path.resolve((process.env.directory || __dirname) + '/../device-detection-cxx/device-detection-data/51Degrees-LiteV4.1.hash');
-const DataFileEnterprise = path.resolve((process.env.directory || __dirname) + '/../device-detection-cxx/device-detection-data/Enterprise-HashV41.hash');
+const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash');
+const DataFileEnterprise = path.resolve((process.env.directory || __dirname) + '/../../../cxx/device-detection-data/Enterprise-HashV41.hash');
 
 describe('deviceDetectionOnPremise', () => {
   // Check that an exception is thrown if license key is not
@@ -233,7 +233,7 @@ describe('deviceDetectionOnPremise', () => {
   // Check if dataUpdateUseUrlFormatter property does not append query params to update url - default value = true
 
   // test('Properties for on-premise engine - Data File Update', done => {
-  //   const DataFileOutput = path.resolve(process.env.directory || __dirname + '/../device-detection-cxx/device-detection-data/51Degrees-LiteV4.1.gz');
+  //   const DataFileOutput = path.resolve(process.env.directory || __dirname + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.gz');
   //
   //   let requestReceived = false;
   //   let requestUrl = '';

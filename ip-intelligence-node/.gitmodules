@@ -1,3 +1,0 @@
-[submodule "fiftyone.ipintelligence.onpremise/ip-intelligence-cxx"]
-	path = fiftyone.ipintelligence.onpremise/ip-intelligence-cxx
-	url = ../ip-intelligence-cxx

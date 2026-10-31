@@ -40,9 +40,8 @@ const CountriesTranslationEngineBuilder =
   require('../countriesTranslationEngineBuilder');
 const createComparer = require('..').createComparer;
 
-// The translation YAML files, read from the on-premise submodule path.
-const translationsDir = path.join(__dirname, '..', '..',
-  'fiftyone.ipintelligence.onpremise', 'ip-intelligence-cxx',
+// The translation YAML files, read from the cxx submodule.
+const translationsDir = path.join(__dirname, '..', '..', '..', 'cxx',
   'ip-intelligence-data', 'Translations');
 const codeToEnglish = yaml.load(fs.readFileSync(
   path.join(translationsDir, 'countrycodes.en_GB.yml'), 'utf8'));

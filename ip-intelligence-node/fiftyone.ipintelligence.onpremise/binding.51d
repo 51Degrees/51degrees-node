@@ -59,15 +59,15 @@
             'target_name': '<(core_lib_name)',
             'sources': [
                 # Common C
-                "<!@(node -p \"d='ip-intelligence-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/common/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # Common C++
-                "<!@(node -p \"d='ip-intelligence-cxx/src/common-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/common/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
                 # IP Graph C
-                "<!@(node -p \"d='ip-intelligence-cxx/src/ip-graph-cxx/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/ipi/graph/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # IP Intelligence C
-                "<!@(node -p \"d='ip-intelligence-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/ipi/';require('fs').readdirSync(d).filter(f=>f.endsWith('.c')).map(f=>d+f).join(' ')\")",
                 # IP Intelligence C++
-                "<!@(node -p \"d='ip-intelligence-cxx/src/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
+                "<!@(node -p \"d='../../cxx/src/ipi/';require('fs').readdirSync(d).filter(f=>f.endsWith('.cpp')).map(f=>d+f).join(' ')\")",
             ],
             'type': 'static_library',
             # The IP intelligence data format uses 64 bit file offsets.
@@ -141,6 +141,8 @@
         },
         {
             'target_name': '<(module_name)',
+            # hash.i and ipi.i include from the root of 51degrees-cxx.
+            'include_dirs': ['../../cxx'],
             'sources': [
                 # Node Wrapper
                 "ipi_node_wrap.cxx",

@@ -25,14 +25,14 @@ const path = require('path');
 
 /**
  * Resolve the default directory holding the translation YAML files. These
- * files arrive with the on-premise SDK through the ip-intelligence-cxx /
- * ip-intelligence-data submodule, which sits alongside this package.
+ * files arrive with the on-premise SDK through the ip-intelligence-data
+ * submodule of the cxx submodule at the root of this repository.
  *
  * @returns {string} the default Translations directory path
  */
 const defaultTranslationsDir = () =>
-  path.join(__dirname, '..', 'fiftyone.ipintelligence.onpremise',
-    'ip-intelligence-cxx', 'ip-intelligence-data', 'Translations');
+  path.join(__dirname, '..', '..', 'cxx', 'ip-intelligence-data',
+    'Translations');
 
 /**
  * Read every YAML file in a directory whose name starts with the given
@@ -49,7 +49,7 @@ const readYamlFiles = (directory, prefix) => {
     files = fs.readdirSync(directory);
   } catch (e) {
     throw 'The translations directory \'' + directory + '\' could not be ' +
-      'read. Ensure the ip-intelligence-cxx/ip-intelligence-data submodule ' +
+      'read. Ensure the cxx/ip-intelligence-data submodule ' +
       'has been initialised, or supply a translationsPath option. ' + e;
   }
   files.forEach((file) => {

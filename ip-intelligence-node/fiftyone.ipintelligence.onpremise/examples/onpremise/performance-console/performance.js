@@ -76,7 +76,7 @@ parser.add_argument('-e', '--evidence', { help: 'Evidence file name' });
 parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// fiftyone.ipintelligence.onpremise/ip-intelligence-cxx/ip-intelligence-data,
+// cxx/ip-intelligence-data,
 // directory or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has

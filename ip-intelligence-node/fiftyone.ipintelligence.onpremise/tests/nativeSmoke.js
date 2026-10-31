@@ -8,7 +8,7 @@ const moduleName = path.join(__dirname, '..', 'build',
   `FiftyOneIpIntelligenceIpiV41-${os.platform()}-${process.arch}-${nodeVersion}.node`);
 const swig = require(moduleName);
 
-const dataFile = path.join(__dirname, '..', 'ip-intelligence-cxx',
+const dataFile = path.join(__dirname, '..', '..', '..', 'cxx',
   'ip-intelligence-data', '51Degrees-LiteV41.ipi');
 
 const propertiesList = new swig.VectorStringSwig();

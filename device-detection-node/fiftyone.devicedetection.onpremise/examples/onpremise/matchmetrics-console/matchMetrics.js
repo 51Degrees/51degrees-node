@@ -59,7 +59,7 @@ const { ExampleUtils, DATA_FILE_PATH_ENV_VAR } =
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// fiftyone.devicedetection.onpremise/device-detection-cxx/device-detection-data,
+// cxx/device-detection-data,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has

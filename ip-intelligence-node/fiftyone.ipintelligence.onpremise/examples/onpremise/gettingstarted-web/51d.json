@@ -5,7 +5,7 @@
         "elementName": "../../../ipIntelligenceOnPremise",
         "elementParameters": {
           "performanceProfile": "Balanced",
-          "dataFilePath": "../../../ip-intelligence-cxx/ip-intelligence-data/51Degrees-LiteV41.ipi",
+          "dataFilePath": "../../../../../cxx/ip-intelligence-data/51Degrees-LiteV41.ipi",
           "autoUpdate": false,
           "licenceKeys": "!!YOUR_LICENCE_KEY!!"
         }
