@@ -84,6 +84,10 @@ const run = async function (resourceKey, output) {
     resourceKey
   }).build();
 
+  // Without a listener, a dropped connection crashes the process instead of
+  // rejecting ready().
+  pipeline.on('error', console.error);
+
   const device = pipeline.getElement('device');
   // The promise is returned so that run() does not resolve before the
   // properties have been written. Without the return, a failure here

@@ -37,6 +37,9 @@ const tc = require51('fiftyone.ipintelligence.shared').testConstants;
 const resourceKey = process.env[tc.envVars.superResourceKeyEnvVar] ||
   process.env.RESOURCE_KEY;
 
+// The cloud service can drop a connection, which is not what these tests check.
+jest.retryTimes(2);
+
 describe('Examples', () => {
   const testFunc = resourceKey ? test : test.skip;
   testFunc('cloud metadata', async () => {

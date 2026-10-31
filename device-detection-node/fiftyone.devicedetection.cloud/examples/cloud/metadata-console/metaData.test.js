@@ -36,6 +36,9 @@ const tc = shared.testConstants;
 const keyUtils = shared.keyUtils;
 const ExampleOutput = shared.exampleOutput.ExampleOutput;
 
+// The cloud service can drop a connection, which is not what these tests check.
+jest.retryTimes(2);
+
 describe('Examples', () => {
   test('cloud metadata', async () => {
     const resourceKey = keyUtils.getResourceKey(

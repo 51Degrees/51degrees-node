@@ -80,8 +80,15 @@ const run = async function (resourceKey, output) {
     resourceKey
   }).build();
 
+  // Without a listener, a dropped connection crashes the process instead of
+  // rejecting ready().
+  pipeline.on('error', console.error);
+
   const ip = pipeline.getElement('ip');
-  ip.ready().then(function () {
+  // The promise is returned so that run() does not resolve before the
+  // properties have been written. Without the return, a failure here
+  // becomes an unhandled rejection that the caller never sees.
+  return ip.ready().then(function () {
     outputProperties(ip, output);
     // We use the CloudRequestEngine to get evidence key details, rather than the
     // IpIntelligenceCloud.
