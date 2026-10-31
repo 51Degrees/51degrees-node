@@ -1,7 +1,7 @@
 name: Cloud 51Did Tests
 
 # Runs the live cloud 51Did integration test
-# (fiftyone.pipeline.did/tests/didClient.integration.test.js) once for every
+# (pipeline-node/fiftyone.pipeline.did/tests/didClient.integration.test.js) once for every
 # _51DEGREES_RESOURCE_KEY* key passed in below. Each run sets the single
 # _51DEGREES_RESOURCE_KEY the test reads.
 #
@@ -29,7 +29,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'fiftyone.pipeline.did/**'
+      - 'pipeline-node/fiftyone.pipeline.did/**'
       - '.github/workflows/cloud-51did.yml'
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: fiftyone.pipeline.did
+        working-directory: pipeline-node/fiftyone.pipeline.did
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

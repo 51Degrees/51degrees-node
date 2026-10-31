@@ -1,14 +1,13 @@
 param (
-    [Parameter(Mandatory)][string]$PackageName
+    [Parameter(Mandatory)][string]$PackageName,
+    [Parameter(Mandatory)][string]$ModuleName
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-# This is a local version of common-ci/node/build-extension.ps1 that
-# builds the IP intelligence native module rather than the device
-# detection one.
-
-$moduleName = "FiftyOneIpIntelligenceIpiV41"
+# This is a local version of common-ci/node/build-extension.ps1, which can
+# only build the device detection native module, and writes its artifacts
+# relative to a package directly under the repository.
 
 Write-Output "Building extension for $PackageName"
 
@@ -51,11 +50,8 @@ $nodeVersion = node --version
 $nodeMajorVersion = $nodeVersion.TrimStart('v').Split('.')[0]
 
 # Creating folder for binaries artifacts
-New-Item -ItemType Directory -Path "../../package-files" -Force | Out-Null
+New-Item -ItemType Directory -Path "$PSScriptRoot/../../package-files" -Force | Out-Null
 
 # Storing binary artifact (needs to be in both of these places for different tests, and packaging)
 Copy-Item "./build/Release/$moduleName.node" "./build/$moduleName-$os-$arch-$nodeMajorVersion.node"
-Move-Item "./build/Release/$moduleName.node" "../../package-files/$moduleName-$os-$arch-$nodeMajorVersion.node"
-
-# Installing package for some examples
-npm install n-readlines
+Move-Item "./build/Release/$moduleName.node" "$PSScriptRoot/../../package-files/$moduleName-$os-$arch-$nodeMajorVersion.node"

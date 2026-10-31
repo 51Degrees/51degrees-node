@@ -21,11 +21,13 @@ jobs:
       DeviceDetection: ${{ secrets.DEVICE_DETECTION_KEY }}
       DeviceDetectionUrl: ${{ secrets.DEVICE_DETECTION_URL }}
       CsvUrl: ${{ secrets.CSV_URL }}
-      TestResourceKey: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE}}
+      IpIntelligence: ${{ secrets.DEVICE_DETECTION_KEY }}
+      IpIntelligenceUrl: ${{ secrets.IPI_DATA_FILE_URL }}
+      TestResourceKey: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
       TestSuperResourceKey: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
       TestPlatformResourceKey: ${{ secrets.ACCEPTCH_PLATFORM_KEY }}
       TestHardwareResourceKey: ${{ secrets.ACCEPTCH_HARDWARE_KEY }}
       TestBrowserResourceKey: ${{ secrets.ACCEPTCH_BROWSER_KEY }}
       TestNoSetHeaderResourceKey: ${{ secrets.ACCEPTCH_NONE_KEY }}
       TestLicenseKey: ${{ secrets.DEVICE_DETECTION_KEY }}
-      NPMAuthToken: ${{ secrets.NPM_AUTH_TOKEN}}
+      NPMAuthToken: ${{ secrets.NPM_AUTH_TOKEN }}
