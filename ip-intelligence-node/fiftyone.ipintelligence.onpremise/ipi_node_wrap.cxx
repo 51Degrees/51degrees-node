@@ -1576,7 +1576,7 @@ template <typename T> T SwigValueInit() {
 #include <assert.h>
 
 
-#include "ip-intelligence-cxx/src/EngineIpi.hpp"
+#include "src/ipi/EngineIpi.hpp"
 
 using namespace FiftyoneDegrees::Common;
 using namespace FiftyoneDegrees::IpIntelligence;
@@ -10975,6 +10975,64 @@ fail:
 }
 
 
+static SwigV8ReturnValue _wrap_EngineBaseSwig_getRequiredProperties(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  EngineBase *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  std::vector< std::string > result;
+  
+  if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getRequiredProperties.");
+  
+  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getRequiredProperties" "', argument " "1"" of type '" "EngineBase *""'"); 
+  }
+  arg1 = reinterpret_cast< EngineBase * >(argp1);{
+    try {
+      result = (arg1)->getRequiredProperties();;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj((new std::vector< std::string >(result)), SWIGTYPE_p_std__vectorT_std__string_t, SWIG_POINTER_OWN |  0 );
+  
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
 static SwigV8ReturnValue _wrap_EngineBaseSwig_getIsThreadSafe(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
@@ -19946,6 +20004,64 @@ fail:
 }
 
 
+static SwigV8ReturnValue _wrap_ResultsIpiSwig_getTargetIpAddress(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  ResultsIpi *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  Value< IpAddress > result;
+  
+  if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsIpiSwig_getTargetIpAddress.");
+  
+  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsIpi, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsIpiSwig_getTargetIpAddress" "', argument " "1"" of type '" "ResultsIpi *""'"); 
+  }
+  arg1 = reinterpret_cast< ResultsIpi * >(argp1);{
+    try {
+      result = (arg1)->getTargetIpAddress();;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj((new Value< IpAddress >(result)), SWIGTYPE_p_ValueT_IpAddress_t, SWIG_POINTER_OWN |  0 );
+  
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
 static SwigV8ReturnValue _wrap_new_veto_ResultsIpiSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
@@ -23317,6 +23433,266 @@ fail:
 }
 
 
+static SwigV8ReturnValue _wrap_EngineIpiSwig_process__SWIG_3(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+{
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  EngineIpi *arg1 = 0 ;
+  EvidenceIpi *arg2 = 0 ;
+  int *arg3 = 0 ;
+  int arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  ResultsIpi *result = 0 ;
+  
+  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineIpi, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineIpiSwig_process" "', argument " "1"" of type '" "EngineIpi *""'"); 
+  }
+  arg1 = reinterpret_cast< EngineIpi * >(argp1);res2 = SWIG_ConvertPtr(args[0], &argp2,SWIGTYPE_p_EvidenceIpi, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "EngineIpiSwig_process" "', argument " "2"" of type '" "EvidenceIpi *""'"); 
+  }
+  arg2 = reinterpret_cast< EvidenceIpi * >(argp2);res3 = SWIG_ConvertPtr(args[1], &argp3,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "EngineIpiSwig_process" "', argument " "3"" of type '" "int const *""'"); 
+  }
+  arg3 = reinterpret_cast< int * >(argp3);ecode4 = SWIG_AsVal_int(args[2], &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "EngineIpiSwig_process" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);{
+    try {
+      result = (ResultsIpi *)(arg1)->process(arg2,(int const *)arg3,arg4);;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_ResultsIpi, SWIG_POINTER_OWN |  0 );
+  
+  
+  
+  
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
+static SwigV8ReturnValue _wrap_EngineIpiSwig_process__SWIG_4(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+{
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  EngineIpi *arg1 = 0 ;
+  char *arg2 = 0 ;
+  int *arg3 = 0 ;
+  int arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  ResultsIpi *result = 0 ;
+  
+  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineIpi, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineIpiSwig_process" "', argument " "1"" of type '" "EngineIpi *""'"); 
+  }
+  arg1 = reinterpret_cast< EngineIpi * >(argp1);res2 = SWIG_AsCharPtrAndSize(args[0], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "EngineIpiSwig_process" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);res3 = SWIG_ConvertPtr(args[1], &argp3,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "EngineIpiSwig_process" "', argument " "3"" of type '" "int const *""'"); 
+  }
+  arg3 = reinterpret_cast< int * >(argp3);ecode4 = SWIG_AsVal_int(args[2], &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "EngineIpiSwig_process" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);{
+    try {
+      result = (ResultsIpi *)(arg1)->process((char const *)arg2,(int const *)arg3,arg4);;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_ResultsIpi, SWIG_POINTER_OWN |  0 );
+  
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  
+  
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
+static SwigV8ReturnValue _wrap_EngineIpiSwig_process__SWIG_5(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+{
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  EngineIpi *arg1 = 0 ;
+  unsigned char *arg2 = (unsigned char *)0 ;
+  long arg3 ;
+  fiftyoneDegreesIpType arg4 ;
+  int *arg5 = 0 ;
+  int arg6 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  long val3 ;
+  int ecode3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  int val6 ;
+  int ecode6 = 0 ;
+  ResultsIpi *result = 0 ;
+  
+  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineIpi, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineIpiSwig_process" "', argument " "1"" of type '" "EngineIpi *""'"); 
+  }
+  arg1 = reinterpret_cast< EngineIpi * >(argp1);res2 = SWIG_ConvertPtr(args[0], &argp2,SWIGTYPE_p_unsigned_char, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "EngineIpiSwig_process" "', argument " "2"" of type '" "unsigned char []""'"); 
+  } 
+  arg2 = reinterpret_cast< unsigned char * >(argp2);ecode3 = SWIG_AsVal_long(args[1], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "EngineIpiSwig_process" "', argument " "3"" of type '" "long""'");
+  } 
+  arg3 = static_cast< long >(val3);ecode4 = SWIG_AsVal_int(args[2], &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "EngineIpiSwig_process" "', argument " "4"" of type '" "fiftyoneDegreesIpType""'");
+  } 
+  arg4 = static_cast< fiftyoneDegreesIpType >(val4);res5 = SWIG_ConvertPtr(args[3], &argp5,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "EngineIpiSwig_process" "', argument " "5"" of type '" "int const *""'"); 
+  }
+  arg5 = reinterpret_cast< int * >(argp5);ecode6 = SWIG_AsVal_int(args[4], &val6);
+  if (!SWIG_IsOK(ecode6)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "EngineIpiSwig_process" "', argument " "6"" of type '" "int""'");
+  } 
+  arg6 = static_cast< int >(val6);{
+    try {
+      result = (ResultsIpi *)(arg1)->process(arg2,arg3,arg4,(int const *)arg5,arg6);;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_ResultsIpi, SWIG_POINTER_OWN |  0 );
+  
+  
+  
+  
+  
+  
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
 static SwigV8ReturnValue _wrap_EngineIpiSwig__wrap_EngineIpiSwig_process(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
@@ -23345,6 +23721,33 @@ static SwigV8ReturnValue _wrap_EngineIpiSwig__wrap_EngineIpiSwig_process(const S
   if(args.Length() >= 3 && args.Length() <= 3) {
     errorHandler.err.Clear();
     _wrap_EngineIpiSwig_process__SWIG_2(args, errorHandler);
+    if(errorHandler.err.IsEmpty()) {
+      return;
+    }
+  }
+  
+  
+  if(args.Length() >= 3 && args.Length() <= 3) {
+    errorHandler.err.Clear();
+    _wrap_EngineIpiSwig_process__SWIG_3(args, errorHandler);
+    if(errorHandler.err.IsEmpty()) {
+      return;
+    }
+  }
+  
+  
+  if(args.Length() >= 3 && args.Length() <= 3) {
+    errorHandler.err.Clear();
+    _wrap_EngineIpiSwig_process__SWIG_4(args, errorHandler);
+    if(errorHandler.err.IsEmpty()) {
+      return;
+    }
+  }
+  
+  
+  if(args.Length() >= 5 && args.Length() <= 5) {
+    errorHandler.err.Clear();
+    _wrap_EngineIpiSwig_process__SWIG_5(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     }
@@ -24636,6 +25039,7 @@ SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getDataFileTempPath", _
 SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getProduct", _wrap_EngineBaseSwig_getProduct);
 SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getType", _wrap_EngineBaseSwig_getType);
 SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getKeys", _wrap_EngineBaseSwig_getKeys);
+SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getRequiredProperties", _wrap_EngineBaseSwig_getRequiredProperties);
 SWIGV8_AddMemberFunction(_exports_EngineBaseSwig_class, "getIsThreadSafe", _wrap_EngineBaseSwig_getIsThreadSafe);
 SWIGV8_AddMemberFunction(_exports_WeightedValueStringSwig_class, "getValue", _wrap_WeightedValueStringSwig_getValue);
 SWIGV8_AddMemberFunction(_exports_WeightedValueStringSwig_class, "setValue", _wrap_WeightedValueStringSwig_setValue);
@@ -24736,6 +25140,7 @@ SWIGV8_AddMemberFunction(_exports_ResultsIpiSwig_class, "getValuesAsWeightedBool
 SWIGV8_AddMemberFunction(_exports_ResultsIpiSwig_class, "getValuesAsWeightedIntegerList", _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedIntegerList);
 SWIGV8_AddMemberFunction(_exports_ResultsIpiSwig_class, "getValuesAsWeightedDoubleList", _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedDoubleList);
 SWIGV8_AddMemberFunction(_exports_ResultsIpiSwig_class, "getValueAsIpAddress", _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValueAsIpAddress);
+SWIGV8_AddMemberFunction(_exports_ResultsIpiSwig_class, "getTargetIpAddress", _wrap_ResultsIpiSwig_getTargetIpAddress);
 SWIGV8_AddMemberFunction(_exports_ConfigBaseSwig_class, "setUseUpperPrefixHeaders", _wrap_ConfigBaseSwig_setUseUpperPrefixHeaders);
 SWIGV8_AddMemberFunction(_exports_ConfigBaseSwig_class, "setUseTempFile", _wrap_ConfigBaseSwig_setUseTempFile);
 SWIGV8_AddMemberFunction(_exports_ConfigBaseSwig_class, "setReuseTempFile", _wrap_ConfigBaseSwig_setReuseTempFile);
