@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./fiftyone.pipeline.cloudrequestengine" },
+    { "path": "./fiftyone.pipeline.core" },
+    { "path": "./fiftyone.pipeline.did" },
+    { "path": "./fiftyone.pipeline.engines" },
+    { "path": "./fiftyone.pipeline.engines.fiftyone" }
+  ]
+}

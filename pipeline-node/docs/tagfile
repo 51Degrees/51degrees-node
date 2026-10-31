@@ -1,0 +1,553 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<tagfile>
+  <compound kind="class">
+    <name>aspectData</name>
+    <filename>classaspect_data.html</filename>
+    <base>elementData</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classaspect_data.html</anchorfile>
+      <anchor>a1520793a1c751f4e756abdf18308613a</anchor>
+      <arglist>({ flowElement, missingPropertyService=new missingPropertyServiceBase() })</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>get</name>
+      <anchorfile>classaspect_data.html</anchorfile>
+      <anchor>a3989035a84ed7ef927c68eecba4c2e12</anchor>
+      <arglist>(key)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>aspectDataDictionary</name>
+    <filename>classaspect_data_dictionary.html</filename>
+    <base>aspectData</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classaspect_data_dictionary.html</anchorfile>
+      <anchor>aa056d54d9f83212669c013dc3e3aa98c</anchor>
+      <arglist>({ flowElement, contents, missingPropertyService })</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>aspectPropertyValue</name>
+    <filename>classaspect_property_value.html</filename>
+    <member kind="function">
+      <type>get</type>
+      <name>value</name>
+      <anchorfile>classaspect_property_value.html</anchorfile>
+      <anchor>a133308271e3be832842707ce051bbe05</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type>set</type>
+      <name>value</name>
+      <anchorfile>classaspect_property_value.html</anchorfile>
+      <anchor>acf7598e81abef5bec2d1177bb60ba8e5</anchor>
+      <arglist>(value)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>astrology</name>
+    <filename>classastrology.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>async</name>
+    <filename>classasync.html</filename>
+    <base>flowElement</base>
+  </compound>
+  <compound kind="class">
+    <name>basicListEvidenceKeyFilter</name>
+    <filename>classbasic_list_evidence_key_filter.html</filename>
+    <base>evidenceKeyFilter</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classbasic_list_evidence_key_filter.html</anchorfile>
+      <anchor>a0507b524dd5e533134f758d15ef60d7e</anchor>
+      <arglist>(list)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>filterEvidenceKey</name>
+      <anchorfile>classbasic_list_evidence_key_filter.html</anchorfile>
+      <anchor>adffb9850f3ccc7c9e521157bbfb1c23d</anchor>
+      <arglist>(key)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>cloudRequestEngine</name>
+    <filename>classcloud_request_engine.html</filename>
+    <base>engine</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classcloud_request_engine.html</anchorfile>
+      <anchor>aba01c743a894108f0da34c4952371bbe</anchor>
+      <arglist>({ resourceKey, licenseKey, baseURL=&quot;https://cloud.51degrees.com/api/v4/&quot; })</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>processInternal</name>
+      <anchorfile>classcloud_request_engine.html</anchorfile>
+      <anchor>a3fdc2bd94e2f3786d9296266a5060796</anchor>
+      <arglist>(flowData)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>dataFile</name>
+    <filename>classdata_file.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>dataFileUpdateService</name>
+    <filename>classdata_file_update_service.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>dataKeyedCache</name>
+    <filename>classdata_keyed_cache.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>get</name>
+      <anchorfile>classdata_keyed_cache.html</anchorfile>
+      <anchor>a004082c38345cb5b5d3f3b708969284d</anchor>
+      <arglist>(cachekey)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>put</name>
+      <anchorfile>classdata_keyed_cache.html</anchorfile>
+      <anchor>ac3f9e74d3c0ca9fa4afffaf5bc1eade8</anchor>
+      <arglist>(cachekey, value)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>elementData</name>
+    <filename>classelement_data.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>ae46c6079efa0bec388f870cd990d15fe</anchor>
+      <arglist>({ flowElement })</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getInternal</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>acfa103d9511c096c4d98243c3a8226b6</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>get</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>aeea21499d902789092321bf9e1e53672</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getAsString</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>aa4180fcdef50a20618caf67a365b2899</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getAsFloat</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>a926791d16ade510f4e68e2c60c42abae</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getAsInteger</name>
+      <anchorfile>classelement_data.html</anchorfile>
+      <anchor>a535d4901632b726448d973df39aacc3a</anchor>
+      <arglist>(key)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>elementDataDictionary</name>
+    <filename>classelement_data_dictionary.html</filename>
+    <base>elementData</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classelement_data_dictionary.html</anchorfile>
+      <anchor>a73363caf6289c6c5bf8ddb57156f6dfc</anchor>
+      <arglist>({ flowElement, contents })</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>engine</name>
+    <filename>classengine.html</filename>
+    <base>flowElement</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classengine.html</anchorfile>
+      <anchor>aa3de6575105f1898d52890fcd0713fe8</anchor>
+      <arglist>({ cache, restrictedProperties }={})</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>inCache</name>
+      <anchorfile>classengine.html</anchorfile>
+      <anchor>a76acbce082750784062e132e29b2bcda</anchor>
+      <arglist>(flowData)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>process</name>
+      <anchorfile>classengine.html</anchorfile>
+      <anchor>aca7e9225a85bc748981429a69eb52cd6</anchor>
+      <arglist>(flowData)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>evidence</name>
+    <filename>classevidence.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>abbecde863300f69e21c560082af04d66</anchor>
+      <arglist>(flowData)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>add</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>a7120e4b62a6212e592233632bc7b5f1e</anchor>
+      <arglist>(key, value)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>addObject</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>af782d384305128befbeb8008930b0bf7</anchor>
+      <arglist>(evidenceObject)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>addFromRequest</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>af1f210b530b2761ca12490e5680dd5b1</anchor>
+      <arglist>(request)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>get</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>adfa32c5de446274b9b6ccf4af8c5a4d2</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getAll</name>
+      <anchorfile>classevidence.html</anchorfile>
+      <anchor>a75c61ac05194c9226a607b1cfa9a9ad7</anchor>
+      <arglist>()</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>evidenceKeyFilter</name>
+    <filename>classevidence_key_filter.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>filterEvidence</name>
+      <anchorfile>classevidence_key_filter.html</anchorfile>
+      <anchor>a2e232f2466460ca3439d6a1f51545bb1</anchor>
+      <arglist>(evidenceKeyObject)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>filterEvidenceKey</name>
+      <anchorfile>classevidence_key_filter.html</anchorfile>
+      <anchor>ad985c4b16ca2b119cf4dbc92d749baaa</anchor>
+      <arglist>(key)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>flowData</name>
+    <filename>classflow_data.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>ae91ef45ffbd53e24cda2f2c6bd4f7528</anchor>
+      <arglist>(pipeline)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getEvidenceDataKey</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>a605d1d3a7c9a1d4abfc14eea8905be05</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>stop</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>ad446d6c64ea9db50749434ee29848c2f</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>setError</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>a11a1eb17918d5674e8e36b8ac3095941</anchor>
+      <arglist>(error, flowElement)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>process</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>a42a726575923c416089eae2db5f424a6</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>setElementData</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>ad6bbb1ff7694414755f64b6fd09c6d69</anchor>
+      <arglist>(data)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>get</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>acf3ca9d3c18144c682daaebfb1fa8388</anchor>
+      <arglist>(flowElementDataKey)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getFromElement</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>a084e750d886946f779ca7df2a40bece1</anchor>
+      <arglist>(flowElement)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getWhere</name>
+      <anchorfile>classflow_data.html</anchorfile>
+      <anchor>ae0180193251705a9907ab5da5a696eb8</anchor>
+      <arglist>(metaKey, metaValueorFuncton)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>flowElement</name>
+    <filename>classflow_element.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>a0ba2fbe444f745460e6d74cfe63e5c04</anchor>
+      <arglist>({ processInternal, dataKey, properties={}, evidenceKeyFilter }={})</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>onRegistration</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>a4686501d335cc14dc265d23a638ef382</anchor>
+      <arglist>(pipeline, flowElement)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>processInternal</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>ac3abf59a8eb175dbf6c9bf982ee5dfcf</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>process</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>adba1bf95c5fe45fb36af6fe283ae46ca</anchor>
+      <arglist>(flowData)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>updateProperties</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>a2edfa7eb6934e418e80d616a2bb9473a</anchor>
+      <arglist>()</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getProperties</name>
+      <anchorfile>classflow_element.html</anchorfile>
+      <anchor>a8b4cb3d84801b110ffe5e111ed64376f</anchor>
+      <arglist>()</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>LRU</name>
+    <filename>class_l_r_u.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>LRUcache</name>
+    <filename>class_l_r_ucache.html</filename>
+    <base>dataKeyedCache</base>
+  </compound>
+  <compound kind="class">
+    <name>missingPropertyService</name>
+    <filename>classmissing_property_service.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>check</name>
+      <anchorfile>classmissing_property_service.html</anchorfile>
+      <anchor>a61a9e3fa21a58e4faaa36dd7b4dfb530</anchor>
+      <arglist>(key, flowElement)</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>myCustomCache</name>
+    <filename>classmy_custom_cache.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>neverRun</name>
+    <filename>classnever_run.html</filename>
+    <base>flowElement</base>
+  </compound>
+  <compound kind="class">
+    <name>Node</name>
+    <filename>class_node.html</filename>
+  </compound>
+  <compound kind="class">
+    <name>pipeline</name>
+    <filename>classpipeline.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classpipeline.html</anchorfile>
+      <anchor>aa056703f8e4066e793f713621c32d9a6</anchor>
+      <arglist>(flowElements=[])</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>getElement</name>
+      <anchorfile>classpipeline.html</anchorfile>
+      <anchor>aa0a9ea44b96358ddc593c899a650b9f9</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>on</name>
+      <anchorfile>classpipeline.html</anchorfile>
+      <anchor>a99419f35d217c333255b955229ed0db1</anchor>
+      <arglist>(listener, callback)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>log</name>
+      <anchorfile>classpipeline.html</anchorfile>
+      <anchor>a659d0a03032738b6afb6c44b5b4e3b0d</anchor>
+      <arglist>(type, message)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>createFlowData</name>
+      <anchorfile>classpipeline.html</anchorfile>
+      <anchor>adbca47de15e3be78633e97a1f51b4d98</anchor>
+      <arglist>()</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>pipelineBuilder</name>
+    <filename>classpipeline_builder.html</filename>
+    <member kind="function">
+      <type></type>
+      <name>buildFromConfigurationFile</name>
+      <anchorfile>classpipeline_builder.html</anchorfile>
+      <anchor>adc682fd6b66b7be4738307ccbe1136bf</anchor>
+      <arglist>(configPath)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>buildFromConfiguration</name>
+      <anchorfile>classpipeline_builder.html</anchorfile>
+      <anchor>a0f28955d2324078413282a27eb419bc3</anchor>
+      <arglist>(config)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>add</name>
+      <anchorfile>classpipeline_builder.html</anchorfile>
+      <anchor>a970d9e575a9670d170c1568cc9923e6e</anchor>
+      <arglist>(flowElement)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>addParallel</name>
+      <anchorfile>classpipeline_builder.html</anchorfile>
+      <anchor>a26bf0dcb1fe7bf604d1f49d2411c91b2</anchor>
+      <arglist>(flowElements)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>build</name>
+      <anchorfile>classpipeline_builder.html</anchorfile>
+      <anchor>a8b081e7980cbbf3802b6b3a70b9e5938</anchor>
+      <arglist>()</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>shareUsage</name>
+    <filename>classshare_usage.html</filename>
+    <base>engine</base>
+    <member kind="function">
+      <type></type>
+      <name>constructor</name>
+      <anchorfile>classshare_usage.html</anchorfile>
+      <anchor>ad2e3aed89f1b5330999e5e11b90c0752</anchor>
+      <arglist>({ interval=100, requestedPackageSize=10, cookie, queryWhitelist, headerBlacklist, sharePercentage=100 }={})</arglist>
+    </member>
+  </compound>
+  <compound kind="class">
+    <name>shareUsageEvidenceKeyFilter</name>
+    <filename>classshare_usage_evidence_key_filter.html</filename>
+    <base>evidenceKeyFilter</base>
+  </compound>
+  <compound kind="class">
+    <name>shareUsageTracker</name>
+    <filename>classshare_usage_tracker.html</filename>
+    <base>tracker</base>
+  </compound>
+  <compound kind="class">
+    <name>stop</name>
+    <filename>classstop.html</filename>
+    <base>flowElement</base>
+  </compound>
+  <compound kind="class">
+    <name>sync</name>
+    <filename>classsync.html</filename>
+    <base>flowElement</base>
+  </compound>
+  <compound kind="class">
+    <name>tracker</name>
+    <filename>classtracker.html</filename>
+    <base>dataKeyedCache</base>
+    <member kind="function">
+      <type></type>
+      <name>track</name>
+      <anchorfile>classtracker.html</anchorfile>
+      <anchor>aaf8c7ada7cf2bc98ba0b424d24364e73</anchor>
+      <arglist>(key)</arglist>
+    </member>
+    <member kind="function">
+      <type></type>
+      <name>match</name>
+      <anchorfile>classtracker.html</anchorfile>
+      <anchor>ac924f936d217c84aa53a728573eba5e9</anchor>
+      <arglist>(result)</arglist>
+    </member>
+  </compound>
+  <compound kind="page">
+    <name>md_D:_Workspace_V4_pipeline-node_readme</name>
+    <title>readme</title>
+    <filename>md__d_1__workspace__v4_pipeline-node_readme</filename>
+  </compound>
+</tagfile>

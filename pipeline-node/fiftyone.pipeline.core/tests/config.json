@@ -1,0 +1,12 @@
+{
+    "PipelineOptions": {
+        "Elements": [
+            {
+                "elementName": "./tests/configTestFlowElement.js",
+                "elementParameters": {
+                    "prefix": "hello"
+                }
+            }
+        ]
+    }
+}

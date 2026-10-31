@@ -1,0 +1,17 @@
+{
+  "PipelineOptions": {
+      "Elements": [
+      {
+          "elementName": "../../shareUsage",
+          "elementParameters": {
+              "sharePercentage": 100,
+              "interval": 1200000,
+              "requestedPackageSize": 50,
+              "cookie": "",
+              "queryWhitelist": [],
+              "headerBlacklist": []
+          }
+      }
+      ]
+    }
+}

@@ -1,0 +1,162 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+/**
+ * Offline example for the 51Did (FodId) reader.
+ *
+ * The 51Degrees Cloud service issues real 51Dids. To keep this example
+ * self-contained and offline, it builds a sample 51Did in process - generate
+ * an ECDSA P-256 key pair, sign a canonical payload - then parses it back
+ * and prints the payload fields. It also shows the headline use
+ * case: a 51Did is re-issued fresh on every call (the envelope, hence the
+ * base64, changes), but the match key is stable. Compare match keys, never
+ * envelopes.
+ */
+
+const { webcrypto } = require('crypto');
+const { FodId, IdType, Usage } = require('../index');
+// The payload byte layout is internal to the package, so a consumer
+// never reaches for it. This example builds a sample 51Did to work on,
+// which the cloud would otherwise issue, so it reads the layout from
+// inside the package.
+const layout = require('../internal/layout');
+
+const subtle = webcrypto.subtle;
+const VERSION = 2;
+const DOMAIN = '51degrees.com';
+const DATE = 2900000; // minutes since 2020-01-01
+
+function uint32LE (v) {
+  return [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF];
+}
+
+function samplePayload () {
+  // One byte longer than the least length, because the terms byte follows
+  // the match key. A 51Did whose payload stops at the match key carries
+  // no terms byte and reads as Terms.NOT_STATED.
+  const p = new Uint8Array(layout.PAYLOAD_LENGTH + layout.TERMS_LENGTH);
+  // Bits 6 and 7 are zero, so the type is Probabilistic. Bits 4 and 5 are
+  // zero, so the payload version is 0, which is the layout this package
+  // reads. Bits 0 to 2 are the usage and they are cumulative, so 0b011
+  // grants standard marketing and, with it, non-marketing use.
+  p[layout.FLAGS_OFFSET] = 0b0000_0011;
+  p[layout.LICENSE_ID_OFFSET] = 0x78;
+  p[layout.LICENSE_ID_OFFSET + 1] = 0x56;
+  p[layout.LICENSE_ID_OFFSET + 2] = 0x34;
+  p[layout.LICENSE_ID_OFFSET + 3] = 0x12;
+  for (let i = 0; i < layout.MATCH_KEY_LENGTH; i++) {
+    p[layout.MATCH_KEY_OFFSET + i] = 0x20 + i;
+  }
+  // The terms document this sample was created under, being index 1, the
+  // Model Terms for Marketing version 2. The byte is an index into a table
+  // in the specification and is not a version number, and an issuer writes
+  // it for every marketing identifier.
+  p[layout.PAYLOAD_LENGTH] = 1;
+  return p;
+}
+
+function noSigBytes (payload, date) {
+  const out = [VERSION];
+  for (let i = 0; i < DOMAIN.length; i++) { out.push(DOMAIN.charCodeAt(i)); }
+  out.push(0);
+  out.push(...uint32LE(date));
+  out.push(...uint32LE(payload.length));
+  for (const b of payload) { out.push(b); }
+  return Uint8Array.from(out);
+}
+
+async function issue (privateKey, payload, date) {
+  const noSig = noSigBytes(payload, date);
+  const sig = new Uint8Array(await subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' }, privateKey, noSig));
+  const full = new Uint8Array(noSig.length + sig.length);
+  full.set(noSig);
+  full.set(sig, noSig.length);
+  return Buffer.from(full).toString('base64');
+}
+
+function toPem (label, der) {
+  const b64 = Buffer.from(der).toString('base64');
+  return `-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n` +
+    `-----END ${label}-----\n`;
+}
+
+async function run () {
+  const keyPair = await subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const publicPem = toPem('PUBLIC KEY',
+    new Uint8Array(await subtle.exportKey('spki', keyPair.publicKey)));
+  const payload = samplePayload();
+
+  const fodId = FodId.fromBase64(await issue(keyPair.privateKey, payload, DATE));
+
+  console.log('51Did parsed from base64:');
+  console.log('  Domain    :', fodId.domain);
+  console.log('  Type      :', IdType.name(fodId.type));
+  console.log('  Usage     :', Usage.name(fodId.usage));
+  console.log('  Indirect  :', fodId.usageIsIndirect);
+  console.log('  LicenseId :', fodId.licenseId);
+  console.log('  Match key :', Buffer.from(fodId.matchKey).toString('hex'));
+  console.log('  Terms     :', fodId.terms);
+  console.log('  Verifies  :', await fodId.verify(publicPem));
+
+  // Re-issue the same payload at a later time. The envelope differs and the
+  // match key does not.
+  const reissued = FodId.fromBase64(
+    await issue(keyPair.privateKey, payload, DATE + 5));
+  const sameEnvelope = fodId.asBase64() === reissued.asBase64();
+  const sameMatchKey = Buffer.from(fodId.matchKey)
+    .equals(Buffer.from(reissued.matchKey));
+
+  console.log('\nSame payload, re-issued:');
+  console.log('  Same envelope (base64) :', sameEnvelope);
+  console.log('  Same match key         :', sameMatchKey);
+
+  if (sameEnvelope || !sameMatchKey) {
+    throw new Error(
+      'Expected a different envelope but the same match key across reissues.');
+  }
+
+  // A 51Did arrives from outside, so a value that is not one is an ordinary
+  // outcome rather than an error. tryParse answers with a reason instead of
+  // throwing, and reading says nothing about the signature, which is the
+  // separate question verify answered above.
+  console.log('\nReading answers with a reason:');
+  for (const input of [fodId.asBase64Url(), 'not a 51Did', '']) {
+    const result = FodId.tryParse(input);
+    const shown = JSON.stringify(input.slice(0, 16)) +
+      (input.length > 16 ? '...' : '');
+    console.log('  ' + shown + ' -> ok ' + result.ok +
+      ', status ' + result.status);
+  }
+  const shortPayload = await issue(
+    keyPair.privateKey, payload.slice(0, layout.PAYLOAD_LENGTH - 1), DATE);
+  const short = FodId.tryParse(shortPayload);
+  console.log('  a payload one byte short -> ok ' + short.ok +
+    ', status ' + short.status);
+  const expected = FodId.ParseStatus.INVALID_TYPE_PAYLOAD_LENGTH;
+  if (short.ok || short.status !== expected) {
+    throw new Error('Expected InvalidTypePayloadLength for a short payload.');
+  }
+}
+
+run().catch((e) => { console.error(e); process.exit(1); });

@@ -1,0 +1,854 @@
+# fiftyone.pipeline.did
+
+Strongly typed Node.js reader for the 51Did (51Degrees Identifier) returned by
+the 51Degrees Cloud service, and a client for everything a server does with a
+51Did against the cloud. Mirrors the .NET `FiftyOne.Did` package.
+
+## Terminology
+
+- The **51Did** (51Degrees Identifier) is the identifier as a whole.
+- The **envelope** is the data model that carries it: a signed OWID holding the
+  version, domain, date, payload and signature. It changes byte-for-byte every
+  time the cloud issues one.
+- The **match key** is the stable, comparable part of the payload after the
+  Flags and License Id, a 32-byte SHA-256 for Probabilistic and HashedEmail
+  identifiers, or 16 GUID bytes for Random. Two 51Dids for the same inputs
+  share the same match key even though their envelopes differ.
+
+**Comparing two 51Dids means comparing their match keys, never their
+envelopes.**
+
+## Payload layout
+
+The byte layout is specified once for every language in the 51Did
+specification, and that specification is the authority for it:
+
+- [Identifier layout](https://github.com/51Degrees/specifications/blob/main/did-specification/identifier-layout.md)
+- [Package surface](https://github.com/51Degrees/specifications/blob/main/did-specification/package-surface.md)
+
+Your code never needs the offsets, because every field has a named accessor,
+so the offsets and the lengths are internal to this package. Reading the flags
+byte by hand is the mistake they are kept internal to prevent, because the
+usage bits are cumulative and a mask for one of them answers the wrong
+question. The summary here explains what the accessors report, and the
+specification governs wherever the two differ.
+
+The payload carries a one byte Flags field, a four byte little-endian
+LicenseId, the match key and then a one byte Terms. Bits 6 and 7 of the
+flags name the identifier type, which decides how long the match key is,
+and so where the Terms byte sits.
+
+| Bits 7-6 | `IdType`        | Match key length | Least payload accepted |
+|---------:|-----------------|-----------------:|-----------------------:|
+|     `00` | `PROBABILISTIC` |               32 |                     37 |
+|     `01` | `RANDOM`        |               16 |                     21 |
+|     `10` | `HASHED_EMAIL`  |               32 |                     37 |
+|     `11` | `RESERVED`      |        remainder |                      5 |
+
+Identifiers issued before the type tag existed have bits 6-7 zeroed and decode
+as `PROBABILISTIC`.
+
+On an identifier carrying a creator context (which binds the identifier to the
+browser and connection it was created on) the four bytes at offset 1 hold an
+encrypted value that only 51Degrees can turn back into a licence identifier.
+`licenseId` is then the field's raw value and identifies nothing outside
+51Degrees. A payload longer than the least length carries the creator context
+after the match key, and the reader accepts it as it accepts the base length. The
+lengths of a context section belong to the cloud, so the reader checks only
+the lower bound for the identifier type, holds no upper bound of its own, and
+leaves anything longer for the cloud to judge. A reader built before a longer
+context section existed therefore still reads the identifier.
+
+The Terms byte sits between the match key and the creator context. An
+identifier whose payload ends at the match key carries no terms byte, and
+the reader answers with a terms index of zero for one.
+
+## The payload version
+
+Bits 4 and 5 of the flags byte say which payload layout the identifier
+follows, and this package reads version 0. A payload naming version 1, 2 or
+3 is refused with `ParseStatus.UNSUPPORTED_PAYLOAD_VERSION`, and the errors
+the throwing surfaces raise name the version they found.
+
+No field is read under the layout this package knows once the version says
+otherwise. A later version exists precisely because a field moved, so
+reading such a payload here would answer with values that are wrong rather
+than absent, which is worse than refusing. A version that nothing checks
+protects nothing.
+
+The version is not exposed. Either this package read the layout, in which
+case the accessors are the answer, or it did not, in which case there is no
+identifier to read fields from.
+
+## The usage a 51Did was created for
+
+Every 51Did says what it was created for, and `fodId.usage` reports it as one
+of the `Usage` values. The usage decides where the identifier may go, so it is
+read before the identifier is passed anywhere.
+
+| `Usage` | The cloud's `id.usage` | Meaning |
+| --- | --- | --- |
+| `NON_MARKETING` | `non-marketing` | Created for use that is not marketing. Must never be passed to a demand source |
+| `STANDARD` | `standard` | Created for standard marketing, being targeting unrelated to browsing history |
+| `PERSONALIZED` | `personalized` | Created for personalized marketing, being targeting related to browsing history |
+
+The three usages are cumulative in the flags byte rather than exclusive.
+Non-marketing sets one bit, standard sets two and personalized sets three, so
+every marketing identifier also carries the non-marketing bit. Code masking
+the byte for that bit alone would read every marketing identifier as
+non-marketing, which is the wrong way round for a rule that turns on it.
+`fodId.usage` answers with the highest usage granted, so that mistake cannot
+be made, and it is the only supported way to read the usage.
+
+There are exactly these three values. A payload whose usage bits are all
+clear is not given a fourth value, and is refused with
+`ParseStatus.NO_USAGE` instead, because the cloud never writes such a flags
+byte and the only safe answer to one is not to pass the identifier on, which
+the refusal already gives.
+
+`fodId.usageIsIndirect` says whether the usage is indirect, being worked out
+by the issuer from a signal other than the caller stating it, or direct,
+being stated by the caller. A consent string is the only indirect signal
+today, so today it is true only where the usage was derived from an IAB
+consent string the caller sent. Both are legitimate ways to arrive at a
+usage, and it says nothing about which usage it is. It was called
+`usageFromConsent` before the field was restated as direct against
+indirect, and the old name has been removed.
+
+`Usage.name(usage)` gives the cross language name, for example
+`"NonMarketing"`, and `Usage.idUsage(usage)` gives the cloud's own `id.usage`
+value, for example `"non-marketing"`. Both answer `null` for a value that
+is not a `Usage`.
+
+## The terms a 51Did was created under
+
+A 51Did created for marketing may only be used by a receiver that has
+accepted the terms it was created under, so the terms travel inside the
+identifier rather than beside it. An identifier passed as a query string
+parameter arrives on its own, and any hop can drop what was sent alongside it
+without the identifier looking any different.
+
+The byte after the match key is an index into a table in the specification
+and is not a version number, so that a later document can live at any address
+rather than only at an address a number could be turned into. An index is
+never reused or repointed once published, because repointing one would
+rewrite what a past identifier says it agreed to.
+
+| Index | Document | `fodId.terms` |
+| ---: | --- | --- |
+| `0` | Not stated in the identifier | `null` |
+| `1` | Model Terms for Marketing, version 2 | `https://m4ow.uk/mtm/2.txt` |
+| anything else | One this package cannot name | `null` |
+
+`fodId.terms` is the address of the document. The package turns the index
+into the address, so you never handle the byte. Nothing here fetches the
+address, because what to do with the document is your decision.
+
+**No address is ever built from an index this package cannot name**, because
+that would name a document nobody wrote and a receiver would record having
+accepted terms that do not exist. An index of zero and an index added after
+this package was released therefore give the same answer, which you cannot
+tell apart, and that is deliberate, since both say the identifier does not
+give the terms and the answer has to come from somewhere else.
+
+No address does not mean the identifier is unrestricted. It means only that
+the identifier does not carry the answer, so the answer has to come from the
+data accompanying it, being the Terms Document Locator in an OpenRTB request
+or whatever the surrounding protocol offers. Carrying the terms does not
+remove the need to carry a Terms Document Locator where a protocol has one,
+and where both are present and they disagree the identifier's own value is
+the one that describes the identifier, because it is inside the signature and
+the accompanying data is not.
+
+The usage says where an identifier may go and the terms say which document it
+was created under, so both are needed. An identifier created for
+non-marketing carries `NOT_STATED`, since the Model Terms govern marketing
+use, and it stays barred from a demand source by its usage.
+
+An identifier whose payload ends at the match key, and one of the
+`RESERVED` type, both read as `NOT_STATED`. The first carries no byte after
+the match key and the second exposes every byte after the header as the
+match key, so neither leaves a byte for the reader to find, and no terms
+are stated in either.
+
+## Reading a 51Did
+
+A 51Did arrives from outside, from a page, a link or a log line, so a value
+that is not one is an ordinary outcome rather than an error. `FodId.tryParse`
+and `FodId.tryFromByteArray` never throw. Each returns a frozen result
+reporting the same three facts:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `ok` | boolean | True when the input was a structurally valid 51Did |
+| `value` | `FodId` or `null` | The identifier on success and `null` on failure, never a half read identifier |
+| `status` | string | `FodId.ParseStatus.PARSED` on success, otherwise the specific reason |
+
+```js
+const { FodId } = require('fiftyone.pipeline.did');
+
+const result = FodId.tryParse(untrusted);
+if (result.ok) {
+  use(result.value);
+} else {
+  console.log('not a 51Did: ' + result.status);
+}
+```
+
+Reading and verifying are two questions with two answers. A successful read
+says the bytes are a structurally valid 51Did and nothing more. No read
+fetches a key or checks a signature, so a parsed 51Did is not necessarily
+genuine, and a structurally valid identifier whose signature does not match
+reads successfully and then fails verification. Verify with
+`fodId.verify(publicKeyPem)`, `fodId.checkSignature(publicKeyPem)` or
+`DidClient.verifySignature(fodId)`, described below.
+
+### Read statuses
+
+`FodId.ParseStatus` is a frozen object of stable string values. Compare
+against its members rather than against the text of any message. The
+vocabulary is the OWID library's own, carried through unchanged, plus three
+members for the 51Did payload. A failure the OWID library reported keeps the
+OWID library's status, so a specific reason is never reduced to a general one.
+
+| Status | Reported by | Meaning |
+| --- | --- | --- |
+| `PARSED` | both | The input is a structurally valid 51Did. Says nothing about the signature |
+| `MISSING_INPUT` | OWID | Nothing was supplied, being `null`, `undefined`, an empty or whitespace-only string, or a buffer of no bytes |
+| `INVALID_INPUT_TYPE` | OWID | The input was not a string (`tryParse`) or not a byte array (`tryFromByteArray`) |
+| `INVALID_BASE64` | OWID | The string is not base64 in either alphabet, so there are no bytes to read |
+| `UNSUPPORTED_VERSION` | OWID | The first byte names an envelope version the OWID library does not know |
+| `ABSENT_NODE` | OWID | The bytes are the OWID absent node marker, which stands for no identifier |
+| `UNEXPECTED_END` | OWID | The data stopped part way through a field |
+| `INVALID_DOMAIN_ENCODING` | OWID | The creator domain is not terminated or is longer than a domain name can be |
+| `BYTE_COUNT_MISMATCH` | OWID | The declared payload byte count disagrees with the bytes present |
+| `IMPLEMENTATION_CAPACITY_EXCEEDED` | OWID | The envelope is consistent but larger than this runtime can hold |
+| `MALFORMED_ENVELOPE` | OWID | Malformed in a way none of the above describes |
+| `PAYLOAD_TOO_SHORT` | 51Did | The payload is shorter than the 5 byte header (flags and licence id), so the type cannot be read |
+| `INVALID_TYPE_PAYLOAD_LENGTH` | 51Did | The header named a type and the payload is shorter than that type's match key needs, being 21 bytes for Random and 37 for Probabilistic and HashedEmail |
+| `UNSUPPORTED_PAYLOAD_VERSION` | 51Did | Bits 4 and 5 of the flags byte name a payload layout version this package does not know, so no field is read |
+| `NO_USAGE` | 51Did | Bits 0 to 2 of the flags byte are all clear, which is not a usage. The cloud never writes such a flags byte, so the identifier is damaged or forged |
+
+A Reserved type is not yet assigned, so the reader accepts it at any length
+from the header up and exposes whatever follows the header as the match key.
+
+### The throwing surface
+
+`FodId.fromBase64(base64)`, `FodId.fromByteArray(bytes)`, `FodId.fromOwid(owid)`
+and `new FodId(owid)` are the same read for a caller who prefers an
+exception. They run the same checks, in the same order, and throw:
+
+| Thrown | When |
+| --- | --- |
+| `TypeError` | The argument is the wrong kind of thing, being `null`, `undefined`, a non-string to `fromBase64`, or a non-`Uint8Array` to `fromByteArray` |
+| `RangeError` | The payload is `PAYLOAD_TOO_SHORT`, `INVALID_TYPE_PAYLOAD_LENGTH`, `UNSUPPORTED_PAYLOAD_VERSION` or `NO_USAGE`, being the four statuses the 51Did payload rules produce. The error carries `status` |
+| `FodIdParseError` | The OWID library refused the envelope for any other status. The error carries `status` |
+
+A wrong argument type is a programming error and stays exceptional on every
+surface. Everything else is a fact about the data, which the non-throwing
+surfaces report as a result and the throwing surfaces report as one of the
+two errors above.
+
+### Migrating from the removed OWID API
+
+The OWID library this package builds on no longer has a public constructor
+and no longer throws from a read (see the next section). A caller who reached
+the OWID library through this package changes as follows.
+
+| Before | After |
+| --- | --- |
+| `FodId.fromOwid(new owid(s))` | `FodId.fromBase64(s)`, or `FodId.tryParse(s)` for a result |
+| `try { FodId.fromBase64(s) } catch (e) { /* e was a string */ }` | `const r = FodId.tryParse(s); if (!r.ok) { /* r.status */ }` |
+| `catch (e)` on `fromBase64` reading `e.message` | `catch (e)` reading `e.status`, one of `FodId.ParseStatus` |
+| `fodId.date` read as a signed number | `fodId.date` is now unsigned |
+| `fodId.verify(pem)` resolving `false` for a key that could not be imported | `verify` rejects when the question could not be answered, and `checkSignature(pem)` reports `INVALID_KEY` |
+
+### Migrating from the removed raw surface
+
+The raw byte and the offsets were the way to read by hand a field that already
+has a name, so they have gone. `fodId.flags`, `fodId.dateMinutes`, the
+deprecated `fodId.hash`, and the layout constants `FLAGS_OFFSET`,
+`LICENSE_ID_OFFSET`, `LICENSE_ID_LENGTH`, `MATCH_KEY_OFFSET`,
+`MATCH_KEY_LENGTH`, `HEADER_LENGTH`, `GUID_LENGTH`, `RANDOM_PAYLOAD_LENGTH`
+and `PAYLOAD_LENGTH` are no longer part of the package.
+
+| Before | After |
+| --- | --- |
+| `fodId.flags` masked for a usage bit | `fodId.usage`, and `fodId.usageIsIndirect` for bit 3 |
+| `fodId.flags` masked for the type bits | `fodId.type` |
+| `fodId.hash` | `fodId.matchKey`, the same bytes under the name the Model Terms for Marketing use |
+| `fodId.dateMinutes` | `fodId.date`, which reports the same unsigned value |
+| `FodId.PAYLOAD_LENGTH` and the other layout constants | Nothing. Every field has a named accessor, and the layout is in the specification linked above |
+
+## Reading a 51Did in a web page
+
+Code that runs in a visitor's browser often has one decision to make about
+a 51Did, being where it may go and under which terms, and every byte it
+loads is sent to every visitor. The `fiftyone.pipeline.did/reader` entry
+point answers that question and nothing else. It loads no OWID library, no
+key handling and no `DidClient`, which a test holds it to. Bundled and
+minified with esbuild in October 2026 it was 3.5 KB, where the package
+entry point was 29.7 KB, and on Node 24 it read an identifier in about 0.6
+microseconds, where `FodId.tryParse` took about 16.
+
+```js
+const { read, Usage } = require('fiftyone.pipeline.did/reader');
+
+const facts = read(untrusted);
+if (facts.ok && facts.usage !== Usage.NON_MARKETING) {
+  send(untrusted, facts.terms);
+}
+```
+
+`read` never throws and returns a frozen answer:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `ok` | boolean | True when the value is a structurally valid 51Did |
+| `type` | `IdType` value or `null` | The identifier type |
+| `usage` | `Usage` value or `null` | The highest usage granted |
+| `usageIsIndirect` | boolean or `null` | Whether the issuer worked the usage out from a signal other than the caller stating it |
+| `terms` | string or `null` | The address of the terms document the identifier was created under, `null` where it states none or names a document this package does not know |
+
+The four fields are the ones `FodId` exposes under the same names, read by
+the same walk of the payload, so the two readers cannot disagree about an
+identifier, and the tests hold them to that for every type, usage and terms
+state. The entry point also exports `Usage` and `IdType`, so that a page
+compares against the named values without loading the package entry point.
+
+The reader checks no signature, so an identifier it reads may still be a
+forgery. It tells a page what an identifier says of itself. Code that has
+to know an identifier is genuine uses `FodId` and verifies it, as the
+sections below describe.
+
+## OWID dependency
+
+`FodId` builds on the OWID envelope library
+([SWAN-community/owid-js](https://github.com/SWAN-community/owid-js)). The
+library is read and verify only, so `FodId` **composes** the OWID the library
+read, delegates the envelope fields to it, and keeps the standard base64 for
+`asBase64()`.
+
+The library was hardened so that an OWID reaches calling code by one route
+only, which is a successful read through `owid.parse` or `owid.parseBytes`.
+Those reads answer with `{ ok, owid, status }` and never throw, `new owid()`
+throws naming what to use instead, and an OWID that has been read is frozen
+and hands out its byte arrays as copies. This package follows the same shape,
+which is why `tryParse` and `tryFromByteArray` exist and why the OWID statuses
+appear in `FodId.ParseStatus` unchanged. The library also offers an offline
+`verifyWithPublicKey(pem)` and `checkSignatureWithPublicKey(pem)` that work
+in Node and the browser (Web Crypto), so `FodId.verify()` and
+`FodId.checkSignature()` run without contacting a network endpoint.
+
+The library is not on the npm registry, so `package.json` names it as a
+GitHub reference, which npm resolves by cloning the repository. The reference
+is `github:SWAN-community/owid-js#6c5ff4e7`, the commit on `main` of
+[SWAN-community/owid-js](https://github.com/SWAN-community/owid-js) where a
+signature covers its own OWID and no other, and a creator's key is fetched
+from the `public-key` endpoint without following a redirect. Cloning is
+needed only when working in this repository, because the published
+`fiftyone.pipeline.did` package carries the OWID source inside its own
+tarball under `node_modules/owid`, named in `bundleDependencies`. Anyone
+installing the package from npm needs neither git nor reachable GitHub, and
+gets the same OWID code every time, whatever the referenced branch happens
+to hold on the day. owid-js is Apache-2.0 and its `LICENSE` file travels in
+the bundle alongside the source.
+
+## Install / build
+
+```bash
+npm install   # needs git on the PATH to fetch owid-js
+npm test
+```
+
+## Usage
+
+```js
+const { FodId, IdType, Usage } = require('fiftyone.pipeline.did');
+
+// Either base64 alphabet is accepted, the standard one the cloud issues and
+// the URL-safe one a page puts in a link, with or without padding.
+const fodId = FodId.fromBase64(base64FromCloudService);
+
+const usage = fodId.usage;        // Usage.NON_MARKETING / STANDARD / PERSONALIZED
+const indirect = fodId.usageIsIndirect;
+const type = fodId.type;          // IdType.PROBABILISTIC / RANDOM / HASHED_EMAIL
+const licenseId = fodId.licenseId;
+const matchKey = fodId.matchKey;  // Uint8Array: SHA-256 or GUID bytes, see type
+const terms = fodId.terms;        // address of the terms document it was
+                                  // created under, null where it names none
+                                  // this package knows
+
+const domain = fodId.domain;
+const minutes = fodId.date;       // minutes since 2020-01-01T00:00:00Z
+const verified = await fodId.verify(publicKeyPem);   // async (Web Crypto)
+const base64 = fodId.asBase64();      // standard alphabet with padding
+const inLink = fodId.asBase64Url();   // URL-safe alphabet, no padding
+```
+
+`date` is the envelope's own date as the unsigned 32-bit count of minutes
+since 2020-01-01T00:00:00Z, exactly as the wire carries it, and it is the
+integer to compare when asking which of two identifiers was issued first.
+
+Where the value may not be a 51Did at all, read it without throwing.
+
+```js
+const result = FodId.tryParse(valueFromOutside);
+if (!result.ok) {
+  // result.status is one of FodId.ParseStatus, and result.value is null.
+  return;
+}
+const fodId = result.value;
+```
+
+`fodId.checkSignature(publicKeyPem)` reports the signature outcome as one of
+`FodId.SignatureStatus` (the OWID library's own frozen object), so that "could
+not check" stays apart from "does not match". Only `SIGNATURE_INVALID` means
+the identifier should be distrusted, and `KEY_UNAVAILABLE`, `INVALID_KEY` and
+`VERIFICATION_ERROR` mean the question was never answered. The boolean
+`verify(publicKeyPem)` resolves only for the two statuses that judge the
+signature and rejects for the rest, because a caller told `false` would treat
+an outage as a forgery.
+
+```js
+const check = await fodId.checkSignature(publicKeyPem);
+if (check.status === FodId.SignatureStatus.SIGNATURE_INVALID) {
+  // The identifier should be distrusted.
+} else if (!check.ok) {
+  // The signature was never judged. Do not treat this as a forgery.
+  console.log(check.status + ': ' + check.message);
+}
+```
+
+## Comparing two 51Dids
+
+```js
+const a = FodId.fromBase64(idprobglobalA);
+const b = FodId.fromBase64(idprobglobalB);
+
+// The envelope (date, signature, base64) differs across reissues.
+// The match key inside the payload is stable, and is what you compare.
+const sameMatchKey = Buffer.from(a.matchKey).equals(Buffer.from(b.matchKey));
+```
+
+## Verifying on your server
+
+`DidClient` handles every manipulation of a 51Did a server needs against the
+cloud, so server code never builds a cloud URL or handles a key itself. One
+instance serves a whole server. It needs Node 18 or later for the built-in
+`fetch`, or a `fetch` function passed in, and it runs in a page as well, as
+[Verifying in a browser](#verifying-in-a-browser) describes. A caller that
+holds the published key list already, and fetches it on its own terms,
+chooses a key with `PublicKeys` instead, described under step 2a below.
+
+```js
+const { FodId, DidClient } = require('fiftyone.pipeline.did');
+
+const client = new DidClient({
+  resourceKey: process.env._51DEGREES_RESOURCE_KEY,
+  licenceKey: process.env._51DEGREES_LICENSE_KEY   // optional, see below
+  // endpoint: defaults to FOD_CLOUD_API_URL, then the public cloud
+});
+```
+
+| Option | Meaning |
+| --- | --- |
+| `resourceKey` | Required for the public cloud. The page's resource key, public by nature. It travels in the route of the key and verify requests and in the form body of the redeem request. A private cloud serves those routes with no resource key, so a client for one is built without it |
+| `licenceKey` | Optional. A licence key of the same account, server side only. Needed to redeem where the account holds licence keys. Sent only in the body of the redeem request, never in a URL |
+| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `FOD_CLOUD_API_URL` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
+| `fetch` | Optional. The HTTP transport, defaulting to the global `fetch`, on Node and in a browser alike. Tests inject one |
+
+On Node every request carries a `User-Agent` naming this package and its
+version. A browser sends its own, as
+[Verifying in a browser](#verifying-in-a-browser) explains.
+
+Every client method takes either a `FodId` or the identifier's base64 in
+either alphabet. A string is read before anything else happens. The client
+first turns away an encoded value longer than 4096 characters with a
+`DidArgumentError`, which is client policy on the size of input the client
+is willing to look at, deliberately generous and unrelated to how long a
+51Did is, and it is not a limit of the 51Did format. A string under that
+length that does not read as a 51Did is refused with a `DidArgumentError`
+naming the read status, and in both cases no key is fetched and no request
+is made. A key list that cannot be fetched is a `DidClientError`, never an
+invalid signature.
+
+**1. Parse.** The identifier arrives from a page in the URL-safe alphabet and
+from the cloud in the standard one. `tryParse` and `fromBase64` take either.
+
+```js
+const read = FodId.tryParse(fiftyOneDid);
+if (!read.ok) {
+  // Answer the page with read.status. Nothing has been fetched.
+}
+const fodId = read.value;
+```
+
+**2. Verify the signature offline.** The client fetches the published signing
+public keys from the cloud and picks the key in force when the identifier was
+created, being the entry whose start is latest on or before the identifier's
+date. Every entry carries `startsAt` and `endsAt`, its scheduled end, which is
+the next key's start, and the newest entry carries one too although the next
+key is not yet published. A key stays in force until its `endsAt`, or until
+the next one starts where a service sends no `endsAt`. Near a period boundary
+the neighbouring key is tried as well, and no earlier key is tried. The
+envelope version must be the one the cloud signs and the payload at least the
+base length for its type.
+
+The cloud publishes each key only from fifteen minutes before its period
+starts, so the client verifies offline until the newest key it holds ends. It
+fetches the whole list on first use and again once the list is a day old. In
+between, it fetches the keys from the newest start it holds onwards for an
+identifier dated close to the end of the list or past it, and the keys from
+the start of the key in force at the identifier's date onwards when no key it
+holds verifies a signature, because a key can be replaced before its `endsAt`.
+Each answer is merged into the list, so no older key is dropped, and those two
+reasons cause at most one fetch a minute.
+
+```js
+const valid = await client.verifySignature(fodId);        // boolean
+const detail = await client.verifySignatureDetailed(fodId);
+// { valid: false, reason: 'nokey' } when no key held covers the date
+const keys = await client.publicKeys();
+// [{ startsAt: Date, endsAt: Date, publicKey: PEM }], endsAt where sent
+const key = await client.publicKeyFor(fodId); // the entry in force, or null
+```
+
+`verifySignatureDetailed` answers `{ valid: false, reason: 'signature' }` only
+when every candidate key was tried and none matched. Where that happens with
+the list held, the client fetches once more, at most once a minute, and checks
+again before answering. A date no key held covers, such as one past the end of
+every published key, is `'nokey'`, and a key list that could not be fetched
+rejects with a `DidClientError`, so an outage never reads as a forgery.
+
+**2a. Choose the key from a list you already hold.** The rule the client
+applies is offered on its own as `PublicKeys`, for a caller that holds the
+published list already and fetches it on its own terms. Such a caller
+chooses the same key the client would and never works the rule out for
+itself. Nothing in `PublicKeys` fetches or checks a signature.
+
+```js
+const { FodId, PublicKeys } = require('fiftyone.pipeline.did');
+
+// The list exactly as the id/key/{resource} endpoint answered it, or as it
+// was stored. Read once into frozen entries, oldest start first.
+let keys = PublicKeys.fromList(JSON.parse(body));
+
+const created = PublicKeys.createdAt(fodId);   // Date, from the envelope date
+
+// Fetch first when the list may not reach the identifier's date. The
+// request is your own, to id/key/{resource} with the newest startsAt held
+// as ?datetime=, so only that entry and later ones come back. Merging keeps
+// every older entry.
+if (!PublicKeys.covers(keys, created)) {
+  keys = PublicKeys.merge(keys, PublicKeys.fromList(await fetchKeysSince(keys)));
+}
+
+const key = PublicKeys.inForceFor(keys, fodId); // the entry in force, or null
+const atMoment = PublicKeys.inForceAt(keys, new Date('2026-08-10T00:00:00Z'));
+
+// The entries to try in order, being the one in force and, within fifteen
+// minutes of a period boundary, the neighbour. Empty when no entry covers
+// the date. No earlier key is ever tried.
+for (const candidate of PublicKeys.candidatesFor(keys, fodId)) {
+  if (await fodId.verify(candidate.publicKey)) {
+    // Genuine.
+    break;
+  }
+}
+```
+
+`fromList` reads `startsAt`, or `created` where an entry carries no
+`startsAt`, `endsAt` where an entry carries it, and `publicKey`, and ignores
+everything else. It throws a `TypeError` for a value that is not a list, an
+entry that lacks a start or a key, or an `endsAt` that is not a date after the
+entry's start, so nothing from such an answer should be merged. `inForceFor`,
+`candidatesFor` and `createdAt` take a `FodId` or its base64 in either
+alphabet, and a string that does not read as a 51Did throws the reader's own
+error, as `FodId.fromBase64` does.
+
+`covers` is false when the list must be fetched before it can answer for a
+moment, which is when the moment is past the end of the list or close enough
+to it that the next key may have signed the identifier. The end is the newest
+entry's `endsAt`, or its start where the cloud sent no `endsAt`. Fetch for
+that reason at most once a minute, so a 51Did dated where no key is published
+yet cannot make every check call the cloud. `merge` adds each entry of the
+answer, or puts it in place of the held entry with the same start, and never
+drops an older entry, because an old 51Did verifies against the key of its own
+period. A key can be replaced before its `endsAt`, so when no candidate
+verifies, fetch the keys from the start of the key in force at the
+identifier's date onwards, within the same limit, merge them in and try the
+candidates once more before treating the signature as failed. Fetch the whole
+list, with no `datetime`, at least once a day as well and merge it in, which
+bounds how long a replaced key is still trusted.
+
+**3. Verify the signature through the cloud.** The open `verify` endpoint,
+one use against the resource key and no licence key needed. A value that does
+not read as a 51Did is refused before the request with a `DidArgumentError`
+naming the status, and a value the cloud refuses raises `DidArgumentError`
+with the cloud's message.
+
+```js
+const valid = await client.verify(fodId);   // boolean
+```
+
+**4. Redeem a sealed creator context result.** The verify-context and
+verify-full endpoints are browser calls, because the creator context describes
+the browser's own connection, and they return the verdict only as an encrypted
+`result` the browser cannot read or forge. The party that acts on it redeems it
+on the server, with the licence key, against the 51Did it knows independently.
+
+```js
+const redeemed = await client.redeem(fodId, result, challenge);
+redeemed.context      // ContextResult: 'verified', 'mismatch', 'nocontext',
+                      // 'misconfigured', 'invaliddate', 'notcheckable',
+                      // 'expired', 'replayed', 'unreadable', 'unconfirmed'
+redeemed.signature    // SignatureResult: 'verified', 'invalid' or 'unknown'
+redeemed.factors      // on a mismatch, on a misconfigured result where the
+                      //   transport was compared, and whenever any factor is
+                      //   'notrecorded', whatever the overall result:
+                      //   { transport, device, browserip, connectionip,
+                      //   asn, platformname, platformversion,
+                      //   browsername, browserversion } each 'verified',
+                      //   'mismatch', 'misconfigured', 'notrecorded', or
+                      //   null where nothing was compared
+redeemed.verifiedAt   // Date, on the redeemed and expired outcomes
+redeemed.secondsSinceVerified
+redeemed.statusCode   // 200, or 503 for 'unconfirmed', which may be retried
+redeemed.raw          // the body as received
+redeemed.toJSON()     // the cloud's own response shape, for relaying to a page
+```
+
+The factor names are in `Factor`, in the order the cloud lists them. From
+cloud release 4.4.38 the operating system and the browser each have a name
+and a version, replacing the single `browser` factor, so a version mismatch
+beside a verified name reads as an upgrade and a mismatched name reads as a
+different operating system or browser. `factors` keeps every name exactly as
+the cloud sent it, including a name that is not in `Factor`, so a factor the
+cloud adds later reaches the caller without a new release of this package,
+and an older service's `browser` key stays under its own name rather than
+filling any of the four. Neither `misconfigured` nor `notrecorded` is a
+mismatch, and neither must ever be read as one, but they say different
+things, because `misconfigured` means the checking service could not
+determine the factor whilst `notrecorded` means the creating service
+recorded no value for it, so the identifier says nothing about it. A
+`notrecorded` factor is left out of the overall result, so `verified` can
+arrive beside factors that are `notrecorded`, and `factors` is sent whenever
+any factor is, so a receiver of `verified` sees how many factors it rests on.
+
+A context string this package does not know maps to `unreadable`, so an
+unrecognised outcome is never mistaken for a good one, and `contextRaw` keeps
+the string as sent. Every cryptographic failure comes back from the cloud as
+the one word `unreadable` by design, a missing licence key included, so the
+client does not try to tell them apart either. A value that does not read as
+a 51Did is refused before the request with a `DidArgumentError` naming the
+status, a cloud that refuses the 51Did raises `DidArgumentError` (HTTP 400),
+a host that does not offer the creator context raises `DidNotSupportedError`
+(HTTP 404), and any other status raises `DidClientError` carrying
+`statusCode` and `body`. A transport failure raises the error `fetch` raised.
+
+## Verifying in a browser
+
+`DidClient` runs in a page with only `resourceKey`. There it reads no
+environment variable, uses the page's own `fetch`, and sends no `User-Agent`
+header, because a browser sends its own and one set by a page can make the
+browser ask the cloud's permission with a preflight request first.
+
+```js
+const { DidClient } = require('fiftyone.pipeline.did');
+
+const client = new DidClient({ resourceKey: 'your resource key' });
+const valid = await client.verifySignature(fiftyOneDid);
+```
+
+A page served by a private cloud, whose routes carry no resource key, builds
+the client with the endpoint alone, as
+`new DidClient({ endpoint: 'https://your-cloud.example/api/v4/' })`.
+
+A page builds a new client on each view, so the client's own copy of the key
+list lasts one view. The browser's HTTP cache can keep the list across views
+instead, for as long as the `Cache-Control` header the cloud sends with the
+key list allows, which is at most half an hour and never past the moment the
+next key is published, so a view within that time can be answered without a
+request to the cloud. The OWID library this package builds on fetches a
+creator's key through the browser's cache in the same way and keeps no copy
+of its own. An answer from the cache can be as old as that header allows, so
+a key the cloud replaces early reaches a page a little later than it reaches
+a server.
+
+Callers must not re-implement the key handling. The client decides when to
+fetch the list, what to ask the cloud for, how to merge each answer, how
+often it may ask and which keys to try, and those rules change with the
+cloud, so a page that fetches, keeps or chooses keys itself carries a copy of
+the rules that will not change when they do.
+
+The package is CommonJS and uses no Node built-ins, so a bundler includes it
+in a page. The client reads its version from the package's own
+`package.json`, so the bundler must include JSON files, which esbuild does
+without any setting.
+
+## Non-goals
+
+- **No signature verification on read.** Call `verify(publicKeyPem)`,
+  `checkSignature(publicKeyPem)` or `DidClient.verifySignature(fodId)` when
+  needed (all are asynchronous).
+- **No creation of new 51Dids.** Creation is the cloud `json` endpoint through
+  the cloud request engine and pipeline, and a page creates from the browser
+  because the identifier describes the browser's own connection.
+- **No upper bound on the payload.** The lengths of a creator context section
+  belong to the cloud.
+
+## Examples
+
+`examples/fodIdExample.js` is the offline reader example described above. The
+web demo below calls the 51Degrees cloud, which attaches a creator context to
+every 51Did it issues, binding the identifier to the browser and connection it
+was created on. The creator context only makes sense from a browser, because
+a process verifying its own connection checks itself against itself, so the
+demo is a page served by a small server. It needs Node 18 or later for the
+built-in `fetch` and depends only on this package, reached by path so the demo
+runs against the code beside it.
+
+### Creator context web demo
+
+`examples/creator-context-web/` holds a small demo web app, `server.js`
+serving `page.html`, that runs the full 51Did flow the way production does.
+
+1. **Create.** The browser loads the 51Degrees client script, which runs the
+   snippets the service asks for, sends what they collected, and hands the
+   page the answer with the 51Did in it, created for the browser's own
+   connection. The service issues an identifier only once those values are
+   in, so a page asking for one by itself is told the page has not finished
+   and is given nothing.
+2. **Verify.** The browser calls `verify-full`, the first verification step,
+   so the cloud observes the browser's live connection, and sends what the
+   snippets collected with the call so that this browser can be compared
+   with the creator. Both the signature
+   outcome and the creator context verdict return only as an encrypted
+   `result` that the browser cannot read or forge. (A deployment holding no
+   context secret answers in the open instead.) The page then hands the
+   encrypted result to its own server.
+3. **Redeem.** The server parses the 51Did, checks its signature offline
+   against the published public keys, then calls `redeem` with the 51Did, the
+   encrypted result and the account's licence key as the second step, and
+   receives the signature outcome, the true creator context verdict, when the
+   verification happened (`verifiedAt`) and how long ago that was
+   (`secondsSinceVerified`).
+
+A fresh `challenge` is issued per page load and bound through both steps by
+the cloud. A production server would also remember the value it issued and
+reject a redemption carrying any other, which this demo keeps out of scope.
+
+The page carries the licensed probabilistic identifier (`idproblic`) through
+verification where the cloud returned it, otherwise the global one
+(`idprobglobal`). An account holding no licence keys gets no licensed
+identifier at all, and the global one carries the creator context just the
+same.
+
+A verdict of `nocontext` is a normal outcome and not an error. A self-hosted
+container can be configured not to emit the creator context, so an identifier
+it issued redeems as `nocontext`, which the page shows the way it shows any
+verdict. Only a transport failure, a status outside 2xx, a body that is not
+JSON, or an `errors` answer from the service is a failure, which the page
+shows as one naming the status and the start of the body. A 404 from
+`verify-full` or `redeem` is different again, because the host answering does
+not offer the creator context at all, so the page reports the step as not
+supported by this host.
+
+**The part that belongs on your server.** Everything the browser does is in
+`page.html`. The one server-side piece is the redeem call, which is where the
+licence key is added, and only there, so the browser never sees it. The
+`/redeem` route in `server.js` is that piece, and these are its essential
+lines, which a developer copies into their own server.
+
+```js
+const { FodId, DidClient } = require('fiftyone.pipeline.did');
+
+// Once, at start-up.
+const client = new DidClient({ resourceKey, licenceKey });
+
+// In the /redeem route, with 51did, result and challenge from the page.
+const read = FodId.tryParse(fiftyOneDid);
+if (!read.ok) {
+  response.writeHead(400, { 'Content-Type': 'application/json' });
+  response.end(JSON.stringify({
+    errors: ['51did is not a valid 51Did (' + read.status + ').']
+  }));
+  return;
+}
+const fodId = read.value;
+const signatureValid = await client.verifySignature(fodId);
+const redeemed = await client.redeem(fodId, result, challenge);
+const body = redeemed.toJSON();
+body.serverSignature = signatureValid ? 'verified' : 'invalid';
+response.writeHead(redeemed.statusCode, { 'Content-Type': 'application/json' });
+response.end(JSON.stringify(body));
+```
+
+The route answers with the cloud's status and a body in the cloud's own shape
+(`signature`, `context`, `factors` when present, `verifiedAt`,
+`secondsSinceVerified`) built from the typed result, plus `serverSignature`,
+the server's own offline check of the identifier's signature. The page ignores
+fields it does not know, so `page.html` is the same for every language. A
+host without the creator context answers 404 with a text body, which the page
+reports as not supported by this host, and an unreachable cloud answers 502
+with `{ "error": ... }`.
+
+The creation call requests every 51Did identifier in one request, and the page
+shows all six in a table: the probabilistic pair (`IdProbGlobal` and
+`IdProbLic`) derived from the connection, the deterministic hashed-email pair
+(`IdHemGlobal` and `IdHemLic`) derived from email evidence supplied as
+`id.email` (the demo sends `demo@51did.example`, so the pair is the same on
+every device that email appears on), and the random pair (`IdRandGlobal` and
+`IdRandLic`). Global identifiers are shared across customers, licensed ones are
+scoped to the licence key.
+
+```bash
+cd examples/creator-context-web
+_51DEGREES_RESOURCE_KEY=<resource key> node server.js
+```
+
+Then open `http://localhost:5100/`. To demonstrate across two devices, serve
+on an address both can reach and open the copied link on the second device.
+
+**The copy-and-paste proof.** Once the 51Did has fully validated, the page
+shows a copy-and-paste section with a link carrying the same 51Did, and an
+explanation of what will happen next. Open that link in a **different
+browser** and the same page loads with the same identifier: the signature
+still verifies and the identifier unpacks, because it is genuine, but the
+creator context does **not** validate, because the context binds the
+identifier to the browser and connection it was created on. That visible
+failure is the demonstration that matters, a copied or stolen identifier
+caught at presentation with nothing stored server side. Opening the link in
+the same browser is not the demonstration, since the same browser presents the
+same context and may still verify.
+
+The stylesheet `examples-main.min.css` beside the demo is the design system
+build and is refreshed by common-ci's `update-example-assets` step.
+
+### Environment variables
+
+| Variable | Meaning |
+| --- | --- |
+| `_51DEGREES_RESOURCE_KEY`, then `RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
+| `_51DEGREES_LICENSE_KEY`, then `LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
+| `FOD_CLOUD_API_URL` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
+| `PORT` | Web demo only. Defaults to `5100` |
+
+### What a run costs
+
+Every call the demo makes to the cloud is one use against the subscription
+behind the resource key. Checking a 51Did from the browser makes two,
+verify-full from the page and redeem from the server, so a browser-based
+context check is two uses every time. Checking only the signature with
+`verify` is one use. The public key list the offline check needs is one use
+each time it is fetched, which is on first use, when the list is a day old,
+and at most once a minute when a 51Did is dated close to the end of the list
+or past it, or fails its signature check.
+
+## Tests
+
+`npm test` runs the unit tests, which use an injected transport and touch no
+network. `tests/didClient.integration.test.js` runs against the live cloud
+only when `_51DEGREES_RESOURCE_KEY` (or `RESOURCE_KEY`) is set, and is skipped
+otherwise.
