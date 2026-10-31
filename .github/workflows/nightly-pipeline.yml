@@ -6,8 +6,9 @@ on:
       dryrun:
         type: boolean
         default: false
-  schedule:
-    - cron: '0 3 * * *'
+  # Off until cut-over, see internal-common-ci#15
+  # schedule:
+  #   - cron: '0 3 * * *'
 
 jobs:
   SubmoduleUpdate:

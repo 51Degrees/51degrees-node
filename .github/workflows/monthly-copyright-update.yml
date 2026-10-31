@@ -7,8 +7,9 @@ on:
         default: false
         type: boolean
         description: Dry Run
-  schedule:
-    - cron: '0 0 1 * *'
+  # Off until cut-over, see internal-common-ci#15
+  # schedule:
+  #   - cron: '0 0 1 * *'
 
 jobs:
   Monthly_Copyright_Update:

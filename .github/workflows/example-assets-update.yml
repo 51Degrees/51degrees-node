@@ -7,8 +7,9 @@ name: Example Assets Update
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * 1'
+  # Off until cut-over, see internal-common-ci#15
+  # schedule:
+  #   - cron: '0 3 * * 1'
 
 jobs:
   Example_Assets_Update:
