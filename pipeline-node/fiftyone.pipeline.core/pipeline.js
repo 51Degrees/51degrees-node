@@ -25,7 +25,7 @@ const EventEmitter = require('events');
 
 /**
  * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('fiftyone.pipeline.engines').DataFileUpdateService} DataFileUpdateService
+ * @typedef {any} DataFileUpdateService
  */
 
 /**

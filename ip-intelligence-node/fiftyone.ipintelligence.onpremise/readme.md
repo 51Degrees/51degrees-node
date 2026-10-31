@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package definitions for the on-premise IP intelligence engine. The on-premise engine requires a data file to be supplied. A free 'Lite' data file can be obtained from the [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository.
 
-The on-premise engine performs processing using a native library which is built from the C/C++ code in the [ip-intelligence-cxx](https://github.com/51Degrees/ip-intelligence-cxx) repository. Binaries are included with the published NPM package for a set of supported platforms and Node versions. If your platform or Node version is not supported then you can build the native module yourself, see 'Building the native module' below.
+The on-premise engine performs processing using a native library which is built from the C/C++ code in the [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx) repository. Binaries are included with the published NPM package for a set of supported platforms and Node versions. If your platform or Node version is not supported then you can build the native module yourself, see 'Building the native module' below.
 
 It can be used like this:
 
@@ -42,7 +42,7 @@ npm install fiftyone.ipintelligence.onpremise
 
 ### Building the native module
 
-The native module is built from the [ip-intelligence-cxx](https://github.com/51Degrees/ip-intelligence-cxx) code which is included in this repository as a git submodule. To build it locally you need:
+The native module is built from the [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx) code which is included at the root of this repository as a git submodule. To build it locally you need:
 
 - Node.js and npm
 - node-gyp (`npm install -g node-gyp`)
@@ -52,7 +52,7 @@ When working inside this repository, run `node ensure-native-module.js` from the
 root to perform all of the following steps automatically. The script works on Windows, Linux
 (including WSL) and MacOS. The manual steps from this directory are:
 
-1. Ensure the `ip-intelligence-cxx` submodule is checked out, including its own submodules.
+1. Ensure the `cxx` submodule at the root of the repository is checked out, including its own submodules.
 2. Copy `binding.51d` to `binding.gyp`.
 3. Run `node-gyp configure` and `node-gyp build`.
 4. Copy the resulting `build/Release/FiftyOneIpIntelligenceIpiV41.node` to `build/FiftyOneIpIntelligenceIpiV41-[platform]-[arch]-[node major version].node`, where [arch] is the value of `process.arch` and [node major version] is the major version of the Node.js runtime the module was built with.

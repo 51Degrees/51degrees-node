@@ -17,6 +17,6 @@ $examples = @(
 foreach ($example in $examples) {
     $path = Join-Path $RepoName $example.File
     $json = Get-Content $path | ConvertFrom-Json
-    $json.PipelineOptions.Elements[$example.Index].elementName = "../../../../../node_modules/$($example.Engine)"
+    $json.PipelineOptions.Elements[$example.Index].elementName = $example.Engine
     $json | ConvertTo-Json -Depth 10 | Set-Content $path
 }

@@ -8,4 +8,9 @@ binding.gyp
 /package-files/
 /package/
 /assets/
-/tests/
+/tests/tmp/
+*.tsbuildinfo
+# fetch-assets.ps1 links these here for the tests, and one test writes the gz
+51Degrees-LiteV4.1.hash
+51Degrees-LiteV4.1.hash.gz
+51Degrees.csv
