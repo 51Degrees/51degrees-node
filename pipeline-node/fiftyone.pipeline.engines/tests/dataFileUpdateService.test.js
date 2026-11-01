@@ -208,6 +208,43 @@ test('file watcher keeps watching after a failed refresh', async () => {
 });
 
 /**
+ * With a pipeline that has no 'error' listener, a refresh that fails on the
+ * file watcher route is written to the console rather than thrown, and the
+ * watcher picks up a later good file.
+ */
+test('file watcher with no error listener writes a failed refresh to the ' +
+  'console', async () => {
+  const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const { file } = newDataFile('watcher-');
+  const updateService = new DataFileUpdateService(new Pipeline([]));
+  const dataFile = Object.assign(standInDataFile(file),
+    { fileSystemWatcher: true });
+
+  try {
+    updateService.registerDataFile(dataFile);
+
+    const failed = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
+    fs.writeFileSync(file, 'unusable');
+    await failed;
+    expect(dataFile.data).toBe('version 1');
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'The data file cannot be used.' }));
+
+    const refreshed = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    fs.writeFileSync(file, 'version 2');
+    await refreshed;
+    expect(dataFile.data).toBe('version 2');
+  } finally {
+    // The folder is left in place, as in the test above.
+    dataFile.finished = true;
+    fs.unlinkSync(file);
+    consoleError.mockRestore();
+  }
+});
+
+/**
  * With an 'error' listener, a refresh that fails on the file watcher route
  * goes to the listener and nothing is written to the console.
  */
@@ -239,6 +276,64 @@ test('file watcher with an error listener reports a failed refresh to it',
       consoleError.mockRestore();
     }
   });
+
+/**
+ * With a pipeline that has no 'error' listener, a download the server refuses
+ * is written to the console rather than thrown.
+ */
+test('update route with no error listener writes a refused download to the ' +
+  'console', async () => {
+  const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const { folder, file } = newDataFile('update-');
+  const server = await serve(403, 'refused');
+  const updateService = new DataFileUpdateService(new Pipeline([]));
+  const dataFile = downloadFrom(standInDataFile(file), server, folder);
+
+  try {
+    const refused = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
+    updateService.updateDataFile(dataFile);
+    await refused;
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Access denied'));
+    expect(dataFile.updating).toBe(false);
+  } finally {
+    stop(server);
+    fs.rmSync(folder, { recursive: true, force: true });
+    consoleError.mockRestore();
+  }
+});
+
+/**
+ * With a pipeline that has no 'error' listener, a refresh that fails on the
+ * update route is written to the console rather than thrown, the data in use
+ * is kept, and no success is reported after the failure.
+ */
+test('update route with no error listener writes a failed refresh to the ' +
+  'console', async () => {
+  const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const { folder, file } = newDataFile('update-');
+  const server = await serve(200, 'unusable');
+  const updateService = new DataFileUpdateService(new Pipeline([]));
+  const statuses = recordStatuses(updateService);
+  const dataFile = downloadFrom(standInDataFile(file), server, folder);
+
+  try {
+    const failed = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
+    updateService.updateDataFile(dataFile);
+    await failed;
+    await downloadRemoved(folder);
+    expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED]);
+    expect(dataFile.data).toBe('version 1');
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'The data file cannot be used.' }));
+  } finally {
+    stop(server);
+    fs.rmSync(folder, { recursive: true, force: true });
+    consoleError.mockRestore();
+  }
+});
 
 /**
  * A refresh that fails on the update route is reported to an 'error'
