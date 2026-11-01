@@ -3,3 +3,4 @@ cxx/
 **/types/
 coverage/
 **/*.min.js
+**/javascript-templates/
