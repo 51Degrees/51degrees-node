@@ -6,8 +6,8 @@ param (
 )
 
 $tests = @(
-    @{ DataFile = 'cxx/device-detection-data/Enterprise-HashV41.hash'; Script = 'device-detection-node/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console/performance.js'; Output = "results_$Name.json" }
-    @{ Script = 'ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console/performance.js'; Output = "results_${Name}_ipi.json" }
+    @{ DataFile = 'cxx/device-detection-data/Enterprise-HashV41.hash'; Script = 'device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console/performance.js'; Output = "results_$Name.json" }
+    @{ Script = 'ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console/performance.js'; Output = "results_${Name}_ipi.json" }
 )
 
 $testsFailed = $false

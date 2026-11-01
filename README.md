@@ -8,19 +8,19 @@ to npm under its own name.
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
-| Pipeline API | [pipeline-node/readme.md](pipeline-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
-| Device Detection | [device-detection-node/readme.md](device-detection-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
-| IP Intelligence | [ip-intelligence-node/readme.md](ip-intelligence-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
-| Location | [location-node/README.md](location-node/README.md) | [Node.js](https://51degrees.com/documentation/apis/location-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
+| Pipeline API | [pipeline/readme.md](pipeline/readme.md) | [Node.js](https://51degrees.com/documentation/apis/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
+| Device Detection | [device-detection/readme.md](device-detection/readme.md) | [Node.js](https://51degrees.com/documentation/apis/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
+| IP Intelligence | [ip-intelligence/readme.md](ip-intelligence/readme.md) | [Node.js](https://51degrees.com/documentation/apis/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
+| Location | [location/README.md](location/README.md) | [Node.js](https://51degrees.com/documentation/apis/location-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
 
 ## What is where
 
 | Path | Contents |
 | --- | --- |
-| `pipeline-node` | The Pipeline API packages, `fiftyone.pipeline.*` |
-| `device-detection-node` | The Device Detection packages, `fiftyone.devicedetection*` |
-| `ip-intelligence-node` | The IP Intelligence packages, `fiftyone.ipintelligence*` |
-| `location-node` | The `fiftyone.geolocation` package |
+| `pipeline` | The Pipeline API packages, `fiftyone.pipeline.*` |
+| `device-detection` | The Device Detection packages, `fiftyone.devicedetection*` |
+| `ip-intelligence` | The IP Intelligence packages, `fiftyone.ipintelligence*` |
+| `location` | The `fiftyone.geolocation` package |
 | `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code and the data file submodules |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
@@ -44,8 +44,8 @@ folder to fetch it.
 The on-premise packages need a native module, built with
 [node-gyp](https://github.com/nodejs/node-gyp). The configuration is stored as
 `binding.51d` so that `npm install` does not start a build for cloud users.
-In `device-detection-node/fiftyone.devicedetection.onpremise` or
-`ip-intelligence-node/fiftyone.ipintelligence.onpremise`, run:
+In `device-detection/fiftyone.devicedetection.onpremise` or
+`ip-intelligence/fiftyone.ipintelligence.onpremise`, run:
 
 ```
 cp binding.51d binding.gyp
@@ -78,9 +78,9 @@ The wrappers are generated and must not be edited by hand. Use the
 [51Degrees fork of SWIG](https://github.com/51Degrees/swig), and run:
 
 ```
-cd device-detection-node/fiftyone.devicedetection.onpremise
+cd device-detection/fiftyone.devicedetection.onpremise
 swig -c++ -javascript -node hash_node.i
-cd ../../ip-intelligence-node/fiftyone.ipintelligence.onpremise
+cd ../../ip-intelligence/fiftyone.ipintelligence.onpremise
 swig -c++ -javascript -node ipi_node.i
 ```
 

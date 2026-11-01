@@ -1,0 +1,60 @@
+{
+  "name": "fiftyone.ipintelligence",
+  "version": "1.0.0",
+  "description": "IP intelligence services for the 51Degrees Pipeline API",
+  "keywords": [
+    "51degrees",
+    "ip intelligence",
+    "ip",
+    "geolocation",
+    "geoip",
+    "network",
+    "asn",
+    "vpn",
+    "proxy",
+    "tor",
+    "hosting",
+    "location",
+    "country",
+    "MaxMind",
+    "ipinfo"
+  ],
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "ip-intelligence/fiftyone.ipintelligence"
+  },
+  "author": "51Degrees Engineering <engineering@51degrees.com>",
+  "dependencies": {
+    "fiftyone.ipintelligence.cloud": ">=1.0.0-alpha.0",
+    "fiftyone.ipintelligence.onpremise": ">=1.0.0-alpha.0",
+    "fiftyone.ipintelligence.shared": ">=1.0.0-alpha.0",
+    "fiftyone.pipeline.cloudrequestengine": "4.4.x",
+    "fiftyone.pipeline.core": "4.4.x",
+    "fiftyone.pipeline.engines": "4.4.x",
+    "fiftyone.pipeline.engines.fiftyone": "4.4.x",
+    "js-yaml": "^4.1.0",
+    "n-readlines": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.8",
+    "@types/node": "^20.14.10",
+    "jest": "^28.1.3",
+    "jest-junit": "^13.2.0"
+  },
+  "license": "EUPL-1.2",
+  "bugs": {
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
+  },
+  "files": [
+    "*.js",
+    "types"
+  ]
+}

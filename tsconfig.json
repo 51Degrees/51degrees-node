@@ -1,9 +1,9 @@
 {
   "files": [],
   "references": [
-    { "path": "./pipeline-node" },
-    { "path": "./device-detection-node" },
-    { "path": "./ip-intelligence-node" },
-    { "path": "./location-node" }
+    { "path": "./pipeline" },
+    { "path": "./device-detection" },
+    { "path": "./ip-intelligence" },
+    { "path": "./location" }
   ]
 }

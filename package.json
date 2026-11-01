@@ -4,26 +4,26 @@
   "private": true,
   "description": "The workspace that holds every 51Degrees Node.js package. It is never published.",
   "workspaces": [
-    "pipeline-node/fiftyone.pipeline.core",
-    "pipeline-node/fiftyone.pipeline.engines",
-    "pipeline-node/fiftyone.pipeline.engines.fiftyone",
-    "pipeline-node/fiftyone.pipeline.cloudrequestengine",
-    "pipeline-node/fiftyone.pipeline.did",
-    "pipeline-node/fiftyone.pipeline.translation",
-    "device-detection-node/fiftyone.devicedetection",
-    "device-detection-node/fiftyone.devicedetection.cloud",
-    "device-detection-node/fiftyone.devicedetection.onpremise",
-    "device-detection-node/fiftyone.devicedetection.shared",
-    "location-node",
-    "ip-intelligence-node/fiftyone.ipintelligence",
-    "ip-intelligence-node/fiftyone.ipintelligence.cloud",
-    "ip-intelligence-node/fiftyone.ipintelligence.onpremise",
-    "ip-intelligence-node/fiftyone.ipintelligence.shared",
-    "ip-intelligence-node/fiftyone.ipintelligence.translation"
+    "pipeline/fiftyone.pipeline.core",
+    "pipeline/fiftyone.pipeline.engines",
+    "pipeline/fiftyone.pipeline.engines.fiftyone",
+    "pipeline/fiftyone.pipeline.cloudrequestengine",
+    "pipeline/fiftyone.pipeline.did",
+    "pipeline/fiftyone.pipeline.translation",
+    "device-detection/fiftyone.devicedetection",
+    "device-detection/fiftyone.devicedetection.cloud",
+    "device-detection/fiftyone.devicedetection.onpremise",
+    "device-detection/fiftyone.devicedetection.shared",
+    "location",
+    "ip-intelligence/fiftyone.ipintelligence",
+    "ip-intelligence/fiftyone.ipintelligence.cloud",
+    "ip-intelligence/fiftyone.ipintelligence.onpremise",
+    "ip-intelligence/fiftyone.ipintelligence.shared",
+    "ip-intelligence/fiftyone.ipintelligence.translation"
   ],
   "scripts": {
-    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location-node/)\"",
-    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location-node/)\" --testPathIgnorePatterns=\"performance\\.test\\.js\"",
+    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/)\"",
+    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"performance\\.test\\.js\"",
     "lint": "eslint . --ext .js",
     "tsc": "tsc -b --force"
   },
@@ -40,22 +40,22 @@
     "projects": [
       {
         "displayName": "pipeline",
-        "rootDir": "pipeline-node",
+        "rootDir": "pipeline",
         "setupFilesAfterEnv": ["<rootDir>/setup.js"]
       },
       {
         "displayName": "device-detection",
-        "rootDir": "device-detection-node",
+        "rootDir": "device-detection",
         "setupFilesAfterEnv": ["<rootDir>/setup.js"]
       },
       {
         "displayName": "ip-intelligence",
-        "rootDir": "ip-intelligence-node",
+        "rootDir": "ip-intelligence",
         "setupFilesAfterEnv": ["<rootDir>/setup.js"]
       },
       {
         "displayName": "location",
-        "rootDir": "location-node",
+        "rootDir": "location",
         "testRunner": "jest-jasmine2",
         "setupFilesAfterEnv": ["<rootDir>/setup.js", "jest-expect-message"]
       }

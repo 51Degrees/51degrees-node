@@ -1,0 +1,60 @@
+{
+  "name": "fiftyone.devicedetection.cloud",
+  "version": "1.0.0",
+  "description": "Device detection cloud services for the 51Degrees Pipeline API",
+  "keywords": [
+    "51degrees",
+    "device detection",
+    "user-agent",
+    "client hints",
+    "browser",
+    "os",
+    "device",
+    "cpu",
+    "mobile",
+    "phone",
+    "tablet",
+    "tv",
+    "bot",
+    "crawler",
+    "cloud",
+    "WURFL",
+    "DeviceAtlas"
+  ],
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "device-detection/fiftyone.devicedetection.cloud"
+  },
+  "author": "51Degrees Engineering <engineering@51degrees.com>",
+  "dependencies": {
+    "fiftyone.devicedetection.shared": ">=4.5.0-alpha.0",
+    "fiftyone.pipeline.cloudrequestengine": "4.4.x",
+    "fiftyone.pipeline.core": "4.4.x",
+    "fiftyone.pipeline.engines": "4.4.x",
+    "fiftyone.pipeline.engines.fiftyone": "4.4.x"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.8",
+    "@types/node": "^20.14.10",
+    "jest": "^28.1.0",
+    "jest-each": "^27.0.6",
+    "jest-junit": "^13.2.0"
+  },
+  "license": "EUPL-1.2",
+  "bugs": {
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
+  },
+  "files": [
+    "*.js",
+    "types"
+  ]
+}
