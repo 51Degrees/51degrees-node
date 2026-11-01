@@ -82,7 +82,7 @@ if ($TestResourceKey) {
     try {
         Invoke-ContractTests `
         -Name 'cloud' `
-        -ExampleDir "$PSScriptRoot/../device-detection-node/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
+        -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
         -Port 8096 `
         -Environment @{
             '_51DEGREES_RESOURCE_KEY' = $TestResourceKey
@@ -109,7 +109,7 @@ if (Test-Path $tacDataFile) {
     try {
         Invoke-ContractTests `
         -Name 'on-premise' `
-        -ExampleDir "$PSScriptRoot/../device-detection-node/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web" `
+        -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web" `
         -Port 8097 `
         -Environment @{
             '51DEGREES_DD_PATH' = (Resolve-Path $tacDataFile).Path

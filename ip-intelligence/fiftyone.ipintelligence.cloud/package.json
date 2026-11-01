@@ -1,0 +1,61 @@
+{
+  "name": "fiftyone.ipintelligence.cloud",
+  "version": "1.0.0",
+  "description": "Cloud-based IP intelligence for Node.js using the 51Degrees Pipeline API. Determine the network, and location properties of an IP address.",
+  "keywords": [
+    "51degrees",
+    "ip intelligence",
+    "ip",
+    "geolocation",
+    "geoip",
+    "network",
+    "asn",
+    "vpn",
+    "proxy",
+    "tor",
+    "hosting",
+    "location",
+    "country",
+    "MaxMind",
+    "ipinfo"
+  ],
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "ip-intelligence/fiftyone.ipintelligence.cloud"
+  },
+  "author": "51Degrees Engineering <engineering@51degrees.com>",
+  "dependencies": {
+    "fiftyone.ipintelligence.shared": "file:../fiftyone.ipintelligence.shared",
+    "fiftyone.pipeline.cloudrequestengine": "file:../../pipeline/fiftyone.pipeline.cloudrequestengine",
+    "fiftyone.pipeline.core": "file:../../pipeline/fiftyone.pipeline.core",
+    "fiftyone.pipeline.engines": "file:../../pipeline/fiftyone.pipeline.engines",
+    "fiftyone.pipeline.engines.fiftyone": "file:../../pipeline/fiftyone.pipeline.engines.fiftyone",
+    "js-yaml": "^4.1.0",
+    "n-readlines": "^1.0.1",
+    "pug": "^3.0.2",
+    "supertest": "^6.1.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.8",
+    "@types/node": "^20.14.10",
+    "jest": "^28.1.3",
+    "jest-junit": "^13.2.0"
+  },
+  "license": "EUPL-1.2",
+  "bugs": {
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
+  },
+  "files": [
+    "*.js",
+    "types"
+  ]
+}
