@@ -1,8 +1,17 @@
 # 51Degrees Node.js
 
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=51degrees-node-js "Data rewards the curious") **Node.js packages for Device Detection, IP Intelligence and Location**
+
 This repository holds the 51Degrees Node.js packages: the Pipeline API,
 Device Detection, IP Intelligence and Location. Each package is still published
 to npm under its own name.
+
+| Product | Read first | Documentation |
+| --- | --- | --- |
+| Pipeline API | [pipeline-node/readme.md](pipeline-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
+| Device Detection | [device-detection-node/readme.md](device-detection-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
+| IP Intelligence | [ip-intelligence-node/readme.md](ip-intelligence-node/readme.md) | [Node.js](https://51degrees.com/documentation/apis/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
+| Location | [location-node/README.md](location-node/README.md) | [Node.js](https://51degrees.com/documentation/apis/location-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
 
 ## What is where
 
@@ -14,8 +23,6 @@ to npm under its own name.
 | `location-node` | The `fiftyone.geolocation` package |
 | `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code and the data file submodules |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
-
-Each folder has its own readme describing its packages and examples.
 
 ## Getting the code
 
@@ -83,3 +90,7 @@ The repositories `pipeline-node`, `device-detection-node`, `location-node` and
 `ip-intelligence-node` were brought in with `git subtree add`, without
 `--squash`, so commit SHAs match the originals. Use `git log --follow` to trace
 a file back through the import.
+
+## Licence
+
+[European Union Public Licence v1.2](LICENSE)
