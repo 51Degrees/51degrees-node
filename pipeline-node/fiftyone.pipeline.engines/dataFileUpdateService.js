@@ -411,7 +411,19 @@ class DataFileUpdateService {
       const watch = function () {
         fs.watch(dataFile.path, { persistent: false }, function (event) {
           if (!dataFile.updating) {
-            dataFile.refresh();
+            // A failed refresh is logged and reported as on the update
+            // route, because an error thrown from here ends the process.
+            // fs.watch goes on watching, so a later file is picked up.
+            try {
+              dataFile.refresh();
+            } catch (e) {
+              dataFileUpdateService.pipeline.log('error', e);
+              dataFileUpdateService.eventEmitter.emit(
+                'updateComplete',
+                AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
+                dataFile);
+              return;
+            }
             dataFileUpdateService.eventEmitter.emit(
               'updateComplete',
               AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
