@@ -32,7 +32,10 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceCloudPipelineBuilder =
   require51('fiftyone.ipintelligence.cloud').IpIntelligenceCloudPipelineBuilder;
 
-const myResourceKey = process.env.RESOURCE_KEY;
+// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
+// first, followed by the legacy RESOURCE_KEY name.
+const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
+  process.env.RESOURCE_KEY;
 
 describe('ipIntelligenceCloud', () => {
   // Check that the cloud engine sets its data key correctly so
@@ -45,8 +48,9 @@ describe('ipIntelligenceCloud', () => {
   });
 
   // Process an IP address using the cloud service. This test
-  // requires a resource key to be provided via the RESOURCE_KEY
-  // environment variable.
+  // requires a resource key to be provided via the
+  // 51DEGREES_RESOURCE_KEY environment variable, or the legacy
+  // RESOURCE_KEY name.
   const testFunc = myResourceKey ? test : test.skip;
   testFunc('process IP address', done => {
     const pipeline = new IpIntelligenceCloudPipelineBuilder({

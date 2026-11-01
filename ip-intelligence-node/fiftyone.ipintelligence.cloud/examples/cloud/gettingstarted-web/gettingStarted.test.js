@@ -36,6 +36,8 @@ const fs = require('fs');
 // Load the example module
 const example = require(path.join(__dirname, '/gettingStarted.js'));
 
+const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
+
 // Test constants
 const tc = require51('fiftyone.ipintelligence.shared').testConstants;
 
@@ -43,7 +45,7 @@ const OptionsExtension =
   require51('fiftyone.ipintelligence.shared').optionsExtension;
 
 const resourceKey = process.env[tc.envVars.superResourceKeyEnvVar] ||
-  process.env.RESOURCE_KEY;
+  ExampleUtils.getResourceKeyFromEnv();
 
 describe('Examples', () => {
   const testFunc = resourceKey ? test : test.skip;

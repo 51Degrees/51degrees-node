@@ -26,6 +26,8 @@ $env:_51DEGREES_RESOURCE_KEY_HARDWARE = $Options.Keys.TestHardwareResourceKey
 $env:_51DEGREES_RESOURCE_KEY_BROWSER = $Options.Keys.TestBrowserResourceKey
 $env:_51DEGREES_RESOURCE_KEY_NO_SETHEADER = $Options.Keys.TestNoSetHeaderResourceKey
 
+# Read first by the IP Intelligence examples and tests.
+${env:51DEGREES_RESOURCE_KEY} = $Options.Keys.TestResourceKey
 $env:RESOURCE_KEY = $Options.Keys.TestResourceKey
 $env:TEST_SUPER_RESOURCE_KEY = $Options.Keys.TestSuperResourceKey
 $env:TEST_PLATFORM_RESOURCE_KEY = $Options.Keys.TestPlatformResourceKey

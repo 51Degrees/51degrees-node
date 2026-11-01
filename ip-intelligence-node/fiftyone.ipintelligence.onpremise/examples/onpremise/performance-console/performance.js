@@ -88,7 +88,7 @@ const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 const EVIDENCE_CSV = 'evidence.csv';
 
 const args = parser.parse_args();
-const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findFile(LITE_V_4_1_IPI);
+const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 const evidenceFile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(EVIDENCE_CSV);
 const jsonoutput = args.jsonoutput;
 

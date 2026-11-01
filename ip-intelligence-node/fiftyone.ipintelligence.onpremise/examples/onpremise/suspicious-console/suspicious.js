@@ -174,12 +174,13 @@ const run = async function (dataFile, output) {
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
-  // Use the supplied path for the data file or find the enterprise
+  // Use the supplied path for the data file, the path in the
+  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
   // file in the project space, falling back to the lite file that is
   // included in the repository.
-  let dataFile = args.length > 0 ? args[0] : ExampleUtils.findFile(ENTERPRISE_V_4_1_IPI);
+  let dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
   if (dataFile === undefined) {
-    dataFile = ExampleUtils.findFile(LITE_V_4_1_IPI);
+    dataFile = ExampleUtils.findDataFile(LITE_V_4_1_IPI);
     if (dataFile !== undefined) {
       console.warn('Failed to find an enterprise IP intelligence data ' +
         'file. Using the lite file instead. Note that the lite file ' +

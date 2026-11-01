@@ -31,11 +31,13 @@ const require51 = (requestedPackage) => {
 
 const example = require(path.join(__dirname, '/metaData.js'));
 
+const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
+
 // Test constants
 const tc = require51('fiftyone.ipintelligence.shared').testConstants;
 
 const resourceKey = process.env[tc.envVars.superResourceKeyEnvVar] ||
-  process.env.RESOURCE_KEY;
+  ExampleUtils.getResourceKeyFromEnv();
 
 // The cloud service can drop a connection, which is not what these tests check.
 jest.retryTimes(2);

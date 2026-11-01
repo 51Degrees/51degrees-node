@@ -29,6 +29,11 @@
  * used as evidence and details about the device, network, and location
  * are displayed.
  *
+ * The page also loads the 51Degrees client-side script from
+ * '/51Degrees.core.js'. The script gathers evidence in the browser, such
+ * as the screen size, and posts that evidence to '/json', which answers
+ * with the refined results.
+ *
  * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-web/gettingStarted.js).
  *
  * To run this example, you will eventually need to create a resource key.
@@ -81,6 +86,13 @@ const dataExtension =
 
 const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils'));
 
+// Path the client-side script is served from. The web integrations of the
+// other Pipeline APIs serve it at the same path.
+const coreJsPath = '/51Degrees.core.js';
+
+// Path the client-side script posts the evidence it gathers to.
+const jsonPath = '/json';
+
 // Pipeline variable to be used
 let pipeline;
 
@@ -94,13 +106,27 @@ const setPipeline = (options) => {
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
       'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
-      'A resource key with the properties required by this example can be ' +
-      'created for free at https://configure.51degrees.com/1QWJwHxl?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
-      'Once complete, populate the config file or environment variable ' +
-      'mentioned at the start of this message with the key.';
+      'A resource key with everything this example displays can be ' +
+      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
+      'subscription. A free key created at ' +
+      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required populates only the ' +
+      'free properties, which for IP intelligence are Country, ' +
+      'LocationConfidence, Ip and IpV6. See ' +
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+      'more properties. Once complete, populate the config file or ' +
+      'environment variable mentioned at the start of this message ' +
+      'with the key.';
   }
 
-  pipeline = new core.PipelineBuilder().buildFromConfiguration(options);
+  pipeline = new core.PipelineBuilder({
+    // Add the elements that build the client-side script and the JSON it
+    // fetches.
+    addJavaScriptBuilder: true,
+    javascriptBuilderSettings: {
+      // The route the client-side script posts the evidence it gathers to.
+      endPoint: jsonPath
+    }
+  }).buildFromConfiguration(options);
 
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
@@ -111,7 +137,7 @@ const setPipeline = (options) => {
 // are served at '/css/...' and '/js/...'.
 const publicDir = path.join(__dirname, '/public');
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   // Serve the shared example assets before running the pipeline. When the
   // request is for one of those files the response is sent here and we
   // return early.
@@ -127,8 +153,45 @@ const server = http.createServer((req, res) => {
   // added automatically from the request.
   const flowData = pipeline.createFlowData();
 
-  // Extract required evidence from the Http request.
-  flowData.evidence.addFromRequest(req);
+  // Extract required evidence from the Http request, being its headers,
+  // cookies and query string. The client-side script posts the evidence
+  // it gathers as a form body, so the body is read first.
+  try {
+    await flowData.evidence.addFromRequestAsync(req);
+  } catch (e) {
+    // The request could not be read, for example because the client
+    // closed the connection part way through the form body.
+    res.statusCode = 400;
+    res.end();
+    return;
+  }
+
+  const urlPath = req.url.split('?')[0];
+
+  if (urlPath === jsonPath) {
+    // Answer the client-side script with the results of processing the
+    // evidence it posted.
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+
+      res.end(JSON.stringify(flowData.jsonbundler.json));
+    });
+    return;
+  }
+
+  if (urlPath === coreJsPath) {
+    // Serve the client-side script built for this request. The script
+    // carries the results of this request's detection, so it is built per
+    // request rather than cached.
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/x-javascript');
+
+      res.end(flowData.javascriptbuilder.javascript);
+    });
+    return;
+  }
 
   flowData.process().then(function () {
     res.statusCode = 200;
@@ -152,6 +215,7 @@ const server = http.createServer((req, res) => {
         evidenceUsed: evidences,
         allEvidence,
         inputIpAddress,
+        coreJsPath,
         areas: dataExtension.getValueHelper(flowData.ip, 'areas'),
         isMobile: dataExtension.getValueHelper(flowData.device, 'ismobile'),
         platformName: dataExtension.getValueHelper(flowData.device, 'platformname'),
@@ -159,6 +223,9 @@ const server = http.createServer((req, res) => {
         browserName: dataExtension.getValueHelper(flowData.device, 'browsername'),
         browserVersion: dataExtension.getValueHelper(flowData.device, 'browserversion'),
         deviceType: dataExtension.getValueHelper(flowData.device, 'devicetype'),
+        // The device id combines the profile ids of the hardware, platform,
+        // browser and crawler components that were matched.
+        deviceId: dataExtension.getValueHelper(flowData.device, 'deviceid'),
         registeredName: dataExtension.getValueHelper(flowData.ip, 'registeredname'),
         registeredOwner: dataExtension.getValueHelper(flowData.ip, 'registeredowner'),
         registeredCountry: dataExtension.getValueHelper(flowData.ip, 'registeredcountry'),
@@ -179,16 +246,16 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // Load the configuration options from config file.
   const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 
-  // Use the resource key from the environment variable if one
+  // Use the resource key from the environment variables if one
   // is not present in the configuration.
   const resourceKeyFromConfig = optionsExtension.getResourceKey(options);
   if (!resourceKeyFromConfig || resourceKeyFromConfig.startsWith('!!')) {
     optionsExtension.setResourceKey(
-      options, process.env[ExampleUtils.RESOURCE_KEY_ENV_VAR]);
+      options, ExampleUtils.getResourceKeyFromEnv());
   }
 
   setPipeline(options);
-  const port = 3001;
+  const port = process.env.PORT || 3001;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);
