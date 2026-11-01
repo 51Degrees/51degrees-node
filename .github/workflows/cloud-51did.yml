@@ -24,7 +24,9 @@ on:
   # unnoticed until a customer finds it. That is what happened when the cloud service began
   # writing the Terms byte. The six 51Did packages are
   # staggered ten minutes apart so they do not all ask production at once.
-  # Off until cut-over, see internal-common-ci#15
+  # Off until this repository takes over from the separate Node repositories
+  # it replaces. Their schedules are turned off then, so the same jobs never
+  # run in both.
   # schedule:
   #   - cron: '20 5 * * *'
   pull_request:
