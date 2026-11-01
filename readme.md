@@ -36,8 +36,26 @@ The API can either use our cloud service to get its data or it can use a local (
 
 You will require a [resource key](https://51degrees.com/documentation/_info__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud), see our
+[configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud), see our
 [documentation](https://51degrees.com/documentation/_concepts__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud) on how to use this.
+
+The cloud property tiers changed in May 2026. The examples and this documentation
+now reflect what is free and what needs a paid subscription. The free tier includes
+the following IP intelligence properties: Country, LocationConfidence, Ip and IpV6.
+A resource key that selects these free properties can be created at
+[this configurator link](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud).
+
+The paid IP intelligence properties used by the examples are: CountryCode,
+CountryCode3, Region, State, Town, TimeZoneOffset, RegisteredName, RegisteredOwner,
+RegisteredCountry, IpRangeStart, IpRangeEnd, Latitude, Longitude and
+AccuracyRadiusMin. A resource key that selects the free properties plus these paid
+properties, covering everything the examples display, can be created at
+[this configurator link](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud).
+See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=cloud to get a paid subscription with more properties.
+
+When running the cloud examples, the resource key can be supplied in the
+`51DEGREES_RESOURCE_KEY` environment variable. The legacy `RESOURCE_KEY`
+name is still supported and is checked second.
 
 #### On-Premise
 
@@ -46,6 +64,18 @@ A free, 'lite' file can be obtained from the
 [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository. It has a
 significantly reduced set of properties. To obtain a file with a more complete set of
 properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=on-premise).
+
+The on-premise examples locate the IP intelligence data file in the following order:
+
+1. The `51DEGREES_IPI_PATH` environment variable, which can be set to an explicit path to
+   the data file. The mixed examples also need a device detection data file, for which the
+   `51DEGREES_DD_PATH` environment variable can be set in the same way.
+2. A search of the folder hierarchy, walking up from the working directory, for the
+   expected data file name.
+3. The free 'Lite' data file in its expected location, which is the
+   [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) submodule of
+   this repository. Make sure submodules have been updated by running
+   `git submodule update --init --recursive`.
 
 ### Installation
 
@@ -171,7 +201,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/1QWJwHxl?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees Cloud Configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `51DEGREES_RESOURCE_KEY` in your test environment. The legacy `RESOURCE_KEY` name is still supported and is checked second.
 
 The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
 

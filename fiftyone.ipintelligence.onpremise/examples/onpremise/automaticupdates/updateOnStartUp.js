@@ -53,9 +53,10 @@ const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
 // Load in a datafile
 const args = process.argv.slice(2);
-// Use the supplied path for the data file or find the lite
+// Use the supplied path for the data file, the path in the
+// 51DEGREES_IPI_PATH environment variable, or find the lite
 // file that is included in the repository.
-const datafile = args.length > 0 ? args[0] : ExampleUtils.findFile(LITE_V_4_1_IPI);
+const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
 // Set your license key, if you don't have a license key already you can
 // obtain one by subscribing to a 51Degrees bundle: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updateonstartup.js&utm_term=mylicensekey

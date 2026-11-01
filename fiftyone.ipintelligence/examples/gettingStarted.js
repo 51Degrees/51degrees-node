@@ -49,15 +49,20 @@ const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpInt
 
 // Create the IP intelligence pipeline with the desired settings.
 
-// You need to create a resource key at https://configure.51degrees.com/1QWJwHxl?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey
-// and paste it into the code, replacing !!YOUR_RESOURCE_KEY!! below.
+// You need to create a resource key at
+// https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and paste it into the code,
+// replacing !!YOUR_RESOURCE_KEY!! below. The link selects the free
+// properties, which include the country property used by this example.
 
-const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
+// first, followed by the legacy RESOURCE_KEY name.
+const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
+  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com/1QWJwHxl?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=resource-key-required and paste it into the code, ' +
-        'replacing !!YOUR_RESOURCE_KEY!!');
+        'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and paste it into ' +
+        'the code, replacing !!YOUR_RESOURCE_KEY!!');
   console.log('Make sure to include the country property ' +
         'as it is used by this example.');
 } else {

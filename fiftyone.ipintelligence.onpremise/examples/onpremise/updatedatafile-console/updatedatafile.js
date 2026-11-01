@@ -37,6 +37,7 @@ const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
+const IPI_DATA_FILE_ENV_VAR = require(path.join(__dirname, '/../exampleUtils')).IPI_DATA_FILE_ENV_VAR;
 const ExampleConstants = require51('fiftyone.ipintelligence.shared').exampleConstants;
 const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 
@@ -195,6 +196,11 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
       console.warn(`File ${dataFilePath} not found, a file will be downloaded to that location on ` +
         'start-up');
     }
+  }
+  // No filename specified. Check the environment variable for an
+  // explicit path before using the default.
+  if (!dataFilePath) {
+    dataFilePath = process.env[IPI_DATA_FILE_ENV_VAR];
   }
   // no filename specified use the default
   if (!dataFilePath) {

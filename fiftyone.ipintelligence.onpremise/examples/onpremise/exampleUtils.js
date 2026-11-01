@@ -33,6 +33,16 @@ const FIND_FILE_TIMEOUT_MS = 10000;
 // be displayed.
 const DATA_FILE_AGE_WARNING = 30;
 
+// Environment variable that can be set to supply an explicit path to
+// the IP intelligence data file. Checked before the folder hierarchy
+// is searched.
+const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
+
+// Environment variable that can be set to supply an explicit path to
+// the device detection data file used by the mixed examples. Checked
+// before the folder hierarchy is searched.
+const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
+
 // Content types for the small set of static assets served by the web
 // examples. The shared pattern-library CSS and JS live under each
 // example's 'public' directory.
@@ -90,6 +100,22 @@ class ExampleUtils {
       fileName,
       new Date().getTime() + FIND_FILE_TIMEOUT_MS,
       path.normalize(process.cwd()));
+  }
+
+  // Get the path to an IP intelligence data file. The environment
+  // variable named by IPI_DATA_FILE_ENV_VAR is checked first for an
+  // explicit path. If it is not set then the folder hierarchy is
+  // searched for the supplied file name.
+  static findDataFile (fileName) {
+    return process.env[IPI_DATA_FILE_ENV_VAR] || this.findFile(fileName);
+  }
+
+  // Get the path to a device detection data file. The environment
+  // variable named by DD_DATA_FILE_ENV_VAR is checked first for an
+  // explicit path. If it is not set then the folder hierarchy is
+  // searched for the supplied file name.
+  static findDeviceDataFile (fileName) {
+    return process.env[DD_DATA_FILE_ENV_VAR] || this.findFile(fileName);
   }
 
   static isTimedOut (timeout) {
@@ -220,5 +246,7 @@ class ExampleUtils {
 
 module.exports = {
   ExampleUtils,
-  DATA_FILE_AGE_WARNING
+  DATA_FILE_AGE_WARNING,
+  IPI_DATA_FILE_ENV_VAR,
+  DD_DATA_FILE_ENV_VAR
 };
