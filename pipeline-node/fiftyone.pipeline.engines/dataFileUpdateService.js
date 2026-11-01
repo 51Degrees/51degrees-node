@@ -280,9 +280,11 @@ class DataFileUpdateService {
             dataFile);
         }
 
+        let refreshed = true;
         try {
           dataFile.refresh();
         } catch (e) {
+          refreshed = false;
           dataFileUpdateService.pipeline.log('error', e);
           dataFileUpdateService.eventEmitter.emit(
             'updateComplete',
@@ -301,10 +303,13 @@ class DataFileUpdateService {
               AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
               dataFile);
           }
-          dataFileUpdateService.eventEmitter.emit(
-            'updateComplete',
-            AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
-            dataFile);
+          // A failed refresh has been reported already.
+          if (refreshed) {
+            dataFileUpdateService.eventEmitter.emit(
+              'updateComplete',
+              AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
+              dataFile);
+          }
         });
       });
     });
