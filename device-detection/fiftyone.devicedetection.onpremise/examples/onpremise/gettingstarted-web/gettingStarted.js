@@ -1,0 +1,319 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+/**
+ * @example onpremise/gettingstarted-web/gettingStarted.js
+ *
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web/gettingStarted.js).
+ *
+ * Required npm Dependencies:
+ * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)
+ * - [fiftyone.pipeline.engines](https://www.npmjs.com/package/fiftyone.pipeline.engines)
+ * - [fiftyone.pipeline.engines.fiftyone](https://www.npmjs.com/package/fiftyone.pipeline.engines.fiftyone)
+ * - [fiftyone.devicedetection.onpremise](https://www.npmjs.com/package/fiftyone.devicedetection.onpremise)
+ *
+ * ## Overview
+ *
+ * The `flowData.evidence.addFromRequestAsync(request)` is used to extract
+ * required evidence from a Http request, including the values the 51Degrees
+ * client script sends as a posted form body, which are only reached by
+ * reading the body. The `Helpers.setResponseHeaders(response, flowData)`
+ * from fiftyone.pipeline.core package is used to add extra headers to a Http
+ * response to request further evidence from the client.
+ * ```
+ * await flowData.evidence.addFromRequestAsync(request);
+ *
+ * core.Helpers.setResponseHeaders(response, flowData);
+ * ```
+ *
+ * The results of detection can be accessed by querying the `device` property of
+ * a FlowData object. This can then be used to interrogate the data.
+ * ```
+ * var flowData = pipeline.createFlowData();
+ * var deviceData = pipeline.device;
+ * var hardwareVendor = deviceData.hardwarevendor;
+ * ```
+ *
+ * Results can also be accessed in client-side code by using the `fod` object. See the
+ * [JavaScriptBuilderElement](/documentation/4.5/apis/pipeline-node/class_java_script_builder_element.html)
+ * for details on available settings such as changing the `fod` name.
+ * ```
+ * window.onload = function () {
+ *     fod.complete(function(data) {
+ *         var hardwareName = data.device.hardwarename;
+ *         alert(hardwareName.join(", "));
+ *     }
+ * }
+ * ```
+ *
+ */
+
+const path = require('path');
+const require51 = (requestedPackage) => {
+  try {
+    return require(path.join(__dirname, '/../../../node_modules/', requestedPackage));
+  } catch (e) {
+    return require(requestedPackage);
+  }
+};
+
+const fs = require('fs');
+const http = require('http');
+const pug = require('pug');
+
+const compiledFunction =
+  pug.compileFile(path.join(__dirname, '/index.pug'));
+
+// Directory holding the shared pattern-library web-example assets
+// (examples-main.min.css and examples.min.js). These are served as static
+// files so the page can reference them with /css and /js URLs, in the same way
+// express.static or an ASP.NET wwwroot folder would expose them.
+const publicDir = path.join(__dirname, '/public');
+
+// Path that the 51Degrees client-side script is served from. The same name is
+// used by the cloud example in this repository and by the .NET, Java and Rust
+// web integrations.
+const coreJsPath = '/51Degrees.core.js';
+
+// Map of file extensions to the content types used when serving static assets.
+const staticContentTypes = {
+  '.css': 'text/css',
+  '.js': 'text/javascript'
+};
+
+// Serve a file from the public directory. Returns true if the request was a
+// static asset request (whether or not the file was found) so the caller can
+// stop processing it as a detection request.
+const tryServeStatic = (req, res) => {
+  const urlPath = req.url.split('?')[0];
+  if (!urlPath.startsWith('/css/') && !urlPath.startsWith('/js/')) {
+    return false;
+  }
+
+  // Resolve the requested path within the public directory and make sure it
+  // cannot escape it.
+  const filePath = path.join(publicDir, urlPath);
+  if (!filePath.startsWith(publicDir)) {
+    res.statusCode = 403;
+    res.end();
+    return true;
+  }
+
+  fs.readFile(filePath, function (err, content) {
+    if (err) {
+      res.statusCode = 404;
+      res.end();
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type',
+      staticContentTypes[path.extname(filePath)] || 'application/octet-stream');
+    res.end(content);
+  });
+  return true;
+};
+
+const core = require51('fiftyone.pipeline.core');
+
+const optionsExtension =
+  require51('fiftyone.devicedetection.shared').optionsExtension;
+
+const dataExtension =
+  require51('fiftyone.devicedetection.shared').dataExtension;
+
+const {
+  DATA_FILE_AGE_WARNING,
+  DATA_FILE_PATH_ENV_VAR,
+  LEGACY_DATA_FILE_PATH_ENV_VAR,
+  ExampleUtils
+} = require(path.join(__dirname, '/../exampleUtils'));
+
+// Pipeline variable to be used
+let pipeline;
+
+const setPipeline = (options) => {
+  // An explicit data file path supplied in the '51DEGREES_DD_PATH'
+  // environment variable (or the older '_51DEGREES_DD_PATH') takes
+  // precedence over the value in the configuration file.
+  const envDataFilePath = ExampleUtils.getDataFilePathFromEnv();
+  if (envDataFilePath) {
+    optionsExtension.setDataFilePath(options, envDataFilePath);
+  }
+  const dataFilePath = optionsExtension.getDataFilePath(options);
+  if (!dataFilePath) {
+    throw 'A data file must be specified in the 51d.json file or the ' +
+      `'${DATA_FILE_PATH_ENV_VAR}' environment variable (the older ` +
+      `'${LEGACY_DATA_FILE_PATH_ENV_VAR}' is also read).`;
+  }
+
+  if (!fs.existsSync(dataFilePath)) {
+    const newDataFilePath = ExampleUtils.findFile(path.basename(dataFilePath));
+    if (newDataFilePath !== undefined) {
+      optionsExtension.setDataFilePath(options, newDataFilePath);
+      console.warn('Failed to find a device detection data file at ' +
+        `at the specified path '${dataFilePath}'. Use '${newDataFilePath}' ` +
+        'instead.');
+    } else {
+      throw 'Failed to find a device detection data file at ' +
+        `'${dataFilePath}'. If using the lite file, then make sure the ` +
+        'device-detection-data submodule has been updated by running ' +
+        '\'git submodule update --recursive\'. Otherwise, ensure that the ' +
+        'filename is correct in 51d.json.';
+    }
+  }
+
+  // 'suppressProcessExceptions' is set to true in 51d.json
+  // (PipelineOptions.BuildParameters) so a device-detection failure degrades
+  // gracefully instead of failing the request. Use false while developing to
+  // surface mistakes loudly. Errors are still logged via the 'error' handler.
+  pipeline = new core.PipelineBuilder({
+    // Enable custom javascript builder
+    addJavaScriptBuilder: true,
+    // Settings for javascript builder
+    javascriptBuilderSettings: {
+      // Custom endpoint to report client-side evidence
+      endPoint: '/json'
+    }
+  }).buildFromConfiguration(options);
+
+  // Logging of errors and other messages.
+  // Valid logs types are info, debug, warn, error
+  pipeline.on('error', console.error);
+};
+
+const server = http.createServer(async (req, res) => {
+  // Serve the shared CSS/JS assets from the public directory. If this was a
+  // static asset request then there is nothing more to do.
+  if (tryServeStatic(req, res)) {
+    return;
+  }
+
+  // FlowData is a data structure that is used to convey
+  // information required for detection and the results of the
+  // detection through the pipeline.
+  // Information required for detection is called "evidence"
+  // and usually consists of a number of HTTP Header field
+  // values, in this case represented by a
+  // Object of header name/value entries.
+  const flowData = pipeline.createFlowData();
+
+  // Extract required evidence from the Http request. The client script
+  // sends the results of its snippets, the session id and the sequence as
+  // a posted form body, so the body is read before the evidence is taken.
+  try {
+    await flowData.evidence.addFromRequestAsync(req);
+  } catch (e) {
+    // The client went away while posting, which must not stop the server.
+    res.statusCode = 400;
+    res.end();
+    return;
+  }
+
+  // Handle report from client side separately
+  if (req.url.startsWith('/json')) {
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+
+      res.end(JSON.stringify(flowData.jsonbundler.json));
+    });
+  } else if (req.url.split('?')[0] === coreJsPath) {
+    // Serve the client-side script built by the JavaScriptBuilder as a separate
+    // resource, so that the page can reference it with a <script src> tag, in
+    // the same way as the cloud example. Serving it per request rather than
+    // caching it is what allows it to carry the results of this request's
+    // detection. Query parameters, such as 'fod-js-enable-cookies', are
+    // evidence like any other and are already in the flow data via
+    // addFromRequest.
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/x-javascript');
+
+      res.end(flowData.javascriptbuilder.javascript);
+    });
+  } else {
+    flowData.process().then(function () {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/html');
+
+      // Some browsers require that extra HTTP headers are explicitly
+      // requested. So set whatever headers are required by the browser in
+      // order to return the evidence needed by the pipeline.
+      // More info on this can be found at
+      // https://51degrees.com/blog/user-agent-client-hints?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-web-gettingstarted.js&utm_term=server
+      core.Helpers.setResponseHeaders(res, flowData);
+
+      // Obtain all used evidence
+      const allEvidence = flowData.evidence.getAll();
+      const evidences =
+        pipeline.getElement('device').evidenceKeyFilter.filterEvidence(
+          allEvidence);
+
+      // Compile a response
+      res.end(compiledFunction(
+        {
+          dataFilePublishedTime: new Date().getTime(),
+          dataFileAgeWarning: DATA_FILE_AGE_WARNING,
+          responseHeaders: res.getHeaders(),
+          evidenceUsed: evidences,
+          allEvidence,
+          dataSourceTier: ExampleUtils.getDataTier(pipeline),
+          coreJsPath,
+          hardwareVendor: dataExtension.getValueHelper(flowData.device, 'hardwarevendor'),
+          hardwareName: dataExtension.getValueHelper(flowData.device, 'hardwarename'),
+          deviceType: dataExtension.getValueHelper(flowData.device, 'devicetype'),
+          platformVendor: dataExtension.getValueHelper(flowData.device, 'platformvendor'),
+          platformName: dataExtension.getValueHelper(flowData.device, 'platformname'),
+          platformVersion: dataExtension.getValueHelper(flowData.device, 'platformversion'),
+          browserVendor: dataExtension.getValueHelper(flowData.device, 'browservendor'),
+          browserName: dataExtension.getValueHelper(flowData.device, 'browsername'),
+          browserVersion: dataExtension.getValueHelper(flowData.device, 'browserversion'),
+          screenWidth: dataExtension.getValueHelper(flowData.device, 'screenpixelswidth'),
+          screenHeight: dataExtension.getValueHelper(flowData.device, 'screenpixelsheight'),
+          // The device id combines the profile ids of the hardware, platform,
+          // browser and crawler components that were matched.
+          deviceId: dataExtension.getValueHelper(flowData.device, 'deviceid')
+        })
+      );
+    });
+  }
+});
+
+// Don't run the server if under TEST
+if (process.env.JEST_WORKER_ID === undefined) {
+  // Load the configuration options from config file.
+  const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
+
+  setPipeline(options);
+  // The port can be set with the 'PORT' environment variable, as in the
+  // cloud example, so that the example can be run alongside others.
+  const port = process.env.PORT || 3001;
+  const hostname = 'localhost';
+  server.listen(port, hostname);
+  console.log(`Server listening on: http://${hostname}:${port}`);
+};
+
+// Export server object and set pipeline.
+module.exports = {
+  server,
+  setPipeline
+};

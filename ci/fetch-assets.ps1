@@ -26,8 +26,8 @@ if ($DeviceDetection) {
 ./steps/fetch-assets.ps1 -DeviceDetection:$DeviceDetection -DeviceDetectionUrl:$DeviceDetectionUrl -CsvUrl:$CsvUrl -Assets $assets
 foreach ($asset in $assets) {
     switch -Exact -CaseSensitive ($asset) {
-        'TAC-HashV41.hash' {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$deviceDetectionData/Enterprise-HashV41.hash", "$PSScriptRoot/../device-detection-node/fiftyone.devicedetection.onpremise/tests/51Degrees-LiteV4.1.hash"}
-        '51Degrees.csv' {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$PSScriptRoot/../device-detection-node/fiftyone.devicedetection.cloud/tests/$_"}
+        'TAC-HashV41.hash' {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$deviceDetectionData/Enterprise-HashV41.hash", "$PSScriptRoot/../device-detection/fiftyone.devicedetection.onpremise/tests/51Degrees-LiteV4.1.hash"}
+        '51Degrees.csv' {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/tests/$_"}
         '51Degrees-LiteV4.1.hash' {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$deviceDetectionData/$_", "$deviceDetectionData/51Degrees.hash"}
         default {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$deviceDetectionData/$_"}
     }

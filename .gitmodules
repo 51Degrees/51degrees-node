@@ -2,5 +2,5 @@
 	path = cxx
 	url = ../51degrees-cxx
 [submodule "javascript-templates"]
-	path = pipeline-node/fiftyone.pipeline.core/javascript-templates
+	path = pipeline/fiftyone.pipeline.core/javascript-templates
 	url = ../javascript-templates
