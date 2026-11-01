@@ -31,9 +31,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// Node major versions that the SWIG generated binding supports. Newer
-// versions removed V8 APIs that the binding depends on.
-const SUPPORTED_NODE_MAJOR_VERSIONS = [20, 22];
+// Node major versions targeted for testing, the current LTS versions.
+// The binding may well build against other versions but they are not
+// tested. See https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=comment&utm_campaign=ip-intelligence-node&utm_content=ensure-native-module.js&utm_term=tested-versions
+const SUPPORTED_NODE_MAJOR_VERSIONS = [22, 24];
 
 const nodeMajor = Number(process.version.split('.')[0].replace('v', ''));
 const packageDir = path.join(__dirname, 'fiftyone.ipintelligence.onpremise');

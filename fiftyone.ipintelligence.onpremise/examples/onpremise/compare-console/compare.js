@@ -66,7 +66,7 @@
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
  * To obtain an enterprise data file for testing, please
- * [contact us](https://51degrees.com/contact-us).
+ * [contact us](https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=header).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)
@@ -96,7 +96,7 @@ const areas = require(path.join(__dirname, '/../areas'));
 // This example requires the enterprise data file as the latitude,
 // longitude and area properties used are not available in the lite file.
 // To obtain an enterprise data file for testing, please contact us:
-// https://51degrees.com/contact-us
+// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=enterprise_v_4_1_ipi
 const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
@@ -206,14 +206,14 @@ const run = async function (dataFile, csvTruthFile, output, progress) {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html
+  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
     // We use the max performance profile for optimal detection speed
     // in this example. See the documentation for more detail on this
     // and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html
-    // https://51degrees.com/documentation/_features__usage_sharing.html
+    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
+    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
     performanceProfile: 'MaxPerformance',
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
@@ -288,7 +288,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
         'does not contain the area properties used by this example, ' +
         'so records may be skipped. To obtain an enterprise data file ' +
         'for testing, please contact us: ' +
-        'https://51degrees.com/contact-us');
+        'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=lite-file-fallback');
     }
   }
 

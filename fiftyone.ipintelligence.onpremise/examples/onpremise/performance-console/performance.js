@@ -82,7 +82,7 @@ parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 // Note that the Lite data file is only used for illustration, and has
 // limited accuracy and capabilities.
 // Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing
+// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=lite_v_4_1_ipi
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 // This file contains IP addresses to use as evidence.
 const EVIDENCE_CSV = 'evidence.csv';

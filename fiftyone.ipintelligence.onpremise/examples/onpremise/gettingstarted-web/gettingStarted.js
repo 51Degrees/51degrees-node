@@ -69,7 +69,9 @@ const pug = require('pug');
 const compiledFunction =
   pug.compileFile(path.join(__dirname, '/index.pug'));
 
-const core = require51('fiftyone.pipeline.core');
+const ipi = require51('fiftyone.ipintelligence.onpremise');
+
+const translation = require51('fiftyone.ipintelligence.translation');
 
 const optionsExtension =
   require51('fiftyone.ipintelligence.shared').optionsExtension;
@@ -84,7 +86,7 @@ const { DATA_FILE_AGE_WARNING, ExampleUtils } =
 let pipeline;
 
 const setPipeline = (options) => {
-  const dataFilePath = optionsExtension.getDataFilePath(options);
+  let dataFilePath = optionsExtension.getDataFilePath(options);
   if (!dataFilePath) {
     throw 'A data file must be specified in the 51d.json file.';
   }
@@ -95,7 +97,7 @@ const setPipeline = (options) => {
     const newDataFilePath =
       ExampleUtils.findDataFile(path.basename(dataFilePath));
     if (newDataFilePath !== undefined) {
-      optionsExtension.setDataFilePath(options, newDataFilePath);
+      dataFilePath = newDataFilePath;
       console.warn('Failed to find an IP intelligence data file ' +
         `at the specified path '${dataFilePath}'. Use '${newDataFilePath}' ` +
         'instead.');
@@ -108,14 +110,42 @@ const setPipeline = (options) => {
     }
   }
 
-  pipeline = new core.PipelineBuilder().buildFromConfiguration(options);
+  // Build the on-premise IP intelligence pipeline and append the two country
+  // translation engines. The IP intelligence engine emits the weighted lists
+  // of country codes; the translation engines turn those into the localized,
+  // ordered country name lists that the page binds the dropdown to. The
+  // browser language is taken from the request's Accept-Language header (a
+  // 'translation' query parameter overrides it).
+  pipeline = new ipi.IpIntelligenceOnPremisePipelineBuilder({
+    performanceProfile: 'Balanced',
+    dataFile: dataFilePath,
+    shareUsage: false,
+    autoUpdate: false,
+    updateOnStart: false,
+    fileSystemWatcher: false,
+    suppressProcessExceptions: true
+  })
+    .add(new translation.CountryCodeTranslationEngineBuilder().build())
+    .add(new translation.CountriesTranslationEngineBuilder().build())
+    .build();
 
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
 };
 
+// Directory holding the shared pattern-library assets (CSS and JS) that
+// are served at '/css/...' and '/js/...'.
+const publicDir = path.join(__dirname, '/public');
+
 const server = http.createServer((req, res) => {
+  // Serve the shared example assets before running the pipeline. When the
+  // request is for one of those files the response is sent here and we
+  // return early.
+  if (ExampleUtils.serveStaticAsset(req, res, publicDir)) {
+    return;
+  }
+
   // FlowData is a data structure that is used to convey
   // information required for detection and the results of the
   // detection through the pipeline.
@@ -137,13 +167,55 @@ const server = http.createServer((req, res) => {
       pipeline.getElement('ip').evidenceKeyFilter.filterEvidence(
         allEvidence);
 
+    // The IP address supplied through the lookup form, used to
+    // pre-populate the input on the rendered page.
+    const inputIpAddress =
+      (allEvidence['query.client-ip'] ||
+        allEvidence['header.x-forwarded-for'] || '');
+
+    // Read one of the ordered "All" lists produced by the country
+    // translation engine, returning an empty array when it is not present.
+    const allList = (key) => {
+      try {
+        const value = flowData.get('countrynamestranslated').get(key);
+        return value && value.hasValue ? value.value : [];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    // Read a weighted list from the IP intelligence element data and format
+    // each entry as 'value (weight%)' for display, returning an empty array
+    // when the property is not present.
+    const ipList = (key) => {
+      try {
+        const value = flowData.ip[key];
+        if (value && value.hasValue && Array.isArray(value.value)) {
+          return value.value.map((item) => dataExtension.formatValue(item));
+        }
+        return [];
+      } catch (e) {
+        return [];
+      }
+    };
+
     // Compile a response
     res.end(compiledFunction(
       {
+        countryCodesGeographical: ipList('countrycodesgeographical'),
+        countryCodesPopulation: ipList('countrycodespopulation'),
+        countryCodesGeographicalAll: allList('countrycodesgeographicalall'),
+        countryNamesGeographicalAllTranslated:
+          allList('countrynamesgeographicalalltranslated'),
+        countryCodesPopulationAll: allList('countrycodespopulationall'),
+        countryNamesPopulationAllTranslated:
+          allList('countrynamespopulationalltranslated'),
         dataFilePublishedTime: new Date().getTime(),
         dataFileAgeWarning: DATA_FILE_AGE_WARNING,
         evidenceUsed: evidences,
         allEvidence,
+        inputIpAddress,
+        areas: dataExtension.getValueHelper(flowData.ip, 'areas'),
         dataSourceTier: ExampleUtils.getDataTier(pipeline),
         registeredName: dataExtension.getValueHelper(flowData.ip, 'registeredname'),
         registeredOwner: dataExtension.getValueHelper(flowData.ip, 'registeredowner'),
@@ -152,9 +224,16 @@ const server = http.createServer((req, res) => {
         ipRangeEnd: dataExtension.getValueHelper(flowData.ip, 'iprangeend'),
         country: dataExtension.getValueHelper(flowData.ip, 'country'),
         countryCode: dataExtension.getValueHelper(flowData.ip, 'countrycode'),
+        countryCode3: dataExtension.getValueHelper(flowData.ip, 'countrycode3'),
+        region: dataExtension.getValueHelper(flowData.ip, 'region'),
+        state: dataExtension.getValueHelper(flowData.ip, 'state'),
         town: dataExtension.getValueHelper(flowData.ip, 'town'),
         latitude: dataExtension.getValueHelper(flowData.ip, 'latitude'),
-        longitude: dataExtension.getValueHelper(flowData.ip, 'longitude')
+        longitude: dataExtension.getValueHelper(flowData.ip, 'longitude'),
+        accuracyRadius:
+          dataExtension.getValueHelper(flowData.ip, 'accuracyradiusmin'),
+        timeZoneOffset:
+          dataExtension.getValueHelper(flowData.ip, 'timezoneoffset')
       })
     );
   });

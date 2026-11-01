@@ -5,7 +5,7 @@ param (
 
 Write-Output "Packages installation"
 
-$Packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared";
+$Packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared", "fiftyone.ipintelligence.translation";
 
 Push-Location $RepoName
 

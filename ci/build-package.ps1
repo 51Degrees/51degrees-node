@@ -6,7 +6,7 @@ param (
 )
 
 # List of packages for build
-$packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared"
+$packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared", "fiftyone.ipintelligence.translation"
 
 # List of packages which does not use remote package.json
 $noRemote = "fiftyone.ipintelligence.shared"

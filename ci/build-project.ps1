@@ -3,7 +3,7 @@ param (
     [string]$RepoName
 )
 
-$packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared";
+$packages = "fiftyone.ipintelligence", "fiftyone.ipintelligence.cloud", "fiftyone.ipintelligence.onpremise", "fiftyone.ipintelligence.shared", "fiftyone.ipintelligence.translation";
 
 $needExtensions = "fiftyone.ipintelligence.onpremise"
 

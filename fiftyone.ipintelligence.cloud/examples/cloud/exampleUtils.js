@@ -20,6 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const fs = require('fs');
+
+const path = require('path');
+
 // The default environment variable used to get the resource key
 // to use when running examples. This aligned name is checked first,
 // before the legacy variable name.
@@ -41,12 +45,63 @@ const getResourceKeyFromEnv = function () {
 // The common message shown when a resource key leaves one or more of
 // the properties used by an example without values.
 const PRICING_MESSAGE = 'Some properties used by this example are not ' +
-  'available with a free resource key. See https://51degrees.com/pricing ' +
+  'available with a free resource key. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-exampleutils.js&utm_term=pricing ' +
   'to get a paid subscription with more properties.';
+
+// Content types for the small set of static assets served by the web
+// examples. The shared pattern-library CSS and JS live under each
+// example's 'public' directory.
+const STATIC_CONTENT_TYPES = {
+  '.css': 'text/css',
+  '.js': 'text/javascript'
+};
+
+// Serve a file from the example's 'public' directory when the request
+// path matches one of the static assets. The web examples use a plain
+// Node http server rather than a framework, so this stands in for the
+// 'static file' middleware found in the equivalent .NET examples. Returns
+// true when a response was sent, false when the request should fall
+// through to the example handler.
+const serveStaticAsset = (req, res, publicDir) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return false;
+  }
+
+  const requestPath = (req.url || '').split('?')[0];
+  const ext = path.extname(requestPath).toLowerCase();
+  const contentType = STATIC_CONTENT_TYPES[ext];
+  if (!contentType) {
+    return false;
+  }
+
+  // Resolve the path within 'public' and guard against directory
+  // traversal by rejecting anything that escapes the public directory.
+  const normalised = path
+    .normalize(decodeURIComponent(requestPath))
+    .replace(/^(\.\.[/\\])+/, '');
+  const filePath = path.join(publicDir, normalised);
+  if (!filePath.startsWith(path.resolve(publicDir))) {
+    return false;
+  }
+
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    return false;
+  }
+
+  res.statusCode = 200;
+  res.setHeader('Content-Type', contentType);
+  if (req.method === 'HEAD') {
+    res.end();
+  } else {
+    res.end(fs.readFileSync(filePath));
+  }
+  return true;
+};
 
 module.exports = {
   RESOURCE_KEY_ENV_VAR,
   LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,
-  getResourceKeyFromEnv
+  getResourceKeyFromEnv,
+  serveStaticAsset
 };

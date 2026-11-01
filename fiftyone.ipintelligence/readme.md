@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=repository&utm_content=readme_main&utm_campaign=node-open-source "Data rewards the curious") **Node IP Intelligence**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=repository&utm_content=documentation&utm_campaign=node-open-source "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package includes a pipeline builder that can toggle between the cloud and on-premise IP intelligence engines with simple parameter changes.
 
-- If a `resourceKey` is supplied then a cloud pipeline is created. A resource key covering everything the examples display can be obtained from the [51Degrees configurator](https://configure.51degrees.com/hYzn3TV3) with a paid subscription. A free key from [https://configure.51degrees.com/Wkqxf3Bs](https://configure.51degrees.com/Wkqxf3Bs) populates only the Country, LocationConfidence, Ip and IpV6 properties.
+- If a `resourceKey` is supplied then a cloud pipeline is created. A resource key covering everything the examples display can be obtained from the [51Degrees configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-readme.md&utm_term=this-package-fiftyone-ipintelligence) with a paid subscription. A free key from [this configurator link](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence-readme.md&utm_term=this-package-fiftyone-ipintelligence) populates only the Country, LocationConfidence, Ip and IpV6 properties.
 - If a `dataFile` is supplied then an on-premise pipeline is created. A free 'Lite' data file can be obtained from the [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository.
 
 It can be used like this:

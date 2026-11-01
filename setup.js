@@ -23,3 +23,15 @@
 // IP intelligence data files are large so engine initialisation can
 // take longer than the jest default of 5 seconds.
 jest.setTimeout(60000); // in milliseconds
+
+// Each on-premise engine holds gigabytes of native memory that V8 does
+// not account for, so the garbage collector never runs on its own and
+// engines from completed suites stay resident until the process dies.
+// When jest runs in band with node --expose-gc, collecting at the start
+// of each suite frees the previous suite's engines and keeps the peak
+// at one suite's worth of engines.
+beforeAll(() => {
+  if (global.gc) {
+    global.gc();
+  }
+});

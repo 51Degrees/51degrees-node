@@ -3,6 +3,16 @@ param (
     [string]$RepoName
 )
 
+# The enterprise data file used in CI is 5.7GB and the update tests
+# make a temporary copy of it, which does not fit in the space left on
+# the hosted Linux runners. Remove preinstalled toolchains this build
+# never uses to make room.
+if ($IsLinux -and $env:GITHUB_ACTIONS -eq "true") {
+    Write-Output "Freeing runner disk space"
+    sudo rm -rf /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup /usr/share/swift
+    df -h /
+}
+
 Push-Location $RepoName
 
 $packageJSON = @"
@@ -16,11 +26,11 @@ $packageJSON = @"
   },
   "scripts": {
     "pretest": "node ensure-native-module.js",
-    "test": "jest --ci --reporters=default --runInBand --forceExit --testPathIgnorePatterns=\"performance.test.js\"",
+    "test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=default --runInBand --forceExit --testPathIgnorePatterns=\"performance.test.js\"",
     "preunit-test": "node ensure-native-module.js",
-    "unit-test": "jest --ci --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/*|performance.test.js)\"",
+    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/*|performance.test.js)\"",
     "preintegration-test": "node ensure-native-module.js",
-    "integration-test": "jest --ci --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/*)\" --testPathIgnorePatterns=\"(performance.test.js|tests/*)\"",
+    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/*)\" --testPathIgnorePatterns=\"(performance.test.js|tests/*)\"",
     "lint": "eslint . --ext .js",
     "tsc": "tsc -b --force"
   },

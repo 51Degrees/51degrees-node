@@ -173,14 +173,14 @@ const run = async function (options, output) {
       `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html. ' +
+      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +
       'A resource key with everything this example displays can be ' +
-      'created at https://configure.51degrees.com/hYzn3TV3 with a paid ' +
+      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required with a paid ' +
       'subscription. A free key created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs populates only the ' +
+      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required populates only the ' +
       'free properties, which for IP intelligence are Country, ' +
       'LocationConfidence, Ip and IpV6. See ' +
-      'https://51degrees.com/pricing to get a paid subscription with ' +
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
       'more properties. Once complete, populate the config file or ' +
       'environment variable mentioned at the start of this message ' +
       'with the key.'

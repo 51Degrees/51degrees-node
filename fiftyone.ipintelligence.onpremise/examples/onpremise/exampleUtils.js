@@ -43,7 +43,57 @@ const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
 // before the folder hierarchy is searched.
 const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
 
+// Content types for the small set of static assets served by the web
+// examples. The shared pattern-library CSS and JS live under each
+// example's 'public' directory.
+const STATIC_CONTENT_TYPES = {
+  '.css': 'text/css',
+  '.js': 'text/javascript'
+};
+
 class ExampleUtils {
+  // Serve a file from the example's 'public' directory when the request
+  // path matches one of the static assets. The web examples use a plain
+  // Node http server rather than a framework, so this stands in for the
+  // 'static file' middleware found in the equivalent .NET examples.
+  // Returns true when a response was sent, false when the request should
+  // fall through to the example handler.
+  static serveStaticAsset (req, res, publicDir) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return false;
+    }
+
+    const requestPath = (req.url || '').split('?')[0];
+    const ext = path.extname(requestPath).toLowerCase();
+    const contentType = STATIC_CONTENT_TYPES[ext];
+    if (!contentType) {
+      return false;
+    }
+
+    // Resolve the path within 'public' and guard against directory
+    // traversal by rejecting anything that escapes the public directory.
+    const normalised = path
+      .normalize(decodeURIComponent(requestPath))
+      .replace(/^(\.\.[/\\])+/, '');
+    const filePath = path.join(publicDir, normalised);
+    if (!filePath.startsWith(path.resolve(publicDir))) {
+      return false;
+    }
+
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      return false;
+    }
+
+    res.statusCode = 200;
+    res.setHeader('Content-Type', contentType);
+    if (req.method === 'HEAD') {
+      res.end();
+    } else {
+      res.end(fs.readFileSync(filePath));
+    }
+    return true;
+  }
+
   // Find the specified filename within the default lookup directory.
   static findFile (fileName) {
     return this.privateFindFile(
@@ -140,14 +190,14 @@ class ExampleUtils {
         'https://github.com/51Degrees/ip-intelligence-data. ' +
         'Find out about the Enterprise data file, which ' +
         'includes automatic daily updates, on our pricing ' +
-        'page: https://51degrees.com/pricing');
+        'page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');
     }
     if (dataTier === 'Lite') {
       console.warn('This example is using the \'Lite\' ' +
         'data file. This is used for illustration, and ' +
         'has limited accuracy and capabilities. Find ' +
         'out about the Enterprise data file on our ' +
-        'pricing page: https://51degrees.com/pricing');
+        'pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=ip-intelligence-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=lite-data-file');
     }
   }
 
