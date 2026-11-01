@@ -59,10 +59,11 @@ class CloudEngine extends Engine {
    *
    * @param {Pipeline} pipeline - The pipeline being registered.
    * @param {FlowElement} flowElement - The flow element associated with the Cloud Engine.
+   * @throws {Error} If no CloudRequestEngine comes before the Cloud Engine in the pipeline.
    */
   handlePipelineRegistration (pipeline, flowElement) {
     if (!pipeline.flowElements.cloud) {
-      pipeline.log('error', 'No CloudRequestEngine in Pipeline');
+      throw new Error('No CloudRequestEngine in Pipeline');
     }
     /**
      * @type {CloudRequestEngine}
