@@ -30,7 +30,7 @@
  * [Android devices](https://developer.android.com/reference/android/os/Build#MODEL) and
  * [iOS devices](https://gist.github.com/soapyigu/c99e1f45553070726f14c1bb0a54053b#file-machinename-swift)
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.cloud/examples/cloud/nativemodellookup-console/nativeModelLookup.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection.cloud/examples/cloud/nativemodellookup-console/nativeModelLookup.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)

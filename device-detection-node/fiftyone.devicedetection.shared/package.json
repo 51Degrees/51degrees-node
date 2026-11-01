@@ -24,7 +24,8 @@
   "types": "types/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/51Degrees/device-detection-node"
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "device-detection-node/fiftyone.devicedetection.shared"
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "devDependencies": {
@@ -34,7 +35,7 @@
   },
   "license": "EUPL-1.2",
   "bugs": {
-    "url": "https://github.com/51Degrees/device-detection-node/issues"
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
   },
   "files": [
     "examples",

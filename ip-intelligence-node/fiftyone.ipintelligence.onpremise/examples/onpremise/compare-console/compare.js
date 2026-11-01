@@ -62,7 +62,7 @@
  * Geometries
  * Contains
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console/compare.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console/compare.js).
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
  * To obtain an enterprise data file for testing, please

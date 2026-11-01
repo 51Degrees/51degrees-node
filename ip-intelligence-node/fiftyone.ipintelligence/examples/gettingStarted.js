@@ -26,7 +26,7 @@
  * This shows how to use IpIntelligencePipelineBuilder instead of specific
  * IpIntelligenceCloudPipelineBuilder.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/main/fiftyone.ipintelligence/examples/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence/examples/gettingStarted.js).
  *
  * Expected output:
  *

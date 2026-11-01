@@ -29,7 +29,7 @@
  * evidence and details about the device, network, and location are
  * displayed.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-web/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-web/gettingStarted.js).
  *
  * Required data files:
  * - Device detection data file (.hash format)

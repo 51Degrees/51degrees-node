@@ -32,7 +32,7 @@
  * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
  * Any value can be used for the resource key when using the local API.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api/gettingStarted.js).
  *
  * Required data files:
  * - Device detection data file (.hash format)

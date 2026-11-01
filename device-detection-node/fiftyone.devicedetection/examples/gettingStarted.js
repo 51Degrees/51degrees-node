@@ -26,7 +26,7 @@
  * This shows how to use DeviceDetectionPipelineBuilder instead of specific
  * DeviceDetectionCloudPipelineBuilder.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/main/fiftyone.devicedetection/examples/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection/examples/gettingStarted.js).
  *
  * Expected output:
  *

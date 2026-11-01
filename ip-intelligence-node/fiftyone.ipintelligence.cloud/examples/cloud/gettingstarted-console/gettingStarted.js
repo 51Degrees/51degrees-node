@@ -22,7 +22,7 @@
 
 /**
  * @example cloud/gettingstarted-console/gettingStarted.js
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-console/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-console/gettingStarted.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)

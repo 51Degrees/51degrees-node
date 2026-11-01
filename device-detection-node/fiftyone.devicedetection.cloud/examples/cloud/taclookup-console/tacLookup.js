@@ -27,7 +27,7 @@
  * based on a given 'TAC'. More background information on TACs can be found through various online
  * sources such as <a href="https://en.wikipedia.org/wiki/Type_Allocation_Code">Wikipedia</a>.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.cloud/examples/cloud/taclookup-console/tacLookup.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection.cloud/examples/cloud/taclookup-console/tacLookup.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)

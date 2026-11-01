@@ -35,7 +35,7 @@
  * keys that, when added to the evidence collection in flow data, could have some impact on the
  * result that is returned.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/metadata-console/metaData.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.cloud/examples/cloud/metadata-console/metaData.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)

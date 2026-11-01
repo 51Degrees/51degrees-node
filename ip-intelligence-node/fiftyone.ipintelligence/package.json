@@ -29,7 +29,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/51Degrees/ip-intelligence-node"
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "ip-intelligence-node/fiftyone.ipintelligence"
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
@@ -60,7 +61,7 @@
   },
   "license": "EUPL-1.2",
   "bugs": {
-    "url": "https://github.com/51Degrees/ip-intelligence-node/issues"
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
   },
   "files": [
     "*.js",

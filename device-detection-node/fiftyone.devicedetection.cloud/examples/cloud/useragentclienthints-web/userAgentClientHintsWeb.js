@@ -23,7 +23,7 @@
 /**
  * @example cloud/useragentclienthints-web/userAgentClientHintsWeb.js
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.cloud/examples/cloud/useragentclienthints-web/userAgentClientHintsWeb.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection.cloud/examples/cloud/useragentclienthints-web/userAgentClientHintsWeb.js).
  *
  * Make sure to include all the required properties used by this example.
  *

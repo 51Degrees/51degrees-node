@@ -43,10 +43,11 @@
     ]
   },
   "bugs": {
-    "url": "https://github.com/51Degrees/pipeline-node/issues"
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/51Degrees/pipeline-node"
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "pipeline-node/fiftyone.pipeline.did"
   }
 }

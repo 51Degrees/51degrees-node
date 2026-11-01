@@ -34,7 +34,7 @@
  * as the screen size, and posts that evidence to '/json', which answers
  * with the refined results.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-web/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-web/gettingStarted.js).
  *
  * To run this example, you will eventually need to create a resource key.
  * A resource key is used as shorthand to store the particular set of

@@ -34,7 +34,7 @@
  * 3. How to retrieve device and IP intelligence results from a single
  * pipeline
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-console/gettingStarted.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.cloud/examples/cloud/mixed/gettingstarted-console/gettingStarted.js).
  *
  * To run this example, you will eventually need to create a resource key.
  * A resource key is used as shorthand to store the particular set of

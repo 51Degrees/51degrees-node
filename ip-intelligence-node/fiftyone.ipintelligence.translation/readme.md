@@ -4,7 +4,7 @@
 
 ## Introduction
 
-This project contains 51Degrees IP Intelligence country translation engines that can be used with the [Pipeline API](https://github.com/51Degrees/pipeline-node).
+This project contains 51Degrees IP Intelligence country translation engines that can be used with the [Pipeline API](https://github.com/51Degrees/51degrees-node/tree/main/pipeline-node).
 
 ## This package - fiftyone.ipintelligence.translation
 
@@ -15,7 +15,7 @@ The on-premise IP Intelligence engine returns country information as weighted li
 
 The translation YAML files (`countrycodes.en_GB.yml` and `countries.<locale>.yml`) are read from the `cxx/ip-intelligence-data/Translations` submodule that ships with [`fiftyone.ipintelligence.onpremise`](/fiftyone.ipintelligence.onpremise#readme.md). A different directory can be supplied to a builder via the `translationsPath` option.
 
-This package builds on the generic [`fiftyone.pipeline.translation`](https://github.com/51Degrees/pipeline-node) base.
+This package builds on the generic [`fiftyone.pipeline.translation`](https://github.com/51Degrees/51degrees-node/tree/main/pipeline-node) base.
 
 It can be used like this:
 

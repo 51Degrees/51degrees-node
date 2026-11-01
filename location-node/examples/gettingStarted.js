@@ -25,7 +25,7 @@
 
 Getting started example of using the 51Degrees geo-location Cloud to determine the country for a given longitude and latitude.
 
-This example is available in full on [GitHub](https://github.com/51Degrees/location-node/blob/main/examples/gettingStarted.js).
+This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/location-node/examples/gettingStarted.js).
 
 To run this example, you will need to create a **resource key**.
 The resource key is used as short-hand to store the particular set of

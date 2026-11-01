@@ -12,7 +12,7 @@ This package provides a generic translation `flow element`. A translation engine
 
 Translations are supplied as YAML files, where the file name defines the locale contained in the file (for example `countries.fr_FR.yml`). The language to translate to can be fixed, or resolved from the evidence using the `query.translation`, `query.accept-language` and `header.accept-language` keys (in that precedence order). English is treated as the base language: when it is the highest priority language no translation is performed and the source values are returned unchanged.
 
-This package is used by [`fiftyone.ipintelligence.translation`](https://github.com/51Degrees/ip-intelligence-node) to turn weighted country code lists into localized country names.
+This package is used by [`fiftyone.ipintelligence.translation`](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence-node) to turn weighted country code lists into localized country names.
 
 ## Installation
 

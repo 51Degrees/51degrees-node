@@ -23,7 +23,7 @@
 /**
  * @example onpremise/performance-console/performance.js
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console/performance.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console/performance.js).
  *
  * This example require module 'n-readlines' to operate. Please install the module
  * before running the example, by using the following command:

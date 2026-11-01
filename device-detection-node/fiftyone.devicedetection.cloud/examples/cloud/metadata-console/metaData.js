@@ -39,7 +39,7 @@
  * cloud. If you are only using a single product (for example - device detection) then not all
  * of these keys will be relevant.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.cloud/examples/cloud/metadata-console/metaData.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection.cloud/examples/cloud/metadata-console/metaData.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.cloudrequestengine](https://www.npmjs.com/package/fiftyone.pipeline.cloudrequestengine)

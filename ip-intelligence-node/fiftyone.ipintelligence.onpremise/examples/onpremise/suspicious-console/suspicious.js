@@ -33,7 +33,7 @@
  * 2. How to combine diversity values with other network related values to
  * assess the likelihood of an IP address being something suspicious.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/suspicious-console/suspicious.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/suspicious-console/suspicious.js).
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
  * To obtain an enterprise data file for testing, please

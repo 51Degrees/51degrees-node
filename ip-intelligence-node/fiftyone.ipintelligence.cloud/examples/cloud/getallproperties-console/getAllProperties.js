@@ -33,7 +33,7 @@
  * 2. How to process an IP address and retrieve all available properties
  * 3. How to enumerate through all the properties returned by the service
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.cloud/examples/cloud/getallproperties-console/getAllProperties.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.cloud/examples/cloud/getallproperties-console/getAllProperties.js).
  *
  * To run this example, you will eventually need to create a resource key.
  * A resource key is used as shorthand to store the particular set of

@@ -23,7 +23,7 @@
 /**
  * @example onpremise/automaticupdates/dataFileSystemWatcher.js
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js).
  *
  */
 

@@ -27,7 +27,7 @@ This example shows how to configure a pipeline with 51Degrees location
 provider from a configuration file using the pipelineBuilder's
 buildFromConfigurationFile method.
 
-This example is available in full on [GitHub](https://github.com/51Degrees/location-node/blob/master/examples/configureFromFile.js).
+This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/location-node/examples/configureFromFile.js).
 
 To run this example, you will need to create a **resource key**.
 The resource key is used as short-hand to store the particular set of

@@ -29,7 +29,7 @@
  * We create an IP intelligence pipeline to read the data and find out about the associated
  * IP ranges, we write this data to a YAML formatted output stream.
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/ip-intelligence-node/blob/master/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console/offlineProcessing.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence-node/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console/offlineProcessing.js).
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)

@@ -15,8 +15,8 @@ It can be used on its own or with the following additional packages.
 
 Engines created by 51Degrees including:
 
-- [**fiftyone.devicedetection**](https://github.com/51Degrees/device-detection-node#readme) - A device detection engine
-- [**fiftyone.geolocation**](https://github.com/51Degrees/location-node#readme) - A geolocation lookup engine
+- [**fiftyone.devicedetection**](https://github.com/51Degrees/51degrees-node/tree/main/device-detection-node#readme) - A device detection engine
+- [**fiftyone.geolocation**](https://github.com/51Degrees/51degrees-node/tree/main/location-node#readme) - A geolocation lookup engine
 
 Make use of the above along with the following additional packages:
 

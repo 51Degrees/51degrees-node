@@ -15,8 +15,8 @@ This package uses the `engines` class created by the [`fiftyone.pipeline.engines
 
 It is used by the cloud versions of the following 51Degrees engines:
 
-- [**fiftyone.devicedetection**](https://github.com/51Degrees/device-detection-node#readme) - A device detection engine
-- [**fiftyone.geolocation**](https://github.com/51Degrees/location-node#readme) - A geolocation lookup engine
+- [**fiftyone.devicedetection**](https://github.com/51Degrees/51degrees-node/tree/main/device-detection-node#readme) - A device detection engine
+- [**fiftyone.geolocation**](https://github.com/51Degrees/51degrees-node/tree/main/location-node#readme) - A geolocation lookup engine
 
 ## Installation
 

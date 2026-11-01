@@ -25,7 +25,7 @@
 
 @include{doc} example-web-integration-location.txt
 
-This example is available in full on [GitHub](https://github.com/51Degrees/location-node/blob/master/examples/webIntegration.js).
+This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/location-node/examples/webIntegration.js).
 
 @include{doc} example-require-resourcekey.txt
  */

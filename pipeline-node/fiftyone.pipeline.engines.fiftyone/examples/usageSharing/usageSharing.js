@@ -24,7 +24,7 @@
  * @example usageSharing/usageSharing.js
  *
  * Usage sharing is enabled by default if using some 51Degrees pipeline
- * builders such as the [DeviceDetectionOnPremisePipelineBuilder](https://github.com/51Degrees/device-detection-node/blob/master/fiftyone.devicedetection.onpremise/deviceDetectionOnPremisePipelineBuilder.js)
+ * builders such as the [DeviceDetectionOnPremisePipelineBuilder](https://github.com/51Degrees/51degrees-node/blob/main/device-detection-node/fiftyone.devicedetection.onpremise/deviceDetectionOnPremisePipelineBuilder.js)
  * In this example, we show how to specifically add a shareUsage element to a
  * Pipeline using configuration.
  *
@@ -39,7 +39,7 @@
  * For details of what each setting does, see the
  * [Share Usage reference](/documentation/4.5/_pipeline_api__features__usage_sharing.html)
  *
- * This example is available in full on [GitHub](https://github.com/51Degrees/pipeline-node/tree/master/fiftyone.pipeline.engines.fiftyone/examples/usageSharing/usageSharing.js).
+ * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/tree/main/pipeline-node/fiftyone.pipeline.engines.fiftyone/examples/usageSharing/usageSharing.js).
  *
  * Expected output
  * ```
