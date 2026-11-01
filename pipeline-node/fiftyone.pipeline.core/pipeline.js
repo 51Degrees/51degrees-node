@@ -213,6 +213,12 @@ class Pipeline {
    * @param {*} message message to store in the log
    */
   log (type, message) {
+    // Node throws an 'error' event that nothing listens for, so such an
+    // error is written to the console instead.
+    if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
+      console.error(message);
+      return;
+    }
     this.eventEmitter.emit(type, message);
   }
 
