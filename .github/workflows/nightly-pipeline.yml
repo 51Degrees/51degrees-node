@@ -6,11 +6,8 @@ on:
       dryrun:
         type: boolean
         default: false
-  # Off until this repository takes over from the separate Node repositories
-  # it replaces. Their schedules are turned off then, so the same jobs never
-  # run in both.
-  # schedule:
-  #   - cron: '0 3 * * *'
+  schedule:
+    - cron: '0 3 * * *'
 
 jobs:
   SubmoduleUpdate:
