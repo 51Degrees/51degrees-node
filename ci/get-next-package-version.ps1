@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 # The version used while the repository has no version tag. It is above every
 # version the absorbed repositories published, so the first release from here
 # is an ordinary upgrade for each package.
-$FirstVersion = '4.5.97'
+$FirstVersion = '4.5.98'
 
 $tags = @(git -C $RepoName tag --list |
     Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |

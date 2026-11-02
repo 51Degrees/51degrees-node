@@ -7,7 +7,9 @@ on:
         default: false
         type: boolean
         description: Dry Run
-  # Off until cut-over, see internal-common-ci#15
+  # Off until this repository takes over from the separate Node repositories
+  # it replaces. Their schedules are turned off then, so the same jobs never
+  # run in both.
   # schedule:
   #   - cron: '0 0 1 * *'
 

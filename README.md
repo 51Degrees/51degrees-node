@@ -86,10 +86,10 @@ swig -c++ -javascript -node ipi_node.i
 
 ## History
 
-The repositories `pipeline-node`, `device-detection-node`, `location-node` and
-`ip-intelligence-node` were brought in with `git subtree add`, without
-`--squash`, so commit SHAs match the originals. Use `git log --follow` to trace
-a file back through the import.
+The repositories `pipeline-node`, `device-detection-node` and `location-node`,
+and the one the IP Intelligence packages came from, were brought in with
+`git subtree add`, without `--squash`, so commit SHAs match the originals. Use
+`git log --follow` to trace a file back through the import.
 
 ## Licence
 
