@@ -18,8 +18,8 @@
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
-    "fiftyone.pipeline.core": "^4.4.7",
-    "fiftyone.pipeline.translation": "^4.4.7",
+    "fiftyone.pipeline.core": "^4.5.0",
+    "fiftyone.pipeline.translation": "^4.5.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

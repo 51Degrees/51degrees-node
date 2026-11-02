@@ -8,8 +8,6 @@ $NativePackages = @(
     @{ Path = 'ip-intelligence/fiftyone.ipintelligence.onpremise'; Module = 'FiftyOneIpIntelligenceIpiV41' }
 )
 
-# ip-intelligence has never been published to npm, so its packages are not
-# listed here. Adding them is a release decision, not a build change.
 $PublishedPackages = @(
     'pipeline/fiftyone.pipeline.core'
     'pipeline/fiftyone.pipeline.engines'
@@ -21,5 +19,10 @@ $PublishedPackages = @(
     'device-detection/fiftyone.devicedetection.cloud'
     'device-detection/fiftyone.devicedetection.onpremise'
     'device-detection/fiftyone.devicedetection.shared'
+    'ip-intelligence/fiftyone.ipintelligence'
+    'ip-intelligence/fiftyone.ipintelligence.cloud'
+    'ip-intelligence/fiftyone.ipintelligence.onpremise'
+    'ip-intelligence/fiftyone.ipintelligence.shared'
+    'ip-intelligence/fiftyone.ipintelligence.translation'
     'location'
 )
