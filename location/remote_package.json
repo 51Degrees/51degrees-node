@@ -27,10 +27,10 @@
     "directory": "location"
   },
   "dependencies": {
-    "fiftyone.pipeline.cloudrequestengine": "4.4.x",
-    "fiftyone.pipeline.core": "4.4.x",
-    "fiftyone.pipeline.engines": "4.4.x",
-    "fiftyone.pipeline.engines.fiftyone": "4.4.x"
+    "fiftyone.pipeline.cloudrequestengine": "^4.5.0",
+    "fiftyone.pipeline.core": "^4.5.0",
+    "fiftyone.pipeline.engines": "^4.5.0",
+    "fiftyone.pipeline.engines.fiftyone": "^4.5.0"
   },
   "devDependencies": {
     "@types/node": "^15.14.9",

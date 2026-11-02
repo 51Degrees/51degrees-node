@@ -34,10 +34,10 @@
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
-    "fiftyone.ipintelligence.shared": ">=1.0.0-alpha.0",
-    "fiftyone.pipeline.core": "4.4.x",
-    "fiftyone.pipeline.engines": "4.4.x",
-    "fiftyone.pipeline.engines.fiftyone": "4.4.x",
+    "fiftyone.ipintelligence.shared": "^4.5.0",
+    "fiftyone.pipeline.core": "^4.5.0",
+    "fiftyone.pipeline.engines": "^4.5.0",
+    "fiftyone.pipeline.engines.fiftyone": "^4.5.0",
     "js-yaml": "^4.1.0",
     "n-readlines": "^1.0.1"
   },
