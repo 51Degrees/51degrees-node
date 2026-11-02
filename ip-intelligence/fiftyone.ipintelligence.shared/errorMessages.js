@@ -51,5 +51,5 @@ module.exports = {
   badDataUnsupportedVersion: 'The data %s is an unsupported version. Check ' +
     'you have the latest data and API.',
   badDataIncorrectFormat: 'The data was not in the correct format. ' +
-    'Check the data file %s is uncompressed.'
+    'Check the data file %s is complete and uncompressed.'
 };
