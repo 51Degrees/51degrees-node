@@ -1,11 +1,17 @@
 {
   "name": "fiftyone.devicedetection",
   "version": "1.0.0",
-  "description": "Accurate device detection from HTTP headers, identifying device type, model, operating system, browsers, and bots.",
+  "description": "Device Detection and User-Agent parser for Node.js. Detects the device, browser, operating system, and crawlers from HTTP headers such as the User-Agent and User-Agent Client Hints. Works on-premise with a data file or in the cloud. Built on the 51Degrees Pipeline API.",
   "keywords": [
     "51degrees",
-    "device detection",
+    "device-detection",
     "user-agent",
+    "user-agent-parser",
+    "client-hints",
+    "browser-detection",
+    "mobile-detection",
+    "crawler-detection",
+    "device detection",
     "client hints",
     "browser",
     "os",
@@ -17,9 +23,7 @@
     "tv",
     "bot",
     "crawler",
-    "detect",
-    "WURFL",
-    "DeviceAtlas"
+    "detect"
   ],
   "main": "index.js",
   "directories": {

@@ -1,23 +1,25 @@
 {
   "name": "fiftyone.ipintelligence",
   "version": "1.0.0",
-  "description": "IP intelligence services for the 51Degrees Pipeline API",
+  "description": "IP Intelligence and IP geolocation for Node.js. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Works on-premise with a data file or in the cloud. Built on the 51Degrees Pipeline API.",
   "keywords": [
     "51degrees",
+    "ip-intelligence",
+    "ip-geolocation",
+    "geoip",
+    "ip-lookup",
+    "asn",
+    "ip-to-country",
     "ip intelligence",
     "ip",
     "geolocation",
-    "geoip",
     "network",
-    "asn",
     "vpn",
     "proxy",
     "tor",
     "hosting",
     "location",
-    "country",
-    "MaxMind",
-    "ipinfo"
+    "country"
   ],
   "main": "index.js",
   "directories": {
