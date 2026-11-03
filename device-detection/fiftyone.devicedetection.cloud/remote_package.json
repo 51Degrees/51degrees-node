@@ -1,7 +1,7 @@
 {
   "name": "fiftyone.devicedetection.cloud",
   "version": "1.0.0",
-  "description": "Device Detection and User-Agent parser for Node.js. Detects the device, browser, operating system, and crawlers from HTTP headers such as the User-Agent and User-Agent Client Hints. Uses the 51Degrees cloud service with a Resource Key. Built on the 51Degrees Pipeline API.",
+  "description": "Device Detection and User-Agent parser for Node.js. Detects the device, browser, operating system, and crawlers from HTTP headers such as the User-Agent and User-Agent Client Hints. Uses the 51Degrees cloud service with a Resource Key. Built on the 51Degrees Pipeline API. An alternative to UAParser, DeviceAtlas, and WURFL.",
   "keywords": [
     "51degrees",
     "device-detection",
@@ -23,7 +23,9 @@
     "tv",
     "bot",
     "crawler",
-    "cloud"
+    "cloud",
+    "WURFL",
+    "DeviceAtlas"
   ],
   "main": "index.js",
   "types": "types/index.d.ts",

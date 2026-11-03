@@ -1,7 +1,7 @@
 {
   "name": "fiftyone.ipintelligence.onpremise",
   "version": "1.0.0",
-  "description": "IP Intelligence and IP geolocation for Node.js. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Reads a data file on your server. Built on the 51Degrees Pipeline API.",
+  "description": "IP Intelligence and IP geolocation for Node.js. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Reads a data file on your server. Built on the 51Degrees Pipeline API. An alternative to MaxMind and IPinfo.",
   "keywords": [
     "51degrees",
     "ip-intelligence",
@@ -19,7 +19,9 @@
     "tor",
     "hosting",
     "location",
-    "country"
+    "country",
+    "MaxMind",
+    "ipinfo"
   ],
   "main": "index.js",
   "types": "types/index.d.ts",
