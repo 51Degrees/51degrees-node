@@ -147,10 +147,6 @@ class Pipeline {
                 resolve(flowData);
               })
               .catch(setError);
-
-            if (flowData.errors !== undefined && Object.entries(flowData.errors).length !== 0 && !pipeline.suppressProcessExceptions) {
-              throw Object.values(flowData.errors)[0];
-            }
           });
         };
       };
@@ -178,7 +174,16 @@ class Pipeline {
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
-        }, Promise.resolve(flowData));
+        }, Promise.resolve(flowData)).then(function () {
+          // Processing has finished, so every error has been recorded.
+          const errors = Object.values(flowData.errors);
+          if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
+            throw new AggregateError(errors,
+              'Errors occurred during processing of ' +
+              Object.keys(flowData.errors).join(', '));
+          }
+          return flowData;
+        });
       };
     };
 
@@ -213,6 +218,12 @@ class Pipeline {
    * @param {*} message message to store in the log
    */
   log (type, message) {
+    // Node throws an 'error' event that nothing listens for, so such an
+    // error is written to the console instead.
+    if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
+      console.error(message);
+      return;
+    }
     this.eventEmitter.emit(type, message);
   }
 

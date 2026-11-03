@@ -280,9 +280,11 @@ class DataFileUpdateService {
             dataFile);
         }
 
+        let refreshed = true;
         try {
           dataFile.refresh();
         } catch (e) {
+          refreshed = false;
           dataFileUpdateService.pipeline.log('error', e);
           dataFileUpdateService.eventEmitter.emit(
             'updateComplete',
@@ -301,10 +303,13 @@ class DataFileUpdateService {
               AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
               dataFile);
           }
-          dataFileUpdateService.eventEmitter.emit(
-            'updateComplete',
-            AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
-            dataFile);
+          // A failed refresh has been reported already.
+          if (refreshed) {
+            dataFileUpdateService.eventEmitter.emit(
+              'updateComplete',
+              AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
+              dataFile);
+          }
         });
       });
     });
@@ -411,7 +416,19 @@ class DataFileUpdateService {
       const watch = function () {
         fs.watch(dataFile.path, { persistent: false }, function (event) {
           if (!dataFile.updating) {
-            dataFile.refresh();
+            // A failed refresh is logged and reported as on the update
+            // route, because an error thrown from here ends the process.
+            // fs.watch goes on watching, so a later file is picked up.
+            try {
+              dataFile.refresh();
+            } catch (e) {
+              dataFileUpdateService.pipeline.log('error', e);
+              dataFileUpdateService.eventEmitter.emit(
+                'updateComplete',
+                AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
+                dataFile);
+              return;
+            }
             dataFileUpdateService.eventEmitter.emit(
               'updateComplete',
               AutoUpdateStatus.AUTO_UPDATE_SUCCESS,

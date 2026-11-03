@@ -79,7 +79,7 @@ test('custom end point - default value', done => {
 
 // Check that values from the http response are populated in the
 // error object.
-test('HTTP data set in error', done => {
+test('HTTP data set in error', async () => {
   const engine = new CloudRequestEngine({
     resourceKey: testResourceKey
   });
@@ -90,19 +90,23 @@ test('HTTP data set in error', done => {
   const expectedError = '\'' + testResourceKey + '\' could not be read as a valid resource key.';
 
   // When an error occurs, check that the message is logged.
-  pipeline.on('error', (e) => {
-    expect(e).toBeDefined();
-    done();
-  });
+  const logged = [];
+  pipeline.on('error', (e) => logged.push(e));
 
-  flowData.process().then(function () {
-    done();
-  }).catch((e) => {
-    // When an error occurs, check that the expected values are populated.
-    expect(e[0].errorMessage.indexOf(expectedError) !== -1).toBe(true);
-    expect(e[0].httpStatusCode).toEqual(400);
-    expect(e[0].responseHeaders.etag).toBeDefined();
-  });
+  const rejection = await flowData.process().then(
+    () => undefined, (e) => e);
+  expect(logged.length).toBeGreaterThan(0);
+
+  // Every recorded error is in the rejection. The cloud request engine
+  // records its errors as one array.
+  expect(rejection).toHaveProperty('name', 'AggregateError');
+  const errors = flowData.errors.cloud;
+  expect(rejection.errors[0]).toBe(errors);
+
+  // When an error occurs, check that the expected values are populated.
+  expect(errors[0].errorMessage.indexOf(expectedError) !== -1).toBe(true);
+  expect(errors[0].httpStatusCode).toEqual(400);
+  expect(errors[0].responseHeaders.etag).toBeDefined();
 });
 
 /**

@@ -22,6 +22,7 @@ declare class CloudEngine extends CloudEngine_base {
      *
      * @param {Pipeline} pipeline - The pipeline being registered.
      * @param {FlowElement} flowElement - The flow element associated with the Cloud Engine.
+     * @throws {Error} If no CloudRequestEngine comes before the Cloud Engine in the pipeline.
      */
     handlePipelineRegistration(pipeline: Pipeline, flowElement: FlowElement): void;
     /**

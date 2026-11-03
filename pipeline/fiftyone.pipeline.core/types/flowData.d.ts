@@ -45,7 +45,9 @@ declare class FlowData {
     /**
      * Processes the flowData (running the process methods on all connected)
      *
-     * @returns {Promise} result of processing
+     * @returns {Promise} result of processing. Once processing has finished,
+     * the promise rejects with an AggregateError holding every error recorded
+     * in flowData.errors, unless the pipeline suppresses process exceptions.
      */
     process(): Promise<any>;
     /**

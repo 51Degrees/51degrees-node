@@ -256,9 +256,8 @@ describe('Origin Header', () => {
     ['test.com', true],
     ['51degrees.com', false]
   ]).test('origin header set to "%s"', async (origin, expectError) => {
-    let error = false;
-    let message = '';
     const expectErrorMessage = `This resource key is not authorised for the domain '${origin}'`;
+    const text = (error) => String(error && error.message ? error.message : error);
 
     const pipeline = new DeviceDetectionCloudPipelineBuilder({
       // Resource key configured with '51degrees.com' as allowed domains.
@@ -267,21 +266,25 @@ describe('Origin Header', () => {
     }).build();
 
     // We want to monitor for the expected error message
+    const messages = [];
     pipeline.on('error', (err) => {
-      error = true;
-      message = err;
+      messages.push(text(err));
     });
 
     const flowData = pipeline.createFlowData();
-    // Catch error so test does not fail on expected error.
-    await flowData.process().catch(e => {
-      expect(e.length).toBe(1);
-      expect(e[0].message).toContain(expectErrorMessage);
-    });
+    const rejection = await flowData.process().then(
+      () => undefined, (e) => e);
 
-    expect(error).toBe(expectError);
-    if (error) {
-      expect(message).toContain(expectErrorMessage);
+    expect(messages.length > 0).toBe(expectError);
+    if (expectError) {
+      expect(messages.some((m) => m.includes(expectErrorMessage))).toBe(true);
+      // Every recorded error is in the rejection. The cloud request engine
+      // records its errors as one array.
+      expect(rejection).toHaveProperty('name', 'AggregateError');
+      expect(rejection.errors.flat().some(
+        (e) => text(e).includes(expectErrorMessage))).toBe(true);
+    } else {
+      expect(rejection).toBeUndefined();
     }
   });
 });
