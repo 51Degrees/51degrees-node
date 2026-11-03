@@ -184,6 +184,9 @@ test('file watcher keeps watching after a failed refresh', async () => {
 
   try {
     updateService.registerDataFile(dataFile);
+    // On macOS fs.watch can miss a change made straight after it starts,
+    // which leaves the test waiting for an event that never comes.
+    await sleep(500);
 
     const failed = next(updateService,
       AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
@@ -193,6 +196,9 @@ test('file watcher keeps watching after a failed refresh', async () => {
     expect(logs.length).toBeGreaterThan(0);
     expect(logs[0].level).toBe('error');
     expect(logs[0].message.message).toBe('The data file cannot be used.');
+    // The test resumes before the watcher has finished with the first
+    // change, and on macOS a change made then is never reported.
+    await sleep(500);
 
     const refreshed = next(updateService,
       AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
@@ -222,6 +228,8 @@ test('file watcher with no error listener writes a failed refresh to the ' +
 
   try {
     updateService.registerDataFile(dataFile);
+    // The watcher is given time to start, as in the test above.
+    await sleep(500);
 
     const failed = next(updateService,
       AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
@@ -230,6 +238,8 @@ test('file watcher with no error listener writes a failed refresh to the ' +
     expect(dataFile.data).toBe('version 1');
     expect(consoleError).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'The data file cannot be used.' }));
+    // As in the test above.
+    await sleep(500);
 
     const refreshed = next(updateService,
       AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
@@ -262,6 +272,8 @@ test('file watcher with an error listener reports a failed refresh to it',
 
     try {
       updateService.registerDataFile(dataFile);
+      // The watcher is given time to start, as in the tests above.
+      await sleep(500);
 
       const failed = next(updateService,
         AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
