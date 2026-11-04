@@ -33,6 +33,7 @@ const FlowElement = require('./flowElement.js');
 const EvidenceKeyFilter = require('./evidenceKeyFilter.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const Constants = require('./constants.js');
+const callbackUrl = require('./callbackUrl.js');
 const uglifyJS = require('uglify-js');
 
 // Evidence names the rendered script is not configured with. The script
@@ -153,6 +154,19 @@ const urlEncode = function (value) {
 };
 
 /**
+ * Text quoted for a log message, with the control characters and the line
+ * and paragraph separators escaped so that it cannot start a new log line.
+ *
+ * @param {string} text the text to quote
+ * @returns {string} the quoted text
+ */
+function quotedForLog (text) {
+  return JSON.stringify(text).replace(
+    /[\u007f-\u009f\u2028\u2029]/g,
+    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
+/**
  * @typedef {import('./flowData')} FlowData
  */
 
@@ -234,6 +248,10 @@ class JavaScriptBuilderElement extends FlowElement {
 
     this.dataKey = 'javascriptbuilder';
     this.evidenceKeyFilter = new JSEvidenceKeyFilter();
+
+    // Set once a callback URL that is not valid has been logged, because a
+    // misconfigured element would otherwise log on every request.
+    this._invalidUrlLogged = false;
   }
 
   /**
@@ -279,22 +297,23 @@ class JavaScriptBuilderElement extends FlowElement {
     settings._host = host;
     settings._protocol = protocol;
 
-    if (settings._host && settings._protocol && settings._endPoint) {
-      // The URL is the protocol, the host and the endpoint and nothing
-      // else, as the .NET builder renders it. The values the page was
-      // requested with go in the request body as the parameters below, so
-      // none of them, the visitor's User-Agent and address included, are
-      // written into a URL that servers and proxies log. Exactly one slash
-      // separates the host from the endpoint.
-      let endPoint = settings._endPoint;
-      const hostHasSlash = settings._host.endsWith('/');
-      const endPointHasSlash = endPoint.startsWith('/');
-      if (hostHasSlash === false && endPointHasSlash === false) {
-        endPoint = '/' + endPoint;
-      } else if (hostHasSlash && endPointHasSlash) {
-        endPoint = endPoint.substring(1);
-      }
-      settings._url = settings._protocol + '://' + settings._host + endPoint;
+    // The URL is the protocol, the host and the endpoint and nothing else,
+    // as the .NET builder renders it, and callbackUrl checks it. The values
+    // the page was requested with go in the request body as the parameters
+    // below, so none of them, the visitor's User-Agent and address included,
+    // are written into a URL that servers and proxies log.
+    const url = callbackUrl(protocol, host, settings._endPoint);
+    if (url !== null && url.valid === false && !this._invalidUrlLogged) {
+      this._invalidUrlLogged = true;
+      this._log('error',
+        'The generated URL ' + quotedForLog(url.url) + ' is not valid, so ' +
+        'the JavaScript has no callback URL. Check the JavaScript ' +
+        "builder's protocol, host and endpoint, and the protocol and host " +
+        'evidence. This is reported once.');
+    }
+
+    if (url !== null && url.valid) {
+      settings._url = url.url;
 
       // The parameters are the query evidence, each named by everything
       // after the first dot of its key so that a name such as id.usage is
