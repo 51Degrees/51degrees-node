@@ -52,6 +52,7 @@
     "jest-junit": "^13.2.0"
   },
   "license": "EUPL-1.2",
+  "homepage": "https://51degrees.com/device-detection?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=homepage",
   "bugs": {
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },

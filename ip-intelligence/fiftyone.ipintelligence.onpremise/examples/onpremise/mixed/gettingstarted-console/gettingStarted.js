@@ -195,7 +195,7 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 
   // Create a pipeline and add both engines to it. For more information
   // about pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
   const pipeline = new core.PipelineBuilder()
     .add(deviceEngine)
     .add(ipEngine)

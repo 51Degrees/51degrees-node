@@ -185,7 +185,7 @@ const run = async function (dataFile, output, evidenceList) {
   // In this example, we use the DeviceDetectionOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile,
     // Prefer low memory profile where all data streamed from disk on-demand.

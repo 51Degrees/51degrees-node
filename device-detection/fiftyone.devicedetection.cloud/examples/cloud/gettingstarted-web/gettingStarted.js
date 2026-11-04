@@ -150,7 +150,7 @@ const setPipeline = (options) => {
     `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
     'service is accessed using a \'ResourceKey\'. For more information ' +
     'see ' +
-    'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+    'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
     'A resource key with the free properties used by this example can ' +
     'be created at https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
     'key populates the free properties only, whilst a key created at ' +
