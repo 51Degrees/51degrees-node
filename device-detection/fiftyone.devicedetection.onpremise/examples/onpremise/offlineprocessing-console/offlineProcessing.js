@@ -136,15 +136,15 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
   // In this example, we use the DeviceDetectionOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=pipeline
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=pipeline
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile,
     // We use the low memory profile as its performance is
     // sufficient for this example. See the documentation for
     // more detail on this and other configuration options:
     // https://51degrees.com/documentation/_device_detection__features__performance_options.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=performanceprofile
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=performanceprofile
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=performanceprofile
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=performanceprofile
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=performanceprofile
     performanceProfile: 'LowMemory',
     //  Inhibit sharing usage for this example.
     // In general, off line processing usage should NOT be shared back to 51Degrees.
@@ -154,7 +154,7 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
     // in order to help us improve detection of new devices/browsers/etc, then
     // this additional data will need to be collected and included as evidence
     // to the Pipeline. See
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=shareusage#Low_Level_Usage_Sharing
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=shareusage#Low_Level_Usage_Sharing
     // for more details on this.
     shareUsage: false,
     // inhibit auto-update of the data file for this test
@@ -230,9 +230,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
       (output, content) => { fs.appendFileSync(output, content); });
   } else {
     console.error('Failed to find a device detection ' +
-      'data file. Make sure the device-detection-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   }
 };
 

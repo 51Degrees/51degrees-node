@@ -420,3 +420,72 @@ test('only query evidence becomes a parameter', async () => {
   });
   expect(renderedParameters(script)).toStrictEqual({ mark: 'kept' });
 });
+
+// Renders one script for each host given, all through the same element, and
+// returns them with the errors the pipeline logged.
+const renderScripts = async (hosts) => {
+  const renderPipeline = new core.PipelineBuilder({
+    javascriptBuilderSettings: { endPoint: '/json' }
+  })
+    .add(testEngine)
+    .build();
+  const errors = [];
+  renderPipeline.on('error', message => errors.push(message));
+  const scripts = [];
+  for (const host of hosts) {
+    const renderData = renderPipeline.createFlowData();
+    renderData.evidence.add('header.host', host);
+    await renderData.process();
+    scripts.push(renderData.javascriptbuilder.javascript);
+  }
+  return { scripts, errors };
+};
+
+// A host the check refuses gives a script with no callback, and the refusal
+// is logged as an error the first time only, whatever the requests in
+// between.
+test('a refused URL is left out and logged once', async () => {
+  const { scripts, errors } = await renderScripts(
+    ['exa mple.com', 'exa mple.com', 'localhost', 'exa mple.com']);
+  scripts.forEach((script, i) => {
+    expect(script).toContain('new fiftyoneDegreesManager()');
+    if (i === 2) {
+      expect(requestUrls(script)).toContain('https://localhost/json');
+    } else {
+      expect(requestUrls(script)).toStrictEqual([]);
+      expect(script).not.toContain('exa mple.com');
+    }
+  });
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toContain('"https://exa mple.com/json"');
+});
+
+// The URL is quoted and escaped in the log, so a line break in it cannot
+// start a new log line.
+test('a refused URL is logged on one line', async () => {
+  const { errors } = await renderScripts(['a\nb.com\r\u2028']);
+  expect(errors.length).toBe(1);
+  expect(errors[0]).not.toMatch(/[\n\r\u2028]/);
+  expect(errors[0]).toContain('a\\nb.com\\r\\u2028');
+});
+
+// A host made only of whitespace is not set, so the script has no callback
+// and nothing is logged.
+test('a blank host gives no callback and is not logged', async () => {
+  const { scripts, errors } = await renderScripts(['  ']);
+  expect(requestUrls(scripts[0])).toStrictEqual([]);
+  expect(errors).toStrictEqual([]);
+});
+
+// A host from the request reaches the script as the check writes it, in
+// lower case and with anything that could end the string the script holds
+// it in percent-encoded.
+test('a host from the request is written as checked', async () => {
+  const { scripts } = await renderScripts(["EXAMPLE.com/');alert(1);//"]);
+  const urls = requestUrls(scripts[0]);
+  expect(urls.length).toBeGreaterThan(0);
+  for (const url of urls) {
+    expect(url).toBe('https://example.com/%27);alert(1);//json');
+  }
+  expect(scripts[0]).not.toContain("');alert(1)");
+});

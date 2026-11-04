@@ -59,7 +59,7 @@ const { ExampleUtils, DATA_FILE_PATH_ENV_VAR } =
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/device-detection-data,
+// cxx/data/device-detection folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
@@ -171,8 +171,8 @@ const findDataFile = function (dataFile, output) {
 
   if (dataFile === null || typeof dataFile === 'undefined' || fs.existsSync(dataFile) === false) {
     output.write(`Failed to find a device detection data file. If using the default 'lite'
- data file, make sure that git lfs is installed and that the device-detection-data
- submodule has been updated by running 'git submodule update --recursive'.\n`);
+ data file, make sure that the cxx/data submodule has been fetched by running
+ 'git submodule update --init --recursive'.\n`);
     throw new Error(`Data file '${dataFile}' not found`);
   }
 
@@ -185,7 +185,7 @@ const run = async function (dataFile, output, evidenceList) {
   // In this example, we use the DeviceDetectionOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile,
     // Prefer low memory profile where all data streamed from disk on-demand.

@@ -40,7 +40,8 @@ The folder table and product guides below show where to find usage examples and 
 | `device-detection` | The Device Detection packages, `fiftyone.devicedetection*` |
 | `ip-intelligence` | The IP Intelligence packages, `fiftyone.ipintelligence*` |
 | `location` | The `fiftyone.geolocation` package |
-| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code and the data file submodules |
+| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code |
+| `cxx/data` | The [data](https://github.com/51Degrees/data) submodule of `cxx`, whose `device-detection` and `ip-intelligence` folders hold the data files the tests and examples use |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
 ## Getting the code
@@ -54,9 +55,31 @@ npm install
 `npm install` links every package to the others in this repository through
 npm workspaces, so a change to one package is seen by the rest straight away.
 
-The free Device Detection Lite data file in `cxx/device-detection-data` is
-stored with [Git LFS](https://git-lfs.github.com/). Run `git lfs pull` in that
-folder to fetch it.
+The data files themselves are not stored in a repository. The `cxx/data`
+submodule holds a `.link` file for each free one, where the file goes, and two
+scripts that download them. From the repository root, run
+
+```
+sh cxx/data/get-data-files.sh
+```
+
+or, in PowerShell,
+
+```
+./cxx/data/get-data-files.ps1
+```
+
+They download the Device Detection Lite file, the 20,000 User-Agents and
+evidence records, and the IP Intelligence Lite and ASN files. A file that is
+already there is kept, unless `-u` (`-Update`) asks for a newer one or `-f`
+(`-Force`) downloads it again. An example whose file is missing runs the script
+for that file itself.
+
+An existing clone fetches the data submodule with
+`git submodule update --init --recursive`. Nothing here reads the older
+`cxx/device-detection-data` and `cxx/ip-intelligence-data` folders. Once cxx no
+longer includes them, delete them from an existing clone, because Git leaves a
+removed submodule's folder on disk.
 
 ## Building the native modules
 

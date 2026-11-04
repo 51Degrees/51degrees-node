@@ -13,8 +13,20 @@ if ($env:GITHUB_JOB -eq "PreBuild") {
     exit 0
 }
 
-$deviceDetectionData = "$PSScriptRoot/../cxx/device-detection-data"
-$ipIntelligenceData = "$PSScriptRoot/../cxx/ip-intelligence-data"
+$data = "$PSScriptRoot/../cxx/data"
+$deviceDetectionData = "$data/device-detection"
+$ipIntelligenceData = "$data/ip-intelligence"
+
+# Downloads every file the data repository links to in one of its folders.
+# A file that is already there is kept, so this runs after the assets are
+# linked in and only fetches what they do not cover.
+function Get-DataFiles([string]$Folder) {
+    $global:LASTEXITCODE = 0
+    & "$data/get-data-files.ps1" $Folder
+    if ($LASTEXITCODE -ne 0) {
+        throw "Not every data file in $Folder was downloaded"
+    }
+}
 
 $assets = '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml', '20000 User Agents.csv'
 if ($DeviceDetection) {
@@ -32,16 +44,20 @@ foreach ($asset in $assets) {
         default {New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$_" -Path "$deviceDetectionData/$_"}
     }
 }
+Get-DataFiles device-detection
 
 if ($IpIntelligence) {
     $asset = '51Degrees-EnterpriseIpiV41.ipi'
     ./steps/fetch-assets.ps1 -IpIntelligence:$IpIntelligence -IpIntelligenceUrl:$IpIntelligenceUrl -Assets $asset
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$ipIntelligenceData/$asset"
-    # Use Enterprise as Lite for testing until a Lite file is freely available.
+    # The Enterprise file stands in for the Lite one too.
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$ipIntelligenceData/51Degrees-LiteV41.ipi"
 } else {
-    Write-Host "::warning file=$($MyInvocation.ScriptName),line=$($MyInvocation.ScriptLineNumber),title=No License Key::An IP intelligence license was not provided, so the on-premise data file will not be downloaded."
+    Write-Host "::warning file=$($MyInvocation.ScriptName),line=$($MyInvocation.ScriptLineNumber),title=No License Key::An IP intelligence license was not provided, so the Enterprise data file will not be downloaded."
 }
+# Downloads the Asn file, which no asset covers, and the Lite file when no
+# Enterprise file was linked under its name.
+Get-DataFiles ip-intelligence
 
 # Generate the evidence files used by tests and examples.
 Push-Location $ipIntelligenceData

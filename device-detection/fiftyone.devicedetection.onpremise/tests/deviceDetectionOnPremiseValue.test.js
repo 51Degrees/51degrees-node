@@ -36,8 +36,8 @@ const EngineBuilder = require51('fiftyone.devicedetection.onpremise').DeviceDete
 const constants = require(path.join(__dirname, '/../constants'));
 const fs = require('fs');
 
-const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash';
-const DataFile = (process.env.directory || __dirname) + '/../../../cxx/device-detection-data/Enterprise-HashV41.hash';
+const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
+const DataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
