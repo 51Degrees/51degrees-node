@@ -43,7 +43,7 @@ const IpIntelligenceOnPremisePipelineBuilder = require51(
 // A small but valid data file, as the engine copies it to a temporary
 // location and the enterprise file used in CI does not fit on the runners.
 const DataFile = path.resolve((process.env.directory || __dirname) +
-  '/../../../cxx/ip-intelligence-data/51Degrees-IPIV4AsnIpiV41.ipi');
+  '/../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
 
 const IpAddress = '8.8.8.8';
 
