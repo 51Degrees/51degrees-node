@@ -106,7 +106,9 @@ test('HTTP data set in error', async () => {
   // When an error occurs, check that the expected values are populated.
   expect(errors[0].errorMessage.indexOf(expectedError) !== -1).toBe(true);
   expect(errors[0].httpStatusCode).toEqual(400);
-  expect(errors[0].responseHeaders.etag).toBeDefined();
+  // Every 4xx answer carries Date (RFC 9110 section 6.6.1). Only some
+  // cloud servers send ETag.
+  expect(errors[0].responseHeaders.date).toBeDefined();
 });
 
 /**
