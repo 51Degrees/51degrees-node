@@ -58,6 +58,14 @@ The workflows in `.github/workflows` call the shared workflows in
 `ci/`. `ci/packages.ps1` lists the native modules and the packages published to
 npm.
 
+## Releases
+
+Pull requests go to `rc`, not `main`, and stay drafts until they have been
+reviewed, because the nightly merges any pull request into `rc` that is not a
+draft and has no review requested. When a release is wanted, one pull request
+merges `rc` into `main`, and the "Only rc into main" check fails a pull request
+into `main` from any other branch.
+
 ## Versions
 
 The repository has one version, tagged as a plain version such as `4.5.97`.
