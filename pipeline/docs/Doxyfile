@@ -821,7 +821,6 @@ WARN_LOGFILE           =
 INPUT                  = ../fiftyone.pipeline.core \
                          ../fiftyone.pipeline.engines \
                          ../fiftyone.pipeline.engines.fiftyone \
-                         ../fiftyone.pipeline.javascriptbundler \
                          ../fiftyone.pipeline.cloudrequestengine \
                          ../readme.md
 

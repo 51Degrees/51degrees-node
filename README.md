@@ -1,10 +1,29 @@
-# 51Degrees Node.js
+# 51Degrees Device Detection and IP Intelligence for Node.js
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=51degrees-node-js "Data rewards the curious") **Node.js packages for Device Detection, IP Intelligence and Location**
+<img src=".github/images/logo.png" alt="51Degrees" title="Data rewards the curious" width="160">
 
-This repository holds the 51Degrees Node.js packages: the Pipeline API,
-Device Detection, IP Intelligence and Location. Each package is still published
-to npm under its own name.
+**Node.js packages for Device Detection, IP Intelligence and Location**
+
+Our User-Agent parser for Node.js supports Device Detection, browser detection, mobile detection, and crawler detection on-premise or in the cloud. IP Intelligence adds IP geolocation, including IP to country data.
+
+It reads User-Agent and User-Agent Client Hints, HTTP request headers that carry browser and device information. For cloud bot detection, Human Confidence reports confidence that a person is viewing the page.
+
+## Install
+
+Each product is a separate npm package. For Device Detection and IP Intelligence, cloud or on-premise:
+
+```
+npm install fiftyone.devicedetection
+npm install fiftyone.ipintelligence
+```
+
+The product guides below list the cloud-only and on-premise-only packages. To work on the source, see [Getting the code](#getting-the-code).
+
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install).
+
+Created from `pipeline-node`, `device-detection-node`, and `location-node`, this repository continues their work.
+
+The folder table and product guides below show where to find usage examples and how to build and test the source.
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
@@ -67,7 +86,7 @@ npm run lint
 npm run tsc
 ```
 
-The tests that use the cloud need a resource key, which is read from the
+The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
 the keys and data files its tests use.
 
@@ -86,11 +105,25 @@ swig -c++ -javascript -node ipi_node.i
 
 ## History
 
-The repositories `pipeline-node`, `device-detection-node` and `location-node`,
-and the one the IP Intelligence packages came from, were brought in with
+| Earlier repository | What it held |
+| --- | --- |
+| [pipeline-node](https://github.com/51Degrees/pipeline-node) | The Pipeline API |
+| [device-detection-node](https://github.com/51Degrees/device-detection-node) | Device Detection |
+| [location-node](https://github.com/51Degrees/location-node) | Location |
+
+
+The earlier repositories were brought in with
 `git subtree add`, without `--squash`, so commit SHAs match the originals. Use
 `git log --follow` to trace a file back through the import.
 
-## Licence
+## License
 
 [European Union Public Licence v1.2](LICENSE)
+
+## Find out more
+
+- [Device Detection](https://51degrees.com/device-detection?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [Bots and humans](https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [Documentation](https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- https://github.com/51Degrees/51degrees-cxx
