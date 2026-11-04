@@ -195,7 +195,7 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 
   // Create a pipeline and add both engines to it. For more information
   // about pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
   const pipeline = new core.PipelineBuilder()
     .add(deviceEngine)
     .add(ipEngine)
@@ -247,17 +247,15 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(deviceDataFile, ipDataFile, process.stdout);
   } else {
     if (deviceDataFile === undefined) {
-      console.error('Failed to find a device detection data file. A ' +
-        'lite data file is available from the device-detection-data ' +
-        'repository on GitHub ' +
-        'https://github.com/51Degrees/device-detection-data. The full ' +
-        'path to a data file can be specified as the first command ' +
-        'line argument');
+      console.error('Failed to find a device detection data file. ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path to a ' +
+        'data file can be specified as the first command line argument');
     }
     if (ipDataFile === undefined) {
       console.error('Failed to find an IP intelligence data file. ' +
-        'Make sure the ip-intelligence-data submodule has been updated ' +
-        'by running `git submodule update --recursive`. The full path ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path ' +
         'to a data file can be specified as the second command line ' +
         'argument');
     }

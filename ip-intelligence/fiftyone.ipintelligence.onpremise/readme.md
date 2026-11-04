@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence On-Premise**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=top "Data rewards the curious") **Node IP Intelligence On-Premise**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/51degrees-node/tree/main/pipeline).
@@ -9,7 +9,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 ## This package - fiftyone.ipintelligence.onpremise
 
-This package definitions for the on-premise IP intelligence engine. The on-premise engine requires a data file to be supplied. A free 'Lite' data file can be obtained from the [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository.
+This package definitions for the on-premise IP intelligence engine. The on-premise engine requires a data file to be supplied. A free 'Lite' data file can be downloaded with the scripts in the [data](https://github.com/51Degrees/data) repository, which is the `cxx/data` submodule of this repository.
 
 The on-premise engine performs processing using a native library which is built from the C/C++ code in the [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx) repository. Binaries are included with the published NPM package for a set of supported platforms and Node versions. If your platform or Node version is not supported then you can build the native module yourself, see 'Building the native module' below.
 
@@ -67,3 +67,12 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 ```
 swig -c++ -javascript -node ipi_node.i
 ```
+
+## Find out more
+
+- [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-ip-intelligence)
+- [IP Intelligence documentation](https://51degrees.com/documentation/_ip_intelligence__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-documentation)
+- [Getting started](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-getting-started)
+- [Pricing](https://51degrees.com/pricing?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-pricing)
+- https://github.com/51Degrees/51degrees-node
+- https://github.com/51Degrees/51degrees-cxx

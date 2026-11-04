@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-readme.md&utm_term=top "Data rewards the curious") **51Degrees Pipeline Cloud Request Engine**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=top "Data rewards the curious") **51Degrees Pipeline Cloud Request Engine**
 
-[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=top "developer documentation")
 
 ## Introduction
 
@@ -8,9 +8,9 @@ The 51Degrees Pipeline API is a generic web request intelligence and data proces
 
 ## This package - fiftyone.pipeline.cloudrequestengine
 
-This package uses the `engines` class created by the [`fiftyone.pipeline.engines`](/fiftyone.pipeline.engines#readme.md). It makes available:
+This package uses the `engines` class created by the [`fiftyone.pipeline.engines`](https://github.com/51Degrees/51degrees-node/tree/main/pipeline/fiftyone.pipeline.engines). It makes available:
 
-* A `Cloud Request Engine` which calls the 51Degrees cloud service to fetch properties and metadata about them based on a provided resource key. A resource key with the free properties used by the tests can be created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-readme.md&utm_term=this-package-fiftyone-pipeline-cloudrequestengine).
+* A `Cloud Request Engine` which calls the 51Degrees cloud service to fetch properties and metadata about them based on a provided resource key. A resource key with the free properties used by the tests can be created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=this-package-fiftyone-pipeline-cloudrequestengine).
 * A `Cloud Engine` template which reads data from the Cloud Request Engine.
 
 It is used by the cloud versions of the following 51Degrees engines:
@@ -62,3 +62,10 @@ unchanged.
 FOD_CLOUD_API_URL=https://cloud.example.com/api/v4/ _51DEGREES_RESOURCE_KEY=<resource key> node yourExample.js
 ```
 
+## Find out more
+
+- [Build your own](https://51degrees.com/build-your-own?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=find-out-more-build-your-own)
+- [Pipeline API documentation](https://51degrees.com/documentation/_pipeline_api__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=find-out-more-documentation)
+- [Pipeline API examples](https://51degrees.com/documentation/_pipeline_api__examples__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=find-out-more-examples)
+- [Cloud service documentation](https://51degrees.com/documentation/_services__cloud__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=find-out-more-cloud-service)
+- https://github.com/51Degrees/51degrees-node

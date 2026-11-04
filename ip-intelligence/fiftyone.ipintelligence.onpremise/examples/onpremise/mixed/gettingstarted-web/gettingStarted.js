@@ -105,12 +105,9 @@ const fixDataFilePaths = (options) => {
       } else {
         throw 'Failed to find a data file at ' +
           `'${parameters.dataFilePath}'. Ensure that the filename is ` +
-          'correct in 51d.json. A device detection lite data file is ' +
-          'available from ' +
-          'https://github.com/51Degrees/device-detection-data. If ' +
-          'using the IP intelligence lite file, then make sure the ' +
-          'ip-intelligence-data submodule has been updated by running ' +
-          '\'git submodule update --recursive\'.';
+          'correct in 51d.json. If using the lite files, then make sure ' +
+          'the cxx/data submodule has been fetched by running ' +
+          '\'git submodule update --init --recursive\'.';
       }
     }
   }

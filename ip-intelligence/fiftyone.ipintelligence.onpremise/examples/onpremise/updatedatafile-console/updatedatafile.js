@@ -64,8 +64,8 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
  * by the 51Degrees filesystem watcher.
  * ## Lite Data File
  * Lite data files (free-to-use, limited capabilities, no license key required) are created
- * regularly and cannot be updated using auto-update, they may be downloaded from
- * (Github)[href=https://github.com/51Degrees/ip-intelligence-data] and are included with
+ * regularly and cannot be updated using auto-update, they may be downloaded with the scripts
+ * in the (data repository)[href=https://github.com/51Degrees/data], which is included with
  * source distributions of this software.
  * # Update on Start-Up
  * You can configure the pipeline builder to download an Enterprise data file on start-up.

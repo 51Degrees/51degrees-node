@@ -6,15 +6,15 @@
 
 The examples can be run either with modules included in the GitHub repository or with the **IP Intelligence** packages from `npm` repository.
 
-Usage examples are available for Cloud and OnPremise [`fiftyone.ipintelligence`](/fiftyone.ipintelligence/examples), [`fiftyone.ipintelligence.cloud`](/fiftyone.ipintelligence.cloud/examples/cloud) and [`fiftyone.ipintelligence.onpremise`](/fiftyone.ipintelligence.onpremise/examples/onpremise).
+Usage examples are available for Cloud and OnPremise [`fiftyone.ipintelligence`](fiftyone.ipintelligence/examples), [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud/examples/cloud) and [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise/examples/onpremise).
 
 ## Run with modules in GitHub repository
 
-First of all, you need to build the binaries for the on-premise examples to work as described in the **On-Premise** section of the [readme](/readme.md). **Skip** this part if you just want to run the cloud examples.
+First of all, you need to build the binaries for the on-premise examples to work as described in the **On-Premise** section of the [readme](readme.md). **Skip** this part if you just want to run the cloud examples.
 
-The `mixed` examples combine device detection and IP intelligence in a single pipeline. These use the `fiftyone.devicedetection.cloud` and `fiftyone.devicedetection.onpremise` packages, which are installed by `npm install` in the repository root. The on-premise mixed examples also need a device detection data file (`.hash` format). A lite data file is available from the [device-detection-data](https://github.com/51Degrees/device-detection-data) repository, and the path to it can be supplied as a command line argument, set in the `51DEGREES_DD_PATH` environment variable, or placed within the project space. The path to the IP intelligence data file can likewise be set in the `51DEGREES_IPI_PATH` environment variable.
+The `mixed` examples combine device detection and IP intelligence in a single pipeline. These use the `fiftyone.devicedetection.cloud` and `fiftyone.devicedetection.onpremise` packages, which are installed by `npm install` in the repository root. The on-premise mixed examples also need a device detection data file (`.hash` format). A lite data file is linked from the [data](https://github.com/51Degrees/data) repository, which is the `cxx/data` submodule, and the examples download it when it is missing. The path to another file can be supplied as a command line argument or set in the `51DEGREES_DD_PATH` environment variable, and an Enterprise file can be placed within the project space. The path to the IP intelligence data file can likewise be set in the `51DEGREES_IPI_PATH` environment variable.
 
-Then navigate to the root folder that contains the examples that you want to run. This folder can be either [`fiftyone.ipintelligence`](/fiftyone.ipintelligence#readme.md), [`fiftyone.ipintelligence.cloud`](/fiftyone.ipintelligence.cloud#readme.md) or [`fiftyone.ipintelligence.onpremise`](/fiftyone.ipintelligence.onpremise#readme.md)
+Then navigate to the root folder that contains the examples that you want to run. This folder can be either [`fiftyone.ipintelligence`](fiftyone.ipintelligence), [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud) or [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise)
 
 Install the required packages:
 
@@ -46,9 +46,9 @@ Create a `package.json` file and make sure to include the package that you wish 
 ```
 
 Packages usage:
-- [`fiftyone.ipintelligence`](/fiftyone.ipintelligence#readme.md): contains pipeline builder which can be used to build both `Cloud` and `On-Premise` engines pipeline.
-- [`fiftyone.ipintelligence.cloud`](/fiftyone.ipintelligence.cloud#readme.md): contains cloud engine and cloud pipeline builder.
-- [`fiftyone.ipintelligence.onpremise`](/fiftyone.ipintelligence.onpremise#readme.md): contains on-premise engine and on-premise pipeline builder.
+- [`fiftyone.ipintelligence`](fiftyone.ipintelligence): contains pipeline builder which can be used to build both `Cloud` and `On-Premise` engines pipeline.
+- [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud): contains cloud engine and cloud pipeline builder.
+- [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise): contains on-premise engine and on-premise pipeline builder.
 
 Next, you will need to update the `require` statement, the data file path and the `51d.json` file if the example require to.
 

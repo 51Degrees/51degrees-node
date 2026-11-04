@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation-readme.md&utm_term=top "Data rewards the curious") **51Degrees Pipeline Translation**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation&utm_term=top "Data rewards the curious") **51Degrees Pipeline Translation**
 
-[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/pipeline-node/index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation&utm_term=top "developer documentation")
 
 ## Introduction
 
@@ -33,3 +33,10 @@ Then, navigate to the module directory and execute:
 ```
 npm test
 ```
+
+## Find out more
+
+- [Build your own](https://51degrees.com/build-your-own?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation&utm_term=find-out-more-build-your-own)
+- [Pipeline API documentation](https://51degrees.com/documentation/_pipeline_api__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation&utm_term=find-out-more-documentation)
+- [Pipeline API examples](https://51degrees.com/documentation/_pipeline_api__examples__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.translation&utm_term=find-out-more-examples)
+- https://github.com/51Degrees/51degrees-node
