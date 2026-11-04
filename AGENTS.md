@@ -21,8 +21,7 @@ before its examples can run. The cloud examples need no native module.
 
 ### Prerequisites
 
-- Git, and [Git LFS](https://git-lfs.github.com/) for the Device Detection
-  data file.
+- Git.
 - Node.js 22 or 24, with npm. CI tests these two (`ci/options.json`), and
   `ip-intelligence/ensure-native-module.js` refuses to build for any other.
   The build uses node-gyp 12, which needs Node.js 22.9 or later on the 22 line.
@@ -33,9 +32,10 @@ before its examples can run. The cloud examples need no native module.
   Linux, `sudo apt-get install g++ make libatomic1`, which CI also runs. On
   macOS, the compilers that come with Xcode. node-gyp also needs Python 3, as
   its README says.
-- For the IP Intelligence data file, PowerShell 7 (`pwsh`) on any system, or
-  `curl`, `gunzip` and `md5sum` (`md5` on macOS) for the shell script on Linux
-  and macOS.
+- For the data files, `curl`, `gzip` and `md5sum` (`md5` on macOS) on Linux
+  and macOS, where the examples download with the shell script, and Windows
+  PowerShell 5.1 or PowerShell 7 on Windows, where they use the PowerShell
+  script. The downloads come from `distributor.51degrees.com`.
 
 Clone the repository with its submodules.
 
@@ -52,71 +52,36 @@ git submodule update --init --recursive
 
 ### Data files
 
-The examples use the free Lite data files, which need no licence key. They
-come from the `cxx` submodule, and two layouts exist. Read the "Getting the
-code" section of `README.md` in your checkout to find out which one applies.
+The examples use the free Lite data files, which need no licence key. They are
+not stored in this repository. The `cxx` submodule holds the
+[data](https://github.com/51Degrees/data) repository as `cxx/data`, which has a
+link to each file, and a script downloads them into `cxx/data/device-detection`
+and `cxx/data/ip-intelligence`.
 
-- **The README says to run `git lfs pull`.** This is the layout on `rc` and
-  `main` today. The files are in `cxx/device-detection-data` and
-  `cxx/ip-intelligence-data`. Follow "Without cxx/data".
-- **The README says to run `cxx/data/get-data-files.sh`.** The draft pull
-  request [#22](https://github.com/51Degrees/51degrees-node/pull/22) moves the
-  examples to the [data](https://github.com/51Degrees/data) repository, which
-  cxx carries as `cxx/data`. Once it is merged, follow "With cxx/data".
-
-Go by the README rather than by whether `cxx/data` exists, because the folder
-can arrive with a newer `cxx` before the examples here read it.
-
-#### Without cxx/data
-
-The Device Detection Lite file is stored with Git LFS. Install Git LFS, for
-example with `sudo apt-get install git-lfs` on Ubuntu, then pull the file in
-its submodule.
-
-```
-git lfs install
-cd cxx/device-detection-data
-git lfs pull
-cd ../..
-```
-
-A script in `cxx/ip-intelligence-data` downloads the IP Intelligence Lite
-file. Run it from inside that folder, because it saves the file in the folder
-it runs from.
-
-```
-cd cxx/ip-intelligence-data
-pwsh ./get-lite-file-from-azure.ps1
-cd ../..
-```
-
-On Linux and macOS, `./get-lite-file-from-azure.sh` in the same folder does
-the same. Either script also downloads the Asn file over the copy committed in
-the submodule, so `git status` then shows the submodule as modified, which is
-expected.
-
-#### With cxx/data
+On Linux and macOS, run the shell script.
 
 ```
 sh cxx/data/get-data-files.sh
 ```
 
-In PowerShell, run `./cxx/data/get-data-files.ps1` instead. Either script
-downloads every free file into `cxx/data/device-detection` and
-`cxx/data/ip-intelligence`, and keeps a file that is already there. In this
-layout an example whose free file is missing runs the script for that file
-itself.
+On Windows, run the PowerShell script. Windows PowerShell can refuse to run a
+script file under the policy Windows sets by default, so run it the way the
+examples do.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File cxx/data/get-data-files.ps1
+```
+
+Where PowerShell 7 is installed, `pwsh cxx/data/get-data-files.ps1` does the
+same on any system. Either script downloads every free file, and keeps a file
+that is already there. To download one file, give its name, as in
+`sh cxx/data/get-data-files.sh 51Degrees-LiteV4.1.hash`. An example whose free
+file is missing runs the script for that file itself.
 
 #### Check the files
 
-- `cxx/device-detection-data/51Degrees-LiteV4.1.hash` is more than 10 MB. A
-  file of about 130 bytes that starts with
-  `version https://git-lfs.github.com/spec/v1` is a Git LFS pointer, which
-  means Git LFS has not pulled the file.
-- `cxx/ip-intelligence-data/51Degrees-LiteV41.ipi` is more than 100 MB.
-
-With `cxx/data`, the same files are in `cxx/data/device-detection` and
-`cxx/data/ip-intelligence`.
+- `cxx/data/device-detection/51Degrees-LiteV4.1.hash` is more than 10 MB.
+- `cxx/data/ip-intelligence/51Degrees-LiteV41.ipi` is more than 100 MB.
 
 ### Build
 
@@ -165,10 +130,12 @@ It prints `Native module built:` and the path when it is done.
 
 ### Run
 
-An on-premise example finds its data file by searching the folder it runs in
-and its subfolders, then each folder above it in turn, for up to 10 seconds
-(`privateFindFile` in the example folder's `exampleUtils.js`). Run each example
-from its own folder, as CI runs the web examples.
+An on-premise example reads its free data file from `cxx/data`, by a path
+relative to the examples' `exampleUtils.js` (`findFile` in that file), so the
+folder it runs in does not matter for that file. When the file is not there,
+the example runs the download script for it, with Windows PowerShell on
+Windows and `sh` on Linux and macOS. The commands below run each example from
+its own folder, as CI runs the web examples.
 
 ```
 cd device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console
@@ -188,6 +155,10 @@ Intelligence. The names start with a digit, so in a Linux shell set them with
 `env`, for example `env 51DEGREES_IPI_PATH=/path/to/file.ipi node gettingStarted.js`.
 
 ### Correct output
+
+When an example downloads its data file, it first prints
+`<file> is missing, so it is being downloaded by running` and the command,
+then the script's `Downloading` and `Saved` lines.
 
 The Device Detection example processes five sets of evidence. For each it
 prints `Input values:` and the evidence, then `Results:` with `Mobile Device`,
@@ -252,19 +223,13 @@ reads its key from `51DEGREES_RESOURCE_KEY` instead.
   because its name holds the major version.
 - **`npm install` after the build.** The product readmes warn that
   `npm install` removes the copied module, so build again after it.
-- **A Git LFS pointer instead of the data file.** The engine cannot load it,
-  so the example fails before it prints any results. Check the file sizes as
-  above.
+- **A data file that is not there.** `cxx/data` holds a `.link` for each file
+  rather than the file. An example whose file is missing runs the download
+  script for it, so it needs the network and the tools under "Prerequisites".
+  Check the file sizes as above.
 - **Missing submodules.** The example then says it failed to find a data file
-  and suggests `git submodule update --recursive`, which does not fetch
-  submodules that were never initialised. Run
-  `git submodule update --init --recursive` instead.
-- **The search gives up after 10 seconds.** Run the example from its own
-  folder, or set `51DEGREES_DD_PATH` or `51DEGREES_IPI_PATH`.
-- **Windows line endings.** Git for Windows usually checks files out with
-  `core.autocrlf=true`, and `cxx/ip-intelligence-data` has no
-  `.gitattributes`, so its shell script gets Windows line endings and the
-  shell cannot run it. Use the PowerShell script on Windows.
+  and asks for `git submodule update --init --recursive`, which fetches them.
+  A zip download of the repository has no submodules, so clone with Git.
 - **Warnings are errors on Windows.** Both `binding.51d` files set
   `win_warn_as_error`, so a compiler newer than the one CI uses can stop the
   build on a new warning.
@@ -276,11 +241,11 @@ reads its key from `51DEGREES_RESOURCE_KEY` instead.
   file system.
 - **What CI does not test.** CI runs the console examples through their jest
   tests, which call each example's `run` with a path from the test helpers,
-  so the file search above never runs there. `ci/fetch-assets.ps1` links the
-  paid Device Detection file in as `tests/51Degrees-LiteV4.1.hash`, which the
-  tests look at first, and the paid IP Intelligence file in as
-  `51Degrees-LiteV41.ipi`, so the Lite IP Intelligence file is never used in
-  CI.
+  so the lookup above never runs there. `ci/fetch-assets.ps1` links the paid
+  Device Detection file in as `tests/51Degrees-LiteV4.1.hash`, which the tests
+  look at first, and the paid IP Intelligence file in as
+  `51Degrees-LiteV41.ipi`, so CI reads the Lite IP Intelligence file only when
+  it has no IP Intelligence licence.
 
 ## Package references
 
