@@ -852,3 +852,10 @@ or past it, or fails its signature check.
 network. `tests/didClient.integration.test.js` runs against the live cloud
 only when `_51DEGREES_RESOURCE_KEY` (or `RESOURCE_KEY`) is set, and is skipped
 otherwise.
+
+## Find out more
+
+- [51Did](https://51degrees.com/developers/51did?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=find-out-more-51did)
+- [51Did documentation](https://51degrees.com/documentation/_identifiers_51_did.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=find-out-more-documentation)
+- [51Did inspector](https://51degrees.com/developers/51did-inspector?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=find-out-more-51did-inspector)
+- https://github.com/51Degrees/51degrees-node
