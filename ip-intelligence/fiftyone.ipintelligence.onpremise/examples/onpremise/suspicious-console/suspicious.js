@@ -195,9 +195,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(dataFile, process.stdout);
   } else {
     console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`. A different file can be ' +
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`. A different file can be ' +
       'specified by supplying the full path as a command line argument');
   }
 };

@@ -47,7 +47,7 @@ const ExampleUtils: {
 
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/device-detection-data,
+// cxx/data/device-detection folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
@@ -155,7 +155,7 @@ if (dataFile !== undefined) {
   run(dataFile);
 } else {
   console.error('Failed to find a device detection ' +
-    'data file. Make sure the device-detection-data ' +
-    'submodule has been updated by running ' +
-    '`git submodule update --recursive`.');
+    'data file. Make sure the cxx/data submodule ' +
+    'has been fetched by running ' +
+    '`git submodule update --init --recursive`.');
 }

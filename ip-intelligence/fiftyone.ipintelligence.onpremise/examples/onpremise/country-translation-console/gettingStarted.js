@@ -60,8 +60,8 @@ const ExampleUtils =
   require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data
-// directory, or you may specify another file as a command line parameter.
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
 /**
@@ -164,8 +164,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(dataFile, process.stdout);
   } else {
     console.error('Failed to find an IP intelligence data file. Make sure ' +
-      'the ip-intelligence-data submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'the cxx/data submodule has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   }
 };
 
