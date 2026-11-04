@@ -39,6 +39,7 @@ const require51 = (requestedPackage) => {
 
 const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
+const PipelineBuilder = require51('fiftyone.pipeline.core').PipelineBuilder;
 
 const DataFile = path.resolve((process.env.directory || __dirname) +
   '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash');
@@ -76,6 +77,42 @@ const processAndDrop = async (tempDir, registry) => {
     registry.register(flowData.device.swigResults, 'results');
   }
   return fs.readdirSync(tempDir).length;
+};
+
+/**
+ * Builds from a configuration whose first element is an on-premise engine and
+ * whose second cannot be found. Elements have no close method, so what the
+ * builder made is released once nothing refers to it.
+ *
+ * @param {string} tempDir folder for the engine's copy of the data file
+ * @returns {{error: string, copies: number}} what was thrown, and the number
+ * of files in tempDir straight after
+ */
+const buildFromFailingConfiguration = (tempDir) => {
+  const config = {
+    PipelineOptions: {
+      Elements: [
+        {
+          elementName: path.join(__dirname, '..', 'deviceDetectionOnPremise'),
+          elementParameters: {
+            dataFilePath: DataFile,
+            licenceKeys: '',
+            autoUpdate: false,
+            createTempDataCopy: true,
+            tempDataDir: tempDir
+          }
+        },
+        { elementName: 'no-such-element' }
+      ]
+    }
+  };
+  let error = 'nothing was thrown';
+  try {
+    new PipelineBuilder().buildFromConfiguration(config);
+  } catch (e) {
+    error = String(e);
+  }
+  return { error, copies: fs.readdirSync(tempDir).length };
 };
 
 /**
@@ -117,6 +154,24 @@ describe('resource cleanup', () => {
       } finally {
         // On Windows a copy still in use cannot be removed, and the error
         // would hide the failure above.
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (e) {
+        }
+      }
+    }, 60000);
+
+  test('a failed build from configuration releases the engine it built',
+    async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dd-cleanup-'));
+      try {
+        const { error, copies } = buildFromFailingConfiguration(tempDir);
+        expect(error).toContain("Can't find no-such-element");
+        expect(copies).toBeGreaterThan(0);
+        await collectUntil(() => fs.readdirSync(tempDir).length === 0);
+        expect(fs.readdirSync(tempDir)).toEqual([]);
+      } finally {
+        // As above, a copy still in use cannot be removed on Windows.
         try {
           fs.rmSync(tempDir, { recursive: true, force: true });
         } catch (e) {
