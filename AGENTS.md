@@ -52,6 +52,17 @@ The workflows in `.github/workflows` call the shared workflows in
 `ci/`. `ci/packages.ps1` lists the native modules and the packages published to
 npm.
 
+`ci/select-options.ps1` chooses the entries a pull request runs. The standard
+set is Node 24 and Node 22 on Linux, with the Selenium contract on Node 24
+alone. A native change adds Windows and Linux ARM, and a change outside the
+package folders adds every entry but macOS. macOS and performance run only
+when `rc` itself or the release pull request is built, which
+`.github/workflows/release-pull-request.yml` does on every entry.
+
+The Selenium contract tests run on .NET, so `ci/setup-environment.ps1` leaves
+it installed when it frees disk space, and `ci/run-integration-tests.ps1`
+fails unless `dotnet test` reports a test that passed.
+
 ## Versions
 
 The repository has one version, tagged as a plain version such as `4.5.97`.
