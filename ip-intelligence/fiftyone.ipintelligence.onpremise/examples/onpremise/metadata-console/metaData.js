@@ -59,8 +59,8 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data,
-// directory or you may specify another file as a command line parameter.
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
 // limited accuracy and capabilities.
@@ -174,9 +174,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(dataFile, process.stdout);
   } else {
     console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`. By default, the \'lite\' file ' +
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`. By default, the \'lite\' file ' +
       'included with this code will be used. A different file can be ' +
       'specified by supplying the full path as a command line argument');
   }

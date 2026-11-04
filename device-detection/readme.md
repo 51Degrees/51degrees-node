@@ -59,32 +59,32 @@ See [pricing](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&
 #### On-Premise
 
 In order to perform device detection on-premise, you will need to use a 51Degrees data file.
-This repository includes a free, 'lite' file in the 'device-detection-data' sub-module that has a
-significantly reduced set of properties. To obtain a file with a more complete set of device
-properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=on-premise).
+The 'cxx/data' sub-module of this repository links to a free, 'lite' file that has a
+significantly reduced set of properties, and its scripts download it. To obtain a file with a
+more complete set of device properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=on-premise).
 
 The on-premise examples locate the data file in the following order:
 
 1. The `51DEGREES_DD_PATH` environment variable, which can be set to an explicit path to the
    data file. The older name, `_51DEGREES_DD_PATH`, is still read if the first is not set.
-2. A search of the folder hierarchy, walking up from the working directory, for the expected
-   file name.
-3. The free 'Lite' data file in its expected location, which is the
-   'cxx/device-detection-data' sub-module
-   of this repository.
+2. For a file the 'cxx/data' sub-module links to, such as the free 'Lite' data file, the
+   'cxx/data/device-detection' folder of this repository. When the file is missing there, the
+   example downloads it with the sub-module's `get-data-files.sh` script, or
+   `get-data-files.ps1` on Windows.
+3. For any other file, a search of the folder hierarchy, walking up from the working directory,
+   for the expected file name.
 
-If you want to use the lite
-file, you will need to install [GitLFS](https://git-lfs.github.com/):
-
-```
-sudo apt-get install git-lfs
-git lfs install
-```
-
-Then, navigate to 'cxx/device-detection-data' and execute:
+To download the free files before running the examples, run this from the root of the
+repository
 
 ```
-git lfs pull
+sh cxx/data/get-data-files.sh
+```
+
+or, in PowerShell,
+
+```
+./cxx/data/get-data-files.ps1
 ```
 
 ### Installation

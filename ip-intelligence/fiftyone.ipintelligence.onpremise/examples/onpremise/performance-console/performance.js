@@ -76,8 +76,8 @@ parser.add_argument('-e', '--evidence', { help: 'Evidence file name' });
 parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data,
-// directory or you may specify another file as a command line parameter.
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
 // limited accuracy and capabilities.
@@ -96,17 +96,17 @@ const jsonoutput = args.jsonoutput;
 const fs = require('fs');
 if (!fs.existsSync(datafile)) {
   console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No data file at '" + datafile + "'");
 }
 
 if (!fs.existsSync(evidenceFile)) {
   console.error('Failed to find an evidence ' +
-      'file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No evidence file at '" + evidenceFile + "'");
 }
 

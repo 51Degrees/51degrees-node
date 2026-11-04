@@ -230,9 +230,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
       (output, content) => { fs.appendFileSync(output, content); });
   } else {
     console.error('Failed to find a device detection ' +
-      'data file. Make sure the device-detection-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   }
 };
 

@@ -20,6 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const childProcess = require('child_process');
+
 const fs = require('fs');
 
 const path = require('path');
@@ -28,6 +30,16 @@ const swigHelpers = require(path.join(__dirname, '/../../swigHelpers'));
 
 // Timeout used when searching for file
 const FIND_FILE_TIMEOUT_MS = 10000;
+
+// The data submodule of the cxx submodule at the root of this repository.
+// Each data file it links to is listed as <file>.link in one of these
+// folders, and its scripts download the file beside the link.
+const DATA_DIR = path.join(__dirname, '..', '..', '..', '..', 'cxx', 'data');
+const DATA_FOLDERS = ['device-detection', 'ip-intelligence'];
+
+// Sent with each download, so that downloads can be counted by where they
+// come from.
+const DATA_FILES_SOURCE = 'examples-51degrees-node';
 
 // If data file is older than this number of days then a warning will
 // be displayed.
@@ -49,6 +61,56 @@ const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
 const STATIC_CONTENT_TYPES = {
   '.css': 'text/css',
   '.js': 'text/javascript'
+};
+
+/**
+ * Get the command that downloads one of the data submodule's files.
+ *
+ * @param {string} fileName the name of the file
+ * @returns {object} the program, its arguments and the command as text
+ */
+const getDataFilesCommand = (fileName) => {
+  if (process.platform === 'win32') {
+    const script = path.join(DATA_DIR, 'get-data-files.ps1');
+    return {
+      program: 'powershell',
+      args: [
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
+        fileName, '-Source', DATA_FILES_SOURCE
+      ],
+      text: 'powershell -NoProfile -ExecutionPolicy Bypass -File ' +
+        `"${script}" "${fileName}" -Source ${DATA_FILES_SOURCE}`
+    };
+  }
+  const script = path.join(DATA_DIR, 'get-data-files.sh');
+  return {
+    program: 'sh',
+    args: [script, '-s', DATA_FILES_SOURCE, fileName],
+    text: `sh "${script}" -s ${DATA_FILES_SOURCE} "${fileName}"`
+  };
+};
+
+/**
+ * Get a file the data submodule links to from the folder holding the
+ * link, running the submodule's script to download it when it is missing.
+ *
+ * @param {string} folder the data submodule folder holding the link
+ * @param {string} fileName the name of the file
+ * @returns {string|undefined} the path of the file, or undefined when it
+ * could not be downloaded
+ */
+const getLinkedFile = (folder, fileName) => {
+  const filePath = path.join(DATA_DIR, folder, fileName);
+  if (fs.existsSync(filePath)) return filePath;
+  const command = getDataFilesCommand(fileName);
+  console.info(`${fileName} is missing, so it is being downloaded by ` +
+    `running ${command.text}`);
+  const result = childProcess.spawnSync(
+    command.program, command.args, { stdio: 'inherit' });
+  if (result.status === 0 && fs.existsSync(filePath)) return filePath;
+  console.error(`${fileName} could not be downloaded. Run ` +
+    `${command.text} to get it.`);
+  return undefined;
 };
 
 class ExampleUtils {
@@ -94,8 +156,14 @@ class ExampleUtils {
     return true;
   }
 
-  // Find the specified filename within the default lookup directory.
+  // Find the specified filename. A file the data submodule links to is
+  // read from the folder holding the link, and downloaded there when it is
+  // missing. Any other file is searched for within the default lookup
+  // directory.
   static findFile (fileName) {
+    const folder = DATA_FOLDERS.find((name) =>
+      fs.existsSync(path.join(DATA_DIR, name, `${fileName}.link`)));
+    if (folder !== undefined) return getLinkedFile(folder, fileName);
     return this.privateFindFile(
       fileName,
       new Date().getTime() + FIND_FILE_TIMEOUT_MS,
@@ -104,16 +172,16 @@ class ExampleUtils {
 
   // Get the path to an IP intelligence data file. The environment
   // variable named by IPI_DATA_FILE_ENV_VAR is checked first for an
-  // explicit path. If it is not set then the folder hierarchy is
-  // searched for the supplied file name.
+  // explicit path. If it is not set then the file is found with
+  // findFile.
   static findDataFile (fileName) {
     return process.env[IPI_DATA_FILE_ENV_VAR] || this.findFile(fileName);
   }
 
   // Get the path to a device detection data file. The environment
   // variable named by DD_DATA_FILE_ENV_VAR is checked first for an
-  // explicit path. If it is not set then the folder hierarchy is
-  // searched for the supplied file name.
+  // explicit path. If it is not set then the file is found with
+  // findFile.
   static findDeviceDataFile (fileName) {
     return process.env[DD_DATA_FILE_ENV_VAR] || this.findFile(fileName);
   }
@@ -185,9 +253,10 @@ class ExampleUtils {
         `that is more than ${DATA_FILE_AGE_WARNING} days old. ` +
         'A more recent data file may be needed to ' +
         'correctly determine the details of the latest ' +
-        'IP ranges. The latest lite data file is available ' +
-        'from the ip-intelligence-data repository on GitHub ' +
-        'https://github.com/51Degrees/ip-intelligence-data. ' +
+        'IP ranges. To get the latest lite data file, run the ' +
+        'get-data-files script in the cxx/data submodule ' +
+        '(https://github.com/51Degrees/data) with -u, or ' +
+        '-Update in PowerShell. ' +
         'Find out about the Enterprise data file, which ' +
         'includes automatic daily updates, on our pricing ' +
         'page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');

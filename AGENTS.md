@@ -41,9 +41,15 @@ SWIG version, so regenerate both wrappers together.
 
 ## Data files
 
-Tests and examples read data from `cxx/device-detection-data` and
-`cxx/ip-intelligence-data`, by paths relative to the file. `ci/fetch-assets.ps1`
-links the enterprise files there.
+Tests and examples read data from `cxx/data/device-detection` and
+`cxx/data/ip-intelligence`, the folders of the data submodule in `cxx`, by
+paths relative to the file. Each free data file there is a `<file>.link` rather
+than the file. `cxx/data/get-data-files.sh` and `.ps1` download them, and the
+examples run the script for a linked file that is missing.
+`ci/fetch-assets.ps1` links the enterprise files in, some under the Lite names,
+then runs the script for the rest, which keeps a file that is already there.
+Nothing reads the older `cxx/device-detection-data` and
+`cxx/ip-intelligence-data` submodules.
 
 ## CI
 

@@ -104,13 +104,14 @@ const tryServeStatic = (req, res) => {
   return true;
 };
 
-// Load in a datafile
+// Load in a datafile, which is downloaded into the cxx/data submodule if
+// it is missing.
 
-const datafile = (process.env.directory || __dirname) + '/../../../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash';
+const datafile = ExampleUtils.findFile('51Degrees-LiteV4.1.hash');
 
-if (!fs.existsSync(datafile)) {
-  console.error("The datafile required by this example is not present. Please ensure that the 'device-detection-data' submodule has been fetched.");
-  throw ("No data file at '" + datafile + "'");
+if (datafile === undefined) {
+  console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched.");
+  throw ('No data file found');
 }
 
 // Helper function to read property values from flowData

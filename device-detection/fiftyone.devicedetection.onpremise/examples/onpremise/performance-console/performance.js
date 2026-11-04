@@ -76,7 +76,7 @@ parser.add_argument('-e', '--evidence', { help: 'Evidence file name' });
 parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/device-detection-data,
+// cxx/data/device-detection folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
@@ -95,17 +95,17 @@ const jsonoutput = args.jsonoutput;
 const fs = require('fs');
 if (!fs.existsSync(datafile)) {
   console.error('Failed to find a device detection ' +
-      'data file. Make sure the device-detection-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No data file at '" + datafile + "'");
 }
 
 if (!fs.existsSync(uafile)) {
   console.error('Failed to find a User-Agents ' +
-      'file. Make sure the device-detection-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No User-Agents file at '" + datafile + "'");
 }
 

@@ -9,7 +9,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 ## This package - fiftyone.ipintelligence.onpremise
 
-This package definitions for the on-premise IP intelligence engine. The on-premise engine requires a data file to be supplied. A free 'Lite' data file can be obtained from the [ip-intelligence-data](https://github.com/51Degrees/ip-intelligence-data) repository.
+This package definitions for the on-premise IP intelligence engine. The on-premise engine requires a data file to be supplied. A free 'Lite' data file can be downloaded with the scripts in the [data](https://github.com/51Degrees/data) repository, which is the `cxx/data` submodule of this repository.
 
 The on-premise engine performs processing using a native library which is built from the C/C++ code in the [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx) repository. Binaries are included with the published NPM package for a set of supported platforms and Node versions. If your platform or Node version is not supported then you can build the native module yourself, see 'Building the native module' below.
 

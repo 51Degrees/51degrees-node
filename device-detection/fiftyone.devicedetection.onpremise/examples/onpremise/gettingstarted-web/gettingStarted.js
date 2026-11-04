@@ -175,9 +175,9 @@ const setPipeline = (options) => {
     } else {
       throw 'Failed to find a device detection data file at ' +
         `'${dataFilePath}'. If using the lite file, then make sure the ` +
-        'device-detection-data submodule has been updated by running ' +
-        '\'git submodule update --recursive\'. Otherwise, ensure that the ' +
-        'filename is correct in 51d.json.';
+        'cxx/data submodule has been fetched by running ' +
+        '\'git submodule update --init --recursive\'. Otherwise, ensure ' +
+        'that the filename is correct in 51d.json.';
     }
   }
 

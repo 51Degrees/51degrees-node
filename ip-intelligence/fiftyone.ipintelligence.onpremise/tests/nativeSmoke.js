@@ -31,7 +31,7 @@ const moduleName = path.join(__dirname, '..', 'build',
 const swig = require(moduleName);
 
 const dataFile = path.join(__dirname, '..', '..', '..', 'cxx',
-  'ip-intelligence-data', '51Degrees-LiteV41.ipi');
+  'data', 'ip-intelligence', '51Degrees-LiteV41.ipi');
 
 const propertiesList = new swig.VectorStringSwig();
 const requiredProperties = new swig.RequiredPropertiesConfigSwig(propertiesList);
