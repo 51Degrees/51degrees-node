@@ -441,7 +441,12 @@ test('watched and scheduled data files can be collected once dropped',
     const registry = new FinalizationRegistry(() => { collected++; });
 
     registerAndDrop(file, registry);
-    for (let i = 0; i < 20 && collected < 2; i++) {
+    // The count changes in the registry's callback, not in the loop, so it
+    // is checked in the body rather than in the condition.
+    for (let i = 0; i < 20; i++) {
+      if (collected === 2) {
+        break;
+      }
       global.gc();
       await sleep(50);
     }
