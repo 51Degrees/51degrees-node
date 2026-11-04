@@ -402,3 +402,50 @@ test('update route reports a good file as a success', async () => {
     fs.rmSync(folder, { recursive: true, force: true });
   }
 });
+
+// Registers, with a new update service, a data file that is watched for
+// changes and one that waits about an hour for its next update, and keeps
+// none of them. The wait is on fake timers, so that it never runs and does not
+// keep the process alive.
+const registerAndDrop = (file, registry) => {
+  const updateService = new DataFileUpdateService({ log: function () {} });
+  const watched = Object.assign(standInDataFile(file),
+    { fileSystemWatcher: true });
+  const scheduled = Object.assign(standInDataFile(file), {
+    autoUpdate: true,
+    pollingInterval: 60,
+    updateTimeMaximumRandomisation: 1,
+    getNextUpdate: () => new Date()
+  });
+  jest.useFakeTimers();
+  try {
+    updateService.registerDataFile(watched);
+    updateService.registerDataFile(scheduled);
+  } finally {
+    jest.useRealTimers();
+  }
+  registry.register(watched, 'watched');
+  registry.register(scheduled, 'scheduled');
+};
+
+/**
+ * Neither the file watcher nor the timer for the next update keeps a data file
+ * alive once the application has dropped it and its update service, because
+ * a data file keeps its engine, and so the engine's native memory, alive.
+ * Needs node --expose-gc, which the unit-test script passes.
+ */
+test('watched and scheduled data files can be collected once dropped',
+  async () => {
+    const { file } = newDataFile('collected-');
+    let collected = 0;
+    const registry = new FinalizationRegistry(() => { collected++; });
+
+    registerAndDrop(file, registry);
+    for (let i = 0; i < 20 && collected < 2; i++) {
+      global.gc();
+      await sleep(50);
+    }
+
+    // The folder is left in place, as in the watcher tests above.
+    expect(collected).toBe(2);
+  });

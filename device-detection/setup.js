@@ -21,3 +21,14 @@
  * ********************************************************************* */
 
 jest.setTimeout(10000); // in milliseconds
+
+// Each on-premise engine holds native memory and file handles that V8 does
+// not account for, so the garbage collector does not run for them and
+// engines from completed suites stay resident until the process ends.
+// When jest runs in band with node --expose-gc, collecting at the start
+// of each suite frees the previous suite's engines.
+beforeAll(() => {
+  if (global.gc) {
+    global.gc();
+  }
+});

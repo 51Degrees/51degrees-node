@@ -32,6 +32,75 @@ const AutoUpdateStatus = require('./autoUpdateStatus');
 
 const minToMs = (min) => min * 60000;
 
+// The timer and the watcher below hold the update service and the data file
+// weakly. Otherwise they keep a pipeline the application no longer uses, and
+// the native memory and file handles of its engine, alive until the process
+// ends, because nothing stops them.
+
+// Closes the watcher of a data file once the data file has been collected.
+const watchersToClose = new FinalizationRegistry(
+  (watcher) => watcher.close());
+
+/**
+ * Updates the data file once the interval has passed, unless the update
+ * service or the data file has been collected by then.
+ *
+ * @param {WeakRef} serviceRef the update service
+ * @param {WeakRef} dataFileRef the data file to update
+ * @param {number} interval milliseconds to wait
+ */
+const scheduleUpdate = function (serviceRef, dataFileRef, interval) {
+  setTimeout(function () {
+    const service = serviceRef.deref();
+    const dataFile = dataFileRef.deref();
+    if (service && dataFile) {
+      service.updateDataFile(dataFile);
+    }
+  }, interval);
+};
+
+/**
+ * Refreshes the data file whenever the file at its path changes, until the
+ * update service or the data file has been collected.
+ *
+ * @param {WeakRef} serviceRef the update service
+ * @param {WeakRef} dataFileRef the data file to refresh
+ */
+const watchDataFile = function (serviceRef, dataFileRef) {
+  const watched = dataFileRef.deref();
+  if (!watched) {
+    return;
+  }
+  const watcher = fs.watch(watched.path, { persistent: false }, function () {
+    const service = serviceRef.deref();
+    const dataFile = dataFileRef.deref();
+    if (!service || !dataFile) {
+      watcher.close();
+      return;
+    }
+    if (!dataFile.updating) {
+      // A failed refresh is logged and reported as on the update
+      // route, because an error thrown from here ends the process.
+      // fs.watch goes on watching, so a later file is picked up.
+      try {
+        dataFile.refresh();
+      } catch (e) {
+        service.pipeline.log('error', e);
+        service.eventEmitter.emit(
+          'updateComplete',
+          AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
+          dataFile);
+        return;
+      }
+      service.eventEmitter.emit(
+        'updateComplete',
+        AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
+        dataFile);
+    }
+  });
+  watchersToClose.register(watched, watcher);
+};
+
 /**
  * @typedef {import('fiftyone.pipeline.core').Pipeline} Pipeline
  * @typedef {import('./dataFile')} DataFile
@@ -384,9 +453,7 @@ class DataFileUpdateService {
         );
 
         interval += dataFile.getNextUpdate().getMilliseconds();
-        setTimeout(function () {
-          dataFileUpdateService.updateDataFile(dataFile);
-        }, interval);
+        scheduleUpdate(new WeakRef(this), new WeakRef(dataFile), interval);
       }
     } catch (e) {
       // Catch any extra errors with datafile updates
@@ -412,37 +479,15 @@ class DataFileUpdateService {
     // check if fileSystemWatcher is enabled and listen for datafile changes
 
     if (dataFile.fileSystemWatcher) {
-      const dataFileUpdateService = this;
-      const watch = function () {
-        fs.watch(dataFile.path, { persistent: false }, function (event) {
-          if (!dataFile.updating) {
-            // A failed refresh is logged and reported as on the update
-            // route, because an error thrown from here ends the process.
-            // fs.watch goes on watching, so a later file is picked up.
-            try {
-              dataFile.refresh();
-            } catch (e) {
-              dataFileUpdateService.pipeline.log('error', e);
-              dataFileUpdateService.eventEmitter.emit(
-                'updateComplete',
-                AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED,
-                dataFile);
-              return;
-            }
-            dataFileUpdateService.eventEmitter.emit(
-              'updateComplete',
-              AutoUpdateStatus.AUTO_UPDATE_SUCCESS,
-              dataFile);
-          }
-        });
-      };
+      const serviceRef = new WeakRef(this);
+      const dataFileRef = new WeakRef(dataFile);
 
       if (fs.existsSync(dataFile.path)) {
-        watch();
+        watchDataFile(serviceRef, dataFileRef);
       } else {
         const checkWatcherCanStart = setInterval(function () {
           try {
-            watch();
+            watchDataFile(serviceRef, dataFileRef);
 
             clearInterval(checkWatcherCanStart);
           } catch (e) {
