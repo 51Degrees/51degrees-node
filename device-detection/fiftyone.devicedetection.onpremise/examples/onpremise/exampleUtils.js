@@ -54,8 +54,7 @@ const DATA_FOLDERS = ['device-detection', 'ip-intelligence'];
 const DATA_FILES_SOURCE = 'examples-51degrees-node';
 
 // Shown in place of a value for a property that the data file in use does
-// not have. Every property the examples ask for is in the Enterprise data
-// file.
+// not have.
 const NEEDS_ENTERPRISE = 'needs the Enterprise data file';
 
 // The number of milliseconds in a day, for the data file age check.

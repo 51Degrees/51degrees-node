@@ -173,7 +173,7 @@ describe('Examples without settings', () => {
     const example = require(path.join(__dirname, 'gettingstarted-web/gettingStarted.js'));
     const dir = path.join(__dirname, 'gettingstarted-web');
     const options = JSON.parse(fs.readFileSync(path.join(dir, '51d.json')));
-    // The page is read once, so usage is not shared.
+    // Usage sharing is removed, so that the test sends nothing to 51Degrees.
     options.PipelineOptions.Elements = options.PipelineOptions.Elements.filter(
       (element) => !element.elementName.includes('shareUsage'));
     optionsExtension.setDataFilePath(options, ExampleUtils.findFile(LITE_V_4_1_HASH));
