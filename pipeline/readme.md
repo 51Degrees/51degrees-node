@@ -1,6 +1,6 @@
 ![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node Pipeline**
 
-[Developer Documentation](https://51degrees.com/documentation/_pipeline_api__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This repository contains the components of the Node.JS implementation of the 51Degrees Pipeline API.
