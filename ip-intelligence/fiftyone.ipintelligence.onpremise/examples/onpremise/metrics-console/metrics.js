@@ -64,11 +64,15 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 const areas = require(path.join(__dirname, '/../areas'));
 
-// This example requires the enterprise data file as the area properties
-// used are not available in the lite file. To obtain an enterprise data
-// file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise_v_4_1_ipi
-const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
+// This example needs the area properties, which only the Enterprise data
+// file has. By default it uses the free Lite data file, which is
+// downloaded if it is missing, and there it says what it needs and where
+// to ask for a copy of the Enterprise data file.
+const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise-data-file';
 
 // The percentage of registered IP addresses to randomly include in the
 // metrics sample. 1 is 100%. Higher values will result in longer elapsed
@@ -375,6 +379,13 @@ const run = async function (
   const engine = pipeline.getElement('ip');
   const metadata = engine.engine.getMetaData();
 
+  // The metrics are measured from the areas, which only the Enterprise
+  // data file has, so with a free data file the example says so and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(engine, 'Measuring the areas',
+    ['Areas'], progress, CONTACT_US)) {
+    return false;
+  }
+
   // Create the data set structure to rapidly retrieve the data needed
   // to calculate the metrics.
   progress.write('Creating area index\n');
@@ -425,18 +436,18 @@ const run = async function (
   // Finally check the data file used for consistency with the other
   // examples.
   ExampleUtils.checkDataFile(pipeline, dataFile);
+  return true;
 };
 
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
-  // file in the project space. The lite file does not contain the
-  // properties needed by this example.
+  // 51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // which is downloaded if it is missing.
   const dataFile = args.length > 0
     ? args[0]
-    : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   // Get the location for the output file.
   const outputFile = args.length > 1 ? args[1] : 'metrics-output.csv';
@@ -459,16 +470,17 @@ if (process.env.JEST_WORKER_ID === undefined) {
       output,
       samplePercentage,
       condition,
-      process.stdout).then(function () {
+      process.stdout).then(function (measured) {
       output.end();
-      console.log(`Output written to '${outputFile}'`);
+      if (measured) {
+        console.log(`Output written to '${outputFile}'`);
+      }
     });
   } else {
-    console.error('Failed to find an enterprise IP intelligence data ' +
-      'file. This example requires an enterprise data file. To obtain ' +
-      'one for testing, please contact us: ' +
-      'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-enterprise-data-file. The full path to a data file ' +
-      'can be specified as a command line argument');
+    console.error('Failed to find an IP intelligence data file. Make ' +
+      'sure the cxx/data submodule has been fetched by running ' +
+      '`git submodule update --init --recursive`. The full path to a data ' +
+      'file can be specified as a command line argument');
   }
 };
 
