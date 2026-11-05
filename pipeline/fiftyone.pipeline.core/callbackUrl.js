@@ -23,10 +23,10 @@
 // The callback URL the client script posts to for updated JSON. The protocol
 // and host usually come from the request, and the script holds the URL in a
 // single-quoted string, so the URL is checked before it is written into the
-// script. A URL that is not valid is refused. In the user information, in
-// anything after the host and port, and in the endpoint, the characters a
-// URL cannot hold or that could end the string or the script are
-// percent-encoded. See
+// script. A URL that is not valid, including one whose protocol is not http
+// or https, is refused. In the user information, in anything after the host
+// and port, and in the endpoint, the characters a URL cannot hold or that
+// could end the string or the script are percent-encoded. See
 // https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/javascript-builder.md#callback-url
 
 // The largest port number.
@@ -45,9 +45,9 @@ const encodedCharacters = '"\'<>\\^`{|}';
 const blankPattern =
   /^[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$/;
 
-// A scheme as RFC 3986 section 3.1 defines one, being a letter followed by
-// letters, digits, '+', '-' and '.'.
-const schemePattern = /^[A-Za-z][A-Za-z0-9+.-]*$/;
+// The schemes the script can send its request with. It uses the URL only
+// with fetch and XMLHttpRequest, which reach a server with no other scheme.
+const schemes = ['http', 'https'];
 
 // A label of a host name, being ASCII letters, digits, '-' and '_'.
 const labelPattern = /^[A-Za-z0-9_-]+$/;
@@ -76,6 +76,30 @@ const ipv4Pattern = new RegExp('^' + decOctet + '(\\.' + decOctet + '){3}$');
  */
 function isBlank (text) {
   return typeof text !== 'string' || blankPattern.test(text);
+}
+
+/**
+ * The text with the ASCII letters A to Z in lower case and every other
+ * character as it is, so that no letter outside ASCII can stand in for an
+ * ASCII one.
+ *
+ * @param {string} text the text
+ * @returns {string} the text with A to Z in lower case
+ */
+function asciiLowerCase (text) {
+  return text.replace(/[A-Z]/g,
+    letter => String.fromCharCode(letter.charCodeAt(0) + 32));
+}
+
+/**
+ * Whether the protocol is http or https, ignoring the case of its ASCII
+ * letters only.
+ *
+ * @param {string} protocol the protocol
+ * @returns {boolean} true if the protocol is http or https
+ */
+function isScheme (protocol) {
+  return schemes.includes(asciiLowerCase(protocol));
 }
 
 /**
@@ -268,7 +292,7 @@ function checkedAuthority (authority) {
  * when both do. The protocol and the host are written in lower case and the
  * rest as given, apart from the percent-encoding.
  *
- * @param {*} protocol the protocol, such as https
+ * @param {*} protocol the protocol, http or https in any case
  * @param {*} host the host, which can start with user information and end
  * with a port, a path, a query or a fragment
  * @param {*} endPoint the endpoint
@@ -289,7 +313,7 @@ function callbackUrl (protocol, host, endPoint) {
     endPoint = endPoint.substring(1);
   }
   const built = protocol + '://' + host + endPoint;
-  if (!schemePattern.test(protocol)) {
+  if (!isScheme(protocol)) {
     return { valid: false, url: built };
   }
   const end = authorityEnd(host);
@@ -299,9 +323,11 @@ function callbackUrl (protocol, host, endPoint) {
   }
   return {
     valid: true,
-    url: protocol.toLowerCase() + '://' + authority +
+    url: asciiLowerCase(protocol) + '://' + authority +
       encoded(host.substring(end)) + encoded(endPoint)
   };
 }
+
+callbackUrl.isScheme = isScheme;
 
 module.exports = callbackUrl;

@@ -489,3 +489,37 @@ test('a host from the request is written as checked', async () => {
   }
   expect(scripts[0]).not.toContain("');alert(1)");
 });
+
+// A protocol given to the builder is used for every request, so one the
+// script cannot send its request with is refused when the element is made.
+test.each(['ftp', 'ws', 'javascript', 'https ', 'http\u017f'])(
+  'a configured protocol %j is refused', protocol => {
+    expect(() => new core.JavascriptBuilder({ protocol }))
+      .toThrow('protocol is invalid');
+  });
+
+test.each(['http', 'https', 'HTTPS'])(
+  'a configured protocol %j is accepted', protocol => {
+    expect(() => new core.JavascriptBuilder({ protocol })).not.toThrow();
+  });
+
+// A protocol from the request that is neither http nor https gives a script
+// with no callback, and is logged once like any other URL that is not valid.
+test('a refused protocol from the request is left out and logged once',
+  async () => {
+    const renderPipeline = new core.PipelineBuilder({
+      javascriptBuilderSettings: { endPoint: '/json' }
+    })
+      .add(testEngine)
+      .build();
+    const errors = [];
+    renderPipeline.on('error', message => errors.push(message));
+    const renderData = renderPipeline.createFlowData();
+    renderData.evidence.add('header.host', 'example.com');
+    renderData.evidence.add('header.protocol', 'ftp');
+    await renderData.process();
+    expect(requestUrls(renderData.javascriptbuilder.javascript))
+      .toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"ftp://example.com/json"');
+  });
