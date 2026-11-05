@@ -46,6 +46,13 @@ foreach ($asset in $assets) {
 }
 Get-DataFiles device-detection
 
+# The free Lite file under its asset name, for the tests that run the
+# examples as a fresh clone does, because the Lite name can hold the
+# Enterprise file.
+$liteAsset = '51Degrees-LiteIpiV41.ipi'
+./steps/fetch-assets.ps1 -Assets $liteAsset
+New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$liteAsset" -Path "$ipIntelligenceData/$liteAsset"
+
 if ($IpIntelligence) {
     $asset = '51Degrees-EnterpriseIpiV41.ipi'
     ./steps/fetch-assets.ps1 -IpIntelligence:$IpIntelligence -IpIntelligenceUrl:$IpIntelligenceUrl -Assets $asset
@@ -54,9 +61,9 @@ if ($IpIntelligence) {
     New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$asset" -Path "$ipIntelligenceData/51Degrees-LiteV41.ipi"
 } else {
     Write-Host "::warning file=$($MyInvocation.ScriptName),line=$($MyInvocation.ScriptLineNumber),title=No License Key::An IP intelligence license was not provided, so the Enterprise data file will not be downloaded."
+    New-Item -ItemType SymbolicLink -Force -Target "$PWD/assets/$liteAsset" -Path "$ipIntelligenceData/51Degrees-LiteV41.ipi"
 }
-# Downloads the Asn file, which no asset covers, and the Lite file when no
-# Enterprise file was linked under its name.
+# Downloads the Asn file, which no asset covers.
 Get-DataFiles ip-intelligence
 
 # Generate the evidence files used by tests and examples.
