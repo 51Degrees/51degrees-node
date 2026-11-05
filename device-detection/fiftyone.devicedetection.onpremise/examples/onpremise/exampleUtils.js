@@ -28,6 +28,16 @@ const path = require('path');
 
 const swigHelpers = require(path.join(__dirname, '/../../swigHelpers'));
 
+const require51 = (requestedPackage) => {
+  try {
+    return require(path.join(__dirname, '/../../node_modules/', requestedPackage));
+  } catch (e) {
+    return require(requestedPackage);
+  }
+};
+
+const dataExtension = require51('fiftyone.devicedetection.shared').dataExtension;
+
 // Timeout used when searching for file
 const FIND_FILE_TIMEOUT_MS = 10000;
 
@@ -38,8 +48,18 @@ const DATA_DIR = path.join(__dirname, '..', '..', '..', '..', 'cxx', 'data');
 const DATA_FOLDERS = ['device-detection', 'ip-intelligence'];
 
 // Sent with each download, so that downloads can be counted by where they
-// come from.
+// come from. It is left out inside GitHub Actions, where the data
+// repository's script names the build instead, so that test runs are not
+// counted as people using the examples.
 const DATA_FILES_SOURCE = 'examples-51degrees-node';
+
+// Shown in place of a value for a property that the data file in use does
+// not have. Every property the examples ask for is in the Enterprise data
+// file.
+const NEEDS_ENTERPRISE = 'needs the Enterprise data file';
+
+// The number of milliseconds in a day, for the data file age check.
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // If data file is older than this number of days then a warning will
 // be displayed.
@@ -62,23 +82,36 @@ const LEGACY_DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
  * @returns {object} the program, its arguments and the command as text
  */
 const getDataFilesCommand = (fileName) => {
+  const inActions = process.env.GITHUB_ACTIONS === 'true';
   if (process.platform === 'win32') {
     const script = path.join(DATA_DIR, 'get-data-files.ps1');
+    // PowerShell 7 when it is on the path, otherwise Windows PowerShell,
+    // which, started from PowerShell 7, inherits its module path and then
+    // cannot load its own commands.
+    const pwsh = childProcess.spawnSync('where', ['pwsh']).status === 0;
+    const program = pwsh ? 'pwsh' : 'powershell';
+    const env = Object.assign({}, process.env);
+    if (!pwsh) delete env.PSModulePath;
+    const source = inActions ? [] : ['-Source', DATA_FILES_SOURCE];
     return {
-      program: 'powershell',
+      program,
       args: [
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
-        fileName, '-Source', DATA_FILES_SOURCE
+        fileName, ...source
       ],
-      text: 'powershell -NoProfile -ExecutionPolicy Bypass -File ' +
-        `"${script}" "${fileName}" -Source ${DATA_FILES_SOURCE}`
+      env,
+      text: `${program} -NoProfile -ExecutionPolicy Bypass -File ` +
+        `"${script}" "${fileName}"` + source.map((a) => ` ${a}`).join('')
     };
   }
   const script = path.join(DATA_DIR, 'get-data-files.sh');
+  const source = inActions ? [] : ['-s', DATA_FILES_SOURCE];
   return {
     program: 'sh',
-    args: [script, '-s', DATA_FILES_SOURCE, fileName],
-    text: `sh "${script}" -s ${DATA_FILES_SOURCE} "${fileName}"`
+    args: [script, ...source, fileName],
+    env: process.env,
+    text: `sh "${script}"` + source.map((a) => ` ${a}`).join('') +
+      ` "${fileName}"`
   };
 };
 
@@ -98,7 +131,7 @@ const getLinkedFile = (folder, fileName) => {
   console.info(`${fileName} is missing, so it is being downloaded by ` +
     `running ${command.text}`);
   const result = childProcess.spawnSync(
-    command.program, command.args, { stdio: 'inherit' });
+    command.program, command.args, { stdio: 'inherit', env: command.env });
   if (result.status === 0 && fs.existsSync(filePath)) return filePath;
   console.error(`${fileName} could not be downloaded. Run ` +
     `${command.text} to get it.`);
@@ -140,39 +173,41 @@ class ExampleUtils {
     return new Date().getTime() > timeout;
   }
 
-  static privateFindFile (fileName, timeout, lookupDir, visited = []) {
-    // Stop if no look up directory is provided
-    if (lookupDir === undefined) return undefined;
-    // Stop if timed out
-    if (this.isTimedOut(timeout)) return undefined;
-
-    const dirItems = fs.readdirSync(lookupDir);
-    const dirs = [];
-    for (const item of dirItems) {
-      const fullPath = path.resolve(`${lookupDir}/${item}`);
-      if (fs.lstatSync(fullPath).isDirectory() &&
-        !visited.includes(fullPath) &&
-        !item.toLocaleLowerCase().includes('node_modules')) {
-        dirs.push(fullPath);
-      } else {
-        if (item === fileName) return fullPath;
+  // Search the look up directory and every directory below it, then each
+  // directory above it in turn, until the file is found or the time runs
+  // out. The directories waiting to be searched are kept in a list rather
+  // than searched by recursion, so a large tree cannot overflow the stack,
+  // and a directory that cannot be read is skipped.
+  static privateFindFile (fileName, timeout, lookupDir) {
+    const visited = new Set();
+    let start = lookupDir;
+    while (start !== undefined) {
+      const pending = [start];
+      while (pending.length > 0) {
+        if (this.isTimedOut(timeout)) return undefined;
+        const dir = pending.pop();
+        if (visited.has(dir)) continue;
+        visited.add(dir);
+        let items;
+        try {
+          items = fs.readdirSync(dir, { withFileTypes: true });
+        } catch (e) {
+          continue;
+        }
+        for (const item of items) {
+          const fullPath = path.resolve(dir, item.name);
+          if (item.isDirectory()) {
+            if (!item.name.toLocaleLowerCase().includes('node_modules')) {
+              pending.push(fullPath);
+            }
+          } else if (item.name === fileName) {
+            return fullPath;
+          }
+        }
       }
+      const parent = path.dirname(start);
+      start = parent !== start ? parent : undefined;
     }
-
-    // Search for file in the sub directories
-    while (dirs.length > 0) {
-      const file = this.privateFindFile(fileName, timeout, dirs.pop(), visited);
-      if (file !== undefined) return file;
-    }
-    // Add directory to the visited list.
-    visited.push(lookupDir);
-
-    // Search for file in the parent directory
-    const parentDir = path.resolve(path.dirname(lookupDir));
-    if (parentDir !== undefined && !visited.includes(parentDir)) {
-      return this.privateFindFile(fileName, timeout, parentDir, visited);
-    }
-
     return undefined;
   }
 
@@ -198,7 +233,8 @@ class ExampleUtils {
         `${filePath}`);
     }
 
-    if (new Date().getTime() > new Date(dateTime + DATA_FILE_AGE_WARNING).getTime()) {
+    if (dateTime !== undefined &&
+      Date.now() > dateTime.getTime() + DATA_FILE_AGE_WARNING * MS_PER_DAY) {
       console.warn('This example is using a data file ' +
         `that is more than ${DATA_FILE_AGE_WARNING} days old. ` +
         'A more recent data file may be needed to ' +
@@ -207,17 +243,55 @@ class ExampleUtils {
         'get-data-files script in the cxx/data submodule ' +
         '(https://github.com/51Degrees/data) with -u, or ' +
         '-Update in PowerShell. ' +
-        'Find out about the Enterprise data file, which ' +
-        'includes automatic daily updates, on our pricing ' +
-        'page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');
+        'Contact us about the Enterprise data file, which ' +
+        'includes automatic daily updates, at ' +
+        'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-exampleutils.js&utm_term=data-file-age-warning');
     }
-    if (dataTier === 'Lite') {
-      console.warn('This example is using the \'Lite\' ' +
-        'data file. This is used for illustration, and ' +
-        'has limited accuracy and capabilities. Find ' +
-        'out about the Enterprise data file on our ' +
-        'pricing page: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-exampleutils.js&utm_term=lite-data-file');
+  }
+
+  // True when the engine's data file has the property. The data file's
+  // own list is read, because an engine's properties are only those it was
+  // built to give.
+  static hasProperty (engine, name) {
+    const properties = engine.engine.getMetaData().getProperties();
+    const wanted = name.toLowerCase();
+    for (let i = 0; i < properties.getSize(); i++) {
+      if (properties.getByIndex(i).getName().toLowerCase() === wanted) {
+        return true;
+      }
     }
+    return false;
+  }
+
+  // Format a property for display, or say that it needs the Enterprise
+  // data file when the engine's data file does not have it. The value is
+  // only read when the data file has the property.
+  static getEnterpriseValue (engine, elementData, name) {
+    if (!this.hasProperty(engine, name)) return NEEDS_ENTERPRISE;
+    return dataExtension.getValueHelper(elementData, name.toLowerCase());
+  }
+
+  // Where to ask for a copy of the Enterprise data file, written after an
+  // example has shown properties that the data file in use does not have.
+  // The link is tagged with the example's file, so that an enquiry can be
+  // traced to the example.
+  static getEnterpriseNote (contactUs) {
+    return 'Some of these properties need the Enterprise data file. ' +
+      `Contact us for a copy at ${contactUs}`;
+  }
+
+  // True when the engine uses the free Lite data file.
+  static isLiteDataFile (engine) {
+    return engine.engine.getProduct() === 'Lite';
+  }
+
+  // What the Enterprise data file adds and where to ask for a copy, written
+  // after an example that shows no properties has run on the free Lite data
+  // file.
+  static getEnterpriseOffer (contactUs) {
+    return 'This example used the free Lite data file. The Enterprise data ' +
+      'file adds many more properties, such as HardwareVendor, ' +
+      `HardwareName and DeviceType. Contact us for a copy at ${contactUs}`;
   }
 
   static sortMap (map, sortFunc) {
@@ -230,6 +304,7 @@ class ExampleUtils {
 
 module.exports = {
   ExampleUtils,
+  NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
   DATA_FILE_PATH_ENV_VAR,
   LEGACY_DATA_FILE_PATH_ENV_VAR
