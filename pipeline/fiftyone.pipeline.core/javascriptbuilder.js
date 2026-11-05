@@ -204,9 +204,10 @@ class JavaScriptBuilderElement extends FlowElement {
    * JavaScript identifier that is not a reserved word, or the constructor
    * throws. Leaving it out, or giving null, means "fod". This can be overridden with "query.fod-js-object-name" evidence,
    * which is ignored with a warning when it is not a valid name.
-   * @param {string} options.protocol The protocol ("http" or "https")
-   * used by the client side callback url.
-   * This can be overriden with header.protocol evidence
+   * @param {string} options.protocol The protocol of the client side
+   * callback url, http or https in any case of its ASCII letters. The
+   * constructor throws for any other protocol. Left out, the header.protocol
+   * evidence is used, or https when there is none
    * @param {string} options.host The host of the client side
    * callback url. This can be overriden with header.host evidence.
    * @param {string} options.endPoint The endpoint of the client side
@@ -235,6 +236,16 @@ class JavaScriptBuilderElement extends FlowElement {
       throw new Error(
         'JavaScriptBuilder objName is invalid. It must be a valid ' +
         'JavaScript identifier that is not a reserved word.');
+    }
+
+    // A protocol given here is used for every request, so one the script
+    // cannot send its request with is refused now rather than logged on the
+    // first request.
+    const protocolIsValid = typeof protocol === 'string' &&
+      callbackUrl.isScheme(protocol);
+    if (protocol && !protocolIsValid) {
+      throw new Error(
+        'JavaScriptBuilder protocol is invalid. It must be http or https.');
     }
 
     this.settings = {

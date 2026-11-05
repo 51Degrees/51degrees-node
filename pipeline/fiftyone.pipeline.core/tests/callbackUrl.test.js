@@ -122,6 +122,62 @@ test.each([
   expect(url('https', host).valid).toBe(false);
 });
 
+// Inside the brackets only an IPv6 address, optionally followed by '%25' and
+// a zone of unreserved characters, and after them only a port. The zone
+// check is what keeps a quote out of the script for a bracketed host.
+test.each([
+  '[fe80::1%25]',
+  "[fe80::1%25'+alert(1)+']",
+  '[fe80::1%eth0]',
+  '[fe80::1%25eth%0]',
+  '[::1]x',
+  '[::1]80',
+  '[::1]:80x',
+  '[::1]]'
+])('refuses the zone or the text after the bracket in %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+test('accepts a zone followed by a port', () => {
+  expect(url('https', '[fe80::1%25eth0]:8080'))
+    .toStrictEqual(valid('https://[fe80::1%25eth0]:8080/51dpipeline/json'));
+});
+
+// A port goes by its value, so leading zeros are allowed, and a port too
+// long to read is refused rather than read as small enough.
+test('checks the port by its value', () => {
+  expect(url('https', 'example.com:00080'))
+    .toStrictEqual(valid('https://example.com:00080/51dpipeline/json'));
+  expect(url('https', 'example.com:0065535'))
+    .toStrictEqual(valid('https://example.com:0065535/51dpipeline/json'));
+  for (const host of [
+    'example.com:0065536',
+    'example.com:123456',
+    'example.com:4294967296',
+    'example.com:99999999999999999999'
+  ]) {
+    expect(url('https', host).valid).toBe(false);
+  }
+});
+
+// Each character rule 8 lists, in the user information, after the host and
+// in the endpoint, and a '%' without two hexadecimal digits after it, even
+// at the end.
+test('encodes the characters rule 8 lists', () => {
+  expect(callbackUrl('https', 'u"^`{|}@example.com/"^`{|}', '/j"^`{|}'))
+    .toStrictEqual(valid(
+      'https://u%22%5E%60%7B%7C%7D@example.com/%22%5E%60%7B%7C%7D' +
+      '/j%22%5E%60%7B%7C%7D'));
+  expect(url('https', 'example.com/a%'))
+    .toStrictEqual(valid('https://example.com/a%25/51dpipeline/json'));
+  expect(url('https', 'example.com/a%4'))
+    .toStrictEqual(valid('https://example.com/a%254/51dpipeline/json'));
+  expect(url('https', 'example.com/a%41'))
+    .toStrictEqual(valid('https://example.com/a%41/51dpipeline/json'));
+  expect(callbackUrl('https', 'example.com', '/json%'))
+    .toStrictEqual(valid('https://example.com/json%25'));
+});
+
 test('the invalid URL is the one built', () => {
   expect(url('https', 'exa mple.com')).toStrictEqual({
     valid: false,
@@ -129,13 +185,29 @@ test('the invalid URL is the one built', () => {
   });
 });
 
+// Only http and https, ignoring the case of ASCII letters only, so a letter
+// outside ASCII that a case-insensitive comparison can match to an ASCII
+// one, such as the long s, is refused.
 test('checks the scheme', () => {
-  for (const protocol of ['https', 'http', 'ftp', 'h+t-p.s']) {
+  for (const protocol of ['https', 'http', 'HtTp']) {
     expect(url(protocol, 'example.com').valid).toBe(true);
   }
   expect(url('HTTPS', 'example.com'))
     .toStrictEqual(valid('https://example.com/51dpipeline/json'));
-  for (const protocol of ['1http', 'h t', "x');alert(1);//", 'a://b']) {
+  for (const protocol of [
+    'ftp',
+    'h+t-p.s',
+    'ws',
+    'javascript',
+    'httpx',
+    'https ',
+    '1http',
+    'h t',
+    "x');alert(1);//",
+    'a://b',
+    'http\u017f',
+    'HTTP\u017f'
+  ]) {
     expect(url(protocol, 'example.com').valid).toBe(false);
   }
 });
