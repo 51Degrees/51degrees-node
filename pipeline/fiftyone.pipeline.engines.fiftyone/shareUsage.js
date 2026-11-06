@@ -24,6 +24,7 @@ const engines = require('fiftyone.pipeline.engines');
 
 const Engine = engines.Engine;
 const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
+const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
 const zlib = require('zlib');
 const url = require('url');
@@ -63,19 +64,23 @@ class ShareUsage extends Engine {
    * messages.
    * For example, the 51Degrees cloud service uses a value of 2500.
    * @param {string} options.cookie if a cookie is being used to identify
-   * user sessions, it can be specified here in order to reduce the
-   * sharing of duplicated data.
-   * @param {Array} options.queryWhitelist By default query string
-   * and HTTP form parameters are not shared unless prefixed with '51D_'.
-   * If you need to share query string parameters, a list can be
-   * specified here.
-   * @param {Array} options.headerBlacklist By default, all HTTP headers
-   * (except a few, such as Cookies) are shared. Individual headers can
+   * user sessions, it can be specified here. Evidence already shared is
+   * then shared again for a new session, and the cookie itself is never
+   * shared.
+   * @param {Array<string>|null} options.queryWhitelist By default query
+   * string and HTTP form parameters are not shared unless prefixed with
+   * '51D_'. If you need to share query string parameters, a list can be
+   * specified here. null shares every parameter.
+   * @param {Array<string>} options.headerBlacklist By default, all HTTP
+   * headers except Cookie are shared. Individual headers can
    * be excluded from sharing by adding them to this list.
    * @param {number} options.sharePercentage approximate proportion of
    * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
    * @param {string} options.endpoint The target destination for usage
    * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
+   * @param {boolean} options.shareAll If true, all evidence is shared apart
+   * from the email address, the salt used for hashed email identifiers, and
+   * the request's query string and path. False by default.
    */
   constructor (
     {
@@ -85,18 +90,34 @@ class ShareUsage extends Engine {
       queryWhitelist,
       headerBlacklist,
       sharePercentage = 1,
-      endpoint = 'https://devices-v4.51degrees.com/new.ashx'
+      endpoint = 'https://devices-v4.51degrees.com/new.ashx',
+      shareAll = false
     } = {}) {
     super(...arguments);
 
     this.trackingCookie = cookie;
 
+    this.shareAll = shareAll;
+
+    // The session id and sequence number are kept in evidence, as the usage
+    // data carries them separately.
+    const options = {
+      cookie,
+      queryWhitelist: queryWhitelist === null
+        ? null
+        : [...(queryWhitelist || []), 'session-id', 'sequence'],
+      headerBlacklist,
+      shareAll
+    };
+
+    // The pipeline keeps the session cookie for the tracker, but the data
+    // sent never includes it.
     this.evidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
-      {
-        cookie,
-        queryWhitelist,
-        headerBlacklist
-      });
+      { ...options, includeSession: true });
+    this.dataEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
+      { ...options, includeSession: false });
+    this.trackerEvidenceKeyFilter = new ShareUsageTrackerEvidenceKeyFilter(
+      { ...options, includeSession: true });
 
     this.dataKey = 'shareUsage';
 
@@ -131,7 +152,7 @@ class ShareUsage extends Engine {
    */
   processInternal (flowData) {
     if (Math.random() <= this.sharePercentage) {
-      const cacheKey = this.evidenceKeyFilter
+      const cacheKey = this.trackerEvidenceKeyFilter
         .filterEvidence(flowData.evidence.getAll());
 
       const share = this.tracker.track(cacheKey);
@@ -175,7 +196,7 @@ class ShareUsage extends Engine {
         }
       } else {
         // Check if we can send this piece of evidence
-        if (this.evidenceKeyFilter.filterEvidenceKey(key)) {
+        if (this.dataEvidenceKeyFilter.filterEvidenceKey(key)) {
           data.tryAddToData(key, value);
         }
       }

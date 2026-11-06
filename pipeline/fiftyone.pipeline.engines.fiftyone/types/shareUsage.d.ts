@@ -24,31 +24,39 @@ declare class ShareUsage extends ShareUsage_base {
      * messages.
      * For example, the 51Degrees cloud service uses a value of 2500.
      * @param {string} options.cookie if a cookie is being used to identify
-     * user sessions, it can be specified here in order to reduce the
-     * sharing of duplicated data.
-     * @param {Array} options.queryWhitelist By default query string
-     * and HTTP form parameters are not shared unless prefixed with '51D_'.
-     * If you need to share query string parameters, a list can be
-     * specified here.
-     * @param {Array} options.headerBlacklist By default, all HTTP headers
-     * (except a few, such as Cookies) are shared. Individual headers can
+     * user sessions, it can be specified here. Evidence already shared is
+     * then shared again for a new session, and the cookie itself is never
+     * shared.
+     * @param {Array<string>|null} options.queryWhitelist By default query
+     * string and HTTP form parameters are not shared unless prefixed with
+     * '51D_'. If you need to share query string parameters, a list can be
+     * specified here. null shares every parameter.
+     * @param {Array<string>} options.headerBlacklist By default, all HTTP
+     * headers except Cookie are shared. Individual headers can
      * be excluded from sharing by adding them to this list.
      * @param {number} options.sharePercentage approximate proportion of
      * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
      * @param {string} options.endpoint The target destination for usage
      * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
+     * @param {boolean} options.shareAll If true, all evidence is shared apart
+     * from the email address, the salt used for hashed email identifiers, and
+     * the request's query string and path. False by default.
      */
-    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint }?: {
+    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll }?: {
         interval: number;
         requestedPackageSize: number;
         cookie: string;
-        queryWhitelist: any[];
-        headerBlacklist: any[];
+        queryWhitelist: Array<string> | null;
+        headerBlacklist: Array<string>;
         sharePercentage: number;
         endpoint: string;
+        shareAll: boolean;
     }, ...args: any[]);
     trackingCookie: string;
+    shareAll: boolean;
     evidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    dataEvidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    trackerEvidenceKeyFilter: ShareUsageTrackerEvidenceKeyFilter;
     tracker: ShareUsageTracker;
     requestedPackageSize: number;
     sharePercentage: number;
@@ -101,6 +109,7 @@ declare namespace ShareUsage {
     export { FlowData, FlowElement };
 }
 import ShareUsageEvidenceKeyFilter = require("./shareUsageEvidenceKeyFilter");
+import ShareUsageTrackerEvidenceKeyFilter = require("./shareUsageTrackerEvidenceKeyFilter");
 import ShareUsageTracker = require("./shareUsageTracker");
 import url = require("url");
 /**
