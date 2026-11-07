@@ -21,8 +21,8 @@
  * ********************************************************************* */
 
 // Runs the base CloudEngine.processInternal against cloud answers where the
-// engine's element is missing or null, which is how the cloud service
-// answers for a product the resource key does not include.
+// engine's element is missing, which is how the cloud service answers for a
+// product the resource key does not include, and where it is null.
 
 const util = require('util');
 const path = require('path');
