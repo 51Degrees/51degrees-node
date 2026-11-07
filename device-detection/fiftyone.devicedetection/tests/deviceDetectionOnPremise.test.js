@@ -50,21 +50,31 @@ if (!haveLiteDataFile) {
 }
 const testWithLite = haveLiteDataFile ? test : test.skip;
 
+/**
+ * A pipeline from the builder with the Lite data file, working offline and
+ * leaving every other option at its default.
+ *
+ * @returns {object} the pipeline
+ */
+function buildAtDefaults () {
+  return new FiftyOneDegreesDeviceDetection
+    .DeviceDetectionPipelineBuilder({
+      dataFile: LiteDataFile,
+      licenceKeys: '',
+      autoUpdate: false,
+      updateOnStart: false,
+      fileSystemWatcher: false,
+      shareUsage: false
+    }).build();
+}
+
 describe('deviceDetectionOnPremise', () => {
   // The matched characters of the User-Agent are recorded unless the
   // option turns them off. A UserAgents value has the User-Agent's
   // character where it was matched and an underscore where it was not.
   testWithLite('a builder left at its defaults returns the matched ' +
     'characters of the User-Agent', async () => {
-    const pipeline = new FiftyOneDegreesDeviceDetection
-      .DeviceDetectionPipelineBuilder({
-        dataFile: LiteDataFile,
-        licenceKeys: '',
-        autoUpdate: false,
-        updateOnStart: false,
-        fileSystemWatcher: false,
-        shareUsage: false
-      }).build();
+    const pipeline = buildAtDefaults();
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('header.user-agent', MobileUserAgent);
     await flowData.process();
@@ -80,6 +90,24 @@ describe('deviceDetectionOnPremise', () => {
       }
     }
     expect(matched).toBeGreaterThan(0);
+  });
+
+  // The engine does not expose the performance profile it uses, so this
+  // watches the profile setter it calls on the native configuration.
+  testWithLite('a builder left at its defaults uses the Balanced ' +
+    'performance profile', () => {
+    const ConfigHashSwig =
+      buildAtDefaults().flowElements.device.swigWrapper.ConfigHashSwig;
+    const setBalanced = jest.spyOn(ConfigHashSwig.prototype, 'setBalanced');
+    const setLowMemory =
+      jest.spyOn(ConfigHashSwig.prototype, 'setLowMemory');
+    try {
+      buildAtDefaults();
+      expect(setBalanced).toHaveBeenCalledTimes(1);
+      expect(setLowMemory).not.toHaveBeenCalled();
+    } finally {
+      jest.restoreAllMocks();
+    }
   });
 
   // Check that setting cache for on-premise engine builder will

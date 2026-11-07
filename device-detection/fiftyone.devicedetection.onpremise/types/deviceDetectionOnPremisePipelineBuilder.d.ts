@@ -41,7 +41,8 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * @param {string} [options.performanceProfile] used to control the tradeoff
      * between performance and system memory usage (Only applies to on-premise,
      * not cloud) options are: LowMemory, MaxPerformance, Balanced,
-     * BalancedTemp, HighPerformance
+     * BalancedTemp, HighPerformance. Balanced by default, as in the native
+     * code.
      * @param {number} [options.concurrency] defaults to the number of cpus
      * in the machine
      * @param {boolean} [options.updateMatchedUserAgent] True if the detection

@@ -35,7 +35,8 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * @param {boolean} options.download whether to download the datafile
      * or store it in memory
      * @param {string} options.performanceProfile options are:
-     * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance
+     * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance.
+     * Balanced by default, as in the native code.
      * @param {boolean} options.fileSystemWatcher whether to monitor the datafile
      * path for changes
      * @param {number} options.concurrency defaults to the number of cpus
