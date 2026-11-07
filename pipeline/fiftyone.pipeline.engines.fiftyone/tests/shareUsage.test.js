@@ -612,14 +612,15 @@ test('share usage - parameter names with dots', done => {
 });
 
 /**
- * Check that naming the session cookie keeps it in the evidence, but neither
- * it nor any other ordinary cookie is shared.
+ * Check that with session tracking on the session cookie is kept in the
+ * evidence, but neither it nor any other ordinary cookie is shared.
  */
 test('share usage - session cookie', done => {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/',
-    cookie: 'sessionid'
+    cookie: 'sessionid',
+    trackSession: true
   });
 
   const pipeline = new PipelineBuilder()
@@ -640,6 +641,84 @@ test('share usage - session cookie', done => {
       expect(received[0]).not.toContain('analytics value');
       done();
     }, 2000);
+  });
+});
+
+/**
+ * Check that session tracking is off by default, and that naming the session
+ * cookie then has no effect. The cookie is not kept, and evidence already
+ * shared is not shared again for a new session.
+ */
+test('share usage - session cookie without session tracking', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    cookie: 'sessionid'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData1 = pipeline.createFlowData();
+  flowData1.evidence.add('header.user-agent', 'repeated user agent');
+  flowData1.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData2 = pipeline.createFlowData();
+  flowData2.evidence.add('header.user-agent', 'repeated user agent');
+  flowData2.evidence.add('cookie.sessionid', 'session value 2');
+
+  flowData1.process().then(() => {
+    flowData2.process().then(() => {
+      setTimeout(() => {
+        expect(received.length).toBe(1);
+        expect(received[0]).not.toContain('session value');
+        expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(false);
+        expect(usageEngine.trackSession).toBe(false);
+        done();
+      }, 2000);
+    });
+  });
+});
+
+/**
+ * Check that with session tracking on, evidence already shared is shared
+ * again for a new session but not for a repeat in the same session, and that
+ * the session cookie is not shared.
+ */
+test('share usage - session tracking', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    cookie: 'sessionid',
+    trackSession: true
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData1 = pipeline.createFlowData();
+  flowData1.evidence.add('header.user-agent', 'repeated user agent');
+  flowData1.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData2 = pipeline.createFlowData();
+  flowData2.evidence.add('header.user-agent', 'repeated user agent');
+  flowData2.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData3 = pipeline.createFlowData();
+  flowData3.evidence.add('header.user-agent', 'repeated user agent');
+  flowData3.evidence.add('cookie.sessionid', 'session value 2');
+
+  flowData1.process().then(() => {
+    flowData2.process().then(() => {
+      flowData3.process().then(() => {
+        setTimeout(() => {
+          expect(received.length).toBe(2);
+          const all = received.join('\n');
+          expect(all.split('repeated user agent').length - 1).toBe(2);
+          expect(all).not.toContain('session value');
+          done();
+        }, 2000);
+      });
+    });
   });
 });
 
