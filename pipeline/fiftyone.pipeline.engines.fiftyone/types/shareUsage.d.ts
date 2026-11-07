@@ -60,7 +60,8 @@ declare class ShareUsage extends ShareUsage_base {
     trackingCookie: string;
     shareAll: boolean;
     trackSession: boolean;
-    evidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    evidenceKeyFilter: import("fiftyone.pipeline.core/types/basicListEvidenceKeyFilter");
+    keptEvidenceKeyFilter: ShareUsageEvidenceKeyFilter;
     dataEvidenceKeyFilter: ShareUsageEvidenceKeyFilter;
     trackerEvidenceKeyFilter: ShareUsageTrackerEvidenceKeyFilter;
     tracker: ShareUsageTracker;
@@ -76,6 +77,17 @@ declare class ShareUsage extends ShareUsage_base {
      * @param {FlowData} flowData flowData to process
      */
     processInternal(flowData: FlowData): void;
+    /**
+     * The values the element finds to share, before its rules leave any out.
+     * They are every value of the web request the web integration supplied
+     * as server.http-request, under the key each has as evidence, and every
+     * evidence value. A key in both has the evidence value. The web request
+     * itself is not one of them.
+     *
+     * @param {FlowData} flowData the flow data to look in
+     * @returns {object} the values, keyed as evidence is
+     */
+    getFoundEvidence(flowData: FlowData): object;
     /**
      * Creates a ShareUsageData instance populated from the evidence
      * within the flow data provided.

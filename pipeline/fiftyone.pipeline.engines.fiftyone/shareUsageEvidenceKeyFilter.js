@@ -20,7 +20,12 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const EvidenceKeyFilter = require('fiftyone.pipeline.core').EvidenceKeyFilter;
+const core = require('fiftyone.pipeline.core');
+
+const EvidenceKeyFilter = core.EvidenceKeyFilter;
+
+// The key of the web request the web integration adds to the evidence.
+const HTTP_REQUEST_KEY = core.Constants.evidenceHttpRequest;
 
 // Cookies, session values and query string parameters whose names start with
 // this are the ones 51Degrees sets, and are shared.
@@ -90,6 +95,11 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
 
     if (NEVER_SHARED_KEYS.some(neverShared =>
       lowerKey === neverShared || lowerKey.endsWith('.' + neverShared))) {
+      return false;
+    }
+
+    // The web request is read for its values and never shared itself.
+    if (lowerKey === HTTP_REQUEST_KEY) {
       return false;
     }
 

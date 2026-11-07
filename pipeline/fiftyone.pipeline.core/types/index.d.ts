@@ -9,6 +9,7 @@ export let ErrorMessages: {
 export let Constants: {
     evidenceEnableCookies: string;
     evidenceObjectName: string;
+    evidenceHttpRequest: string;
 };
 export let Evidence: typeof import("./evidence");
 export let EvidenceKeyFilter: typeof import("./evidenceKeyFilter");

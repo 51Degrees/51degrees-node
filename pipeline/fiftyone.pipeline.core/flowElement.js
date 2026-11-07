@@ -46,12 +46,16 @@ class FlowElement {
    * @param {object} options.properties list of properties including metadata
    * @param {EvidenceKeyFilter} options.evidenceKeyFilter an instance of
    * an EvidenceKeyFilter to filter evidence added to the Pipeline
+   * @param {EvidenceKeyFilter} [options.keptEvidenceKeyFilter] the evidence
+   * the element reads without it changing its results, which the flow data
+   * keeps but which is not accepted evidence
    */
   constructor ({
     processInternal,
     dataKey,
     properties = {},
-    evidenceKeyFilter
+    evidenceKeyFilter,
+    keptEvidenceKeyFilter
   } = {}) {
     this.dataKey = dataKey;
 
@@ -61,11 +65,21 @@ class FlowElement {
 
     this.properties = properties;
 
+    // The evidence the element accepts, being the evidence that can change
+    // its results. Caching, the ETag and the Vary header are built from it.
     if (evidenceKeyFilter) {
       this.evidenceKeyFilter = evidenceKeyFilter;
     } else {
       this.evidenceKeyFilter = new EvidenceKeyFilterBase();
     }
+
+    /**
+     * Evidence the flow data keeps for the element, though it is not
+     * accepted, such as the evidence the usage sharing element shares.
+     *
+     * @type {EvidenceKeyFilter|undefined}
+     */
+    this.keptEvidenceKeyFilter = keptEvidenceKeyFilter;
 
     /**
      * @type {Function[]}

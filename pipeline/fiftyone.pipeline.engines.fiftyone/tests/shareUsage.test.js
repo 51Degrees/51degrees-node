@@ -634,7 +634,8 @@ test('share usage - session cookie', done => {
 
   flowData.process().then(() => {
     setTimeout(() => {
-      expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(true);
+      expect(usageEngine.keptEvidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(true);
+      expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBeFalsy();
       expect(received.length).toBe(1);
       expect(received[0]).toContain('some user agent');
       expect(received[0]).not.toContain('session value');
@@ -672,7 +673,7 @@ test('share usage - session cookie without session tracking', done => {
       setTimeout(() => {
         expect(received.length).toBe(1);
         expect(received[0]).not.toContain('session value');
-        expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(false);
+        expect(usageEngine.keptEvidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(false);
         expect(usageEngine.trackSession).toBe(false);
         done();
       }, 2000);

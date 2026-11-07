@@ -21,8 +21,11 @@
  * ********************************************************************* */
 
 const engines = require('fiftyone.pipeline.engines');
+const core = require('fiftyone.pipeline.core');
 
 const Engine = engines.Engine;
+const BasicListEvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const Constants = core.Constants;
 const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
@@ -117,10 +120,13 @@ class ShareUsage extends Engine {
       shareAll
     };
 
-    // When sessions are tracked, the pipeline keeps the session cookie for
-    // the tracker. The data sent leaves it out unless all evidence is
-    // shared.
-    this.evidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
+    // The element accepts no evidence, as none of what it shares changes a
+    // result, so caching, the ETag and the Vary header never depend on it.
+    // The flow data still keeps the evidence it would share, and, when
+    // sessions are tracked, the session cookie for the tracker. The data
+    // sent leaves the cookie out unless all evidence is shared.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.keptEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: trackSession });
     this.dataEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: false });
@@ -160,8 +166,9 @@ class ShareUsage extends Engine {
    */
   processInternal (flowData) {
     if (Math.random() <= this.sharePercentage) {
+      // The tracker compares the values that would be shared.
       const cacheKey = this.trackerEvidenceKeyFilter
-        .filterEvidence(flowData.evidence.getAll());
+        .filterEvidence(this.getFoundEvidence(flowData));
 
       const share = this.tracker.track(cacheKey);
       if (share) {
@@ -170,6 +177,29 @@ class ShareUsage extends Engine {
         this.addToShareUsage(this.getDataFromEvidence(flowData));
       }
     }
+  }
+
+  /**
+   * The values the element finds to share, before its rules leave any out.
+   * They are every value of the web request the web integration supplied
+   * as server.http-request, under the key each has as evidence, and every
+   * evidence value. A key in both has the evidence value. The web request
+   * itself is not one of them.
+   *
+   * @param {FlowData} flowData the flow data to look in
+   * @returns {object} the values, keyed as evidence is
+   */
+  getFoundEvidence (flowData) {
+    const found = {};
+    const httpRequest = flowData.evidence.get(Constants.evidenceHttpRequest);
+    if (httpRequest !== null && typeof httpRequest === 'object') {
+      for (const [key, value] of Object.entries(httpRequest)) {
+        if (value !== undefined && value !== null) {
+          found[key] = value;
+        }
+      }
+    }
+    return Object.assign(found, flowData.evidence.getAll());
   }
 
   /**
@@ -182,9 +212,10 @@ class ShareUsage extends Engine {
    */
   getDataFromEvidence (flowData) {
     const data = new ShareUsageData();
+    const found = this.getFoundEvidence(flowData);
 
-    Object.keys(flowData.evidence.getAll()).forEach(key => {
-      const value = flowData.evidence.get(key);
+    Object.keys(found).forEach(key => {
+      const value = found[key];
       if (key === 'server.client-ip') {
         // The client IP is dealt with separately for backwards
         // compatibility purposes.

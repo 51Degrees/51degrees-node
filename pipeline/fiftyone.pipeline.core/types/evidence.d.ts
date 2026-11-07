@@ -15,15 +15,19 @@ declare class Evidence {
     flowData: import("./flowData");
     evidenceStore: {};
     /**
-     * Every value addFromRequest read from the request, under its evidence
-     * key and before any is filtered out, or undefined when evidence was
-     * not added from a request.
+     * The web request as server.http-request holds it, being every value
+     * addFromRequest read from the request, under its evidence key and
+     * before any is filtered out, or undefined when evidence was not added
+     * from a request.
      *
      * @type {Readonly<object>|undefined}
      */
-    requestEvidence: Readonly<object> | undefined;
+    httpRequest: Readonly<object> | undefined;
     /**
-     * Add a piece of evidence to flowData
+     * Add a piece of evidence to flowData. A key is kept when an element
+     * accepts it or keeps it. server.http-request is always kept, apart from
+     * the other evidence, because it is the web request rather than a value
+     * to process.
      *
      * @param {string} key evidence key to add
      * @param {*} value value of evidence key
@@ -54,9 +58,12 @@ declare class Evidence {
      * The 51Degrees client script sends its values in a form body, so without
      * one or the other they never reach the pipeline.
      *
-     * Every value read is also kept in requestEvidence, so that what the
-     * request carried can be used once processing is done, when the request's
-     * socket may have closed.
+     * The web request is also added as server.http-request, whether or not an
+     * element accepts it, as a frozen object holding every value read from
+     * the request under the key it has as evidence. It is there for elements
+     * that read the request without accepting evidence, such as the usage
+     * sharing element, and so that what the request carried can be used once
+     * processing is done, when the request's socket may have closed.
      *
      * @param {object} request an HTTP request object
      * @returns {Evidence} return updated evidence
@@ -83,7 +90,8 @@ declare class Evidence {
      */
     get(key: string): any;
     /**
-     * Get all evidence
+     * Get all evidence. server.http-request is left out, because it is the web
+     * request rather than a value to process, so get it with get.
      *
      * @returns {object} all evidence
      */
