@@ -170,14 +170,19 @@ function quotedForLog (text) {
  * @typedef {import('./flowData')} FlowData
  */
 
+// The headers the JavaScript builder reads, for the callback URL.
+const JS_HEADERS = ['header.host', 'header.protocol'];
+
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
+ * The evidence the JavaScript builder reads, being every query value, which
+ * the script sends back as its parameters, and the host and protocol of the
+ * callback URL. Other headers do not change the script, so they are not
+ * accepted.
  **/
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    return key.indexOf('query.') !== -1 || key.indexOf('header.') !== -1;
+    const lowerKey = key.toLowerCase();
+    return lowerKey.startsWith('query.') || JS_HEADERS.includes(lowerKey);
   }
 }
 

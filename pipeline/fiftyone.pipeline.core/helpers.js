@@ -39,7 +39,8 @@ const CACHE_CONTROL_AFTER_ERRORS = 'private, no-cache';
 // the preconditions of RFC 9110 section 13.1 and the cache directives of
 // RFC 9111 sections 5.2.1 and 5.4. They take no part in the ETag, or a
 // revalidation, which sends If-None-Match, would never match. They are named
-// here because the JavaScript builder accepts every header.
+// here because an element with no evidence key filter of its own accepts
+// every key.
 const NOT_IN_ETAG = [
   'header.if-match',
   'header.if-none-match',
