@@ -63,10 +63,9 @@ class ShareUsage extends Engine {
    * is recommended in order to reduce the overhead of sending HTTP
    * messages.
    * For example, the 51Degrees cloud service uses a value of 2500.
-   * @param {string} options.cookie if a cookie is being used to identify
-   * user sessions, it can be specified here. Evidence already shared is
-   * then shared again for a new session, and the cookie itself is never
-   * shared.
+   * @param {string} options.cookie The name of the cookie that holds the
+   * session id. It has no effect unless trackSession is true. The cookie
+   * itself is not shared unless shareAll is true.
    * @param {Array<string>|null} options.queryWhitelist By default query
    * string and HTTP form parameters are not shared unless prefixed with
    * '51D_'. If you need to share query string parameters, a list can be
@@ -81,6 +80,11 @@ class ShareUsage extends Engine {
    * @param {boolean} options.shareAll If true, all evidence is shared apart
    * from the email address, the salt used for hashed email identifiers, and
    * the request's query string and path. False by default.
+   * @param {boolean} options.trackSession If true, the cookie named by
+   * cookie is used to tell user sessions apart, so evidence already shared
+   * is shared again when it comes from a new session. False by default. It
+   * needs cookie to be set, and has no effect when shareAll is true,
+   * because every cookie is then shared and used to find repeats.
    */
   constructor (
     {
@@ -91,13 +95,16 @@ class ShareUsage extends Engine {
       headerBlacklist,
       sharePercentage = 1,
       endpoint = 'https://devices-v4.51degrees.com/new.ashx',
-      shareAll = false
+      shareAll = false,
+      trackSession = false
     } = {}) {
     super(...arguments);
 
     this.trackingCookie = cookie;
 
     this.shareAll = shareAll;
+
+    this.trackSession = trackSession;
 
     // The session id and sequence number are kept in evidence, as the usage
     // data carries them separately.
@@ -110,14 +117,15 @@ class ShareUsage extends Engine {
       shareAll
     };
 
-    // The pipeline keeps the session cookie for the tracker, but the data
-    // sent never includes it.
+    // When sessions are tracked, the pipeline keeps the session cookie for
+    // the tracker. The data sent leaves it out unless all evidence is
+    // shared.
     this.evidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
-      { ...options, includeSession: true });
+      { ...options, includeSession: trackSession });
     this.dataEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: false });
     this.trackerEvidenceKeyFilter = new ShareUsageTrackerEvidenceKeyFilter(
-      { ...options, includeSession: true });
+      { ...options, includeSession: trackSession });
 
     this.dataKey = 'shareUsage';
 

@@ -8,8 +8,10 @@
               "interval": 1200000,
               "requestedPackageSize": 50,
               "cookie": "",
+              "trackSession": false,
               "queryWhitelist": [],
-              "headerBlacklist": []
+              "headerBlacklist": [],
+              "shareAll": false
           }
       }
       ]
