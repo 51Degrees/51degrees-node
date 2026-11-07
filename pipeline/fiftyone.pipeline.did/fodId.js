@@ -147,14 +147,23 @@ class FodId {
    * URL-safe alphabet. Node's `Buffer` reads both alphabets, and a browser
    * has no `Buffer`.
    *
-   * Leading and trailing whitespace is stripped first, so a value carried
+   * White space before and after the text is removed first, being any
+   * character with the Unicode White_Space property, so a value carried
    * through a log line, a text field or a copy and paste with a stray
    * newline still parses. The URL-safe characters `-` and `_` become `+`
-   * and `/`, then padding is added where the stripped length calls for it.
-   * A string already in the standard form comes back unchanged.
+   * and `/`, then padding is added where the trimmed length calls for it.
+   * A string already in the standard form comes back unchanged apart from
+   * that trim.
+   *
+   * A text with white space inside it, or with a character from each
+   * alphabet such as both `+` and `-`, gives null, as the 51Did
+   * specification requires. The issuer writes neither, so either is a sign
+   * of a damaged value, such as a `+` a form decoder turned into a space or
+   * a value converted only in part.
    * @param {string} value base64 in the standard or URL-safe alphabet, with
-   * or without padding, and with or without surrounding whitespace
-   * @returns {string} the same bytes in the standard alphabet with padding
+   * or without padding, and with or without white space around it
+   * @returns {string|null} the same bytes in the standard alphabet with
+   * padding, or null where the text is refused
    */
   static toStandardBase64 (value) {
     if (typeof value !== 'string') {
@@ -182,12 +191,14 @@ class FodId {
   /**
    * Reads a 51Did from its base64 form without throwing. Both base64
    * alphabets are accepted, the standard one the cloud issues and the
-   * URL-safe one a page uses in a link, with or without padding. The value
-   * may be anything at all, because a 51Did arrives from outside and
-   * failing to be one is an ordinary outcome. An absent value or an empty
-   * string is `MISSING_INPUT`, a value that is not a string is
-   * `INVALID_INPUT_TYPE`, and a reason from the OWID library is reported
-   * exactly as the OWID library reported it.
+   * URL-safe one a page uses in a link, with or without padding, and white
+   * space around the value is ignored. The value may be anything at all,
+   * because a 51Did arrives from outside and failing to be one is an
+   * ordinary outcome. An absent value, or a string that is empty or only
+   * white space, is `MISSING_INPUT`, a value that is not a string is
+   * `INVALID_INPUT_TYPE`, and a string with white space inside it or with
+   * characters from both alphabets is `INVALID_BASE64`. A reason from the
+   * OWID library is reported exactly as the OWID library reported it.
    *
    * A successful read says the bytes are a structurally valid 51Did. It
    * fetches no key and checks no signature, so the identifier may still be
@@ -229,7 +240,8 @@ class FodId {
    * @throws {RangeError} when the payload is shorter than a 51Did of its
    * type can be
    * @throws {FodIdParseError} when the value is not an OWID, with the OWID
-   * library's status
+   * library's status, or when it has white space inside it or characters
+   * from both alphabets, with `INVALID_BASE64`
    */
   static fromBase64 (base64) {
     if (typeof base64 !== 'string') {
@@ -478,15 +490,20 @@ function readEnvelope (read) {
  * Reads a 51Did from base64 in either alphabet. Only a string is
  * normalised, so anything else reaches the OWID library as it is and is
  * reported by the OWID library's own rules for absent and wrongly typed
- * input.
+ * input. A string the normaliser refuses is `INVALID_BASE64`, the status
+ * the OWID library gives for any other string that is not base64.
  * @param {*} base64 whatever the caller gave
  * @returns {{ok: boolean, value: FodId | null, status: string,
  * detail?: object}} the read
  */
 function readBase64 (base64) {
-  const normalised = typeof base64 === 'string'
-    ? FodId.toStandardBase64(base64)
-    : base64;
+  if (typeof base64 !== 'string') {
+    return readEnvelope(owid.parse(base64));
+  }
+  const normalised = toStandardBase64(base64);
+  if (normalised === null) {
+    return { ok: false, value: null, status: ParseStatus.INVALID_BASE64 };
+  }
   return readEnvelope(owid.parse(normalised));
 }
 

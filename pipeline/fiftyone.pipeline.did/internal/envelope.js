@@ -58,12 +58,19 @@ const SIGNATURE_LENGTH = 64;
  * @returns {Uint8Array|null} the payload bytes, or null
  */
 function payloadOf (value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const standard = toStandardBase64(value);
+  if (standard === null) {
+    return null;
+  }
   let text;
   try {
     // `atob` and not Node's `Buffer`, which a browser does not have.
-    text = atob(toStandardBase64(value));
+    text = atob(standard);
   } catch (e) {
-    // Not a string, or not base 64.
+    // Not base 64.
     return null;
   }
   // Each character of the decoded text is one byte of the envelope. The
