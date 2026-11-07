@@ -42,13 +42,13 @@ const USER_AGENT = 'Mozilla/5.0 (test)';
 const HOST = 'example.test';
 
 /**
- * Builds a server whose pipeline has one element that reads the
- * User-Agent and fails while state.failing is true.
+ * Builds a pipeline with one element that reads the User-Agent and fails
+ * while state.failing is true.
  *
  * @param {{failing: boolean}} state whether the element fails
- * @returns {http.Server} the server
+ * @returns {object} the pipeline
  */
-const makeServer = (state) => {
+const makePipeline = (state) => {
   const element = new FlowElement({
     dataKey: 'test',
     evidenceKeyFilter: new BasicListEvidenceKeyFilter(['header.user-agent']),
@@ -68,6 +68,17 @@ const makeServer = (state) => {
     javascriptBuilderSettings: { endPoint: '/json' }
   }).add(element).build();
   pipeline.on('error', () => {});
+  return pipeline;
+};
+
+/**
+ * Builds a server for the pipeline makePipeline gives.
+ *
+ * @param {{failing: boolean}} state whether the element fails
+ * @returns {http.Server} the server
+ */
+const makeServer = (state) => {
+  const pipeline = makePipeline(state);
   return http.createServer(async (req, res) => {
     // A fault answers 500 with its message, so a test fails on it rather
     // than waiting for a response that never comes.
@@ -162,6 +173,42 @@ describe('client-side caching headers', () => {
 
     expect(again.statusCode).toBe(412);
   });
+
+  // A browser can stop waiting while the pipeline processes, and the
+  // request's socket then has no addresses. The ETag uses what was read
+  // from the request when the evidence was added.
+  test('the ETag does not read the request again after processing',
+    async () => {
+      const pipeline = makePipeline({ failing: false });
+      const req = {
+        method: 'GET',
+        url: '/51Degrees.core.js',
+        headers: { host: HOST, 'user-agent': USER_AGENT },
+        connection: {
+          encrypted: false,
+          remoteAddress: '127.0.0.1',
+          localAddress: '127.0.0.1'
+        }
+      };
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.addFromRequest(req);
+      await flowData.process();
+      req.connection = {};
+
+      const headers = {};
+      let ended = false;
+      const res = {
+        statusCode: 0,
+        setHeader: (name, value) => { headers[name.toLowerCase()] = value; },
+        end: () => { ended = true; }
+      };
+      Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
+
+      expect(ended).toBe(true);
+      expect(res.statusCode).toBe(200);
+      expect(headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
+    });
 
   test('a response to a request that recorded errors has no ETag',
     async () => {
