@@ -226,7 +226,8 @@ describe('deviceDetectionOnPremise', () => {
       matchedUa.split(/[_{}]/g).forEach(substring => {
         expect(MobileUserAgent.includes(substring)).toBeTruthy();
         const index = matchedUa.indexOf(substring);
-        const original = MobileUserAgent.substring(index, substring.length);
+        const original = MobileUserAgent.substring(
+          index, index + substring.length);
         expect(substring).toEqual(original);
       });
     });

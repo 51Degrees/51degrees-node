@@ -212,8 +212,11 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {boolean} options.reuseTempFile Indicates that an existing temp
    * file may be used. This should be selected if multiple instances wish to
    * use the same file to prevent high disk usage.
-   * @param {boolean} options.updateMatchedUserAgent True if the detection
-   * should record the matched characters from the target User-Agent
+   * @param {boolean} [options.updateMatchedUserAgent] True if the detection
+   * should record the matched characters from the target User-Agent, which
+   * the UserAgents property returns. On by default, as the native code sets
+   * it. Set it to false where UserAgents is not needed, which saves
+   * recording the characters.
    * @param {number} options.maxMatchedUserAgentLength Number of characters to
    * consider in the matched User-Agent. Ignored if updateMatchedUserAgent
    * is false
@@ -249,7 +252,7 @@ class DeviceDetectionOnPremise extends Engine {
       download,
       performanceProfile = 'LowMemory',
       reuseTempFile = false,
-      updateMatchedUserAgent = false,
+      updateMatchedUserAgent,
       maxMatchedUserAgentLength,
       drift,
       difference,
@@ -394,7 +397,11 @@ class DeviceDetectionOnPremise extends Engine {
     }
 
     config.setReuseTempFile(reuseTempFile);
-    config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+
+    // Left at the native default, which is on, unless a value was given.
+    if (updateMatchedUserAgent !== undefined) {
+      config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+    }
 
     if (typeof allowUnmatched === 'boolean') {
       config.setAllowUnmatched(allowUnmatched);
