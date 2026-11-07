@@ -93,12 +93,15 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 const areas = require(path.join(__dirname, '/../areas'));
 
-// This example requires the enterprise data file as the latitude,
-// longitude and area properties used are not available in the lite file.
-// To obtain an enterprise data file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=enterprise_v_4_1_ipi
-const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
+// This example needs the latitude, longitude and area properties, which
+// only the Enterprise data file has. By default it uses the free Lite data
+// file, which is downloaded if it is missing, and there it says what it
+// needs and where to ask for a copy of the Enterprise data file.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=enterprise-data-file';
 
 // The CSV file containing the 'known and true' records. A version of this
 // file is included in the cxx/data submodule.
@@ -224,6 +227,15 @@ const run = async function (dataFile, csvTruthFile, output, progress) {
     fileSystemWatcher: false
   }).build();
 
+  // The comparison needs the location properties, which only the
+  // Enterprise data file has, so with a free data file the example says so
+  // and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(pipeline.getElement('ip'),
+    'Comparing locations', ['Latitude', 'Longitude', 'Areas'], progress,
+    CONTACT_US)) {
+    return false;
+  }
+
   // Write the output header.
   output.write(TRUTH_FIELDS.concat(RESULT_FIELDS).join(',') + '\n');
 
@@ -270,27 +282,16 @@ const run = async function (dataFile, csvTruthFile, output, progress) {
   // Finally check the data file used for consistency with the other
   // examples.
   ExampleUtils.checkDataFile(pipeline, dataFile);
+  return true;
 };
 
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
-  // file in the project space, falling back to the lite file that is
-  // included in the repository.
-  let dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
-  if (dataFile === undefined) {
-    dataFile = ExampleUtils.findDataFile(LITE_V_4_1_IPI);
-    if (dataFile !== undefined) {
-      console.warn('Failed to find an enterprise IP intelligence data ' +
-        'file. Using the lite file instead. Note that the lite file ' +
-        'does not contain the area properties used by this example, ' +
-        'so records may be skipped. To obtain an enterprise data file ' +
-        'for testing, please contact us: ' +
-        'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=lite-file-fallback');
-    }
-  }
+  // 51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // which is downloaded if it is missing.
+  const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   // Get the CSV file containing the source of truth.
   const csvTruthFile = args.length > 1
@@ -302,9 +303,11 @@ if (process.env.JEST_WORKER_ID === undefined) {
 
   if (dataFile !== undefined && csvTruthFile !== undefined) {
     const output = fs.createWriteStream(outputFile);
-    run(dataFile, csvTruthFile, output, process.stdout).then(function () {
+    run(dataFile, csvTruthFile, output, process.stdout).then(function (compared) {
       output.end();
-      console.log(`Output written to '${outputFile}'`);
+      if (compared) {
+        console.log(`Output written to '${outputFile}'`);
+      }
     });
   } else {
     if (dataFile === undefined) {

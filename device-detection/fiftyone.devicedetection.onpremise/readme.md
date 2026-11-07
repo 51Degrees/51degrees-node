@@ -77,6 +77,7 @@ If the module is installed directly from Git then the binaries are also required
 ### Examples
 
 For details of how to run the examples, please refer to [run examples](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/run_examples.md).
+The examples need no settings. They run on the free Lite data file, which they download when it is missing, and show each property they ask for that only the Enterprise data file has as needing it, with a link to [contact us](https://51degrees.com/contact-us?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=examples) for a copy.
 The tables below describe the examples that are available.
 
 | Example                                | Description |
