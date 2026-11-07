@@ -22,5 +22,15 @@
 
 module.exports = {
   // warning message to be shown for conflicted evidences
-  evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s"
+  evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s",
+  // logged when the cloud answer has no element for an engine's data key
+  elementMissing: '%s not populated. The resource key does not include ' +
+    "the '%s' product, so the cloud service left it out of the answer. " +
+    'The other products in the answer can still be used. To see the ' +
+    'products a key includes, open ' +
+    'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>',
+  // logged when the element is null and the cloud gave no reason
+  elementNullNoReason: 'The cloud service gave no reason. To see whether ' +
+    "the resource key includes the '%s' product, open " +
+    'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>'
 };
