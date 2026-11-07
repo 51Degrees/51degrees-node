@@ -4,8 +4,8 @@
 # repository needs on top of it.
 #
 # common-ci runs these scripts from its own root, with this repository checked
-# out inside it, which is where this looks first. COMMON_CI can name another
-# checkout of common-ci.
+# out inside it, which is where this looks. COMMON_CI, when set, names another
+# checkout of common-ci and is looked at first.
 $CommonCi = @($env:COMMON_CI, (Join-Path $PSScriptRoot '..' '..')) |
     Where-Object { $_ -and (Test-Path (Join-Path $_ 'steps' 'release-plan.ps1')) } |
     Select-Object -First 1

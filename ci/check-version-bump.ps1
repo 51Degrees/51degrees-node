@@ -6,11 +6,11 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot/release-plan.ps1"
 
 # The shared publish runs this in place of its own check, because each package
-# here has its own version. Every package about to be published goes through
-# common-ci's steps/check-version-bump.ps1, which refuses a major or minor move
-# unless ALLOW_VERSION_BUMP is 'true', twice. Once against its own tags, and
-# once against the version npm installs by default, so that a tag pushed by
-# hand or a FirstVersion in packages.json cannot set where it starts.
+# here has its own version. Every package about to be published goes twice
+# through common-ci's steps/check-version-bump.ps1, which refuses a major or
+# minor move unless ALLOW_VERSION_BUMP is 'true'. Once against its own tags,
+# and once against the version npm installs by default, so that neither a tag
+# pushed by hand nor a FirstVersion in packages.json can set where it starts.
 
 $check = Join-Path $CommonCi 'steps' 'check-version-bump.ps1'
 
