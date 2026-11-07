@@ -139,8 +139,8 @@ describe('DidClient against the cloud', () => {
   // These are the strings the cloud's own IabTcfElement tests use, repeated
   // here rather than shared, for the same reason as the address above.
   const consentStrings = [
-    ['AAAAAAAAAAAAAAAAAAAAAAAAAP_w', Usage.PERSONALIZED],
-    ['AAAAAAAAAAAAAAAAAAAAAAAAAMMg', Usage.STANDARD]
+    ['AAAAAAAAAAAAAAAAAAAAAAAAAP_w', Usage.PERSONALIZED, 'personalized'],
+    ['AAAAAAAAAAAAAAAAAAAAAAAAAMMg', Usage.STANDARD, 'standard']
   ];
 
   // Asks the json endpoint for a 51Did with the given query fragment and
@@ -212,14 +212,14 @@ describe('DidClient against the cloud', () => {
   test('a consent string sets the usage is indirect bit', async () => {
     requireKey();
     let proven = 0;
-    for (const [tcString, usage] of consentStrings) {
+    for (const [tcString, usage, usageName] of consentStrings) {
       // No id.usage is sent. A stated usage wins over a consent string, so
       // sending one would leave the bit clear and prove the opposite. A
       // consent string granting a marketing usage produces a marketing
       // identifier, so the terms travel with it too.
       const identifiers = await identifiersFor(
         'tcstring=' + encodeURIComponent(tcString),
-        `the consent string granting ${usage}`, true);
+        `the consent string granting the ${usageName} usage`, true);
       identifiers.forEach((id, index) => {
         assertAligned(`consent/${usage}[${index}]`, id, usage,
           MODEL_TERMS_FOR_MARKETING_2, true);
