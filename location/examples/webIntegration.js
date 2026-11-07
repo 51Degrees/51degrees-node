@@ -66,6 +66,7 @@ if (myResourceKey.substring(0, 2) === '!!') {
   pipeline.on('error', console.error);
 
   const http = require('http');
+  const core = require('fiftyone.pipeline.core');
 
   server = http.createServer((req, res) => {
     const flowData = pipeline.createFlowData();
@@ -75,14 +76,13 @@ if (myResourceKey.substring(0, 2) === '!!') {
     flowData.evidence.addFromRequest(req);
 
     flowData.process().then(function () {
-      res.statusCode = 200;
-
       if (req.url.startsWith('/json')) {
-        // Return the json to the client.
-        res.setHeader('Content-Type', 'application/json');
-
-        res.end(JSON.stringify(flowData.jsonbundler.json));
+        // Return the json to the client, with the caching headers, and a
+        // 304 to a matching If-None-Match.
+        core.Helpers.writeClientSideResponse(req, res, flowData,
+          'application/json', JSON.stringify(flowData.jsonbundler.json));
       } else {
+        res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
 
         let output = '';

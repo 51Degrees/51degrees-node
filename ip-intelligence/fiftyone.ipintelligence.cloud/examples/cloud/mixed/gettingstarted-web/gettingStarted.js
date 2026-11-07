@@ -172,10 +172,9 @@ const server = http.createServer(async (req, res) => {
     // Answer the client-side script with the results of processing the
     // evidence it posted.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
     return;
   }
@@ -185,10 +184,9 @@ const server = http.createServer(async (req, res) => {
     // carries the results of this request's detection, so it is built per
     // request rather than cached.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/x-javascript');
-
-      res.end(flowData.javascriptbuilder.javascript);
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
     return;
   }
