@@ -1,5 +1,7 @@
 # fiftyone.pipeline.did
 
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious")
+
 Strongly typed Node.js reader for the 51Did (51Degrees Identifier) returned by
 the 51Degrees Cloud service, and a client for everything a server does with a
 51Did against the cloud. Mirrors the .NET `FiftyOne.Did` package.
