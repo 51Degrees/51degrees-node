@@ -2,6 +2,7 @@
   {
     "Name": "fiftyone.pipeline.core",
     "Path": "pipeline/fiftyone.pipeline.core",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["pipeline/fiftyone.pipeline.core/examples"],
     "DependsOn": [],
     "Publish": true
@@ -9,6 +10,7 @@
   {
     "Name": "fiftyone.pipeline.engines",
     "Path": "pipeline/fiftyone.pipeline.engines",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["pipeline/fiftyone.pipeline.engines/examples"],
     "DependsOn": ["fiftyone.pipeline.core"],
     "Publish": true
@@ -16,6 +18,7 @@
   {
     "Name": "fiftyone.pipeline.engines.fiftyone",
     "Path": "pipeline/fiftyone.pipeline.engines.fiftyone",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["pipeline/fiftyone.pipeline.engines.fiftyone/examples"],
     "DependsOn": ["fiftyone.pipeline.core", "fiftyone.pipeline.engines"],
     "Publish": true
@@ -23,12 +26,14 @@
   {
     "Name": "fiftyone.pipeline.cloudrequestengine",
     "Path": "pipeline/fiftyone.pipeline.cloudrequestengine",
+    "Ignore": ["**/__tests__/**"],
     "DependsOn": ["fiftyone.pipeline.core", "fiftyone.pipeline.engines"],
     "Publish": true
   },
   {
     "Name": "fiftyone.pipeline.did",
     "Path": "pipeline/fiftyone.pipeline.did",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["pipeline/fiftyone.pipeline.did/examples"],
     "DependsOn": [],
     "Publish": true
@@ -36,18 +41,22 @@
   {
     "Name": "fiftyone.pipeline.translation",
     "Path": "pipeline/fiftyone.pipeline.translation",
+    "Ignore": ["**/__tests__/**"],
     "DependsOn": ["fiftyone.pipeline.core"],
     "Publish": true
   },
   {
     "Name": "fiftyone.devicedetection.shared",
     "Path": "device-detection/fiftyone.devicedetection.shared",
+    "Ignore": ["**/*.md", "**/LICENSE*", "**/__tests__/**"],
+    "IgnoreDefaults": false,
     "DependsOn": [],
     "Publish": true
   },
   {
     "Name": "fiftyone.devicedetection.cloud",
     "Path": "device-detection/fiftyone.devicedetection.cloud",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["device-detection/fiftyone.devicedetection.cloud/examples"],
     "DependsOn": [
       "fiftyone.devicedetection.shared",
@@ -61,6 +70,7 @@
   {
     "Name": "fiftyone.devicedetection.onpremise",
     "Path": "device-detection/fiftyone.devicedetection.onpremise",
+    "Ignore": ["**/__tests__/**"],
     "ExtraPaths": ["cxx"],
     "ExcludePaths": ["device-detection/fiftyone.devicedetection.onpremise/examples"],
     "DependsOn": [
@@ -74,6 +84,7 @@
   {
     "Name": "fiftyone.devicedetection",
     "Path": "device-detection/fiftyone.devicedetection",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["device-detection/fiftyone.devicedetection/examples"],
     "DependsOn": [
       "fiftyone.devicedetection.cloud",
@@ -89,6 +100,7 @@
   {
     "Name": "fiftyone.geolocation",
     "Path": "location",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["location/examples", "location/docs"],
     "DependsOn": [
       "fiftyone.pipeline.cloudrequestengine",
@@ -101,12 +113,15 @@
   {
     "Name": "fiftyone.ipintelligence.shared",
     "Path": "ip-intelligence/fiftyone.ipintelligence.shared",
+    "Ignore": ["**/*.md", "**/LICENSE*", "**/__tests__/**"],
+    "IgnoreDefaults": false,
     "DependsOn": [],
     "Publish": true
   },
   {
     "Name": "fiftyone.ipintelligence.cloud",
     "Path": "ip-intelligence/fiftyone.ipintelligence.cloud",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["ip-intelligence/fiftyone.ipintelligence.cloud/examples"],
     "DependsOn": [
       "fiftyone.ipintelligence.shared",
@@ -120,6 +135,7 @@
   {
     "Name": "fiftyone.ipintelligence.onpremise",
     "Path": "ip-intelligence/fiftyone.ipintelligence.onpremise",
+    "Ignore": ["**/__tests__/**"],
     "ExtraPaths": ["cxx"],
     "ExcludePaths": ["ip-intelligence/fiftyone.ipintelligence.onpremise/examples"],
     "DependsOn": [
@@ -133,12 +149,14 @@
   {
     "Name": "fiftyone.ipintelligence.translation",
     "Path": "ip-intelligence/fiftyone.ipintelligence.translation",
+    "Ignore": ["**/__tests__/**"],
     "DependsOn": ["fiftyone.pipeline.core", "fiftyone.pipeline.translation"],
     "Publish": true
   },
   {
     "Name": "fiftyone.ipintelligence",
     "Path": "ip-intelligence/fiftyone.ipintelligence",
+    "Ignore": ["**/__tests__/**"],
     "ExcludePaths": ["ip-intelligence/fiftyone.ipintelligence/examples"],
     "DependsOn": [
       "fiftyone.ipintelligence.cloud",
