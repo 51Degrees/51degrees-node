@@ -42,7 +42,10 @@ class SequenceElement extends FlowElement {
 
     this.dataKey = 'sequence';
 
-    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    // The session id and sequence it reads and writes, so that the flow
+    // data keeps them whatever else is in the pipeline.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
+      ['query.session-id', 'query.sequence']);
   }
 
   /**
