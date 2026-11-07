@@ -50,24 +50,28 @@ const NOT_IN_ETAG = [
 
 /**
  * The ETag for the evidence a request carries, the same in every process.
- * The evidence is read from the request again, as addFromRequest reads it,
- * because processing adds evidence of its own, such as the new session id
- * the sequence element makes for each request without one, which would give
- * every response a different ETag. It is weak, because the response can
- * change for the same evidence, for example when a data file is updated,
- * and RFC 9110 section 8.8.3 asks for such a validator to be marked weak.
+ * It is built from what addFromRequest read from the request, rather than
+ * the flow data's evidence, because processing adds evidence of its own,
+ * such as the new session id the sequence element makes for each request
+ * without one, which would give every response a different ETag. Evidence
+ * added by hand has no such record, so its ETag is built from the flow
+ * data's evidence. Only the evidence an element accepts is hashed. It is
+ * weak, because the response can change for the same evidence, for example
+ * when a data file is updated, and RFC 9110 section 8.8.3 asks for such a
+ * validator to be marked weak.
  *
- * @param {import('http').IncomingMessage} request the request
  * @param {FlowData} flowData the flow data for the request
  * @returns {string} the ETag
  */
-const clientSideETag = function (request, flowData) {
-  const fresh = flowData.pipeline.createFlowData();
-  fresh.evidence.addFromRequest(request);
-  const evidence = fresh.evidence.getAll();
+const clientSideETag = function (flowData) {
+  const evidence = flowData.evidence.requestEvidence ||
+    flowData.evidence.getAll();
+  const elements = Object.values(flowData.pipeline.flowElements);
   const hash = crypto.createHash('sha256');
   for (const key of Object.keys(evidence).sort()) {
-    if (NOT_IN_ETAG.includes(key.toLowerCase())) {
+    if (NOT_IN_ETAG.includes(key.toLowerCase()) ||
+      elements.some((element) =>
+        element.evidenceKeyFilter.filterEvidenceKey(key)) === false) {
       continue;
     }
     hash.update(key + '\0' + String(evidence[key]) + '\0');
@@ -160,7 +164,7 @@ class Helpers {
       ? DEFAULT_MAX_AGE_SECONDS
       : options.maxAgeSeconds;
     const failed = Object.keys(flowData.errors || {}).length > 0;
-    const etag = clientSideETag(request, flowData);
+    const etag = clientSideETag(flowData);
     const method = (request.method || 'GET').toUpperCase();
     const read = method === 'GET' || method === 'HEAD';
     const matched = ifNoneMatchMatches(
