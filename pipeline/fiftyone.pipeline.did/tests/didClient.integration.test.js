@@ -20,33 +20,45 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// Live tests against the cloud, run only when a resource key is set. The
-// aligned _51DEGREES_RESOURCE_KEY environment variable is checked first,
-// then the legacy RESOURCE_KEY variable, and without either the whole
-// file is skipped rather than failed. A license key, needed to redeem
-// where the account holds one, is read from _51DEGREES_LICENSE_KEY_51DID
-// first, the name CI passes. The endpoint follows FOD_CLOUD_API_URL as the
-// client does.
+// Live tests against the cloud. They fail rather than skip when no
+// resource key is set, and when the key gets an answer without the 51Did
+// a test needs. The resource key names are in liveCloudKeys.js. A license
+// key, needed to redeem where the account holds one, is read from
+// _51DEGREES_LICENSE_KEY_51DID first, the name CI passes. The endpoint
+// follows FOD_CLOUD_API_URL as the client does.
 
 const {
   FodId, DidClient, ContextResult, SignatureResult, DidNotSupportedError,
   Usage, IdType
 } = require('../index');
+const keys = require('./liveCloudKeys');
 
-const resourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-  process.env.RESOURCE_KEY || '';
+const resourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
 const licenceKey = process.env._51DEGREES_LICENSE_KEY_51DID ||
   process.env._51DEGREES_LICENSE_KEY || process.env.LICENSE_KEY || '';
 
-const live = resourceKey ? describe : describe.skip;
+const noKey = keys.noKeyMessage(keys.RESOURCE_KEY_NAMES, 'FODid',
+  'FODiD.IdProbGlobal and FODiD.IdProbLic for each usage, which for the ' +
+  'marketing usages also needs the CloudV5FODiD product', true);
 
-live('DidClient against the cloud', () => {
+// Called first by every test, so each one fails with the message rather
+// than on whatever the missing key breaks first.
+const requireKey = () => {
+  if (!resourceKey) {
+    throw new Error(noKey);
+  }
+};
+
+describe('DidClient against the cloud', () => {
   jest.setTimeout(30000);
 
   let client;
   let fodId;
 
   beforeAll(async () => {
+    if (!resourceKey) {
+      return;
+    }
     client = new DidClient({ resourceKey, licenceKey });
     // Created through the json endpoint, as a page or the cloud request
     // engine would, asking for the global probabilistic identifier.
@@ -60,14 +72,25 @@ live('DidClient against the cloud', () => {
     if (response.status !== 200) {
       throw new Error(`json answered HTTP ${response.status}: ${body}`);
     }
-    const created = JSON.parse(body).fodid.idprobglobal;
-    if (typeof created !== 'string') {
-      throw new Error('json answered without idprobglobal: ' + body);
+    const fodid = JSON.parse(body).fodid;
+    if (!fodid || typeof fodid.idprobglobal !== 'string') {
+      throw new Error(keys.missingMessage(
+        'a 51Did for id.usage=non-marketing',
+        fodid && fodid.idprobglobalnullreason, 'FODid'));
     }
-    fodId = FodId.fromBase64(created);
+    fodId = FodId.fromBase64(fodid.idprobglobal);
   });
 
+  // A host that answers the redeem endpoint with 404 does not offer the
+  // creator context. The production cloud service offers it, so that is a
+  // configuration to report rather than something to pass over.
+  const noCreatorContext = () => new Error('The host at ' +
+    client.endpoint + ' does not offer the creator context, which the ' +
+    'production cloud service does. Leave FOD_CLOUD_API_URL unset, or set ' +
+    'it to a host that offers the creator context.');
+
   test('parses, verifies offline and verifies through the cloud', async () => {
+    requireKey();
     expect(fodId.version).toBe(3);
     expect(fodId.date).toBeGreaterThan(0);
     const key = await client.publicKeyFor(fodId);
@@ -80,15 +103,13 @@ live('DidClient against the cloud', () => {
   });
 
   test('redeem with a garbage result answers unreadable with 200', async () => {
+    requireKey();
     let result;
     try {
       result = await client.redeem(fodId, 'not-a-sealed-result', 'challenge');
     } catch (error) {
       if (error instanceof DidNotSupportedError) {
-        // A host without the creator context. Reported rather than failed.
-        console.warn('Skipped: the host at ' + client.endpoint +
-          ' does not offer the creator context.');
-        return;
+        throw noCreatorContext();
       }
       throw error;
     }
@@ -123,10 +144,11 @@ live('DidClient against the cloud', () => {
   ];
 
   // Asks the json endpoint for a 51Did with the given query fragment and
-  // returns every identifier it answered with. An empty array means the
-  // resource key is not entitled to that usage, which is reported by the
-  // caller rather than failed.
-  const identifiersFor = async (fragment) => {
+  // returns every identifier it answered with. When there is none it fails,
+  // naming the product a key needs. An answer with no fodid element at all
+  // is a key without the FODid product. One with the element but no
+  // marketing identifier is a key without the CloudV5FODiD product.
+  const identifiersFor = async (fragment, label, marketing) => {
     const url = client.endpoint + 'json?resource=' +
       encodeURIComponent(resourceKey) + '&' + fragment +
       '&values=FODiD.IdProbGlobal&values=FODiD.IdProbLic';
@@ -138,13 +160,16 @@ live('DidClient against the cloud', () => {
       throw new Error(`json answered HTTP ${response.status}: ${body}`);
     }
     const fodid = JSON.parse(body).fodid;
-    if (!fodid) {
-      return [];
-    }
-    return ['idprobglobal', 'idproblic']
-      .map((name) => fodid[name])
+    const identifiers = ['idprobglobal', 'idproblic']
+      .map((name) => fodid ? fodid[name] : undefined)
       .filter((value) => typeof value === 'string' && value.length > 0)
       .map((value) => FodId.fromBase64(value));
+    if (identifiers.length === 0) {
+      throw new Error(keys.missingMessage('a 51Did for ' + label,
+        fodid && (fodid.idprobglobalnullreason || fodid.idproblicnullreason),
+        fodid && marketing ? 'CloudV5FODiD' : 'FODid'));
+    }
+    return identifiers;
   };
 
   // Every field the flags byte carries, plus the terms, read through the
@@ -162,64 +187,46 @@ live('DidClient against the cloud', () => {
       .toEqual({ label, type: IdType.PROBABILISTIC });
   };
 
+  // Only a marketing usage carries a terms address, so only a marketing
+  // identifier shows that the service wrote the byte. A non-marketing one
+  // states no terms either way, which is the same answer a service
+  // predating the Terms release would give.
   test('every usage reads back the terms and flags the service wrote',
     async () => {
+      requireKey();
       let checked = 0;
       for (const [name, usage, terms] of usages) {
         const identifiers = await identifiersFor(
-          'id.usage=' + encodeURIComponent(name));
-        if (identifiers.length === 0) {
-          console.warn(`id.usage=${name}: no identifier returned, so this ` +
-            'key is not entitled to that usage.');
-          continue;
-        }
+          'id.usage=' + encodeURIComponent(name), 'id.usage=' + name,
+          terms !== null);
         identifiers.forEach((id, index) => {
           assertAligned(`${name}[${index}]`, id, usage, terms, false);
         });
-        // Only a marketing usage carries a terms address, so only a
-        // marketing identifier shows that the service wrote the byte. A
-        // non-marketing one states no terms either way, which is the same
-        // answer a service predating the Terms release would give.
         if (terms !== null) {
           checked += identifiers.length;
         }
       }
-      if (checked === 0) {
-        console.warn('NOTHING PROVEN: this resource key returned no ' +
-          'marketing 51Did, so no terms address was read. Use a key ' +
-          'entitled to the standard or personalized usage.');
-      } else {
-        console.log(`Terms checked on ${checked} marketing identifier(s).`);
-      }
+      console.log(`Terms checked on ${checked} marketing identifier(s).`);
     });
 
   test('a consent string sets the usage is indirect bit', async () => {
+    requireKey();
     let proven = 0;
     for (const [tcString, usage] of consentStrings) {
       // No id.usage is sent. A stated usage wins over a consent string, so
-      // sending one would leave the bit clear and prove the opposite.
+      // sending one would leave the bit clear and prove the opposite. A
+      // consent string granting a marketing usage produces a marketing
+      // identifier, so the terms travel with it too.
       const identifiers = await identifiersFor(
-        'tcstring=' + encodeURIComponent(tcString));
-      if (identifiers.length === 0) {
-        console.warn(`consent string granting ${usage}: no identifier ` +
-          'returned, so this key is not entitled to that marketing usage.');
-        continue;
-      }
+        'tcstring=' + encodeURIComponent(tcString),
+        `the consent string granting ${usage}`, true);
       identifiers.forEach((id, index) => {
-        // A consent string granting a marketing usage produces a marketing
-        // identifier, so the terms travel with it too.
         assertAligned(`consent/${usage}[${index}]`, id, usage,
           MODEL_TERMS_FOR_MARKETING_2, true);
       });
       proven += identifiers.length;
     }
-    if (proven === 0) {
-      console.warn('NOTHING PROVEN: this resource key returned no ' +
-        'identifier for either consent string, so the usage is indirect ' +
-        'bit was never read.');
-    } else {
-      console.log(`Usage is indirect read on ${proven} identifier(s).`);
-    }
+    console.log(`Usage is indirect read on ${proven} identifier(s).`);
   });
 
   // A browser as the service judges one, and a second whose browser and
@@ -263,16 +270,19 @@ live('DidClient against the cloud', () => {
 
   test('redeem of a sealed result reads the verdict with a license key',
     async () => {
-      // Created as a page creates it. Non-marketing, so every resource key
-      // is entitled to it and the pass without a license key runs too.
+      requireKey();
+      // Created as a page creates it. Non-marketing, so every key with the
+      // FODid product is entitled to it and the pass without a license key
+      // runs too.
       const created = await browserGet('json',
         { resource: resourceKey, 'id.usage': 'non-marketing' }, CHROME);
       expect({ status: created.status, body: created.body })
         .toEqual({ status: 200, body: created.body });
       const fodid = JSON.parse(created.body).fodid;
       if (!fodid || typeof fodid.idprobglobal !== 'string') {
-        throw new Error('json answered without idprobglobal: ' +
-          JSON.stringify(fodid));
+        throw new Error(keys.missingMessage(
+          'a 51Did for id.usage=non-marketing',
+          fodid && fodid.idprobglobalnullreason, 'FODid'));
       }
 
       // The call a page makes, here from another browser.
@@ -280,9 +290,7 @@ live('DidClient against the cloud', () => {
         'id/verify-context/' + encodeURIComponent(resourceKey),
         { '51did': fodid.idprobglobal }, SAFARI);
       if (sealed.status === 404) {
-        console.warn('Skipped: the host at ' + client.endpoint +
-          ' does not offer the creator context.');
-        return;
+        throw noCreatorContext();
       }
       expect({ status: sealed.status, body: sealed.body })
         .toEqual({ status: 200, body: sealed.body });

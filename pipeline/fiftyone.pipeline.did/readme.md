@@ -850,8 +850,11 @@ or past it, or fails its signature check.
 
 `npm test` runs the unit tests, which use an injected transport and touch no
 network. `tests/didClient.integration.test.js` runs against the live cloud
-only when `_51DEGREES_RESOURCE_KEY` (or `RESOURCE_KEY`) is set, and is skipped
-otherwise.
+with the first of `_51DEGREES_RESOURCE_KEY`, `_51DEGREES_RESOURCE_KEY_BESPOKE`
+and `RESOURCE_KEY` that is set, and fails when none is. The key has to carry
+the FODid product, and the CloudV5FODiD product for the marketing usages.
+`tests/tierEntitlement.integration.test.js` checks what a Basic tier key is
+given, with the key in `_51DEGREES_RESOURCE_KEY_BASIC`.
 
 ## Find out more
 
