@@ -250,9 +250,12 @@ reads its key from `51DEGREES_RESOURCE_KEY` instead.
 ## Package references
 
 `package.json` refers to the other packages here by path, so the workspace links
-them. `remote_package.json` is the same manifest with the versions consumers
-install, and `ci/build-package.ps1` swaps it in before packing. Change both when
-a dependency or a field changes. A package with no in-repository dependency has
+them. `remote_package.json` is the same manifest as published, and
+`ci/build-package.ps1` swaps it in before packing. The build then writes the
+package's version, and requires each package here at the version that package
+has once the release is out. Change both files when a dependency or a field
+changes, and `DependsOn` in `ci/packages.json` when a dependency changes, as the
+build stops when they disagree. A package with no in-repository dependency has
 no `remote_package.json`.
 
 ## Everything hoists to the root
@@ -299,8 +302,8 @@ Nothing reads the older `cxx/device-detection-data` and
 
 The workflows in `.github/workflows` call the shared workflows in
 [common-ci](https://github.com/51Degrees/common-ci), which run the scripts in
-`ci/`. `ci/packages.ps1` lists the native modules and the packages published to
-npm.
+`ci/`. `ci/packages.ps1` lists the native modules, and `ci/packages.json` the
+packages published to npm.
 
 ## Releases
 
@@ -312,5 +315,20 @@ into `main` from any other branch.
 
 ## Versions
 
-The repository has one version, tagged as a plain version such as `4.5.97`.
-`ci/get-next-package-version.ps1` moves only the patch number.
+Each package has its own version, tagged `<package>/<version>`, such as
+`fiftyone.pipeline.core/4.5.103`. A publish releases a package when a file
+under its `Path` or `ExtraPaths` in `ci/packages.json` changed since its last
+tag, other than under its `ExcludePaths`, and releases every package that
+depends on it with it. `ci/release-plan.ps1` works this out with common-ci's
+`steps/release-plan.ps1`, and only the patch number moves.
+
+A package's examples are in its `ExcludePaths`, so a change only to them
+releases nothing. The two `shared` packages are the exception, because their
+`index.js` exports their `examples` and `tests` modules.
+
+`ci/check-version-bump.ps1` refuses a major or minor move for any package,
+against its own tags and against the version npm installs by default.
+`ci/check-release-interval.ps1` holds each package to one release a week. A
+package with no tag of its own stops the publish, unless `ci/packages.json`
+gives it a `FirstVersion`. The plain tags such as `4.5.102` are the releases
+from when every package had one version.
