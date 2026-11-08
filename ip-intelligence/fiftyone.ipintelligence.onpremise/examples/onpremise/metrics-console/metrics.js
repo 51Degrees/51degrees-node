@@ -29,7 +29,10 @@
  * equivalent radius if the area can be represented as a circle.
  *
  * The example can take a long time to complete. The sample of IP
- * addresses used in the metrics can be adjusted as a parameter.
+ * addresses used in the metrics can be adjusted as a parameter. The
+ * example uses the LowMemory performance profile unless another, such as
+ * MaxPerformance, is named as the fourth parameter. MaxPerformance runs
+ * much faster but holds the whole data file in memory.
  *
  * This example is primarily designed for those who are interested in
  * verifying the published metrics associated with 51Degrees'
@@ -344,25 +347,32 @@ const writeToCsv = function (output, groups) {
  * @param {Function} condition function used to determine if an IP address
  * range should be included, or undefined to include all ranges
  * @param {object} progress writable stream for progress messages
+ * @param {string} [performanceProfile] the performance profile to use,
+ * LowMemory unless another is named
  */
 const run = async function (
   dataFile,
   output,
   samplePercentage,
   condition,
-  progress) {
+  progress,
+  performanceProfile = 'LowMemory') {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
   // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
-    // We use the max performance profile for optimal detection speed
-    // in this example. See the documentation for more detail on this
-    // and other configuration options:
+    // The low memory profile is the default because this example needs
+    // the Enterprise data file, which is about 6 GB. It reads the file as
+    // it goes, which uses little memory but runs much more slowly.
+    // MaxPerformance holds all of the file in memory and runs much faster,
+    // where the machine has the memory for it. Choose it with the fourth
+    // command line argument. See the documentation for more detail on
+    // this and other configuration options:
     // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
     // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
-    performanceProfile: 'MaxPerformance',
+    performanceProfile,
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
     shareUsage: false,
@@ -446,6 +456,11 @@ if (process.env.JEST_WORKER_ID === undefined) {
     ? parseFloat(args[2])
     : DEFAULT_SAMPLE_PERCENTAGE;
 
+  // Get the performance profile, LowMemory unless another is named, for
+  // example MaxPerformance where the machine can hold the whole data file
+  // in memory.
+  const performanceProfile = args.length > 3 ? args[3] : 'LowMemory';
+
   // A condition can be used to limit the ranges included. For example,
   // only include IPv4 ranges as there are too many IPv6 addresses for
   // the metrics example to complete in a short time frame.
@@ -459,7 +474,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
       output,
       samplePercentage,
       condition,
-      process.stdout).then(function () {
+      process.stdout,
+      performanceProfile).then(function () {
       output.end();
       console.log(`Output written to '${outputFile}'`);
     });

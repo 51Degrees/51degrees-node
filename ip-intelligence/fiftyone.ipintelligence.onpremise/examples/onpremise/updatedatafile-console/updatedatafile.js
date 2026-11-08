@@ -214,7 +214,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // let's check this file out
     const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
       dataFile: dataFilePath,
-      performanceProfile: 'Balanced',
+      // The low memory profile reads the file as it goes, because the
+      // Enterprise data file this example works with is about 6 GB.
+      performanceProfile: 'LowMemory',
       shareUsage: false,
       autoUpdate: false,
       updateOnStart: false,
@@ -312,6 +314,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // file to a temporary file (createTempDataCopy parameter == true.
     dataFile: dataFilePath,
     createTempDataCopy: true,
+    // The low memory profile reads the file as it goes, because the
+    // Enterprise data file this example downloads is about 6 GB.
+    performanceProfile: 'LowMemory',
     // Enable automatic updates once the pipeline has started
     autoUpdate: true,
     // For automatic updates to work you will need to provide a license key.

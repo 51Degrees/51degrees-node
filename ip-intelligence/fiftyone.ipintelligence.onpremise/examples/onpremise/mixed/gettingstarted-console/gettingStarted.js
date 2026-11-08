@@ -184,7 +184,10 @@ const run = async function (deviceDataFile, ipDataFile, output) {
   // Create the IP intelligence engine from scratch.
   const ipEngine = new IpIntelligenceOnPremise({
     dataFilePath: ipDataFile,
-    performanceProfile: 'MaxPerformance',
+    // This example picks the Enterprise IP intelligence data file first,
+    // which is about 6 GB, so the low memory profile reads the file as it
+    // goes rather than holding all of it in memory.
+    performanceProfile: 'LowMemory',
     // inhibit auto-update of the data file for this example. An empty
     // license key disables automatic updates.
     licenceKeys: '',
