@@ -175,9 +175,16 @@ function quotedForLog (text) {
  * and query evidence as that is all that is used by
  * the JavaScript builder
  **/
+/**
+ * The script reads the query string, and the host and protocol it calls
+ * back to, so those are the evidence that can change it.
+ */
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    return key.indexOf('query.') !== -1 || key.indexOf('header.') !== -1;
+    const lower = key.toLowerCase();
+    return lower.startsWith('query.') ||
+      lower === 'header.host' ||
+      lower === 'header.protocol';
   }
 }
 
