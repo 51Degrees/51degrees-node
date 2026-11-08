@@ -31,8 +31,8 @@
  * The example can take a long time to complete. The sample of IP
  * addresses used in the metrics can be adjusted as a parameter. The
  * example uses the LowMemory performance profile unless another, such as
- * MaxPerformance, is named as the fourth parameter. MaxPerformance runs
- * much faster but holds the whole data file in memory.
+ * MaxPerformance, is named as the fourth command line argument.
+ * MaxPerformance runs much faster but holds the whole data file in memory.
  *
  * This example is primarily designed for those who are interested in
  * verifying the published metrics associated with 51Degrees'

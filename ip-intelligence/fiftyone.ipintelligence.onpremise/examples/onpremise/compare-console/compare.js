@@ -62,6 +62,10 @@
  * Geometries
  * Contains
  *
+ * The example uses the LowMemory performance profile unless another, such
+ * as MaxPerformance, is named as the fourth command line argument.
+ * MaxPerformance runs much faster but holds the whole data file in memory.
+ *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console/compare.js).
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
