@@ -81,6 +81,13 @@ describe('Examples', () => {
       const result = await example.run(
         getDataFilePath(liteDataFileName), { write: () => {} });
 
+      // A free data file has no country codes, so the example says so and
+      // stops without ordering anything. The tests of the examples without
+      // settings check what it writes.
+      if (result === undefined) {
+        return;
+      }
+
       assertOrdered(result.flowData, result.geographicalCodes,
         result.geographicalNames, 'countrycodesgeographical');
       assertOrdered(result.flowData, result.populationCodes,

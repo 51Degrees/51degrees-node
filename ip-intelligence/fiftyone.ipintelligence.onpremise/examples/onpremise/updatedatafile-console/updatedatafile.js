@@ -53,8 +53,9 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
  *  - Daily auto-update
  *
  * ## License Key
- * In order to test this example you will need a 51Degrees Enterprise license which can be
- * purchased from our [pricing page](https://51degrees.com/pricing/annual?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=header).
+ * Updating the data file needs a 51Degrees licence key for the Enterprise data file.
+ * Without one, the example shows the free ASN data file and says where to ask for a key.
+ * Contact us for a key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=header
  * # Data Files
  * You can find out more about data files, licenses etc. at our (FAQ page)[https://51degrees.com/resources/faqs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=header]
  * ## Enterprise Data File
@@ -168,6 +169,42 @@ const UPDATE_EXAMPLE_LICENSE_KEY_NAME = 'LicenseKey';
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
 
+// The free data file shown when there is no licence key. The ASN data file
+// is far smaller than the Lite data file.
+const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
+
+// Where to ask for a licence key and a copy of the Enterprise data file,
+// tagged with this example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licence-key';
+
+// Without a licence key the example cannot download a data file, so it
+// shows the data file it would start from, the free ASN data file unless
+// another is given, and says what an update needs.
+const explainLicenseKey = function (dataFilePath, output) {
+  const dataFile = dataFilePath && fs.existsSync(dataFilePath)
+    ? dataFilePath
+    : ExampleUtils.findDataFile(ASN_V_4_1_IPI);
+  if (dataFile !== undefined && fs.existsSync(dataFile)) {
+    const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
+      dataFile,
+      // The low memory profile reads the file as it goes, because a file
+      // given to this example is the Enterprise data file, which is about
+      // 6 GB, rather than the free ASN data file used otherwise.
+      performanceProfile: 'LowMemory',
+      shareUsage: false,
+      autoUpdate: false,
+      updateOnStart: false,
+      fileSystemWatcher: false
+    }).build();
+    ExampleUtils.checkDataFile(pipeline, dataFile);
+  }
+  output.write('Updating the data file downloads the Enterprise data file, ' +
+    'which needs a licence key. Give the key as the first command line ' +
+    'argument, or in the environment variable ' +
+    `'${UPDATE_EXAMPLE_LICENSE_KEY_NAME}'. Contact us for a key and a copy ` +
+    `at ${CONTACT_US}\n`);
+};
+
 const run = async function (dataFilePath, licenseKey, interactive, output) {
   output.write('Starting example\n');
   // try to find a license key
@@ -175,12 +212,8 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     licenseKey = KeyUtils.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
-    console.error('In order to test this example you will need a 51Degrees Enterprise ' +
-      'license which can be obtained on a trial basis or purchased from our\n' +
-      'pricing page https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=enterprise-license-required. You must supply the license ' +
-      'key as an argument to this program, or as an environment or system variable ' +
-      `named '${UPDATE_EXAMPLE_LICENSE_KEY_NAME}'`);
-    throw new Error('No license key available');
+    explainLicenseKey(dataFilePath, output);
+    return;
   }
 
   // work out where the downloaded file will be put, directory must exist
@@ -224,7 +257,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     }).build();
     // and output the results
     ExampleUtils.checkDataFile(pipeline, dataFilePath);
-    if (ExampleUtils.getDataTier(pipeline) === 'Lite') {
+    if (ExampleUtils.isFreeDataFile(pipeline.getElement('ip'))) {
       console.error('Will not download an "Enterprise" data file over the top of ' +
         'a "Lite" data file, please supply another location.');
       throw new Error('File supplied has wrong data tier');
@@ -320,7 +353,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // Enable automatic updates once the pipeline has started
     autoUpdate: true,
     // For automatic updates to work you will need to provide a license key.
-    // A license key can be obtained with a subscription from https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
+    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
     licenceKeys: licenseKey,
     // Enable update on startup, the auto update system
     // will be used to check for an update before the
