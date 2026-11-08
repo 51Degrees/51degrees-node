@@ -110,6 +110,9 @@ class CloudRequestEngine extends Engine {
     // and getEvidenceKeys replaces this with the keys the service lists.
     this.evidenceKeyFilter = new EvidenceKeyFilter();
 
+    // Set once the cloud service's evidence keys have arrived.
+    this.evidenceKeysFetched = false;
+
     // Properties of connected FlowElements
     this.flowElementProperties = {};
   }
@@ -117,13 +120,15 @@ class CloudRequestEngine extends Engine {
   /**
    * Check if the keys and properties have been fetched.
    *
-   * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-   * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+   * True once the cloud service's evidence keys have arrived and its
+   * properties have been read, so they are fetched once rather than for
+   * every request.
    *
    * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
    */
   get keysAndPropertiesFetched () {
-    return Object.keys(this.flowElementProperties).length > 0 && this.evidenceKeyFilter.length > 0;
+    return Object.keys(this.flowElementProperties).length > 0 &&
+      this.evidenceKeysFetched;
   }
 
   /**
@@ -381,6 +386,7 @@ class CloudRequestEngine extends Engine {
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
+          engine.evidenceKeysFetched = true;
 
           resolve();
         }).catch(function (response) {
