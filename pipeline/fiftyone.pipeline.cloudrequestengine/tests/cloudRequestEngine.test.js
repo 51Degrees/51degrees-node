@@ -304,3 +304,36 @@ test('evidence set before the keys arrive is kept', () => {
       .toBeFalsy();
   });
 });
+
+/**
+ * The cloud service's evidence keys and properties are fetched before the
+ * first request is answered, and not again for later requests.
+ */
+test('the keys and properties are not fetched again for a later request', () => {
+  const client = new MockRequestClient();
+  let gets = 0;
+  const get = client.get.bind(client);
+  client.get = function (url, origin) {
+    gets++;
+    return get(url, origin);
+  };
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: client
+  });
+  const device = new CloudEngine();
+  device.dataKey = 'device';
+  const pipeline = new PipelineBuilder().add(engine).add(device).build();
+
+  const first = pipeline.createFlowData();
+  first.evidence.add('header.user-agent', 'iPhone');
+  return first.process().then(function () {
+    const afterFirst = gets;
+    expect(afterFirst).toBeGreaterThan(0);
+    const second = pipeline.createFlowData();
+    second.evidence.add('header.user-agent', 'iPhone');
+    return second.process().then(function () {
+      expect(gets).toBe(afterFirst);
+    });
+  });
+});
