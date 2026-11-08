@@ -22,6 +22,7 @@
 
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
+const CloudEngine = require('../cloudEngine');
 const sharedValues = require('../sharedValues');
 const MockRequestClient = require('./classes/mockRequestClient');
 const AcceptEveryKeyElement = require('./classes/acceptEveryKeyElement');
@@ -275,5 +276,31 @@ test('get content keeps dotted names apart', () => {
   expect(result).toStrictEqual({
     'id.usage': 'standard',
     'id.email': 'someone@example.com'
+  });
+});
+
+/**
+ * The cloud service's keys are fetched when the Pipeline first processes, so
+ * evidence set before then is kept, and once they arrive the engine accepts
+ * only the keys the service lists.
+ */
+test('evidence set before the keys arrive is kept', () => {
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  });
+  // A cloud engine is what asks the request engine to fetch the keys.
+  const device = new CloudEngine();
+  device.dataKey = 'device';
+  const pipeline = new PipelineBuilder().add(engine).add(device).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('header.user-agent', 'iPhone');
+  expect(data.evidence.get('header.user-agent')).toBe('iPhone');
+
+  return data.process().then(function () {
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeTruthy();
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.x-test'))
+      .toBeFalsy();
   });
 });
