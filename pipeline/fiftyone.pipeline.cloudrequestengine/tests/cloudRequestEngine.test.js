@@ -24,6 +24,7 @@ const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const sharedValues = require('../sharedValues');
 const MockRequestClient = require('./classes/mockRequestClient');
+const AcceptEveryKeyElement = require('./classes/acceptEveryKeyElement');
 const each = require('jest-each').default;
 const util = require('util');
 const errorMessages = require('../errorMessages');
@@ -135,8 +136,11 @@ each([
       requestClient: client
     });
 
+    // The stand-in service lists only some keys, so an element that accepts
+    // every key keeps the rest of the evidence for the engine to order.
     const builder = new PipelineBuilder();
-    const pipeline = builder.add(engine).build();
+    const pipeline = builder.add(new AcceptEveryKeyElement())
+      .add(engine).build();
 
     const flowData = pipeline.createFlowData();
     flowData.evidence.add(evidence1Parts[0], evidence1Parts[1]);
@@ -202,6 +206,7 @@ each([
     });
 
     const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
       .add(engine)
       .build();
 
@@ -236,6 +241,7 @@ each([
     });
 
     const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
       .add(engine)
       .build();
 

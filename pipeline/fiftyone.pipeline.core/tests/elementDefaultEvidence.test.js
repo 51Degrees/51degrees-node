@@ -23,6 +23,8 @@
 const FlowElement = require('../flowElement');
 const PipelineBuilder = require('../pipelineBuilder');
 const BasicListEvidenceKeyFilter = require('../basicListEvidenceKeyFilter');
+const JavaScriptBuilderElement = require('../javascriptbuilder');
+const SequenceElement = require('../sequenceElement');
 
 const NOT_DECLARED = [
   'header.user-agent',
@@ -61,4 +63,31 @@ test('an element that declares no evidence widens nothing', () => {
   flowData.evidence.add('header.x-test', 'a header');
   expect(flowData.evidence.get('header.user-agent')).toBe('a browser');
   expect(flowData.evidence.get('header.x-test')).toBeUndefined();
+});
+
+/**
+ * The JavaScript builder reads the query string, the host and the protocol,
+ * and nothing else.
+ */
+test('the JavaScript builder accepts only what it reads', () => {
+  const filter = new JavaScriptBuilderElement({}).evidenceKeyFilter;
+  ['query.a', 'query.session-id', 'query.fod-js-object-name', 'header.host',
+    'header.protocol', 'Header.Host'].forEach((key) => {
+    expect(filter.filterEvidenceKey(key)).toBe(true);
+  });
+  ['header.x-test', 'header.x-query', 'header.user-agent', 'cookie.query',
+    'server.client-ip', 'header.query.a'].forEach((key) => {
+    expect(filter.filterEvidenceKey(key)).toBeFalsy();
+  });
+});
+
+/**
+ * The sequence element reads the session id and the sequence.
+ */
+test('the sequence element accepts its two keys', () => {
+  const filter = new SequenceElement().evidenceKeyFilter;
+  expect(filter.filterEvidenceKey('query.session-id')).toBe(true);
+  expect(filter.filterEvidenceKey('query.sequence')).toBe(true);
+  expect(filter.filterEvidenceKey('query.other')).toBeFalsy();
+  expect(filter.filterEvidenceKey('header.x-test')).toBeFalsy();
 });
