@@ -124,8 +124,10 @@ class CountriesTranslationEngine extends TranslationEngine {
    * countries as { code, englishName } pairs, from countrycodes.en_GB.yml
    */
   constructor ({ sources, allCountries } = {}) {
+    // The older option names, sourceDataKey and behavior, are passed because
+    // every release of fiftyone.pipeline.translation accepts them.
     super({
-      sourceElementDataKey: constants.countryNamesKey,
+      sourceDataKey: constants.countryNamesKey,
       elementDataKey: constants.countryNamesTranslatedKey,
       translations: [
         {
@@ -139,7 +141,7 @@ class CountriesTranslationEngine extends TranslationEngine {
       ],
       sources,
       fixedLanguage: null,
-      missingTranslationBehavior: MissingTranslationBehavior.Original
+      behavior: MissingTranslationBehavior.Original
     });
 
     this.allCountries = allCountries || [];

@@ -44,8 +44,10 @@ class CountryCodeTranslationEngine extends TranslationEngine {
    * sources, a map of file name to YAML content string
    */
   constructor ({ sources } = {}) {
+    // The older option names, sourceDataKey and behavior, are passed because
+    // every release of fiftyone.pipeline.translation accepts them.
     super({
-      sourceElementDataKey: constants.ipDataKey,
+      sourceDataKey: constants.ipDataKey,
       elementDataKey: constants.countryNamesKey,
       translations: [
         {
@@ -59,7 +61,7 @@ class CountryCodeTranslationEngine extends TranslationEngine {
       ],
       sources,
       fixedLanguage: 'en_GB',
-      missingTranslationBehavior: MissingTranslationBehavior.Original
+      behavior: MissingTranslationBehavior.Original
     });
   }
 }
