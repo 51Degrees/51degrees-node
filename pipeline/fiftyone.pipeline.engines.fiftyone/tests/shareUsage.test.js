@@ -476,3 +476,282 @@ test('share usage - XML characters', done => {
     }, 2000);
   });
 });
+
+/**
+ * Check that with no options the element shares headers and the 51Degrees
+ * cookies and parameters, and leaves out other cookies, the Cookie header,
+ * and other query string and form parameters.
+ */
+test('share usage - default shares only accepted evidence', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'some user agent');
+  flowData.evidence.add('cookie.51d_screenpixelswidth', '1080');
+  flowData.evidence.add('query.51d_gethighentropyvalues', 'hev');
+  flowData.evidence.add('cookie.sessionid', 'cookie value');
+  flowData.evidence.add('header.cookie', 'sessionid=header value');
+  flowData.evidence.add('query.password', 'password value');
+  flowData.evidence.add('query.id.email', 'email value');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<header Name="user-agent">some user agent</header>');
+      expect(received[0]).toContain('<cookie Name="51d_screenpixelswidth">1080</cookie>');
+      expect(received[0]).toContain('<query Name="51d_gethighentropyvalues">hev</query>');
+      expect(received[0]).not.toContain('cookie value');
+      expect(received[0]).not.toContain('header value');
+      expect(received[0]).not.toContain('password value');
+      expect(received[0]).not.toContain('email value');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Check that the email address, the salt for hashed email identifiers, the
+ * query string and the path are not shared, though the rules for their
+ * prefixes would share them.
+ */
+test('share usage - never shared evidence', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'some user agent');
+  flowData.evidence.add('id.email', 'email value');
+  flowData.evidence.add('header.id.salt', 'salt value');
+  flowData.evidence.add('server.request-query', 'query string value');
+  flowData.evidence.add('server.request-path', 'path value');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('some user agent');
+      expect(received[0]).not.toContain('email value');
+      expect(received[0]).not.toContain('salt value');
+      expect(received[0]).not.toContain('query string value');
+      expect(received[0]).not.toContain('path value');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Check that sharing all evidence shares what the other rules leave out,
+ * but not the evidence that is never shared.
+ */
+test('share usage - share all', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    shareAll: true
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('cookie.sessionid', 'cookie value');
+  flowData.evidence.add('query.campaign', 'campaign value');
+  flowData.evidence.add('query.id.email', 'email value');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<cookie Name="sessionid">cookie value</cookie>');
+      expect(received[0]).toContain('<query Name="campaign">campaign value</query>');
+      expect(received[0]).not.toContain('email value');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Check that a query string parameter whose name contains a dot is matched
+ * by its whole name against the parameters to share.
+ */
+test('share usage - parameter names with dots', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    queryWhitelist: ['valid.email']
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('query.valid.email', 'valid value');
+  flowData.evidence.add('query.valid', 'first part value');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<query Name="valid.email">valid value</query>');
+      expect(received[0]).not.toContain('first part value');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Check that with session tracking on the session cookie is kept in the
+ * evidence, but neither it nor any other ordinary cookie is shared.
+ */
+test('share usage - session cookie', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    cookie: 'sessionid',
+    trackSession: true
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'some user agent');
+  flowData.evidence.add('cookie.sessionid', 'session value');
+  flowData.evidence.add('cookie._ga', 'analytics value');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(true);
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('some user agent');
+      expect(received[0]).not.toContain('session value');
+      expect(received[0]).not.toContain('analytics value');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Check that session tracking is off by default, and that naming the session
+ * cookie then has no effect. The cookie is not kept, and evidence already
+ * shared is not shared again for a new session.
+ */
+test('share usage - session cookie without session tracking', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    cookie: 'sessionid'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData1 = pipeline.createFlowData();
+  flowData1.evidence.add('header.user-agent', 'repeated user agent');
+  flowData1.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData2 = pipeline.createFlowData();
+  flowData2.evidence.add('header.user-agent', 'repeated user agent');
+  flowData2.evidence.add('cookie.sessionid', 'session value 2');
+
+  flowData1.process().then(() => {
+    flowData2.process().then(() => {
+      setTimeout(() => {
+        expect(received.length).toBe(1);
+        expect(received[0]).not.toContain('session value');
+        expect(usageEngine.evidenceKeyFilter.filterEvidenceKey('cookie.sessionid')).toBe(false);
+        expect(usageEngine.trackSession).toBe(false);
+        done();
+      }, 2000);
+    });
+  });
+});
+
+/**
+ * Check that with session tracking on, evidence already shared is shared
+ * again for a new session but not for a repeat in the same session, and that
+ * the session cookie is not shared.
+ */
+test('share usage - session tracking', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/',
+    cookie: 'sessionid',
+    trackSession: true
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData1 = pipeline.createFlowData();
+  flowData1.evidence.add('header.user-agent', 'repeated user agent');
+  flowData1.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData2 = pipeline.createFlowData();
+  flowData2.evidence.add('header.user-agent', 'repeated user agent');
+  flowData2.evidence.add('cookie.sessionid', 'session value 1');
+  const flowData3 = pipeline.createFlowData();
+  flowData3.evidence.add('header.user-agent', 'repeated user agent');
+  flowData3.evidence.add('cookie.sessionid', 'session value 2');
+
+  flowData1.process().then(() => {
+    flowData2.process().then(() => {
+      flowData3.process().then(() => {
+        setTimeout(() => {
+          expect(received.length).toBe(2);
+          const all = received.join('\n');
+          expect(all.split('repeated user agent').length - 1).toBe(2);
+          expect(all).not.toContain('session value');
+          done();
+        }, 2000);
+      });
+    });
+  });
+});
+
+/**
+ * Check that a request differing from one already shared only in its
+ * session id and sequence number is not shared again.
+ */
+test('share usage - repeat with new sequence not shared', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData1 = pipeline.createFlowData();
+  flowData1.evidence.add('header.user-agent', 'repeated user agent');
+  flowData1.evidence.add('query.session-id', 'session 1');
+  flowData1.evidence.add('query.sequence', '1');
+  const flowData2 = pipeline.createFlowData();
+  flowData2.evidence.add('header.user-agent', 'repeated user agent');
+  flowData2.evidence.add('query.session-id', 'session 2');
+  flowData2.evidence.add('query.sequence', '2');
+
+  flowData1.process().then(() => {
+    flowData2.process().then(() => {
+      setTimeout(() => {
+        expect(received.length).toBe(1);
+        expect(received[0]).toContain('<SessionId>session 1</SessionId>');
+        done();
+      }, 2000);
+    });
+  });
+});
