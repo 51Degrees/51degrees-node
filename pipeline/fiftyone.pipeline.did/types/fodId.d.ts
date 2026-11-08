@@ -66,16 +66,25 @@ declare class FodId {
      * URL-safe alphabet. Node's `Buffer` reads both alphabets, and a browser
      * has no `Buffer`.
      *
-     * Leading and trailing whitespace is stripped first, so a value carried
+     * White space before and after the text is removed first, being any
+     * character with the Unicode White_Space property, so a value carried
      * through a log line, a text field or a copy and paste with a stray
      * newline still parses. The URL-safe characters `-` and `_` become `+`
-     * and `/`, then padding is added where the stripped length calls for it.
-     * A string already in the standard form comes back unchanged.
+     * and `/`, then padding is added where the trimmed length calls for it.
+     * A string already in the standard form comes back unchanged apart from
+     * that trim.
+     *
+     * A text with white space inside it, or with a character from each
+     * alphabet such as both `+` and `-`, gives null, as the 51Did
+     * specification requires. The issuer writes neither, so either is a sign
+     * of a damaged value, such as a `+` a form decoder turned into a space or
+     * a value converted only in part.
      * @param {string} value base64 in the standard or URL-safe alphabet, with
-     * or without padding, and with or without surrounding whitespace
-     * @returns {string} the same bytes in the standard alphabet with padding
+     * or without padding, and with or without white space around it
+     * @returns {string|null} the same bytes in the standard alphabet with
+     * padding, or null where the text is refused
      */
-    static toStandardBase64(value: string): string;
+    static toStandardBase64(value: string): string | null;
     /**
      * Converts a base64 string in either alphabet to the URL-safe alphabet
      * without padding, the inverse of {@link FodId.toStandardBase64}, so the
@@ -89,12 +98,14 @@ declare class FodId {
     /**
      * Reads a 51Did from its base64 form without throwing. Both base64
      * alphabets are accepted, the standard one the cloud issues and the
-     * URL-safe one a page uses in a link, with or without padding. The value
-     * may be anything at all, because a 51Did arrives from outside and
-     * failing to be one is an ordinary outcome. An absent value or an empty
-     * string is `MISSING_INPUT`, a value that is not a string is
-     * `INVALID_INPUT_TYPE`, and a reason from the OWID library is reported
-     * exactly as the OWID library reported it.
+     * URL-safe one a page uses in a link, with or without padding, and white
+     * space around the value is ignored. The value may be anything at all,
+     * because a 51Did arrives from outside and failing to be one is an
+     * ordinary outcome. An absent value, or a string that is empty or only
+     * white space, is `MISSING_INPUT`, a value that is not a string is
+     * `INVALID_INPUT_TYPE`, and a string with white space inside it or with
+     * characters from both alphabets is `INVALID_BASE64`. A reason from the
+     * OWID library is reported exactly as the OWID library reported it.
      *
      * A successful read says the bytes are a structurally valid 51Did. It
      * fetches no key and checks no signature, so the identifier may still be
@@ -130,7 +141,8 @@ declare class FodId {
      * @throws {RangeError} when the payload is shorter than a 51Did of its
      * type can be
      * @throws {FodIdParseError} when the value is not an OWID, with the OWID
-     * library's status
+     * library's status, or when it has white space inside it or characters
+     * from both alphabets, with `INVALID_BASE64`
      */
     static fromBase64(base64: string): FodId;
     /**
