@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const EvidenceKeyFilterBase = require('./evidenceKeyFilter');
+const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 
 /**
  * @typedef {import('./flowData')} FlowData
@@ -44,8 +44,10 @@ class FlowElement {
    * elementData will be stored under
    * @param {Function} options.processInternal callback to act on flowData
    * @param {object} options.properties list of properties including metadata
-   * @param {EvidenceKeyFilter} options.evidenceKeyFilter an instance of
-   * an EvidenceKeyFilter to filter evidence added to the Pipeline
+   * @param {EvidenceKeyFilter} options.evidenceKeyFilter the evidence the
+   * element accepts, being the keys that can change its results. An element
+   * that gives none accepts no evidence, so it never widens what the
+   * Pipeline keeps
    */
   constructor ({
     processInternal,
@@ -64,7 +66,7 @@ class FlowElement {
     if (evidenceKeyFilter) {
       this.evidenceKeyFilter = evidenceKeyFilter;
     } else {
-      this.evidenceKeyFilter = new EvidenceKeyFilterBase();
+      this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
     }
 
     /**
