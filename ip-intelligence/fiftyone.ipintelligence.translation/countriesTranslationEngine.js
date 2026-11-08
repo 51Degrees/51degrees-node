@@ -125,7 +125,7 @@ class CountriesTranslationEngine extends TranslationEngine {
    */
   constructor ({ sources, allCountries } = {}) {
     super({
-      sourceDataKey: constants.countryNamesKey,
+      sourceElementDataKey: constants.countryNamesKey,
       elementDataKey: constants.countryNamesTranslatedKey,
       translations: [
         {
@@ -139,7 +139,7 @@ class CountriesTranslationEngine extends TranslationEngine {
       ],
       sources,
       fixedLanguage: null,
-      behavior: MissingTranslationBehavior.Original
+      missingTranslationBehavior: MissingTranslationBehavior.Original
     });
 
     this.allCountries = allCountries || [];

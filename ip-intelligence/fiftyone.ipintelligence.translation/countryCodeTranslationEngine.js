@@ -45,7 +45,7 @@ class CountryCodeTranslationEngine extends TranslationEngine {
    */
   constructor ({ sources } = {}) {
     super({
-      sourceDataKey: constants.ipDataKey,
+      sourceElementDataKey: constants.ipDataKey,
       elementDataKey: constants.countryNamesKey,
       translations: [
         {
@@ -59,7 +59,7 @@ class CountryCodeTranslationEngine extends TranslationEngine {
       ],
       sources,
       fixedLanguage: 'en_GB',
-      behavior: MissingTranslationBehavior.Original
+      missingTranslationBehavior: MissingTranslationBehavior.Original
     });
   }
 }
