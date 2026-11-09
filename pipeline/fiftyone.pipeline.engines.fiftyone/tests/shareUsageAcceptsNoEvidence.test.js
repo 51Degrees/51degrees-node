@@ -128,24 +128,30 @@ const accepts = (pipeline, key) => Object.values(pipeline.flowElements)
  *
  * @param {object} pipeline the pipeline
  * @param {object} headers the request headers
+ * @param {object} [session] the session object of the request, if it has one
  * @returns {Promise<object>} the processed flow data
  */
-const processRequest = (pipeline, headers) => new Promise((resolve, reject) => {
-  let flowData;
-  const server = http.createServer(async (req, res) => {
-    try {
-      flowData = pipeline.createFlowData();
-      await flowData.evidence.addFromRequestAsync(req);
-      await flowData.process();
-      res.end('done');
-    } catch (e) {
-      reject(e);
-      res.end();
-    }
+const processRequest = (pipeline, headers, session) => {
+  return new Promise((resolve, reject) => {
+    let flowData;
+    const server = http.createServer(async (req, res) => {
+      try {
+        if (session) {
+          req.session = session;
+        }
+        flowData = pipeline.createFlowData();
+        await flowData.evidence.addFromRequestAsync(req);
+        await flowData.process();
+        res.end('done');
+      } catch (e) {
+        reject(e);
+        res.end();
+      }
+    });
+    request(server).get('/page?51D_x=1&other=2').set(headers)
+      .then(() => resolve(flowData), reject);
   });
-  request(server).get('/page?51D_x=1&other=2').set(headers)
-    .then(() => resolve(flowData), reject);
-});
+};
 
 describe('usage sharing accepts no evidence', () => {
   test('a pipeline with usage sharing does not accept arbitrary headers',
@@ -171,6 +177,40 @@ describe('usage sharing accepts no evidence', () => {
       expect(Object.keys(flowData.evidence.getAll()))
         .not.toContain('server.http-request');
     });
+
+  test('the web request has every part the specification names', async () => {
+    const flowData = await processRequest(usagePipeline(),
+      { 'User-Agent': 'agent', Cookie: 'sessionid=cookie value' },
+      { '51D_session': 'one', theme: 'dark' });
+
+    const view = flowData.evidence.get('server.http-request');
+    expect(view['header.user-agent']).toBe('agent');
+    expect(view['cookie.sessionid']).toBe('cookie value');
+    expect(view['query.51D_x']).toBe('1');
+    expect(view['session.51D_session']).toBe('one');
+    expect(view['session.theme']).toBe('dark');
+    expect(view['server.client-ip']).toBeDefined();
+    expect(view['header.protocol']).toBe('http');
+    expect(view['server.request-method']).toBe('GET');
+    expect(view['server.request-path']).toBe('/page');
+    expect(Object.keys(view)).not.toContain('header.cookie');
+  });
+
+  test('the method is shared, and the path and Cookie header are not, ' +
+    'even when all evidence is shared', async () => {
+    const pipeline = usagePipeline({ shareAll: true });
+
+    await processRequest(pipeline, {
+      'User-Agent': 'agent value',
+      Cookie: 'sessionid=cookie value'
+    }, { '51D_session': 'session one' });
+    await receivedCount(1);
+
+    expect(received[0]).toContain('request-method');
+    expect(received[0]).toContain('session one');
+    expect(received[0]).not.toContain('/page');
+    expect(received[0]).not.toMatch(/header Name="cookie"/i);
+  });
 
   test('a header no other element accepts is shared from the web request, ' +
     'and the cookie header and a blocked header are not', async () => {
