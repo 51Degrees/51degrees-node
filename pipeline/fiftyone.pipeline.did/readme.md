@@ -214,9 +214,9 @@ OWID library's status, so a specific reason is never reduced to a general one.
 | Status | Reported by | Meaning |
 | --- | --- | --- |
 | `PARSED` | both | The input is a structurally valid 51Did. Says nothing about the signature |
-| `MISSING_INPUT` | OWID | Nothing was supplied, being `null`, `undefined`, an empty or whitespace-only string, or a buffer of no bytes |
+| `MISSING_INPUT` | OWID | Nothing was supplied, being `null`, `undefined`, a string that is empty or only white space, or a buffer of no bytes |
 | `INVALID_INPUT_TYPE` | OWID | The input was not a string (`tryParse`) or not a byte array (`tryFromByteArray`) |
-| `INVALID_BASE64` | OWID | The string is not base64 in either alphabet, so there are no bytes to read |
+| `INVALID_BASE64` | both | The string is not base64 in one alphabet, so there are no bytes to read. This package reports it for white space inside the string and for characters from both alphabets, and the OWID library for any other character outside the alphabet |
 | `UNSUPPORTED_VERSION` | OWID | The first byte names an envelope version the OWID library does not know |
 | `ABSENT_NODE` | OWID | The bytes are the OWID absent node marker, which stands for no identifier |
 | `UNEXPECTED_END` | OWID | The data stopped part way through a field |
@@ -367,7 +367,9 @@ npm test
 const { FodId, IdType, Usage } = require('fiftyone.pipeline.did');
 
 // Either base64 alphabet is accepted, the standard one the cloud issues and
-// the URL-safe one a page puts in a link, with or without padding.
+// the URL-safe one a page puts in a link, with or without padding. White
+// space around the value is ignored. A value with white space inside it, or
+// with characters from both alphabets, is refused.
 const fodId = FodId.fromBase64(base64FromCloudService);
 
 const usage = fodId.usage;        // Usage.NON_MARKETING / STANDARD / PERSONALIZED
@@ -850,8 +852,11 @@ or past it, or fails its signature check.
 
 `npm test` runs the unit tests, which use an injected transport and touch no
 network. `tests/didClient.integration.test.js` runs against the live cloud
-only when `_51DEGREES_RESOURCE_KEY` (or `RESOURCE_KEY`) is set, and is skipped
-otherwise.
+with the first of `_51DEGREES_RESOURCE_KEY`, `_51DEGREES_RESOURCE_KEY_BESPOKE`
+and `RESOURCE_KEY` that is set, and fails when none is. The key has to carry
+the FODid product, and the CloudV5FODiD product for the marketing usages.
+`tests/tierEntitlement.integration.test.js` checks what a Basic tier key is
+given, with the key in `_51DEGREES_RESOURCE_KEY_BASIC`.
 
 ## Find out more
 

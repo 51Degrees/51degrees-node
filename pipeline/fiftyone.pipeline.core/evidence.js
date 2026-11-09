@@ -118,6 +118,14 @@ class Evidence {
   constructor (flowData) {
     this.flowData = flowData;
     this.evidenceStore = {};
+    /**
+     * Every value addFromRequest read from the request, under its evidence
+     * key and before any is filtered out, or undefined when evidence was
+     * not added from a request.
+     *
+     * @type {Readonly<object>|undefined}
+     */
+    this.requestEvidence = undefined;
   }
 
   /**
@@ -180,13 +188,22 @@ class Evidence {
    * The 51Degrees client script sends its values in a form body, so without
    * one or the other they never reach the pipeline.
    *
+   * Every value read is also kept in requestEvidence, so that what the
+   * request carried can be used once processing is done, when the request's
+   * socket may have closed.
+   *
    * @param {object} request an HTTP request object
    * @returns {Evidence} return updated evidence
    */
   addFromRequest (request) {
-    // Process headers
+    // Every value read from the request, in order, so that a later value
+    // for a key replaces an earlier one, as add does.
+    const values = [];
+    const evidence = {
+      add: (key, value) => values.push([key, value])
+    };
 
-    const evidence = this;
+    // Process headers
 
     Object.keys(request.headers).forEach(key => {
       const value = request.headers[key];
@@ -262,6 +279,13 @@ class Evidence {
         evidence.add('query.' + name, value);
       }
     }
+
+    const requestEvidence = {};
+    for (const [key, value] of values) {
+      this.add(key, value);
+      requestEvidence[key] = value;
+    }
+    this.requestEvidence = Object.freeze(requestEvidence);
 
     return this;
   }

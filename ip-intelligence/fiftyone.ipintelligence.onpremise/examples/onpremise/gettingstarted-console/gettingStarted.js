@@ -44,8 +44,8 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
-const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../exampleUtils'));
 const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleConstants;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
@@ -53,10 +53,14 @@ const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleCons
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=lite_v_4_1_ipi
+// limited accuracy and capabilities. Each property the example asks for
+// that only the Enterprise data file has is shown as needing it, with a
+// link to ask for a copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
 
 const outputValue = function (name, value) {
   // Individual result values have a wrapper called
@@ -108,18 +112,23 @@ const analyse = async function (evidence, pipeline, output) {
   // Most IP intelligence values are lists of weighted values
   // where the weight indicates the proportion of the result
   // that the value applies to.
-  message += outputValue('Registered Name', DataExtension.getValueHelper(ip, 'registeredname'));
-  message += outputValue('Registered Owner', DataExtension.getValueHelper(ip, 'registeredowner'));
-  message += outputValue('Registered Country', DataExtension.getValueHelper(ip, 'registeredcountry'));
-  message += outputValue('IP Range Start', DataExtension.getValueHelper(ip, 'iprangestart'));
-  message += outputValue('IP Range End', DataExtension.getValueHelper(ip, 'iprangeend'));
-  message += outputValue('Country', DataExtension.getValueHelper(ip, 'country'));
-  message += outputValue('Country Code', DataExtension.getValueHelper(ip, 'countrycode'));
-  message += outputValue('Town', DataExtension.getValueHelper(ip, 'town'));
-  message += outputValue('Latitude', DataExtension.getValueHelper(ip, 'latitude'));
-  message += outputValue('Longitude', DataExtension.getValueHelper(ip, 'longitude'));
+  // A property that the data file does not have is shown as needing the
+  // Enterprise data file. The free Lite data file has the registration
+  // properties.
+  const engine = pipeline.getElement('ip');
+  message += outputValue('Registered Name', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredName'));
+  message += outputValue('Registered Owner', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredOwner'));
+  message += outputValue('Registered Country', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredCountry'));
+  message += outputValue('IP Range Start', ExampleUtils.getEnterpriseValue(engine, ip, 'IpRangeStart'));
+  message += outputValue('IP Range End', ExampleUtils.getEnterpriseValue(engine, ip, 'IpRangeEnd'));
+  message += outputValue('Country', ExampleUtils.getEnterpriseValue(engine, ip, 'Country'));
+  message += outputValue('Country Code', ExampleUtils.getEnterpriseValue(engine, ip, 'CountryCode'));
+  message += outputValue('Town', ExampleUtils.getEnterpriseValue(engine, ip, 'Town'));
+  message += outputValue('Latitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Latitude'));
+  message += outputValue('Longitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Longitude'));
   message += '\n\n';
   output.write(message);
+  return message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (dataFile, output) {
@@ -145,8 +154,12 @@ const run = async function (dataFile, output) {
   }).build();
 
   // carry out some sample lookups
+  let needsEnterprise = false;
   for (const values of exampleConstants.defaultEvidenceValues) {
-    await analyse(values, pipeline, output);
+    needsEnterprise = await analyse(values, pipeline, output) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    output.write(`${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
   }
 
   ExampleUtils.checkDataFile(pipeline, dataFile);
