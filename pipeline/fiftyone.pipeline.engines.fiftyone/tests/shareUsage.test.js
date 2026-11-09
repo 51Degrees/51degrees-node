@@ -331,8 +331,8 @@ test('share usage - invalid char', done => {
       expect(received.length).toBe(1);
       expect(received[0]).not.toContain('ƌ');
       expect(received[0]).toContain(replacementChar);
-      expect(received[0]).toContain('replaced="true"');
-      expect(received[0]).toContain(`<header Name="user-agent" replaced="true">1${replacementChar}2</header>`);
+      expect(received[0]).toContain('escaped="true"');
+      expect(received[0]).toContain(`<header Name="user-agent" escaped="true">1${replacementChar}2</header>`);
       done();
     }, 2000);
   });
