@@ -91,6 +91,7 @@ declare class ShareUsage extends ShareUsage_base {
     requestedPackageSize: number;
     sharePercentage: number;
     shareData: any[];
+    dropped: number;
     maximumQueueSize: number;
     requestTimeout: number;
     backOff: ShareUsageBackOff;
@@ -138,8 +139,9 @@ declare class ShareUsage extends ShareUsage_base {
      */
     scheduleResume(pause: number): void;
     /**
-     * Send one message of requestedPackageSize entries, then the next until
-     * fewer are queued or a failed send pauses sending.
+     * Send one message of at most twice requestedPackageSize entries, then the
+     * next until fewer than requestedPackageSize are queued or a failed send
+     * pauses sending.
      */
     sendNext(): void;
     /**
