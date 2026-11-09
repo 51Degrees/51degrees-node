@@ -28,6 +28,10 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
  * @typedef {import('./flowData')} FlowData
  */
 
+// From this sequence number on, no JavaScript properties are listed, so that
+// the JavaScript does not call back to the server without end.
+const MaxJavaScriptSequence = 10;
+
 const elementBlacklist = [
   'jsonbundler', 'javascriptbuilder', 'set-headers', 'cloud', 'shareUsage'
 ];
@@ -51,11 +55,36 @@ class JSONBundlerElement extends FlowElement {
   }
 
   /**
+   * The sequence number the Sequence Element produced, which is its Element
+   * Data or, as a whole number a caller put in the evidence, query.sequence.
+   * Text from a query string does not count.
+   *
+   * @param {FlowData} flowData the FlowData being processed
+   * @returns {number} the sequence number
+   */
+  getSequence (flowData) {
+    let sequence;
+    try {
+      sequence = flowData.get('sequence').get('sequence');
+    } catch (e) {
+      sequence = flowData.evidence.get('query.sequence');
+    }
+    if (!Number.isInteger(sequence)) {
+      throw new Error('There is no sequence number. A Sequence Element ' +
+        'needs to be placed before the JSON Builder Element in the Pipeline.');
+    }
+    return sequence;
+  }
+
+  /**
    * The JSON Builder extracts all properties and serializes them into JSON
    *
    * @param {FlowData} flowData the FlowData being processed
    */
   processInternal (flowData) {
+    // Fails, and sets no JSON, where no sequence number has been produced.
+    const sequence = this.getSequence(flowData);
+
     // Get every property on every flowElement
     // Storing JavaScript properties in an extra section
 
@@ -183,10 +212,7 @@ class JSONBundlerElement extends FlowElement {
 
         const propertyObject = properties[property];
 
-        if (
-          !flowData.evidence.get('query.sequence') ||
-          flowData.evidence.get('query.sequence') < 10
-        ) {
+        if (sequence < MaxJavaScriptSequence) {
           const type =
             propertyObject[
               Object.keys(propertyObject).find(
