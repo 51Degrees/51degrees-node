@@ -424,7 +424,7 @@ test('share usage - 10,000 code points of emoji are not truncated', done => {
  * replaced, so the escapes do not count towards it.
  */
 test('share usage - escapes do not count towards the limit', done => {
-  const value = '100012' + 'X'.repeat(9997);
+  const value = '1\u00012' + 'X'.repeat(9997);
   sendAndCheck(value, xml => {
     expect(xml).not.toContain('truncated=');
     expect(xml).toContain(
