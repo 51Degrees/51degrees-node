@@ -204,7 +204,8 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {boolean} options.download whether to download the datafile
    * or store it in memory
    * @param {string} options.performanceProfile options are:
-   * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance
+   * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance.
+   * Balanced by default, as in the native code.
    * @param {boolean} options.fileSystemWatcher whether to monitor the datafile
    * path for changes
    * @param {number} options.concurrency defaults to the number of cpus
@@ -212,8 +213,11 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {boolean} options.reuseTempFile Indicates that an existing temp
    * file may be used. This should be selected if multiple instances wish to
    * use the same file to prevent high disk usage.
-   * @param {boolean} options.updateMatchedUserAgent True if the detection
-   * should record the matched characters from the target User-Agent
+   * @param {boolean} [options.updateMatchedUserAgent] True if the detection
+   * should record the matched characters from the target User-Agent, which
+   * the UserAgents property returns. On by default, as the native code sets
+   * it. Set it to false where UserAgents is not needed, which saves
+   * recording the characters.
    * @param {number} options.maxMatchedUserAgentLength Number of characters to
    * consider in the matched User-Agent. Ignored if updateMatchedUserAgent
    * is false
@@ -247,9 +251,9 @@ class DeviceDetectionOnPremise extends Engine {
       restrictedProperties,
       licenceKeys,
       download,
-      performanceProfile = 'LowMemory',
+      performanceProfile = 'Balanced',
       reuseTempFile = false,
-      updateMatchedUserAgent = false,
+      updateMatchedUserAgent,
       maxMatchedUserAgentLength,
       drift,
       difference,
@@ -394,7 +398,11 @@ class DeviceDetectionOnPremise extends Engine {
     }
 
     config.setReuseTempFile(reuseTempFile);
-    config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+
+    // Left at the native default, which is on, unless a value was given.
+    if (updateMatchedUserAgent !== undefined) {
+      config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+    }
 
     if (typeof allowUnmatched === 'boolean') {
       config.setAllowUnmatched(allowUnmatched);

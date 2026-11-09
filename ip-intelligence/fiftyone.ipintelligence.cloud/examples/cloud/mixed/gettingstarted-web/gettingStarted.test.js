@@ -42,18 +42,30 @@ const example = require(path.join(__dirname, '/gettingStarted.js'));
 
 const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils'));
 
-// Test constants
-const tc = require51('fiftyone.ipintelligence.shared').testConstants;
+const shared = require51('fiftyone.ipintelligence.shared');
+const tc = shared.testConstants;
+const keyUtils = shared.keyUtils;
+const OptionsExtension = shared.optionsExtension;
+const CloudRequestEngine =
+  require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const OptionsExtension =
-  require51('fiftyone.ipintelligence.shared').optionsExtension;
-
-const resourceKey = process.env[tc.envVars.superResourceKeyEnvVar] ||
-  ExampleUtils.getResourceKeyFromEnv();
+const resourceKeyNames = keyUtils.resourceKeyNames(
+  tc.envVars.superResourceKeyEnvVar,
+  ExampleUtils.RESOURCE_KEY_ENV_VAR,
+  ExampleUtils.LEGACY_RESOURCE_KEY_ENV_VAR);
 
 describe('Examples', () => {
-  const testFunc = resourceKey ? test : test.skip;
-  testFunc('cloud mixed getting started web', async () => {
+  test('cloud mixed getting started web', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        ['ip', 'device'], 'IP Intelligence and device detection ' +
+        'properties of the request'));
+    }
+    const cloud = new CloudRequestEngine({ resourceKey });
+    await keyUtils.requireProduct(cloud, 'ip');
+    await keyUtils.requireProduct(cloud, 'device');
+
     // Load configuration options
     const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 

@@ -262,9 +262,8 @@ const server = http.createServer(async (req, res) => {
 
       // Obtain all used evidence
       const allEvidence = flowData.evidence.getAll();
-      const evidences =
-        pipeline.getElement('device').evidenceKeyFilter.filterEvidence(
-          allEvidence);
+      const device = pipeline.getElement('device');
+      const evidences = device.evidenceKeyFilter.filterEvidence(allEvidence);
 
       // Compile a response
       res.end(compiledFunction(
@@ -276,17 +275,17 @@ const server = http.createServer(async (req, res) => {
           allEvidence,
           dataSourceTier: ExampleUtils.getDataTier(pipeline),
           coreJsPath,
-          hardwareVendor: dataExtension.getValueHelper(flowData.device, 'hardwarevendor'),
-          hardwareName: dataExtension.getValueHelper(flowData.device, 'hardwarename'),
-          deviceType: dataExtension.getValueHelper(flowData.device, 'devicetype'),
-          platformVendor: dataExtension.getValueHelper(flowData.device, 'platformvendor'),
-          platformName: dataExtension.getValueHelper(flowData.device, 'platformname'),
-          platformVersion: dataExtension.getValueHelper(flowData.device, 'platformversion'),
-          browserVendor: dataExtension.getValueHelper(flowData.device, 'browservendor'),
-          browserName: dataExtension.getValueHelper(flowData.device, 'browsername'),
-          browserVersion: dataExtension.getValueHelper(flowData.device, 'browserversion'),
-          screenWidth: dataExtension.getValueHelper(flowData.device, 'screenpixelswidth'),
-          screenHeight: dataExtension.getValueHelper(flowData.device, 'screenpixelsheight'),
+          hardwareVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'hardwarevendor'),
+          hardwareName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'hardwarename'),
+          deviceType: ExampleUtils.getEnterpriseValue(device, flowData.device, 'devicetype'),
+          platformVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformvendor'),
+          platformName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformname'),
+          platformVersion: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformversion'),
+          browserVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browservendor'),
+          browserName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browsername'),
+          browserVersion: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browserversion'),
+          screenWidth: ExampleUtils.getEnterpriseValue(device, flowData.device, 'screenpixelswidth'),
+          screenHeight: ExampleUtils.getEnterpriseValue(device, flowData.device, 'screenpixelsheight'),
           // The device id combines the profile ids of the hardware, platform,
           // browser and crawler components that were matched.
           deviceId: dataExtension.getValueHelper(flowData.device, 'deviceid')
