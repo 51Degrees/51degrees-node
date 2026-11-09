@@ -325,9 +325,11 @@ test('share usage back-off - failed answer logs the status and content', async (
   await failSends(pipeline, 1);
 
   await waitFor(
-    () => logged.some(entry => String(entry.message).includes('500')),
+    () => logged.some(entry => entry.level === 'warning' &&
+      String(entry.message).includes('500')),
     () => `The status code was not logged. Logged: ${JSON.stringify(logged)}`);
-  const failed = logged.find(entry => String(entry.message).includes('500'));
+  const failed = logged.find(entry => entry.level === 'warning' &&
+    String(entry.message).includes('500'));
   expect(failed.message).toContain('the service says no');
 }, 30000);
 
