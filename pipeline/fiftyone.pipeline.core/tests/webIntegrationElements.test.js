@@ -130,10 +130,12 @@ describe('Sequence Element data', () => {
     expect(properties.sequence.type).toBe('int');
   });
 
-  test('adds no section to the JSON sent to browsers', async () => {
-    const flowData = await run({});
+  test('adds a sequence section to the JSON sent to browsers', async () => {
+    const flowData = await run({
+      'query.session-id': 'abc-123',
+      'query.sequence': '4'
+    });
     const json = flowData.jsonbundler.json;
-    expect(Object.keys(json)).not.toContain('sequence');
-    expect(JSON.stringify(json)).not.toContain('session-id');
+    expect(json.sequence).toEqual({ 'session-id': 'abc-123', sequence: 5 });
   });
 });
