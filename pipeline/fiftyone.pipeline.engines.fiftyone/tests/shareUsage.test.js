@@ -43,6 +43,8 @@ const requestListener = function (req, res) {
   let data = '';
   // Unzip the data.
   const gunzip = zlib.createGunzip();
+  // Decode as the chunks arrive, without splitting a character in two.
+  gunzip.setEncoding('utf8');
   req.pipe(gunzip);
   gunzip.on('data', function (chunk) {
     data += chunk;
