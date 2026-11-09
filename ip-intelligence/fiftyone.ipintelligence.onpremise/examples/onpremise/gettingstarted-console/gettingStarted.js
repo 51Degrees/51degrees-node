@@ -53,7 +53,7 @@ const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleCons
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities. Each property the example asks for
+// a small number of Properties. Each property the example asks for
 // that only the Enterprise data file has is shown as needing it, with a
 // link to ask for a copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
