@@ -35,7 +35,7 @@ const os = require('os');
  * The maximum length of a piece of evidence's value which can be
  * added to the usage data being sent.
  */
-const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
 
@@ -372,30 +372,25 @@ class ShareUsage extends Engine {
   }
 }
 
-// a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-const VALID_XML_CHARS =
-  Array.from({ length: parseInt('0x7F', 16) - parseInt('0x20', 16) }, (v, k) => k + parseInt('0x20', 16))
-    .concat(
-      Array.from({ length: parseInt('0x100', 16) - parseInt('0x40', 16) }, (v, k) => k + parseInt('0x40', 16)));
-
-const IS_VALID_XML_CHAR = __getIsValidCharMap();
-
 /**
- * Get an object describing whether a character value is valid
+ * Whether a character is allowed in XML 1.0, which allows tab, line feed,
+ * carriage return, and the ranges U+0020 to U+D7FF, U+E000 to U+FFFD and
+ * U+10000 to U+10FFFF.
  *
- * @returns {object} Object of valid chars
+ * @param {number} code the UTF-16 code unit
+ * @returns {boolean} true if the character is allowed
  */
-function __getIsValidCharMap () {
-  const maxChar = parseInt('0x100', 16);
-  const isValidChar = {};
-  for (let c = 0; c <= maxChar; c++) {
-    isValidChar[c] = VALID_XML_CHARS.includes(c);
-  }
-  return isValidChar;
+function isValidXmlChar (code) {
+  return code === 0x9 || code === 0xA || code === 0xD ||
+    (code >= 0x20 && code <= 0xD7FF) ||
+    (code >= 0xE000 && code <= 0xFFFD);
 }
 
 /**
- * Replace characters that cause problems in XML with the "Replacement character"
+ * Prepares a value for the XML. A value over the maximum length is cut,
+ * special XML characters are escaped, and a character XML 1.0 does not
+ * allow is written as \x and four lower case hexadecimal digits of its
+ * code. A surrogate pair is a valid character and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
@@ -403,26 +398,43 @@ class ReplacedString {
     this.escaped = false;
     this.truncated = false;
     if (text) {
-      const escapedText = text
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const length = Math.min(escapedText.length, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
-      this.truncated = escapedText.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH;
-      Array.from(escapedText.substring(0, length))
-        .forEach(c => {
-          if (c.charCodeAt(0) < Object.keys(IS_VALID_XML_CHAR).length && IS_VALID_XML_CHAR[c.charCodeAt(0)]) {
-            this.result += c;
-          } else {
-            this.result += String.fromCharCode(parseInt('0xFFFD', 16));
-            this.escaped = true;
-          }
-        });
+      let value = text;
+      if (value.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH) {
+        this.truncated = true;
+        value = value.substring(0, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
+        // Do not leave half of a surrogate pair at the end.
+        const last = value.charCodeAt(value.length - 1);
+        if (last >= 0xD800 && last <= 0xDBFF) {
+          value = value.substring(0, value.length - 1);
+        }
+      }
+      for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code >= 0xD800 && code <= 0xDBFF &&
+          i + 1 < value.length &&
+          value.charCodeAt(i + 1) >= 0xDC00 &&
+          value.charCodeAt(i + 1) <= 0xDFFF) {
+          this.result += value.substring(i, i + 2);
+          i++;
+        } else if (isValidXmlChar(code)) {
+          this.result += ESCAPED_CHARS[value[i]] || value[i];
+        } else {
+          this.result += '\\x' + code.toString(16).padStart(4, '0');
+          this.escaped = true;
+        }
+      }
     }
   }
 }
+
+const ESCAPED_CHARS = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;',
+  '<': '&lt;',
+  '>': '&gt;'
+};
+
 /**
  * Internal class that is used to store details of data in memory
  * prior to it being sent to 51Degrees.
