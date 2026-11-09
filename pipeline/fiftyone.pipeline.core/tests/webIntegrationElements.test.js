@@ -139,3 +139,92 @@ describe('Sequence Element data', () => {
     expect(json.sequence).toEqual({ 'session-id': 'abc-123', sequence: 5 });
   });
 });
+
+describe('Sequence Element session id and sequence', () => {
+  const run = async (evidence) => {
+    const pipeline = new core.PipelineBuilder().add(userElement()).build();
+    const flowData = pipeline.createFlowData();
+    for (const key in evidence) {
+      flowData.evidence.add(key, evidence[key]);
+    }
+    await flowData.process();
+    return flowData;
+  };
+
+  const newId = /^[0-9a-f]{32}$/;
+
+  test.each([
+    ['5', 6],
+    [5, 6],
+    ['0', 1],
+    [0, 1],
+    ['2147483646', 2147483647]
+  ])('a sequence of %p with no session id counts up to %p and gets a new ' +
+    'session id', async (given, expected) => {
+    const flowData = await run({ 'query.sequence': given });
+    expect(flowData.sequence.get('session-id')).toMatch(newId);
+    expect(flowData.sequence.get('sequence')).toBe(expected);
+  });
+
+  test('a session id with no sequence gives a sequence of 1', async () => {
+    const flowData = await run({ 'query.session-id': 'abc-123' });
+    expect(flowData.sequence.get('session-id')).toBe('abc-123');
+    expect(flowData.sequence.get('sequence')).toBe(1);
+  });
+
+  test.each([[''], [[]], [['abc']], [{}], [7], [null]])(
+    'a session id of %p counts as absent and gets a new one', async (given) => {
+      const flowData = await run({
+        'query.session-id': given,
+        'query.sequence': '3'
+      });
+      expect(flowData.sequence.get('session-id')).toMatch(newId);
+      expect(flowData.sequence.get('sequence')).toBe(4);
+    });
+
+  test.each([
+    ['abc'], [''], ['-1'], ['1.5'], ['1e3'], [' 4'], ['2147483647'],
+    ['99999999999'], [-1], [1.5], [NaN], [Infinity], [2147483647],
+    [[]], [['5']], [{}], [null], [true]
+  ])('a sequence of %p counts as absent and gives 1', async (given) => {
+    const flowData = await run({
+      'query.session-id': 'abc-123',
+      'query.sequence': given
+    });
+    expect(flowData.sequence.get('session-id')).toBe('abc-123');
+    expect(flowData.sequence.get('sequence')).toBe(1);
+    expect(flowData.evidence.get('query.sequence')).toBe(1);
+  });
+});
+
+describe('JSON Builder exclusions', () => {
+  const ElementDataDictionary = core.ElementDataDictionary ||
+    require('../elementDataDictionary');
+
+  const elementWith = (dataKey) => new FlowElement({
+    dataKey,
+    properties: { value: { name: 'value', type: 'string' } },
+    processInternal: function (flowData) {
+      flowData.setElementData(new ElementDataDictionary({
+        flowElement: this,
+        contents: { value: 'x' }
+      }));
+    }
+  });
+
+  test('leave out the Cloud Request Engine and Usage Sharing and keep ' +
+    'other elements', async () => {
+    const pipeline = new core.PipelineBuilder()
+      .add(elementWith('cloud'))
+      .add(elementWith('shareUsage'))
+      .add(elementWith('other'))
+      .build();
+    const flowData = pipeline.createFlowData();
+    await flowData.process();
+    const keys = Object.keys(flowData.jsonbundler.json);
+    expect(keys).toContain('other');
+    expect(keys).not.toContain('cloud');
+    expect(keys).not.toContain('shareusage');
+    expect(keys).not.toContain('shareUsage');
+  });
+});
