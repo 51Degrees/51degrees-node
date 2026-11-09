@@ -20,8 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const util = require('util');
 const engines = require('fiftyone.pipeline.engines');
 const core = require('fiftyone.pipeline.core');
+const errorMessages = require('./errorMessages');
 const Engine = engines.Engine;
 const AspectDataDictionary = engines.AspectDataDictionary;
 const AspectPropertyValue = core.AspectPropertyValue;
@@ -38,7 +40,7 @@ const BasicListEvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
  * This is a template for all 51Degrees cloud engines.
  * It requires the 51Degrees cloudRequestEngine to be placed in a
  *  pipeline before it. It takes that raw JSON response and
- * parses it to extract the device part.
+ * parses it to extract the part under its data key.
  * It also uses this data to generate a list of properties and an evidence key filter
  **/
 class CloudEngine extends Engine {
@@ -46,6 +48,13 @@ class CloudEngine extends Engine {
     super(...arguments);
 
     this.dataKey = 'CloudEngineBase'; // This should be overridden
+
+    /**
+     * Whether an answer without this engine's element has been logged.
+     *
+     * @type {boolean}
+     */
+    this._missingElementReported = false;
 
     this.registrationCallbacks.push((pipeline, flowElement) => {
       this.handlePipelineRegistration(pipeline, flowElement);
@@ -115,23 +124,34 @@ class CloudEngine extends Engine {
     const engine = this;
 
     return engine.ready().then(function () {
-      let cloudData = flowData.get('cloud').get('cloud');
-
-      cloudData = JSON.parse(cloudData);
+      const cloudData = JSON.parse(flowData.get('cloud').get('cloud'));
+      const elementData = cloudData ? cloudData[engine.dataKey] : undefined;
       const result = {};
 
-      if (cloudData && cloudData[engine.dataKey] === null) {
+      if (elementData === undefined) {
+        // The cloud service leaves out a product the resource key does not
+        // include. That cannot change while the key stays the same, so it
+        // is logged once rather than on every request, and the request
+        // carries on with empty element data.
+        if (engine._missingElementReported === false) {
+          engine._missingElementReported = true;
+          flowData.pipeline.log('error', util.format(
+            errorMessages.elementMissing, engine.dataKey, engine.dataKey));
+        }
+      } else if (elementData === null) {
+        // A null element is an answer to this request, so its reason is
+        // logged every time.
+        const reason = cloudData[engine.dataKey + 'nullreason'];
         flowData.pipeline.log('error', engine.dataKey + ' not populated. ' +
-        cloudData[engine.dataKey + 'nullreason'] !== null
-          ? cloudData[engine.dataKey + 'nullreason']
-          : '\nThis may be because the provided API key is not authorised for ' + engine.dataKey + ' queries.');
+          (reason ||
+            util.format(errorMessages.elementNullNoReason, engine.dataKey)));
       } else {
-        // Loop over cloudData.device properties to check if they have a value
-        Object.entries(cloudData[engine.dataKey]).forEach(function ([key, value]) {
+        // A property with no value has a '<name>nullreason' beside it.
+        Object.entries(elementData).forEach(function ([key, value]) {
           result[key] = new AspectPropertyValue();
 
-          if (cloudData[engine.dataKey][key + 'nullreason']) {
-            result[key].noValueMessage = cloudData[engine.dataKey][key + 'nullreason'];
+          if (elementData[key + 'nullreason']) {
+            result[key].noValueMessage = elementData[key + 'nullreason'];
           } else {
             result[key].value = value;
           }
