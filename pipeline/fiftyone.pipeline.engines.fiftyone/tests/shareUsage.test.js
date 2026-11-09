@@ -291,7 +291,7 @@ test('share usage - session and sequence', done => {
     endpoint: 'http://127.0.0.1:8080/'
   });
 
-  const pipeline = new PipelineBuilder()
+  const pipeline = new PipelineBuilder({ addSequenceElement: false })
     .add(usageEngine)
     .build();
 
@@ -304,6 +304,34 @@ test('share usage - session and sequence', done => {
       expect(received.length).toBe(1);
       expect(received[0]).toContain('<SessionId>1</SessionId>');
       expect(received[0]).toContain('<Sequence>1</Sequence>');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * The Sequence Element runs before the usage sharing element, so the
+ * sequence shared is the one it has added one to.
+ */
+test('share usage - sequence after the Sequence Element', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('query.session-id', '1');
+  flowData.evidence.add('query.sequence', '1');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<SessionId>1</SessionId>');
+      expect(received[0]).toContain('<Sequence>2</Sequence>');
       done();
     }, 2000);
   });

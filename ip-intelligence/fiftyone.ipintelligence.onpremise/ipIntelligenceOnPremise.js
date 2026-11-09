@@ -433,7 +433,12 @@ class IpIntelligenceOnPremise extends Engine {
 
       const evidence = new ipi.swigWrapper.EvidenceIpiSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = ipi.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 
