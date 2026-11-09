@@ -1,0 +1,17 @@
+name: Temporary targeted tests
+on:
+  push:
+    branches:
+      - 'tmp/green-web9'
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: git submodule update --init pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npx eslint --ext .js device-detection/fiftyone.devicedetection.onpremise/deviceDetectionOnPremise.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console/gettingStarted.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/matchmetrics-console/matchMetrics.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/metadata-console/metaData.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/offlineprocessing-console/offlineProcessing.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console/performance.js device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/updatedatafile-console/updatedatafile.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-console/gettingStarted.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/metadata-console/metaData.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console/offlineProcessing.js ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/updatedatafile-console/updatedatafile.js ip-intelligence/fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise.js pipeline/fiftyone.pipeline.core/jsonbundler.js pipeline/fiftyone.pipeline.core/pipelineBuilder.js pipeline/fiftyone.pipeline.core/sequenceElement.js pipeline/fiftyone.pipeline.core/tests/core.test.js pipeline/fiftyone.pipeline.core/tests/javascriptbuilder.test.js pipeline/fiftyone.pipeline.core/tests/logs-errors-and-stops.test.js pipeline/fiftyone.pipeline.core/tests/webIntegrationElements.test.js pipeline/fiftyone.pipeline.engines.fiftyone/tests/shareUsage.test.js
+      - run: node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit pipeline/fiftyone.pipeline.engines/tests pipeline/fiftyone.pipeline.core/tests pipeline/fiftyone.pipeline.engines.fiftyone/tests
