@@ -193,9 +193,10 @@ test('file watcher keeps watching after a failed refresh', async () => {
     fs.writeFileSync(file, 'unusable');
     await failed;
     expect(dataFile.data).toBe('version 1');
-    expect(logs.length).toBeGreaterThan(0);
-    expect(logs[0].level).toBe('error');
-    expect(logs[0].message.message).toBe('The data file cannot be used.');
+    const error = logs.find((log) => log.level === 'error');
+    expect(error.message).toBe('An error occurred while applying a data ' +
+      'file update to testEngine. Error detail: The data file cannot be ' +
+      'used.');
     // The test resumes before the watcher has finished with the first
     // change, and on macOS a change made then is never reported.
     await sleep(500);
@@ -237,7 +238,7 @@ test('file watcher with no error listener writes a failed refresh to the ' +
     await failed;
     expect(dataFile.data).toBe('version 1');
     expect(consoleError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'The data file cannot be used.' }));
+      expect.stringContaining('Error detail: The data file cannot be used.'));
     // As in the test above.
     await sleep(500);
 
@@ -279,7 +280,8 @@ test('file watcher with an error listener reports a failed refresh to it',
         AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
       fs.writeFileSync(file, 'unusable');
       await failed;
-      expect(heard[0].message).toBe('The data file cannot be used.');
+      expect(heard[0]).toContain(
+        'Error detail: The data file cannot be used.');
       expect(consoleError).not.toHaveBeenCalled();
     } finally {
       // The folder is left in place, as in the tests above.
@@ -290,15 +292,17 @@ test('file watcher with an error listener reports a failed refresh to it',
   });
 
 /**
- * With a pipeline that has no 'error' listener, a download the server refuses
- * is written to the console rather than thrown.
+ * A download the server refuses is reported as a warning, as the data update
+ * page of the specification says, and nothing is thrown.
  */
-test('update route with no error listener writes a refused download to the ' +
-  'console', async () => {
+test('update route reports a refused download as a warning', async () => {
   const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
   const { folder, file } = newDataFile('update-');
   const server = await serve(403, 'refused');
-  const updateService = new DataFileUpdateService(new Pipeline([]));
+  const pipeline = new Pipeline([]);
+  const warnings = [];
+  pipeline.on('warn', (message) => warnings.push(message));
+  const updateService = new DataFileUpdateService(pipeline);
   const dataFile = downloadFrom(standInDataFile(file), server, folder);
 
   try {
@@ -306,8 +310,10 @@ test('update route with no error listener writes a refused download to the ' +
       AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
     updateService.updateDataFile(dataFile);
     await refused;
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('Access denied'));
+    expect(warnings.some((message) => message.includes(
+      'An error occurred while downloading a data file update for testEngine ' +
+      'from ' + dataFile.updateUrl))).toBe(true);
+    expect(consoleError).not.toHaveBeenCalled();
     expect(dataFile.updating).toBe(false);
   } finally {
     stop(server);
@@ -339,7 +345,7 @@ test('update route with no error listener writes a failed refresh to the ' +
     expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED]);
     expect(dataFile.data).toBe('version 1');
     expect(consoleError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'The data file cannot be used.' }));
+      expect.stringContaining('Error detail: The data file cannot be used.'));
   } finally {
     stop(server);
     fs.rmSync(folder, { recursive: true, force: true });
@@ -371,7 +377,8 @@ test('update route reports a failed refresh with no success after it',
       await failed;
       await downloadRemoved(folder);
       expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED]);
-      expect(heard[0].message).toBe('The data file cannot be used.');
+      expect(heard[0]).toContain(
+        'Error detail: The data file cannot be used.');
       expect(consoleError).not.toHaveBeenCalled();
     } finally {
       stop(server);

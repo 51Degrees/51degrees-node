@@ -282,7 +282,7 @@ describe('update from memory', () => {
   test('refuses something that is not bytes', () => {
     const { service } = loggingService();
     expect(() => service.updateFromMemory(memoryDataFile('version 1'),
-      'version 2')).toThrow(TypeError);
+      'version 2')).toThrow('must be a Buffer or a Uint8Array');
   });
 
   test('refuses a data file that is read from a path', () => {
@@ -290,7 +290,7 @@ describe('update from memory', () => {
     const dataFile = memoryDataFile('version 1');
     dataFile.path = '/some/file.dat';
     expect(() => service.updateFromMemory(dataFile, Buffer.from('x')))
-      .toThrow();
+      .toThrow('not held in memory');
   });
 });
 

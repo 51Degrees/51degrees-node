@@ -106,16 +106,14 @@ describe('update on start-up with no data file', () => {
   test('fails to process where the download fails', async () => {
     server = await serve(500);
     const pipeline = builderFor(server, folder, true).build();
+    const logged = [];
+    pipeline.on('error', (message) => logged.push(String(message)));
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('header.user-agent', MobileUserAgent);
-    let error;
-    try {
-      await flowData.process();
-    } catch (e) {
-      error = e;
-    }
-    expect(String(error.message || error)).toContain(
-      'There is no file at \'' + path.join(folder, 'missing.hash') + '\'');
+    await expect(flowData.process()).rejects.toBeDefined();
+    expect(logged.some((message) => message.includes(
+      'There is no file at \'' + path.join(folder, 'missing.hash') + '\'')))
+      .toBe(true);
   });
 
   test('still fails to build where the engine does not update on ' +
