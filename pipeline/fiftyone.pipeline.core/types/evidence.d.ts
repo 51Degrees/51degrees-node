@@ -15,6 +15,14 @@ declare class Evidence {
     flowData: import("./flowData");
     evidenceStore: {};
     /**
+     * Every value addFromRequest read from the request, under its evidence
+     * key and before any is filtered out, or undefined when evidence was
+     * not added from a request.
+     *
+     * @type {Readonly<object>|undefined}
+     */
+    requestEvidence: Readonly<object> | undefined;
+    /**
      * Add a piece of evidence to flowData
      *
      * @param {string} key evidence key to add
@@ -45,6 +53,10 @@ declare class Evidence {
      * so use addFromRequestAsync to read the body from the request instead.
      * The 51Degrees client script sends its values in a form body, so without
      * one or the other they never reach the pipeline.
+     *
+     * Every value read is also kept in requestEvidence, so that what the
+     * request carried can be used once processing is done, when the request's
+     * socket may have closed.
      *
      * @param {object} request an HTTP request object
      * @returns {Evidence} return updated evidence
