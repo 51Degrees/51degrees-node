@@ -1,0 +1,17 @@
+name: Temporary targeted tests
+on:
+  push:
+    branches:
+      - 'tmp/red-usage3'
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: git submodule update --init pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npx eslint --ext .js pipeline/fiftyone.pipeline.engines.fiftyone/shareUsage.js pipeline/fiftyone.pipeline.engines.fiftyone/tests/shareUsage.test.js
+      - run: node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit pipeline/fiftyone.pipeline.engines.fiftyone/tests/shareUsage.test.js
