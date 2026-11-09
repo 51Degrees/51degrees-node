@@ -62,6 +62,10 @@
  * Geometries
  * Contains
  *
+ * The example uses the LowMemory performance profile unless another, such
+ * as MaxPerformance, is named as the fourth command line argument.
+ * MaxPerformance runs much faster but holds the whole data file in memory.
+ *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console/compare.js).
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
@@ -205,19 +209,28 @@ const processTruth = async function (pipeline, truth) {
   };
 };
 
-const run = async function (dataFile, csvTruthFile, output, progress) {
+const run = async function (
+  dataFile,
+  csvTruthFile,
+  output,
+  progress,
+  performanceProfile = 'LowMemory') {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
   // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
-    // We use the max performance profile for optimal detection speed
-    // in this example. See the documentation for more detail on this
-    // and other configuration options:
+    // The low memory profile is the default because this example needs
+    // the Enterprise data file, which is about 6 GB. It reads the file as
+    // it goes, which uses little memory but runs much more slowly.
+    // MaxPerformance holds all of the file in memory and runs much faster,
+    // where the machine has the memory for it. Choose it with the fourth
+    // command line argument. See the documentation for more detail on
+    // this and other configuration options:
     // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
     // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
-    performanceProfile: 'MaxPerformance',
+    performanceProfile,
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
     shareUsage: false,
@@ -301,9 +314,19 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // Get the location for the output file.
   const outputFile = args.length > 2 ? args[2] : 'compare-output.csv';
 
+  // Get the performance profile, LowMemory unless another is named, for
+  // example MaxPerformance where the machine can hold the whole data file
+  // in memory.
+  const performanceProfile = args.length > 3 ? args[3] : 'LowMemory';
+
   if (dataFile !== undefined && csvTruthFile !== undefined) {
     const output = fs.createWriteStream(outputFile);
-    run(dataFile, csvTruthFile, output, process.stdout).then(function (compared) {
+    run(
+      dataFile,
+      csvTruthFile,
+      output,
+      process.stdout,
+      performanceProfile).then(function (compared) {
       output.end();
       if (compared) {
         console.log(`Output written to '${outputFile}'`);
