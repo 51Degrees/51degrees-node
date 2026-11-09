@@ -367,6 +367,35 @@ test('share usage - truncated value', done => {
 });
 
 /**
+ * Check that a value with an invalid character that is also too long is
+ * marked both escaped and truncated.
+ */
+test('share usage - escaped and truncated value', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const replacementChar = String.fromCharCode(parseInt('0xFFFD', 16));
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', '1ƌ2' + 'X'.repeat(1000));
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain(
+        '<header Name="user-agent" escaped="true" truncated="true">1' +
+        `${replacementChar}2${'X'.repeat(509)}</header>`);
+      done();
+    }, 2000);
+  });
+});
+
+/**
  * Check that the queue of data is correctly reset, and used for the
  * next set of requests.
  */
