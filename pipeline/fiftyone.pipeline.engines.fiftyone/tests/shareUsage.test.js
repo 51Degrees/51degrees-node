@@ -420,6 +420,20 @@ test('share usage - 10,000 code points of emoji are not truncated', done => {
 });
 
 /**
+ * The limit counts the value as it was supplied, before any character is
+ * replaced, so the escapes do not count towards it.
+ */
+test('share usage - escapes do not count towards the limit', done => {
+  const value = '100012' + 'X'.repeat(9997);
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(
+      '<header Name="user-agent" escaped="true">' +
+      `1\\x00012${'X'.repeat(9997)}</header>`);
+  }, done);
+});
+
+/**
  * A value with a character that is not allowed that is also too long is
  * marked both escaped and truncated. The cut is made on the original value.
  */
