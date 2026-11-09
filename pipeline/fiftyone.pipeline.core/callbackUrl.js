@@ -56,8 +56,8 @@ const labelPattern = /^[A-Za-z0-9_-]+$/;
 // and any number of hexadecimal digits.
 const numberLabelPattern = /^([0-9]+|0[xX][0-9A-Fa-f]*)$/;
 
-// A port as it follows the host, being ':' and any number of digits.
-const portPattern = /^:[0-9]*$/;
+// A port as it follows the host, being ':' and at least one digit.
+const portPattern = /^:[0-9]+$/;
 
 // One group of an IPv6 address.
 const hexGroupPattern = /^[0-9A-Fa-f]{1,4}$/;
@@ -207,7 +207,7 @@ function isIpv6 (text) {
 
 /**
  * Whether the text is ':' followed by digits whose value is no more than
- * 65535, or by nothing.
+ * 65535.
  *
  * @param {string} text the port, with its ':'
  * @returns {boolean} true if the text is a port
@@ -226,7 +226,7 @@ function isPort (text) {
  * valid. The host is an IPv6 address in brackets, or a name of labels
  * separated by dots with a dot allowed at the end, which is an IPv4 address
  * when its last label is a number. The port is ':' followed by digits up to
- * 65535, or by nothing.
+ * 65535.
  *
  * @param {string} hostPort the host and port
  * @returns {string|null} the host and port, or null
