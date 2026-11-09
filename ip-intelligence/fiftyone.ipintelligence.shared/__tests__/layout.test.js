@@ -22,6 +22,8 @@
 
 // Guards the package layout. The shipped code must sit outside the
 // examples and tests folders, because the release plan ignores both.
+// Those folders hold only one-line re-exports of lib, so that a require
+// of an old path keeps working.
 
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +35,14 @@ const exported = [
   'keyUtils', 'exampleOutput', 'exampleConstants',
   'optionsExtension', 'dataExtension'
 ];
+
+// The paths the package used to publish, kept as re-exports of lib.
+const oldPaths = [].concat(
+  fs.readdirSync(path.join(packageRoot, 'examples'))
+    .map((file) => 'examples/' + file),
+  fs.readdirSync(path.join(packageRoot, 'tests'))
+    .map((file) => 'tests/' + file)
+);
 
 describe('shared package layout', () => {
   test('index exports every module', () => {
@@ -56,7 +66,7 @@ describe('shared package layout', () => {
     });
   });
 
-  test('the packed files include what index requires and no examples',
+  test('the packed files include lib and the old paths',
     () => {
       const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
       const output = execFileSync(
@@ -71,8 +81,29 @@ describe('shared package layout', () => {
       exported.forEach((name) => {
         expect(packed).toContain('lib/' + name + '.js');
       });
-      packed.forEach((file) => {
-        expect(file).not.toMatch(/^(examples|tests)\//);
+      packed.filter((file) => /^(examples|tests)\//.test(file))
+        .forEach((file) => {
+          expect(oldPaths).toContain(file);
+        });
+      oldPaths.forEach((file) => {
+        expect(packed).toContain(file);
       });
     });
+
+  test('each old path still resolves to the module in lib', () => {
+    expect(oldPaths.length).toBeGreaterThan(0);
+    oldPaths.forEach((file) => {
+      const name = path.basename(file, '.js');
+      expect(require(path.join(packageRoot, file)))
+        .toBe(require(path.join(packageRoot, 'lib', name)));
+    });
+  });
+
+  test('each old path is a one-line re-export', () => {
+    oldPaths.forEach((file) => {
+      const source = fs.readFileSync(path.join(packageRoot, file), 'utf8');
+      expect(source).toMatch(
+        /module\.exports = require\('\.\.\/lib\/\w+'\);/);
+    });
+  });
 });

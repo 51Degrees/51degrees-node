@@ -39,6 +39,12 @@
   },
   "files": [
     "lib",
+    "examples/dataExtension.js",
+    "examples/exampleConstants.js",
+    "examples/optionsExtension.js",
+    "tests/exampleOutput.js",
+    "tests/keyUtils.js",
+    "tests/testConstants.js",
     "*.js",
     "types"
   ]
