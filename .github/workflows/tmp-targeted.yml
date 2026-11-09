@@ -1,0 +1,17 @@
+name: Temporary targeted tests
+on:
+  push:
+    branches:
+      - 'tmp/red-data8'
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: git submodule update --init pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npx eslint --ext .js device-detection/fiftyone.devicedetection.onpremise/deviceDetectionOnPremise.js device-detection/fiftyone.devicedetection.onpremise/tests/swigHelpers.test.js device-detection/fiftyone.devicedetection.onpremise/tests/updateOnStartMissingFile.test.js device-detection/fiftyone.devicedetection.shared/errorMessages.js ip-intelligence/fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise.js ip-intelligence/fiftyone.ipintelligence.onpremise/tests/swigHelpers.test.js ip-intelligence/fiftyone.ipintelligence.onpremise/tests/updateOnStartMissingFile.test.js ip-intelligence/fiftyone.ipintelligence.shared/errorMessages.js pipeline/fiftyone.pipeline.engines/dataFile.js pipeline/fiftyone.pipeline.engines/dataFileUpdateService.js pipeline/fiftyone.pipeline.engines/tests/dataFileUpdateService.test.js pipeline/fiftyone.pipeline.engines/tests/dataUpdateSpecification.test.js
+      - run: node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit pipeline/fiftyone.pipeline.engines/tests pipeline/fiftyone.pipeline.core/tests device-detection/fiftyone.devicedetection.onpremise/tests/swigHelpers.test.js ip-intelligence/fiftyone.ipintelligence.onpremise/tests/swigHelpers.test.js
