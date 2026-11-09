@@ -20,6 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const { performance } = require('perf_hooks');
+
 /**
  * The fewest failed sends that can be set to pause sending.
  */
@@ -35,9 +37,21 @@ const FAILURES_TO_ENTER_RECOVERY_MAX = 100;
  * once the set number of sends fail within the window. A failed send after a
  * pause multiplies the delay, up to the maximum, and a successful send ends
  * the back-off. Only sending pauses, so evidence is still queued while
- * paused. Each method takes the time from the caller, in milliseconds.
+ * paused. Each method takes the time from the caller, in milliseconds on the
+ * clock that now() reads, so a change to the system time cannot lengthen or
+ * skip a pause.
  */
 class ShareUsageBackOff {
+  /**
+   * The time in milliseconds on a monotonic clock, for the caller to pass to
+   * the other methods. Its zero is not a calendar time.
+   *
+   * @returns {number} the milliseconds
+   */
+  static now () {
+    return performance.now();
+  }
+
   /**
    * Constructor for ShareUsageBackOff
    *
@@ -60,7 +74,8 @@ class ShareUsageBackOff {
     maxRecoveryDelaySeconds = 300.0,
     recoveryMultiplier = 2.0
   } = {}) {
-    if (!(failuresToEnterRecovery >= FAILURES_TO_ENTER_RECOVERY_MIN &&
+    if (!(Number.isInteger(failuresToEnterRecovery) &&
+      failuresToEnterRecovery >= FAILURES_TO_ENTER_RECOVERY_MIN &&
       failuresToEnterRecovery <= FAILURES_TO_ENTER_RECOVERY_MAX)) {
       throw new RangeError(
         'failuresToEnterRecovery must be from ' +

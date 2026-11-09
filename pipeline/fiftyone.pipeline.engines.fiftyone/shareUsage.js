@@ -47,6 +47,17 @@ const SHARE_USAGE_VERSION = '1.1';
 const MAX_QUEUE_SIZE_DEFAULT = 1000;
 
 /**
+ * While the queue is full, a message is logged for the first entry dropped
+ * and then once for every this many more, never one for each entry.
+ */
+const QUEUE_FULL_LOG_EVERY = 1000;
+
+/**
+ * The most characters of an answer's content that are logged.
+ */
+const LOGGED_CONTENT_LENGTH = 500;
+
+/**
  * The default time in milliseconds to wait for the service to answer.
  */
 const REQUEST_TIMEOUT_DEFAULT = 60000;
@@ -179,6 +190,9 @@ class ShareUsage extends Engine {
 
     // The entries waiting to be sent, oldest first.
     this.shareData = [];
+
+    // The entries dropped since the queue last had room.
+    this.dropped = 0;
 
     this.maximumQueueSize = maximumQueueSize === undefined
       ? Math.max(MAX_QUEUE_SIZE_DEFAULT, 10 * requestedPackageSize)
@@ -315,8 +329,16 @@ class ShareUsage extends Engine {
   addToShareUsage (data) {
     // When the queue is full, the newest entries are dropped.
     if (this.shareData.length >= this.maximumQueueSize) {
+      this.dropped++;
+      if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
+        this._log('warning', 'The usage sharing queue is full at ' +
+          `${this.maximumQueueSize} entries, so usage data is being ` +
+          `dropped. ${this.dropped} entries have been dropped since the ` +
+          'queue last had room.');
+      }
       return;
     }
+    this.dropped = 0;
 
     let xml = '';
 
@@ -388,7 +410,7 @@ class ShareUsage extends Engine {
     if (this.sending) {
       return;
     }
-    const pause = this.backOff.remaining(Date.now());
+    const pause = this.backOff.remaining(ShareUsageBackOff.now());
     if (pause > 0) {
       this.scheduleResume(pause);
       return;
@@ -418,12 +440,13 @@ class ShareUsage extends Engine {
   }
 
   /**
-   * Send one message of requestedPackageSize entries, then the next until
-   * fewer are queued or a failed send pauses sending.
+   * Send one message of at most twice requestedPackageSize entries, then the
+   * next until fewer than requestedPackageSize are queued or a failed send
+   * pauses sending.
    */
   sendNext () {
-    const shareData = this.shareData.splice(0, this.requestedPackageSize);
-    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join()}</Devices>`;
+    const shareData = this.shareData.splice(0, 2 * this.requestedPackageSize);
+    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join('')}</Devices>`;
     this.post(data, accepted => {
       let pause = 0;
       if (accepted) {
@@ -431,7 +454,7 @@ class ShareUsage extends Engine {
           this._log('info', 'Usage sharing resumed after a send succeeded.');
         }
       } else {
-        pause = this.backOff.failed(Date.now());
+        pause = this.backOff.failed(ShareUsageBackOff.now());
         if (pause > 0) {
           this._log('warning', `Usage sharing paused for ${pause / 1000} ` +
             'seconds after failed sends. Usage data is still queued, up to ' +
@@ -480,22 +503,49 @@ class ShareUsage extends Engine {
         finish(false);
         return;
       }
-      const req = usageEngine.http.request(options, function (res) {
-        usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
-        // Reads the answer so the connection can be used again.
-        res.resume();
-        finish(res.statusCode === 200);
-      });
-      req.on('timeout', function () {
-        req.destroy(new Error(
-          `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
-      });
-      req.on('error', function (e) {
+      try {
+        const req = usageEngine.http.request(options, function (res) {
+          usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
+          if (res.statusCode === 200) {
+            // Reads the answer so the connection can be used again.
+            res.resume();
+            finish(true);
+            return;
+          }
+          let content = '';
+          res.setEncoding('utf8');
+          res.on('data', chunk => {
+            if (content.length < LOGGED_CONTENT_LENGTH) {
+              content += chunk;
+            }
+          });
+          res.on('end', function () {
+            usageEngine._log('warning', 'Usage sharing sent a message and ' +
+              `the service answered ${res.statusCode} with content ` +
+              `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
+            finish(false);
+          });
+          res.on('error', function () {
+            finish(false);
+          });
+          res.on('close', function () {
+            finish(false);
+          });
+        });
+        req.on('timeout', function () {
+          req.destroy(new Error(
+            `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
+        });
+        req.on('error', function (e) {
+          usageEngine._log('warning', e);
+          finish(false);
+        });
+        req.write(buffer);
+        req.end();
+      } catch (e) {
         usageEngine._log('warning', e);
         finish(false);
-      });
-      req.write(buffer);
-      req.end();
+      }
     });
   }
 

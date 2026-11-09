@@ -4,9 +4,18 @@ export = ShareUsageBackOff;
  * once the set number of sends fail within the window. A failed send after a
  * pause multiplies the delay, up to the maximum, and a successful send ends
  * the back-off. Only sending pauses, so evidence is still queued while
- * paused. Each method takes the time from the caller, in milliseconds.
+ * paused. Each method takes the time from the caller, in milliseconds on the
+ * clock that now() reads, so a change to the system time cannot lengthen or
+ * skip a pause.
  */
 declare class ShareUsageBackOff {
+    /**
+     * The time in milliseconds on a monotonic clock, for the caller to pass to
+     * the other methods. Its zero is not a calendar time.
+     *
+     * @returns {number} the milliseconds
+     */
+    static now(): number;
     /**
      * Constructor for ShareUsageBackOff
      *
