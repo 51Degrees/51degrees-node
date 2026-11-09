@@ -57,7 +57,6 @@ test('missing when a part is empty', () => {
 test.each([
   ['EXAMPLE.com', 'https://example.com/51dpipeline/json'],
   ['example.com:8080', 'https://example.com:8080/51dpipeline/json'],
-  ['example.com:', 'https://example.com:/51dpipeline/json'],
   ['example.com:65535', 'https://example.com:65535/51dpipeline/json'],
   ['a_b.com', 'https://a_b.com/51dpipeline/json'],
   ['-ab.com', 'https://-ab.com/51dpipeline/json'],
@@ -249,6 +248,18 @@ test.each([
   '0x7f.1',
   '1.2.3.4.:8080'
 ])('refuses the name ending in a number %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+// Rule 5, where a port that is present is not empty, so a protocol written
+// into the host gives the host 'https' with an empty port and is refused.
+test.each([
+  'example.com:',
+  'example.com:/path',
+  '[::1]:',
+  'https://example.com',
+  'http://example.com'
+])('refuses the empty port in %j', host => {
   expect(url('https', host).valid).toBe(false);
 });
 
