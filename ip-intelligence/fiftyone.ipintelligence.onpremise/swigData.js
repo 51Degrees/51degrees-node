@@ -27,9 +27,23 @@ const swigHelpers = require('./swigHelpers');
 
 const DataFileMissingPropertyService = require('./dataFileMissingPropertyService');
 
-// The number of decimal places to use when converting WKB values to
-// WKT strings.
-const defaultWktDecimalPlaces = 16;
+// The number of decimal places a location is given to, whether it is a
+// number or a point in a WKT string.
+const defaultDecimalPlaces = 3;
+
+// Properties whose numbers are given to the decimal places above.
+const locationProperties = ['latitude', 'longitude'];
+
+/**
+ * Rounds a number to the decimal places, to the binary floating point number
+ * nearest to the rounded decimal. Zero is never negative.
+ *
+ * @param {number} value the number to round
+ * @returns {number} the rounded number
+ */
+const roundLocation = function (value) {
+  return Number(value.toFixed(defaultDecimalPlaces)) + 0;
+};
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
@@ -130,7 +144,7 @@ class SwigData extends AspectData {
         case 'weightedwkb':
         case 'weightedwkbr':
           value = this.swigResults.getValuesAsWeightedWKTStringList(
-            property.name, defaultWktDecimalPlaces);
+            property.name, defaultDecimalPlaces);
           isWeighted = true;
           break;
         default:
@@ -145,6 +159,12 @@ class SwigData extends AspectData {
 
         if (isWeighted) {
           result.value = swigHelpers.weightedVectorToArray(result.value);
+          if (locationProperties.includes(property.name.toLowerCase()) &&
+            (type === 'weightedsingle' || type === 'weighteddouble')) {
+            result.value.forEach(function (weighted) {
+              weighted.value = roundLocation(weighted.value);
+            });
+          }
         } else if (type === 'string[]') {
           result.value = swigHelpers.vectorToArray(result.value);
         }
