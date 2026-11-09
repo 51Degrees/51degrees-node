@@ -31,11 +31,10 @@ const require51 = (requestedPackage) => {
 
 const IpIntelligenceCloudPipelineBuilder =
   require51('fiftyone.ipintelligence.cloud').IpIntelligenceCloudPipelineBuilder;
+const keyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 
-// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
-// first, followed by the legacy RESOURCE_KEY name.
-const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
-  process.env.RESOURCE_KEY;
+const resourceKeyNames = keyUtils.resourceKeyNames(
+  '51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY');
 
 describe('ipIntelligenceCloud', () => {
   // Check that the cloud engine sets its data key correctly so
@@ -47,23 +46,25 @@ describe('ipIntelligenceCloud', () => {
     expect(engine.dataKey).toBe('ip');
   });
 
-  // Process an IP address using the cloud service. This test
-  // requires a resource key to be provided via the
-  // 51DEGREES_RESOURCE_KEY environment variable, or the legacy
-  // RESOURCE_KEY name.
-  const testFunc = myResourceKey ? test : test.skip;
-  testFunc('process IP address', done => {
+  // Process an IP address using the live cloud service, which fails
+  // rather than skips when no resource key is set.
+  test('process IP address', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        'ip', 'the registered country of 8.8.8.8'));
+    }
     const pipeline = new IpIntelligenceCloudPipelineBuilder({
-      resourceKey: myResourceKey
+      resourceKey
     }).build();
     pipeline.on('error', console.error);
+    await keyUtils.requireProduct(pipeline.getElement('cloud'), 'ip');
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('query.client-ip', '8.8.8.8');
 
-    flowData.process().then(function () {
-      expect(flowData.ip).toBeDefined();
+    await flowData.process();
 
-      done();
-    });
+    // 8.8.8.8 is registered to Google in the United States.
+    expect(flowData.ip.registeredcountry.value).toBe('US');
   });
 });

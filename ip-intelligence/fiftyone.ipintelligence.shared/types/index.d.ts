@@ -29,9 +29,15 @@ export let testConstants: {
     };
 };
 export let keyUtils: {
+    resourceKeyNames: (...legacyNames: string[]) => Array<string>;
+    getResourceKey: (names: Array<string>) => string;
+    missingResourceKeyMessage: (names: Array<string>, products: string | Array<string>, asksFor: string, plural?: boolean) => string;
+    missingFromAnswerMessage: (thing: string, reason: string, product: string) => string;
+    requireProduct: (cloudRequestEngine: object, product: string) => Promise<void>;
     getNamedKey: (keyName: string) => string;
     isInvalidKey: (keyValue: string) => boolean;
 };
+export let exampleOutput: typeof import("./lib/exampleOutput");
 export let exampleConstants: {
     defaultEvidenceValues: Map<string, string>[];
     fileNames: {

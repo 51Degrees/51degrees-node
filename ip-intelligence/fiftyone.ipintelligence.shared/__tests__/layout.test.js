@@ -30,7 +30,7 @@ const { execFileSync } = require('child_process');
 const packageRoot = path.join(__dirname, '..');
 const exported = [
   'testConstants',
-  'keyUtils', 'exampleConstants', 'optionsExtension', 'dataExtension'
+  'keyUtils', 'exampleOutput', 'exampleConstants', 'optionsExtension', 'dataExtension'
 ];
 
 describe('shared package layout', () => {

@@ -62,6 +62,10 @@
  * Geometries
  * Contains
  *
+ * The example uses the LowMemory performance profile unless another, such
+ * as MaxPerformance, is named as the fourth command line argument.
+ * MaxPerformance runs much faster but holds the whole data file in memory.
+ *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console/compare.js).
  *
  * This example requires an enterprise IP intelligence data file (.ipi).
@@ -93,12 +97,15 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 const areas = require(path.join(__dirname, '/../areas'));
 
-// This example requires the enterprise data file as the latitude,
-// longitude and area properties used are not available in the lite file.
-// To obtain an enterprise data file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=enterprise_v_4_1_ipi
-const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
+// This example needs the latitude, longitude and area properties, which
+// only the Enterprise data file has. By default it uses the free Lite data
+// file, which is downloaded if it is missing, and there it says what it
+// needs and where to ask for a copy of the Enterprise data file.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=enterprise-data-file';
 
 // The CSV file containing the 'known and true' records. A version of this
 // file is included in the cxx/data submodule.
@@ -202,19 +209,28 @@ const processTruth = async function (pipeline, truth) {
   };
 };
 
-const run = async function (dataFile, csvTruthFile, output, progress) {
+const run = async function (
+  dataFile,
+  csvTruthFile,
+  output,
+  progress,
+  performanceProfile = 'LowMemory') {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
   // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
-    // We use the max performance profile for optimal detection speed
-    // in this example. See the documentation for more detail on this
-    // and other configuration options:
+    // The low memory profile is the default because this example needs
+    // the Enterprise data file, which is about 6 GB. It reads the file as
+    // it goes, which uses little memory but runs much more slowly.
+    // MaxPerformance holds all of the file in memory and runs much faster,
+    // where the machine has the memory for it. Choose it with the fourth
+    // command line argument. See the documentation for more detail on
+    // this and other configuration options:
     // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
     // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=run
-    performanceProfile: 'MaxPerformance',
+    performanceProfile,
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
     shareUsage: false,
@@ -223,6 +239,15 @@ const run = async function (dataFile, csvTruthFile, output, progress) {
     updateOnStart: false,
     fileSystemWatcher: false
   }).build();
+
+  // The comparison needs the location properties, which only the
+  // Enterprise data file has, so with a free data file the example says so
+  // and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(pipeline.getElement('ip'),
+    'Comparing locations', ['Latitude', 'Longitude', 'Areas'], progress,
+    CONTACT_US)) {
+    return false;
+  }
 
   // Write the output header.
   output.write(TRUTH_FIELDS.concat(RESULT_FIELDS).join(',') + '\n');
@@ -270,27 +295,16 @@ const run = async function (dataFile, csvTruthFile, output, progress) {
   // Finally check the data file used for consistency with the other
   // examples.
   ExampleUtils.checkDataFile(pipeline, dataFile);
+  return true;
 };
 
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
-  // file in the project space, falling back to the lite file that is
-  // included in the repository.
-  let dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
-  if (dataFile === undefined) {
-    dataFile = ExampleUtils.findDataFile(LITE_V_4_1_IPI);
-    if (dataFile !== undefined) {
-      console.warn('Failed to find an enterprise IP intelligence data ' +
-        'file. Using the lite file instead. Note that the lite file ' +
-        'does not contain the area properties used by this example, ' +
-        'so records may be skipped. To obtain an enterprise data file ' +
-        'for testing, please contact us: ' +
-        'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-compare-console-compare.js&utm_term=lite-file-fallback');
-    }
-  }
+  // 51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // which is downloaded if it is missing.
+  const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   // Get the CSV file containing the source of truth.
   const csvTruthFile = args.length > 1
@@ -300,11 +314,23 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // Get the location for the output file.
   const outputFile = args.length > 2 ? args[2] : 'compare-output.csv';
 
+  // Get the performance profile, LowMemory unless another is named, for
+  // example MaxPerformance where the machine can hold the whole data file
+  // in memory.
+  const performanceProfile = args.length > 3 ? args[3] : 'LowMemory';
+
   if (dataFile !== undefined && csvTruthFile !== undefined) {
     const output = fs.createWriteStream(outputFile);
-    run(dataFile, csvTruthFile, output, process.stdout).then(function () {
+    run(
+      dataFile,
+      csvTruthFile,
+      output,
+      process.stdout,
+      performanceProfile).then(function (compared) {
       output.end();
-      console.log(`Output written to '${outputFile}'`);
+      if (compared) {
+        console.log(`Output written to '${outputFile}'`);
+      }
     });
   } else {
     if (dataFile === undefined) {

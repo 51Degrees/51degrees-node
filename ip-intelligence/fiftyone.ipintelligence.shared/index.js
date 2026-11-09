@@ -28,6 +28,7 @@ module.exports = {
   errorMessages: require('./errorMessages'),
   testConstants: require('./lib/testConstants'),
   keyUtils: require('./lib/keyUtils'),
+  exampleOutput: require('./lib/exampleOutput'),
   exampleConstants: require('./lib/exampleConstants'),
   optionsExtension: require('./lib/optionsExtension'),
   dataExtension: require('./lib/dataExtension')

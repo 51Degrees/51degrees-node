@@ -10,11 +10,17 @@ declare const CloudEngine_base: typeof import("fiftyone.pipeline.engines/types/e
  * This is a template for all 51Degrees cloud engines.
  * It requires the 51Degrees cloudRequestEngine to be placed in a
  *  pipeline before it. It takes that raw JSON response and
- * parses it to extract the device part.
+ * parses it to extract the part under its data key.
  * It also uses this data to generate a list of properties and an evidence key filter
  **/
 declare class CloudEngine extends CloudEngine_base {
     constructor(...args: any[]);
+    /**
+     * Whether an answer without this engine's element has been logged.
+     *
+     * @type {boolean}
+     */
+    _missingElementReported: boolean;
     /**
      * Handles the registration of the Cloud Engine in a pipeline.
      * This method is called when a pipeline is registered,

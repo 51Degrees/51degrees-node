@@ -28,14 +28,15 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * will be restricted to
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
      * If you do not wish to use a key then you can specify
      * an empty string, but this will cause automatic updates to
      * be disabled.
      * @param {boolean} options.download whether to download the datafile
      * or store it in memory
      * @param {string} options.performanceProfile options are:
-     * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance
+     * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance.
+     * Balanced by default, as in the native code.
      * @param {boolean} options.fileSystemWatcher whether to monitor the datafile
      * path for changes
      * @param {number} options.concurrency defaults to the number of cpus
@@ -43,8 +44,11 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * @param {boolean} options.reuseTempFile Indicates that an existing temp
      * file may be used. This should be selected if multiple instances wish to
      * use the same file to prevent high disk usage.
-     * @param {boolean} options.updateMatchedUserAgent True if the detection
-     * should record the matched characters from the target User-Agent
+     * @param {boolean} [options.updateMatchedUserAgent] True if the detection
+     * should record the matched characters from the target User-Agent, which
+     * the UserAgents property returns. On by default, as the native code sets
+     * it. Set it to false where UserAgents is not needed, which saves
+     * recording the characters.
      * @param {number} options.maxMatchedUserAgentLength Number of characters to
      * consider in the matched User-Agent. Ignored if updateMatchedUserAgent
      * is false
@@ -83,7 +87,7 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
         fileSystemWatcher: boolean;
         concurrency: number;
         reuseTempFile: boolean;
-        updateMatchedUserAgent: boolean;
+        updateMatchedUserAgent?: boolean;
         maxMatchedUserAgentLength: number;
         drift: number;
         difference: number;

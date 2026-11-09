@@ -23,7 +23,24 @@
 const path = require('path');
 
 const GeoLocation = require(path.resolve(__dirname, '..'));
-const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// These tests call the live cloud service, so each fails rather than skips
+// when no resource key is set. The names are tried in this order.
+const resourceKeyNames = [
+  '_51DEGREES_RESOURCE_KEY',
+  '_51DEGREES_RESOURCE_KEY_BESPOKE',
+  'RESOURCE_KEY'
+];
+const myResourceKey = resourceKeyNames
+  .map((name) => process.env[name])
+  .find((value) => value && value.trim()) || '!!YOUR_RESOURCE_KEY!!';
+const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
+  'so it needs a resource key and there is nothing to fall back on. None ' +
+  'of ' + resourceKeyNames.join(', ') + ' is set, tried in that order. The ' +
+  'key has to carry the location product, because the test asks the ' +
+  'service for the location properties of a latitude and longitude. To ' +
+  'see the products a key carries, open ' +
+  'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. ' +
+  'Create a key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation-tests-geolocationcloud.test.js&utm_term=resource-key-required.';
 
 const TestLat = '51.4578261';
 const TestLon = '-0.975922996290084';
@@ -74,7 +91,7 @@ if (isAsync) {
   // and a correct error message.
   test('No evidence error message', done => {
     if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error('No resource key is present!');
+      throw new Error(noResourceKey);
     }
 
     const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
@@ -110,7 +127,7 @@ if (isAsync) {
 
   test('Available Properties 51Degrees', async done => {
     if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error('No resource key is present!');
+      throw new Error(noResourceKey);
     }
 
     const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
@@ -124,7 +141,7 @@ if (isAsync) {
 
   test('Value Types 51Degrees', async done => {
     if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error('No resource key is present!');
+      throw new Error(noResourceKey);
     }
 
     const pipeline = new GeoLocation.GeoLocationPipelineBuilder({

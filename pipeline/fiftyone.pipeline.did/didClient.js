@@ -22,6 +22,7 @@
 
 const FodId = require('./fodId');
 const layout = require('./internal/layout');
+const { trimWhiteSpace } = require('./internal/base64');
 const IdType = require('./idType');
 const PublicKeys = require('./publicKeys');
 const packageVersion = require('./package.json').version;
@@ -900,12 +901,12 @@ function parseOrRefuse (value) {
 
 /**
  * Turns away an encoded value too long to be worth decoding, before any
- * work is done on it. Whitespace at either end is ignored, as the reader
+ * work is done on it. White space at either end is ignored, as the reader
  * ignores it.
  * @param {string} value the encoded identifier as the caller gave it
  */
 function ensureEncodedLength (value) {
-  if (value.trim().length > MAXIMUM_ENCODED_LENGTH) {
+  if (trimWhiteSpace(value).length > MAXIMUM_ENCODED_LENGTH) {
     throw new DidArgumentError(
       'The value is longer than this client will read as a 51Did.');
   }
