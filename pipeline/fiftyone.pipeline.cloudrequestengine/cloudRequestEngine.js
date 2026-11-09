@@ -180,6 +180,24 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * A response with a top level `fodid` member holds a 51Did created for the
+   * one request, so it is neither stored in the cache nor served from it.
+   *
+   * @param {object} data the element data of a response
+   * @returns {boolean} false if the response has a top level fodid member
+   */
+  isCacheable (data) {
+    try {
+      const response = JSON.parse(data.get('cloud'));
+      return !(response !== null &&
+        typeof response === 'object' &&
+        Object.prototype.hasOwnProperty.call(response, 'fodid'));
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
    * Typically, cloud will return errors as JSON.
    * However, transport level errors or other failures can result in
    * responses that are plain text. This function handles these cases.
