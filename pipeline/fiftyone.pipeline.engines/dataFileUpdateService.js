@@ -312,7 +312,19 @@ class DataFileUpdateService {
 
     this.log('info', 'Checking for update');
 
-    const urlParts = new url.URL(dataFile.updateUrl);
+    let urlParts;
+    try {
+      urlParts = new url.URL(dataFile.updateUrl);
+    } catch (e) {
+      this.log(
+        'warn',
+        'An error occurred when connecting to ' + dataFile.updateUrl +
+        ' in order to check for data file updates for ' +
+        engineName(dataFile) + '.' + this.retryText(dataFile) +
+        ' Error detail: ' + errorDetail(e));
+      this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      return false;
+    }
 
     const requestOptions = urlParts;
 
@@ -420,6 +432,28 @@ class DataFileUpdateService {
       });
       response.pipe(output);
 
+      // A download that ends before the whole file has arrived never
+      // finishes writing, so it is reported when the response closes.
+      response.on('error', function () {});
+      response.on('close', function () {
+        if (response.complete || !written) {
+          return;
+        }
+        written = false;
+        output.destroy();
+        fs.unlink(filename, function () {});
+        dataFileUpdateService.log(
+          'warn',
+          'An error occurred while downloading a data file update for ' +
+          engineName(dataFile) + ' from ' + dataFile.updateUrl + '.' +
+          dataFileUpdateService.retryText(dataFile) +
+          ' Error detail: The connection closed before the whole file ' +
+          'was received.');
+        dataFileUpdateService.fail(
+          dataFile,
+          AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      });
+
       output.on('finish', function () {
         if (!written) {
           return;
@@ -508,9 +542,6 @@ class DataFileUpdateService {
       fs.unlink(filename, function (err) {
         if (err) {
           dataFileUpdateService.writeFailed(dataFile, filename, err);
-          dataFileUpdateService.complete(
-            dataFile,
-            AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
         }
         done();
       });
@@ -544,13 +575,13 @@ class DataFileUpdateService {
         }
 
         const refreshed = dataFileUpdateService.refreshDataFile(dataFile);
+        dataFile.updating = false;
         if (!refreshed) {
           dataFileUpdateService.complete(
             dataFile,
             AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
         }
         dataFileUpdateService.checkNextUpdate(dataFile);
-        dataFile.updating = false;
 
         // Delete the temp file
         removeDownload(function () {
@@ -684,7 +715,7 @@ class DataFileUpdateService {
             dataFile.updateTimeMaximumRandomisation) +
           1);
 
-        // The first check waits for the polling interval, or until the
+        // Each check waits for the polling interval, or until the
         // data says newer data is expected where that is later. Either way
         // the random offset is added, so that servers started together do
         // not all ask at once.
@@ -723,7 +754,7 @@ class DataFileUpdateService {
 
     // check if fileSystemWatcher is enabled and listen for datafile changes
 
-    if (dataFile.fileSystemWatcher) {
+    if (dataFile.autoUpdate && dataFile.fileSystemWatcher) {
       const serviceRef = new WeakRef(this);
       const dataFileRef = new WeakRef(dataFile);
 
