@@ -1,0 +1,25 @@
+name: Temporary usage sharing tests
+
+on:
+  push:
+    branches:
+      - 'tmp/u97-**'
+
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Submodules
+        run: git submodule update --init pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: |
+          cd pipeline
+          for p in fiftyone.pipeline.core fiftyone.pipeline.engines fiftyone.pipeline.engines.fiftyone; do (cd $p && npm install --no-audit --no-fund); done
+      - name: Test
+        run: |
+          cd pipeline/fiftyone.pipeline.engines.fiftyone
+          npx jest tests/shareUsage
