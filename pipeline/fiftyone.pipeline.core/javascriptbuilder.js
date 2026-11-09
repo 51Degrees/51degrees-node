@@ -171,11 +171,6 @@ function quotedForLog (text) {
  */
 
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
- **/
-/**
  * The script reads the query string, and the host and protocol it calls
  * back to, so those are the evidence that can change it.
  */
