@@ -278,8 +278,8 @@ class ShareUsage extends Engine {
           xml += `<${entryKey}`;
         }
         // Write any attributes
-        if (replacedString.replaced) {
-          xml += ' replaced="true"';
+        if (replacedString.escaped) {
+          xml += ' escaped="true"';
         }
         if (replacedString.truncated) {
           xml += ' truncated="true"';
@@ -400,7 +400,7 @@ function __getIsValidCharMap () {
 class ReplacedString {
   constructor (text) {
     this.result = '';
-    this.replaced = false;
+    this.escaped = false;
     this.truncated = false;
     if (text) {
       const escapedText = text
@@ -417,7 +417,7 @@ class ReplacedString {
             this.result += c;
           } else {
             this.result += String.fromCharCode(parseInt('0xFFFD', 16));
-            this.replaced = true;
+            this.escaped = true;
           }
         });
     }
