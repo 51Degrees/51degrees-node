@@ -26,9 +26,9 @@ This file is used for development package.
 
 module.exports = {
   errorMessages: require('./errorMessages'),
-  testConstants: require('./tests/testConstants'),
-  keyUtils: require('./tests/keyUtils'),
-  exampleConstants: require('./examples/exampleConstants'),
-  optionsExtension: require('./examples/optionsExtension'),
-  dataExtension: require('./examples/dataExtension')
+  testConstants: require('./lib/testConstants'),
+  keyUtils: require('./lib/keyUtils'),
+  exampleConstants: require('./lib/exampleConstants'),
+  optionsExtension: require('./lib/optionsExtension'),
+  dataExtension: require('./lib/dataExtension')
 };

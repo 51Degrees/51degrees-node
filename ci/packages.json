@@ -48,8 +48,7 @@
   {
     "Name": "fiftyone.devicedetection.shared",
     "Path": "device-detection/fiftyone.devicedetection.shared",
-    "Ignore": ["**/*.md", "**/LICENSE*", "**/__tests__/**"],
-    "IgnoreDefaults": false,
+    "Ignore": ["**/__tests__/**"],
     "DependsOn": [],
     "Publish": true
   },
@@ -113,8 +112,7 @@
   {
     "Name": "fiftyone.ipintelligence.shared",
     "Path": "ip-intelligence/fiftyone.ipintelligence.shared",
-    "Ignore": ["**/*.md", "**/LICENSE*", "**/__tests__/**"],
-    "IgnoreDefaults": false,
+    "Ignore": ["**/__tests__/**"],
     "DependsOn": [],
     "Publish": true
   },

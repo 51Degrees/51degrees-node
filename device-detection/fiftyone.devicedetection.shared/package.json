@@ -39,8 +39,7 @@
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },
   "files": [
-    "examples",
-    "tests",
+    "lib",
     "*.js",
     "types"
   ]

@@ -179,7 +179,7 @@ with the address, then `Results:` with `Registered Name`, `Registered Owner`,
 `Country Code`, `Town`, `Latitude` and `Longitude`. The Lite file has only
 RegisteredCountry, RegisteredName and RegisteredOwner. The example reads each
 value through `getValueHelper` in
-`ip-intelligence/fiftyone.ipintelligence.shared/examples/dataExtension.js`,
+`ip-intelligence/fiftyone.ipintelligence.shared/lib/dataExtension.js`,
 which catches the error a missing property raises, so the lines for the other
 properties read `Unknown (...)` and the example carries on. It ends with the
 same two lines about the data file.
