@@ -310,89 +310,93 @@ test('share usage - session and sequence', done => {
 });
 
 /**
- * Check that invalid characters are escaped correctly.
+ * Sends one request carrying the user-agent given through a usage sharing
+ * element and passes the XML that was received to the check.
+ *
+ * @param {string} userAgent the value of the header.user-agent evidence
+ * @param {Function} check called with the XML text received
+ * @param {Function} done the test's callback
  */
-test('share usage - invalid char', done => {
+function sendAndCheck (userAgent, check, done) {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/'
   });
-
-  const replacementChar = String.fromCharCode(parseInt('0xFFFD', 16));
   const pipeline = new PipelineBuilder()
     .add(usageEngine)
     .build();
 
   const flowData = pipeline.createFlowData();
-  flowData.evidence.add('header.user-agent', '1ƌ2');
+  flowData.evidence.add('header.user-agent', userAgent);
 
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).not.toContain('ƌ');
-      expect(received[0]).toContain(replacementChar);
-      expect(received[0]).toContain('escaped="true"');
-      expect(received[0]).toContain(`<header Name="user-agent" escaped="true">1${replacementChar}2</header>`);
+      check(received[0]);
       done();
     }, 2000);
   });
-});
+}
 
 /**
- * Check that long values are truncated correctly.
+ * A character XML 1.0 does not allow is written as \x and its code as four
+ * lower case hexadecimal digits, and the element is marked escaped.
  */
-test('share usage - truncated value', done => {
-  const usageEngine = new ShareUsage({
-    requestedPackageSize: 1,
-    endpoint: 'http://127.0.0.1:8080/'
-  });
-
-  const ua = 'X'.repeat(1000);
-  const pipeline = new PipelineBuilder()
-    .add(usageEngine)
-    .build();
-
-  const flowData = pipeline.createFlowData();
-  flowData.evidence.add('header.user-agent', ua);
-
-  flowData.process().then(() => {
-    setTimeout(() => {
-      expect(received.length).toBe(1);
-      expect(received[0]).toContain('truncated="true"');
-      expect(received[0]).not.toContain(ua);
-      expect(received[0]).toContain(`<header Name="user-agent" truncated="true">${'X'.repeat(512)}</header>`);
-      done();
-    }, 2000);
+test.each([
+  ['a control character', '1\u00012', '1\\x00012'],
+  ['the unit separator', '1\u001f2', '1\\x001f2'],
+  ['U+FFFE', '1\ufffe2', '1\\xfffe2'],
+  ['a lone high surrogate', '1\ud8002', '1\\xd8002'],
+  ['a lone low surrogate', '1\udc002', '1\\xdc002']
+])('share usage - %s is written as \\x and four hex digits', (name, value, written) => {
+  return new Promise(resolve => {
+    sendAndCheck(value, xml => {
+      expect(xml).toContain(
+        `<header Name="user-agent" escaped="true">${written}</header>`);
+    }, resolve);
   });
 });
 
 /**
- * Check that a value with an invalid character that is also too long is
- * marked both escaped and truncated.
+ * Characters XML 1.0 allows are written as they are, with no attribute.
+ */
+test('share usage - allowed characters are written as they are', done => {
+  const value = 'a\tb\nc\rd\u018ce\u00e9f\ud83d\ude00g';
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      `<header Name="user-agent">${value}</header>`);
+  }, done);
+});
+
+/**
+ * Values are cut at 10,000 characters and marked truncated.
+ */
+test('share usage - a value of 10,001 characters is truncated', done => {
+  sendAndCheck('X'.repeat(10001), xml => {
+    expect(xml).toContain(
+      `<header Name="user-agent" truncated="true">${'X'.repeat(10000)}</header>`);
+  }, done);
+});
+
+test('share usage - a value of 10,000 characters is not truncated', done => {
+  sendAndCheck('X'.repeat(10000), xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(
+      `<header Name="user-agent">${'X'.repeat(10000)}</header>`);
+  }, done);
+});
+
+/**
+ * A value with a character that is not allowed that is also too long is
+ * marked both escaped and truncated. The cut is made on the original value.
  */
 test('share usage - escaped and truncated value', done => {
-  const usageEngine = new ShareUsage({
-    requestedPackageSize: 1,
-    endpoint: 'http://127.0.0.1:8080/'
-  });
-
-  const replacementChar = String.fromCharCode(parseInt('0xFFFD', 16));
-  const pipeline = new PipelineBuilder()
-    .add(usageEngine)
-    .build();
-
-  const flowData = pipeline.createFlowData();
-  flowData.evidence.add('header.user-agent', '1ƌ2' + 'X'.repeat(1000));
-
-  flowData.process().then(() => {
-    setTimeout(() => {
-      expect(received.length).toBe(1);
-      expect(received[0]).toContain(
-        '<header Name="user-agent" escaped="true" truncated="true">1' +
-        `${replacementChar}2${'X'.repeat(509)}</header>`);
-      done();
-    }, 2000);
-  });
+  sendAndCheck('1\u00012' + 'X'.repeat(10000), xml => {
+    expect(xml).toContain(
+      '<header Name="user-agent" escaped="true" truncated="true">' +
+      `1\\x00012${'X'.repeat(9997)}</header>`);
+  }, done);
 });
 
 /**
