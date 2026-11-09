@@ -32,8 +32,8 @@ const url = require('url');
 const os = require('os');
 
 /**
- * The maximum length of a piece of evidence's value which can be
- * added to the usage data being sent.
+ * The maximum number of code points in a piece of evidence's value which
+ * can be added to the usage data being sent.
  */
 const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 10000;
 
@@ -387,10 +387,10 @@ function isValidXmlChar (code) {
 }
 
 /**
- * Prepares a value for the XML. A value over the maximum length is cut,
- * special XML characters are escaped, and a character XML 1.0 does not
- * allow is written as \x and four lower case hexadecimal digits of its
- * code. A surrogate pair is a valid character and is kept whole.
+ * Prepares a value for the XML. A value over the maximum number of code
+ * points is cut, special XML characters are escaped, and a character XML 1.0
+ * does not allow is written as \x and four lower case hexadecimal digits of
+ * its code. A surrogate pair is one valid character and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
@@ -398,15 +398,12 @@ class ReplacedString {
     this.escaped = false;
     this.truncated = false;
     if (text) {
+      // The limit counts code points, so a character is never cut in two.
       let value = text;
-      if (value.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH) {
+      const points = Array.from(text);
+      if (points.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH) {
         this.truncated = true;
-        value = value.substring(0, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
-        // Do not leave half of a surrogate pair at the end.
-        const last = value.charCodeAt(value.length - 1);
-        if (last >= 0xD800 && last <= 0xDBFF) {
-          value = value.substring(0, value.length - 1);
-        }
+        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_LENGTH).join('');
       }
       for (let i = 0; i < value.length; i++) {
         const code = value.charCodeAt(i);
