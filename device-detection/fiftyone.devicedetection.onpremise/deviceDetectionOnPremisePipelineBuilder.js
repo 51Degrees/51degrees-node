@@ -70,11 +70,15 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
    * @param {string} [options.performanceProfile] used to control the tradeoff
    * between performance and system memory usage (Only applies to on-premise,
    * not cloud) options are: LowMemory, MaxPerformance, Balanced,
-   * BalancedTemp, HighPerformance
+   * BalancedTemp, HighPerformance. Balanced by default, as in the native
+   * code.
    * @param {number} [options.concurrency] defaults to the number of cpus
    * in the machine
    * @param {boolean} [options.updateMatchedUserAgent] True if the detection
-   * should record the matched characters from the target User-Agent
+   * should record the matched characters from the target User-Agent, which
+   * the UserAgents property returns. On by default, as the native code sets
+   * it. Set it to false where UserAgents is not needed, which saves
+   * recording the characters.
    * @param {number} [options.maxMatchedUserAgentLength] Number of characters to
    * consider in the matched User-Agent. Ignored if updateMatchedUserAgent is
    * false
@@ -124,9 +128,9 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       updateOnStart = false,
       cacheSize = null,
       restrictedProperties,
-      performanceProfile = 'LowMemory',
+      performanceProfile = 'Balanced',
       concurrency = os.cpus().length,
-      updateMatchedUserAgent = false,
+      updateMatchedUserAgent,
       maxMatchedUserAgentLength,
       drift,
       difference,

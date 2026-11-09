@@ -195,9 +195,9 @@ const server = http.createServer((req, res) => {
     // via the JavaScriptBuilder
 
     if (req.url.indexOf('/json') !== -1) {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      FiftyOnePipelineCore.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
 
       return;
     }

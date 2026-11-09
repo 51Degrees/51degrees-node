@@ -214,8 +214,8 @@ const run = async function (dataFile, output, evidenceList) {
     // Uncomment 'browsername' to include Browser component as well. This can be seen by looking
     // for the browser profile ID in the device ID value.
     restrictedProperties: ['ismobile', 'hardwarename', 'userAgents', 'deviceID', 'difference', 'method', 'matchedNodes', 'drift', 'iterations'], /* , 'browsername' */
-    // We want to show the matching evidence characters as part of this example, so we have to set
-    // this flag to true.
+    // This example shows the matching evidence characters, which are recorded by default. Set
+    // this to false where the 'userAgents' property is not needed.
     updateMatchedUserAgent: true
   }).build();
 

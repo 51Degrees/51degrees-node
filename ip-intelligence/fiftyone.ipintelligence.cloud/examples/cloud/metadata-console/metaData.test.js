@@ -33,19 +33,38 @@ const example = require(path.join(__dirname, '/metaData.js'));
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
-// Test constants
-const tc = require51('fiftyone.ipintelligence.shared').testConstants;
+const shared = require51('fiftyone.ipintelligence.shared');
+const tc = shared.testConstants;
+const keyUtils = shared.keyUtils;
+const ExampleOutput = shared.exampleOutput.ExampleOutput;
+const CloudRequestEngine =
+  require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const resourceKey = process.env[tc.envVars.superResourceKeyEnvVar] ||
-  ExampleUtils.getResourceKeyFromEnv();
+const resourceKeyNames = keyUtils.resourceKeyNames(
+  tc.envVars.superResourceKeyEnvVar,
+  ExampleUtils.RESOURCE_KEY_ENV_VAR,
+  ExampleUtils.LEGACY_RESOURCE_KEY_ENV_VAR);
 
 // The cloud service can drop a connection, which is not what these tests check.
 jest.retryTimes(2);
 
 describe('Examples', () => {
-  const testFunc = resourceKey ? test : test.skip;
-  testFunc('cloud metadata', async () => {
-    await example.run(resourceKey, process.stdout);
-    expect(true);
+  test('cloud metadata', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        'ip', 'the IP Intelligence properties the key gives access to'));
+    }
+    await keyUtils.requireProduct(
+      new CloudRequestEngine({ resourceKey }), 'ip');
+
+    const output = new ExampleOutput();
+
+    await example.run(resourceKey, output);
+
+    // The example lists each property, then the evidence keys.
+    expect(output.text()).toContain('Property - RegisteredCountry');
+    expect(output.text()).toContain('Accepted evidence keys:');
+    expect(output.faults()).toEqual([]);
   });
 });

@@ -231,10 +231,9 @@ const server = http.createServer(async (req, res) => {
   // Handle report from client side separately
   if (req.url.startsWith('/json')) {
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
   } else if (req.url.split('?')[0] === coreJsPath) {
     // Serve the client-side script built by the JavaScriptBuilder as a separate
@@ -245,10 +244,9 @@ const server = http.createServer(async (req, res) => {
     // evidence like any other and are already in the flow data via
     // addFromRequest.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/x-javascript');
-
-      res.end(flowData.javascriptbuilder.javascript);
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
   } else {
     flowData.process().then(function () {

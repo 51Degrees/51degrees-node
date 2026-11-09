@@ -28,10 +28,88 @@ const require51 = (requestedPackage) => {
   }
 };
 
+const fs = require('fs');
+
 const FiftyOneDegreesDeviceDetection = require51('fiftyone.devicedetection');
 const DataFile = 'test.hash';
+const LiteDataFile = path.resolve(
+  process.env.directory || __dirname,
+  '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+
+const MobileUserAgent =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
+  'AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile' +
+  '/11D167 Safari/9537.53';
+
+const haveLiteDataFile = fs.existsSync(LiteDataFile);
+if (!haveLiteDataFile) {
+  console.warn(
+    'The update matched User-Agent test is skipped because the free Lite ' +
+    `data file is not at ${LiteDataFile}. Run cxx/data/get-data-files.sh ` +
+    'or cxx/data/get-data-files.ps1 to download it.');
+}
+const testWithLite = haveLiteDataFile ? test : test.skip;
+
+/**
+ * A pipeline from the builder with the Lite data file, working offline and
+ * leaving every other option at its default.
+ *
+ * @returns {object} the pipeline
+ */
+function buildAtDefaults () {
+  return new FiftyOneDegreesDeviceDetection
+    .DeviceDetectionPipelineBuilder({
+      dataFile: LiteDataFile,
+      licenceKeys: '',
+      autoUpdate: false,
+      updateOnStart: false,
+      fileSystemWatcher: false,
+      shareUsage: false
+    }).build();
+}
 
 describe('deviceDetectionOnPremise', () => {
+  // The matched characters of the User-Agent are recorded unless the
+  // option turns them off. A UserAgents value has the User-Agent's
+  // character where it was matched and an underscore where it was not.
+  testWithLite('a builder left at its defaults returns the matched ' +
+    'characters of the User-Agent', async () => {
+    const pipeline = buildAtDefaults();
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('header.user-agent', MobileUserAgent);
+    await flowData.process();
+    const userAgents = flowData.device.userAgents;
+    expect(userAgents.hasValue).toBe(true);
+    let matched = 0;
+    for (const value of userAgents.value) {
+      for (let i = 0; i < value.length; i++) {
+        if (value[i] !== '_') {
+          expect(value[i]).toBe(MobileUserAgent[i]);
+          matched++;
+        }
+      }
+    }
+    expect(matched).toBeGreaterThan(0);
+  });
+
+  // The engine does not expose the performance profile it uses, so this
+  // watches the profile setter it calls on the native configuration.
+  testWithLite('a builder left at its defaults uses the Balanced ' +
+    'performance profile', () => {
+    const ConfigHashSwig =
+      buildAtDefaults().flowElements.device.swigWrapper.ConfigHashSwig;
+    const setBalanced = jest.spyOn(ConfigHashSwig.prototype, 'setBalanced');
+    const setLowMemory =
+      jest.spyOn(ConfigHashSwig.prototype, 'setLowMemory');
+    try {
+      buildAtDefaults();
+      expect(setBalanced).toHaveBeenCalledTimes(1);
+      expect(setLowMemory).not.toHaveBeenCalled();
+    } finally {
+      jest.restoreAllMocks();
+    }
+  });
+
   // Check that setting cache for on-premise engine builder will
   // throw exception
   test('No cache support for on-premise engine', done => {
