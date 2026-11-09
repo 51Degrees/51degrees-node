@@ -63,10 +63,14 @@ const exampleConstants = require51('fiftyone.devicedetection.shared').exampleCon
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=lite_v_4_1_hash
+// limited accuracy and capabilities. On a free data file the example ends
+// by saying what the Enterprise data file adds, with a link to ask for a
+// copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=enterprise-data-file';
 
 // Here we make a function that gets a userAgent as evidence and
 // uses the Device Detection Engine to detect if it is a mobile or not
@@ -202,8 +206,8 @@ const run = async function (dataFile, output, evidenceList) {
     // properties here, we will only see those properties, along with the match metric properties
     // in the output.
     //
-    // If using the full on-premise data file the hardwarename property will be present in the
-    // data file. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=restrictedproperties
+    // The hardwarename property is only in the Enterprise data file, so with the free Lite
+    // data file it is left out. Contact us for a copy at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=restrictedproperties
     //
     // The 'ismobile' and 'hardwarename' properties are both part of the 'hardware' component.
     // The remaining properties are from match metrics.
@@ -224,6 +228,10 @@ const run = async function (dataFile, output, evidenceList) {
   // carry out some sample detections
   for (const evidenceValues of evidenceList) {
     await displayMatchMetrics(pipeline, output, evidenceValues);
+  }
+
+  if (ExampleUtils.isLiteDataFile(pipeline.getElement('device'))) {
+    output.write(`${ExampleUtils.getEnterpriseOffer(CONTACT_US)}\n`);
   }
 };
 
