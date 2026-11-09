@@ -388,6 +388,11 @@ export class RedeemResult {
      */
     factors: object | undefined;
     /**
+     * the `factors` object exactly as the cloud sent it, present only when
+     * the cloud sent `factors`
+     */
+    factorsRaw: object | undefined;
+    /**
      * @type {Date | undefined} when the verify endpoint checked the context
      * and sealed the result, present on the redeemed and expired outcomes
      */

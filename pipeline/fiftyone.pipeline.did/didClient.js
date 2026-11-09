@@ -145,6 +145,23 @@ const FactorResult = Object.freeze({
   NOT_RECORDED: 'notrecorded'
 });
 
+const KNOWN_FACTOR_RESULTS = new Set(Object.values(FactorResult));
+
+/**
+ * Reads a factor word from the cloud. Verified, misconfigured and not
+ * recorded are each read only from their own word and any other word is a
+ * mismatch. Null, which means nothing was compared, stays null.
+ *
+ * @param {*} word the value the cloud sent for a factor
+ * @returns {string | null} one of {@link FactorResult}, or null
+ */
+function factorResult (word) {
+  if (word === null) {
+    return null;
+  }
+  return KNOWN_FACTOR_RESULTS.has(word) ? word : FactorResult.MISMATCH;
+}
+
 /**
  * The names of the creator context factors, as the cloud writes them as
  * keys of `factors`, in the order the cloud lists them. The operating
@@ -274,18 +291,31 @@ class RedeemResult {
       : parsed.signature === SignatureResult.INVALID
         ? SignatureResult.INVALID
         : SignatureResult.UNKNOWN;
+    const factors = parsed.factors && typeof parsed.factors === 'object'
+      ? parsed.factors
+      : undefined;
+    /**
+     * @type {object | undefined} the `factors` object exactly as the cloud
+     * sent it, present only when the cloud sent `factors`
+     */
+    this.factorsRaw = factors
+      ? Object.freeze(Object.assign({}, factors))
+      : undefined;
     /**
      * @type {object | undefined} {@link Factor} name to
      * {@link FactorResult} value (or null where nothing was compared),
      * present only when the cloud sent `factors`, which it does where there
      * is something to diagnose, being a mismatch or a misconfigured result
-     * that still compared some factors. Every name is kept exactly as the
-     * cloud sent it, including one this package does not list in
-     * {@link Factor}, so a factor the cloud adds later reaches the caller
-     * without a new release of this package.
+     * that still compared some factors. Every name is kept as the cloud
+     * sent it, including one this package does not list in {@link Factor}.
+     * A word this package does not know is a mismatch, so an unexpected
+     * value never reads as a factor that matched or one that could not be
+     * compared. {@link RedeemResult#factorsRaw} has the words as sent.
      */
-    this.factors = parsed.factors && typeof parsed.factors === 'object'
-      ? Object.freeze(Object.assign({}, parsed.factors))
+    this.factors = factors
+      ? Object.freeze(Object.fromEntries(
+        Object.entries(factors).map(
+          ([name, word]) => [name, factorResult(word)])))
       : undefined;
     const verifiedAt = typeof parsed.verifiedAt === 'string'
       ? new Date(parsed.verifiedAt)
