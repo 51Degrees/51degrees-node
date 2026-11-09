@@ -20,7 +20,9 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const {
+  PipelineBuilder, FlowElement, ElementDataDictionary
+} = require('fiftyone.pipeline.core');
 const ShareUsage = require('../shareUsage');
 const http = require('http');
 const os = require('os');
@@ -291,7 +293,19 @@ test('share usage - session and sequence', done => {
     endpoint: 'http://127.0.0.1:8080/'
   });
 
+  // The JSON bundler needs a sequence number, which this stand-in gives
+  // without touching the evidence.
+  const standIn = new FlowElement({
+    dataKey: 'sequence',
+    processInternal: function (flowData) {
+      flowData.setElementData(new ElementDataDictionary({
+        flowElement: this,
+        contents: { 'session-id': '', sequence: 1 }
+      }));
+    }
+  });
   const pipeline = new PipelineBuilder({ addSequenceElement: false })
+    .add(standIn)
     .add(usageEngine)
     .build();
 
