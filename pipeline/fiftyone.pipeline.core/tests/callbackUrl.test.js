@@ -62,15 +62,18 @@ test.each([
   ['a_b.com', 'https://a_b.com/51dpipeline/json'],
   ['-ab.com', 'https://-ab.com/51dpipeline/json'],
   ['127.0.0.1:80', 'https://127.0.0.1:80/51dpipeline/json'],
+  ['1.2.3.4', 'https://1.2.3.4/51dpipeline/json'],
+  ['1.2.3.4:8080', 'https://1.2.3.4:8080/51dpipeline/json'],
+  ['1.2.3.4/path', 'https://1.2.3.4/path/51dpipeline/json'],
+  ['0.0.0.0', 'https://0.0.0.0/51dpipeline/json'],
+  ['101.2.3.4', 'https://101.2.3.4/51dpipeline/json'],
+  ['example.co1', 'https://example.co1/51dpipeline/json'],
+  ['123.example.com', 'https://123.example.com/51dpipeline/json'],
+  ['0x7f.example.com', 'https://0x7f.example.com/51dpipeline/json'],
   ['[::1]', 'https://[::1]/51dpipeline/json'],
   ['[::1]:8080', 'https://[::1]:8080/51dpipeline/json'],
-  ['[fe80::1%25eth0]', 'https://[fe80::1%25eth0]/51dpipeline/json'],
-  ['user:pw@example.com', 'https://user:pw@example.com/51dpipeline/json'],
-  ['u x@example.com', 'https://u%20x@example.com/51dpipeline/json'],
-  ['u\tx@example.com', 'https://u%09x@example.com/51dpipeline/json'],
   ['example.com.', 'https://example.com./51dpipeline/json'],
   ['example.com/path', 'https://example.com/path/51dpipeline/json'],
-  ['example.com?x', 'https://example.com?x/51dpipeline/json'],
   ['example.com/a b', 'https://example.com/a%20b/51dpipeline/json'],
   ['example.com/a%zzb', 'https://example.com/a%25zzb/51dpipeline/json'],
   ['example.com/a%41b', 'https://example.com/a%41b/51dpipeline/json'],
@@ -95,7 +98,6 @@ test.each([
   '[::1',
   '[v1.x]',
   '[1.2.3.4]',
-  'a@b@example.com',
   'a..b.com',
   '%41.com',
   'a\\b.com',
@@ -138,11 +140,6 @@ test.each([
   expect(url('https', host).valid).toBe(false);
 });
 
-test('accepts a zone followed by a port', () => {
-  expect(url('https', '[fe80::1%25eth0]:8080'))
-    .toStrictEqual(valid('https://[fe80::1%25eth0]:8080/51dpipeline/json'));
-});
-
 // A port goes by its value, so leading zeros are allowed, and a port too
 // long to read is refused rather than read as small enough.
 test('checks the port by its value', () => {
@@ -160,14 +157,12 @@ test('checks the port by its value', () => {
   }
 });
 
-// Each character rule 8 lists, in the user information, after the host and
-// in the endpoint, and a '%' without two hexadecimal digits after it, even
+// Each character rule 8 lists, after the host and in the endpoint, and a '%' without two hexadecimal digits after it, even
 // at the end.
 test('encodes the characters rule 8 lists', () => {
-  expect(callbackUrl('https', 'u"^`{|}@example.com/"^`{|}', '/j"^`{|}'))
+  expect(callbackUrl('https', 'example.com/"^`{|}', '/j"^`{|}'))
     .toStrictEqual(valid(
-      'https://u%22%5E%60%7B%7C%7D@example.com/%22%5E%60%7B%7C%7D' +
-      '/j%22%5E%60%7B%7C%7D'));
+      'https://example.com/%22%5E%60%7B%7C%7D/j%22%5E%60%7B%7C%7D'));
   expect(url('https', 'example.com/a%'))
     .toStrictEqual(valid('https://example.com/a%25/51dpipeline/json'));
   expect(url('https', 'example.com/a%4'))
@@ -176,6 +171,98 @@ test('encodes the characters rule 8 lists', () => {
     .toStrictEqual(valid('https://example.com/a%41/51dpipeline/json'));
   expect(callbackUrl('https', 'example.com', '/json%'))
     .toStrictEqual(valid('https://example.com/json%25'));
+});
+
+// The callback URL page's rule 4, which refuses an IPv6 zone identifier.
+test.each([
+  '[fe80::1%25eth0]',
+  '[fe80::1%25eth0]:8080',
+  '[FE80::1%25ETH0]',
+  '[fe80::1%251]',
+  '[::1%25lo]',
+  '[fe80::1%]',
+  '[fe80::1%25eth0]/path'
+])('refuses the zone identifier in %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+// Rule 3, which refuses an '@' anywhere in the host value.
+test.each([
+  'user@example.com',
+  'user:pw@example.com',
+  '@example.com',
+  ':@example.com',
+  'user@example.com:8080',
+  'user@[::1]',
+  'user@example.com/path',
+  'u%41@example.com',
+  'u x@example.com',
+  'u\tx@example.com',
+  'u"x@example.com',
+  "u'x@example.com",
+  'u\\x@example.com',
+  'u\nx@example.com',
+  'u\u0001x@example.com',
+  'a@b@example.com',
+  'example.com/a@b',
+  'exa mple.com/a@b',
+  'user:12/ss@example.com',
+  'user:pa/ss@example.com',
+  'user:pa?ss@example.com'
+])('refuses the user information in %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+// Rule 2, which refuses a '?' or '#' anywhere in the host value.
+test.each([
+  'example.com?x',
+  'example.com#x',
+  'example.com?',
+  'example.com#',
+  'example.com:8080?x',
+  '[::1]#x',
+  'example.com/path?x',
+  'example.com/path#x',
+  "example.com?');alert(1);//",
+  "example.com#');alert(1);//"
+])('refuses the query or fragment in %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+// Rule 4, where a name ending in a number must be an IPv4 address written
+// as four decimal numbers, each starting with 0 only when it is 0 alone.
+test.each([
+  'example.123',
+  'example.0x1f',
+  'example.0X',
+  '1.2.3.999',
+  '1.2.3',
+  '127.1',
+  '0x7f.0.0.1',
+  '01.2.3.4',
+  '00.2.3.4',
+  'example.123.',
+  '1.2.3.4.',
+  '1.2.3.4.5',
+  '1',
+  '300.1.1.1',
+  '0x7f.1',
+  '1.2.3.4.:8080'
+])('refuses the name ending in a number %j', host => {
+  expect(url('https', host).valid).toBe(false);
+});
+
+// Rule 6, where the URL kept for the log shows *** in place of everything in
+// the host before its last '@', wherever in the host value that '@' is.
+test.each([
+  ['user:secret@example.com', 'https://***@example.com/51dpipeline/json'],
+  ['a@b@example.com', 'https://***@example.com/51dpipeline/json'],
+  ['u@[::1]:80x', 'https://***@[::1]:80x/51dpipeline/json'],
+  ['user:pa/ss@example.com', 'https://***@example.com/51dpipeline/json'],
+  ['user:pa?ss@example.com', 'https://***@example.com/51dpipeline/json'],
+  ['exa mple.com/a@b', 'https://***@b/51dpipeline/json']
+])('the logged URL for %j holds no user information', (host, logged) => {
+  expect(url('https', host)).toStrictEqual({ valid: false, url: logged });
 });
 
 test('the invalid URL is the one built', () => {
@@ -216,10 +303,7 @@ test('checks the scheme', () => {
 // the URL it was given.
 test.each([
   "example.com/');alert(1);//",
-  "example.com?');alert(1);//",
-  "example.com#');alert(1);//",
-  "u'x@example.com",
-  'u\\x@example.com',
+  'example.com/a"b',
   'example.com/a\\b',
   'example.com/</script>'
 ])('nothing given can end the string, host %j', host => {
