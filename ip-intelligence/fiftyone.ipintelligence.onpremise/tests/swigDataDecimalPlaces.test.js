@@ -44,7 +44,7 @@ const found = (value) => ({
 });
 
 const dataFor = (properties, swigResults) => new SwigData({
-  flowElement: { properties },
+  flowElement: { dataKey: 'ip', properties },
   swigResults
 });
 
