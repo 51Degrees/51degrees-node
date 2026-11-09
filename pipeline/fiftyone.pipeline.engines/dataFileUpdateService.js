@@ -43,17 +43,25 @@ const watchersToClose = new FinalizationRegistry(
 
 /**
  * Updates the data file once the interval has passed, unless the update
- * service or the data file has been collected by then.
+ * service or the data file has been collected by then. The data file keeps
+ * the pending timer and a new one replaces it, so a data file has one
+ * polling schedule however many updates are started.
  *
  * @param {WeakRef} serviceRef the update service
  * @param {WeakRef} dataFileRef the data file to update
  * @param {number} interval milliseconds to wait
  */
 const scheduleUpdate = function (serviceRef, dataFileRef, interval) {
-  setTimeout(function () {
+  const scheduled = dataFileRef.deref();
+  if (!scheduled) {
+    return;
+  }
+  clearTimeout(scheduled.pollingTimer);
+  scheduled.pollingTimer = setTimeout(function () {
     const service = serviceRef.deref();
     const dataFile = dataFileRef.deref();
     if (service && dataFile) {
+      dataFile.pollingTimer = undefined;
       service.updateDataFile(dataFile);
     }
   }, interval);
