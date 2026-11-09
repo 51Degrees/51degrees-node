@@ -31,6 +31,10 @@ const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 
+// Names the engine sends from its own settings, which Evidence must not
+// supply.
+const reservedFields = ['resource', 'license', 'licence', 'values'];
+
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
@@ -432,6 +436,11 @@ class CloudRequestEngine extends Engine {
       const suffix = separatorIndex >= 0
         ? evidenceKey.substring(separatorIndex + 1)
         : evidenceKey;
+
+      // Evidence never supplies the request's own fields.
+      if (reservedFields.includes(suffix.toLowerCase())) {
+        continue;
+      }
 
       // Check and add the evidence to the query parameters.
       if ((suffix in queryData) === false) {
