@@ -23,6 +23,7 @@
 const crypto = require('crypto');
 
 const FlowElement = require('./flowElement.js');
+const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 
 /**
@@ -38,7 +39,21 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
  **/
 class SequenceElement extends FlowElement {
   constructor () {
-    super(...arguments);
+    super({
+      properties: {
+        'session-id': {
+          name: 'session-id',
+          type: 'string',
+          description: 'An identifier for this session.'
+        },
+        sequence: {
+          name: 'sequence',
+          type: 'int',
+          description: 'A counter that records how many consecutive ' +
+            'callbacks have been made in this session.'
+        }
+      }
+    });
 
     this.dataKey = 'sequence';
 
@@ -49,17 +64,23 @@ class SequenceElement extends FlowElement {
    * Internal process function for the sequence element
    * Checks if there is a session id and sequence number set
    * if there is it increments the sequence number for that session
-   * if not it initialises both
+   * if not it initialises both. Both values are written to the evidence
+   * and to the element data.
    *
    * @param {FlowData} flowData flowData with the evidence in it
    */
   processInternal (flowData) {
+    let sessionId;
+    let sequence;
+
     // Check if session id is set in evidence
 
     if (flowData.evidence.get('query.session-id')) {
+      sessionId = flowData.evidence.get('query.session-id');
+
       // Get current sequence number
 
-      let sequence = flowData.evidence.get('query.sequence');
+      sequence = flowData.evidence.get('query.sequence');
 
       if (sequence) {
         sequence = parseInt(sequence);
@@ -67,15 +88,19 @@ class SequenceElement extends FlowElement {
         sequence = 1;
       }
 
-      flowData.evidence.add('query.sequence', sequence + 1);
+      sequence += 1;
     } else {
-      flowData.evidence.add(
-        'query.session-id',
-        crypto.randomBytes(16).toString('hex')
-      );
-
-      flowData.evidence.add('query.sequence', 1);
+      sessionId = crypto.randomBytes(16).toString('hex');
+      sequence = 1;
     }
+
+    flowData.evidence.add('query.session-id', sessionId);
+    flowData.evidence.add('query.sequence', sequence);
+
+    flowData.setElementData(new ElementDataDictionary({
+      flowElement: this,
+      contents: { 'session-id': sessionId, sequence }
+    }));
   }
 }
 
