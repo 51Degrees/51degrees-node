@@ -388,6 +388,38 @@ test('share usage - a value of 10,000 characters is not truncated', done => {
 });
 
 /**
+ * The limit counts Unicode code points, so a character made of two UTF-16
+ * code units counts once and is never cut in two.
+ */
+test('share usage - an emoji at the limit is kept whole', done => {
+  const emoji = '\ud83d\ude00';
+  sendAndCheck('X'.repeat(9999) + emoji + 'Y', xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      '<header Name="user-agent" truncated="true">' +
+      `${'X'.repeat(9999)}${emoji}</header>`);
+  }, done);
+});
+
+test('share usage - a second emoji over the limit is cut whole', done => {
+  const emoji = '\ud83d\ude00';
+  sendAndCheck('X'.repeat(9999) + emoji + emoji, xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      '<header Name="user-agent" truncated="true">' +
+      `${'X'.repeat(9999)}${emoji}</header>`);
+  }, done);
+});
+
+test('share usage - 10,000 code points of emoji are not truncated', done => {
+  const value = '\ud83d\ude00'.repeat(10000);
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(`<header Name="user-agent">${value}</header>`);
+  }, done);
+});
+
+/**
  * A value with a character that is not allowed that is also too long is
  * marked both escaped and truncated. The cut is made on the original value.
  */
