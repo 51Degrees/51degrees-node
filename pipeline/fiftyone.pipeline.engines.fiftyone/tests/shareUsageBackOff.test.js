@@ -35,6 +35,8 @@ const ENDPOINT = `http://127.0.0.1:${PORT}/`;
 let status = 200;
 // When true the receiver never answers.
 let hang = false;
+// The content the receiver answers with.
+let body = '';
 // The usage data the receiver accepted.
 let received = [];
 // When each request arrived, whatever the answer.
@@ -66,13 +68,14 @@ const requestListener = function (req, res) {
       received.push(data);
     }
     res.writeHead(status);
-    res.end();
+    res.end(body);
   });
 };
 
 beforeEach(done => {
   status = 200;
   hang = false;
+  body = '';
   received = [];
   attempts = [];
   requests = 0;
@@ -275,12 +278,153 @@ test('share usage back-off - request with no answer does not stop sending', asyn
 }, 30000);
 
 /**
+ * Replaces the element's log with one that records what is logged.
+ *
+ * @returns {Array<object>} the messages logged, which the log adds to
+ */
+const recordLog = () => {
+  const logged = [];
+  usageEngine._log = (level, message) => logged.push({ level, message });
+  return logged;
+};
+
+/**
+ * Entries discarded because the queue is full are logged, but not with a
+ * message for each entry discarded.
+ */
+test('share usage back-off - full queue logs without a message per entry', async () => {
+  const pipeline = createPipeline({
+    maximumQueueSize: 4,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 2,
+    maxRecoveryDelaySeconds: 2
+  });
+  const logged = recordLog();
+  await failSends(pipeline, 1);
+  logged.length = 0;
+
+  for (let i = 0; i < 10; i++) {
+    await processUnique(pipeline);
+  }
+
+  const full = logged.filter(entry => String(entry.message).includes('full'));
+  expect(full.length).toBeGreaterThanOrEqual(1);
+  expect(full.length).toBeLessThan(6);
+  expect(full[0].level).toBe('warning');
+}, 30000);
+
+/**
+ * A send answered with anything other than 200 logs the status code and the
+ * content of the answer.
+ */
+test('share usage back-off - failed answer logs the status and content', async () => {
+  const pipeline = createPipeline();
+  const logged = recordLog();
+  body = 'the service says no';
+
+  await failSends(pipeline, 1);
+
+  await waitFor(
+    () => logged.some(entry => entry.level === 'warning' &&
+      String(entry.message).includes('500')),
+    () => `The status code was not logged. Logged: ${JSON.stringify(logged)}`);
+  const failed = logged.find(entry => entry.level === 'warning' &&
+    String(entry.message).includes('500'));
+  expect(failed.message).toContain('the service says no');
+}, 30000);
+
+/**
+ * The entries in a message are not separated by anything, as the XML has
+ * only Device elements inside Devices.
+ */
+test('share usage back-off - message has no text between devices', async () => {
+  const pipeline = createPipeline({ requestedPackageSize: 2 });
+  await processUnique(pipeline);
+  await processUnique(pipeline);
+
+  await waitFor(
+    () => received.length === 1,
+    () => 'The message was not sent.');
+  expect(received[0]).toContain('</Device><Device>');
+  expect(received[0]).not.toContain('</Device>,<Device>');
+}, 30000);
+
+/**
+ * A message holds the requested package size or more entries, up to twice
+ * the package size, so a queue that filled during a pause drains in fewer
+ * messages.
+ */
+test('share usage back-off - message holds up to twice the package size', async () => {
+  const pipeline = createPipeline({
+    requestedPackageSize: 2,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 1,
+    maxRecoveryDelaySeconds: 1
+  });
+  status = 500;
+  await processUnique(pipeline);
+  await processUnique(pipeline);
+  await waitFor(
+    () => attempts.length === 1,
+    () => 'The first send was not made.');
+  await sleep(50);
+  for (let i = 0; i < 6; i++) {
+    await processUnique(pipeline);
+  }
+
+  status = 200;
+  await waitFor(
+    () => clientIps().length === 6,
+    () => `Not all entries were sent: ${clientIps()}`);
+
+  expect(received.map(data => (data.match(/<Device>/g) || []).length))
+    .toEqual([4, 2]);
+}, 30000);
+
+/**
+ * A send that cannot be started counts as a failed send and is logged,
+ * rather than ending the process.
+ */
+test('share usage back-off - request that throws counts as failed', async () => {
+  const pipeline = createPipeline();
+  const logged = recordLog();
+  usageEngine.http = {
+    request: () => {
+      throw new Error('could not start the request');
+    }
+  };
+
+  await processUnique(pipeline);
+
+  await waitFor(
+    () => logged.some(entry =>
+      String(entry.message).includes('could not start the request')),
+    () => `The failed send was not logged. Logged: ${JSON.stringify(logged)}`);
+  expect(usageEngine.sending).toBe(false);
+}, 30000);
+
+/**
+ * The time the back-off is given comes from a clock that a change to the
+ * system time does not move.
+ */
+test('share usage back-off - now follows the monotonic clock', () => {
+  const { performance } = require('perf_hooks');
+  const before = performance.now();
+  const now = ShareUsageBackOff.now();
+  const after = performance.now();
+
+  expect(now).toBeGreaterThanOrEqual(before);
+  expect(now).toBeLessThanOrEqual(after);
+});
+
+/**
  * Settings the pause cannot work with are rejected.
  */
 test('share usage back-off - invalid settings are rejected', () => {
   [
     { failuresToEnterRecovery: 0 },
     { failuresToEnterRecovery: 101 },
+    { failuresToEnterRecovery: 2.5 },
     { failuresWindowSeconds: 0 },
     { initialRecoveryDelaySeconds: 0 },
     { maxRecoveryDelaySeconds: -1 },
