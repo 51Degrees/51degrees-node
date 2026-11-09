@@ -1526,17 +1526,18 @@ describe('DidClient redeem', () => {
     ]);
   });
 
-  test('a factor value this package does not list is passed through',
-    async () => {
-      const body = {
-        context: 'mismatch',
-        factors: { transport: 'somethingnewer' }
-      };
-      const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
-      expect(result.factors.transport).toBe('somethingnewer');
-      expect(result.toJSON().factors).toEqual(body.factors);
-    });
+  test('a factor value this package does not list is a mismatch, and the ' +
+    'word as sent is kept', async () => {
+    const body = {
+      context: 'mismatch',
+      factors: { transport: 'somethingnewer' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors.transport).toBe(FactorResult.MISMATCH);
+    expect(result.factorsRaw.transport).toBe('somethingnewer');
+    expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
+  });
 
   test('the factor names are the nine the cloud lists, in its order', () => {
     expect(Object.isFrozen(Factor)).toBe(true);
