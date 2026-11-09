@@ -1,0 +1,28 @@
+name: Temporary object name tests
+
+on:
+  push:
+    branches:
+      - 'tmp/objname-node-*'
+
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Show head
+        run: git log -1 --format=%H
+      - name: Install
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Lint
+        run: npx eslint pipeline/fiftyone.pipeline.core --ext .js
+      - name: Test
+        run: >
+          npx jest pipeline/fiftyone.pipeline.core/tests/objectName.test.js
+          pipeline/fiftyone.pipeline.core/tests/callbackUrl.test.js
+          pipeline/fiftyone.pipeline.core/tests/javascriptbuilder.test.js
