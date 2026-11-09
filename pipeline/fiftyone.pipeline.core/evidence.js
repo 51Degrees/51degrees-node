@@ -26,6 +26,18 @@ const Constants = require('./constants');
 const formContentType = 'application/x-www-form-urlencoded';
 
 /**
+ * The path of a request line's target, undecoded, being what comes before
+ * any query string and, when the target is a full URL, after its host.
+ *
+ * @param {string} target the request target, such as /page?a=1
+ * @returns {string} the path
+ */
+const requestLinePath = function (target) {
+  const withoutScheme = target.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '');
+  return withoutScheme.split(/[?#]/)[0] || '/';
+};
+
+/**
  * Whether the request is a POST whose body is a form.
  *
  * @param {object} request an HTTP request object
@@ -189,8 +201,8 @@ class Evidence {
   /**
    * Add evidence to flowData from an HTTP request
    * This helper automatically adds evidence:
-   * headers, cookies, protocol, IP, query params and, for a POST with a
-   * form body, the form values.
+   * headers, cookies, session values, protocol, IP, query params and, for a
+   * POST with a form body, the form values.
    *
    * Form values are added as query evidence after the query string, so a
    * form value replaces a query string value of the same name. They are
@@ -202,10 +214,12 @@ class Evidence {
    *
    * The web request is also added as server.http-request, whether or not an
    * element accepts it, as a frozen object holding every value read from
-   * the request under the key it has as evidence. It is there for elements
-   * that read the request without accepting evidence, such as the usage
-   * sharing element, and so that what the request carried can be used once
-   * processing is done, when the request's socket may have closed.
+   * the request under the key it has as evidence, with the request's method
+   * and path as server.request-method and server.request-path. It is there
+   * for elements that read the request without accepting evidence, such as
+   * the usage sharing element, and so that what the request carried can be
+   * used once processing is done, when the request's socket may have
+   * closed.
    *
    * @param {object} request an HTTP request object
    * @returns {Evidence} return updated evidence
@@ -295,11 +309,28 @@ class Evidence {
       }
     }
 
+    // Add the values stored in the session, when the request has one. The
+    // session's own settings, such as an expiry, are not values.
+    if (request.session !== null && typeof request.session === 'object') {
+      for (const [name, value] of Object.entries(request.session)) {
+        if (['string', 'number', 'boolean'].includes(typeof value)) {
+          evidence.add('session.' + name, value);
+        }
+      }
+    }
+
     const httpRequest = {};
     for (const [key, value] of values) {
       this.add(key, value);
       httpRequest[key] = value;
     }
+
+    // The method and path of the request line are part of the request as
+    // well, exactly as the request line has them.
+    if (typeof request.method === 'string') {
+      httpRequest['server.request-method'] = request.method;
+    }
+    httpRequest['server.request-path'] = requestLinePath(request.url);
     this.add(Constants.evidenceHttpRequest, Object.freeze(httpRequest));
 
     return this;

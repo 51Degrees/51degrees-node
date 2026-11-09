@@ -47,8 +47,8 @@ declare class Evidence {
     /**
      * Add evidence to flowData from an HTTP request
      * This helper automatically adds evidence:
-     * headers, cookies, protocol, IP, query params and, for a POST with a
-     * form body, the form values.
+     * headers, cookies, session values, protocol, IP, query params and, for a
+     * POST with a form body, the form values.
      *
      * Form values are added as query evidence after the query string, so a
      * form value replaces a query string value of the same name. They are
@@ -60,10 +60,12 @@ declare class Evidence {
      *
      * The web request is also added as server.http-request, whether or not an
      * element accepts it, as a frozen object holding every value read from
-     * the request under the key it has as evidence. It is there for elements
-     * that read the request without accepting evidence, such as the usage
-     * sharing element, and so that what the request carried can be used once
-     * processing is done, when the request's socket may have closed.
+     * the request under the key it has as evidence, with the request's method
+     * and path as server.request-method and server.request-path. It is there
+     * for elements that read the request without accepting evidence, such as
+     * the usage sharing element, and so that what the request carried can be
+     * used once processing is done, when the request's socket may have
+     * closed.
      *
      * @param {object} request an HTTP request object
      * @returns {Evidence} return updated evidence

@@ -31,16 +31,16 @@ const HTTP_REQUEST_KEY = core.Constants.evidenceHttpRequest;
 // this are the ones 51Degrees sets, and are shared.
 const FIFTYONE_PREFIX = '51d_';
 
-// The Cookie header carries every cookie, including the ones the cookie rule
-// leaves out, so it is not shared unless all evidence is.
-const BLOCKED_HEADERS = ['cookie'];
-
 // Evidence that is never shared, whatever the settings, matched as the whole
 // key or after a '.'. 'id.email' and 'id.salt' are a raw email address and the
 // salt used to make hashed email identifiers. 'request-query' is the whole
 // query string, which would undo the rules for its parameters. 'request-path'
 // would make each page a visitor opens look like a new session to the tracker.
-const NEVER_SHARED_KEYS = ['id.email', 'id.salt', 'request-query', 'request-path'];
+// 'header.cookie' is the Cookie header, which carries every cookie, and the
+// cookies that are shared are shared as their own 'cookie.' evidence.
+const NEVER_SHARED_KEYS = [
+  'id.email', 'id.salt', 'request-query', 'request-path', 'header.cookie'
+];
 
 /**
  * The ShareUsageEvidenceKeyFilter decides which evidence the 51Degrees
@@ -119,8 +119,7 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
     if (prefix === 'header') {
       // Add the header to the list if the header name does not
       // appear in the list of blocked headers.
-      return this.blockedHttpHeaders.includes(field) === false &&
-        BLOCKED_HEADERS.includes(field) === false;
+      return this.blockedHttpHeaders.includes(field) === false;
     }
     if (prefix === 'cookie') {
       // Only add cookies that start with the 51Degrees cookie
