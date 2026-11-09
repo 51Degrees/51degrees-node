@@ -26,6 +26,11 @@ const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 
+// The largest sequence that can be given, so that one more is still a
+// 32 bit whole number.
+const MaxGivenSequence = 2147483646;
+const SequencePattern = /^[0-9]{1,10}$/;
+
 /**
  * @typedef {import('./flowData')} FlowData
  */
@@ -70,28 +75,19 @@ class SequenceElement extends FlowElement {
    * @param {FlowData} flowData flowData with the evidence in it
    */
   processInternal (flowData) {
-    let sessionId;
-    let sequence;
-
-    // Check if session id is set in evidence
-
-    if (flowData.evidence.get('query.session-id')) {
-      sessionId = flowData.evidence.get('query.session-id');
-
-      // Get current sequence number
-
-      sequence = flowData.evidence.get('query.sequence');
-
-      if (sequence) {
-        sequence = parseInt(sequence);
-      } else {
-        sequence = 1;
-      }
-
-      sequence += 1;
-    } else {
+    // The session id and the sequence are each read on their own. A value
+    // that is not usable counts as absent.
+    let sessionId = flowData.evidence.get('query.session-id');
+    if (typeof sessionId !== 'string' || sessionId.length === 0) {
       sessionId = crypto.randomBytes(16).toString('hex');
-      sequence = 1;
+    }
+
+    const given = flowData.evidence.get('query.sequence');
+    let sequence = 1;
+    if (typeof given === 'number' && Number.isInteger(given)) {
+      sequence = given >= 0 && given <= MaxGivenSequence ? given + 1 : 1;
+    } else if (typeof given === 'string' && SequencePattern.test(given)) {
+      sequence = Number(given) <= MaxGivenSequence ? Number(given) + 1 : 1;
     }
 
     flowData.evidence.add('query.session-id', sessionId);
