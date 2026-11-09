@@ -323,10 +323,19 @@ describe('log messages', () => {
   test('a file system watcher is logged', async () => {
     const { service, logs } = loggingService();
     const dataFile = standInDataFile({
+      autoUpdate: true,
+      pollingInterval: 60,
+      updateTimeMaximumRandomisation: 1,
+      getNextUpdate: () => new Date(),
       fileSystemWatcher: true,
       path: file
     });
-    service.registerDataFile(dataFile);
+    jest.useFakeTimers();
+    try {
+      service.registerDataFile(dataFile);
+    } finally {
+      jest.useRealTimers();
+    }
     expect(messages(logs)).toContain('info: Creating file system watcher');
   });
 
@@ -520,6 +529,165 @@ describe('log messages', () => {
       expect(logs.find((log) => log.level === 'error').message).toBe(
         'An error occurred when copying a data file to replace the ' +
         'existing one at \'' + target + '\'.');
+    } finally {
+      stop(remote.server);
+    }
+  });
+});
+
+describe('file system watcher', () => {
+  test('is not created while autoUpdate is off', () => {
+    const folder = newFolder();
+    const file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+    const { service, logs } = loggingService();
+    const watch = jest.spyOn(fs, 'watch');
+    try {
+      service.registerDataFile(standInDataFile({
+        autoUpdate: false,
+        fileSystemWatcher: true,
+        path: file
+      }));
+      expect(watch).not.toHaveBeenCalled();
+      expect(logs.map((log) => log.message))
+        .not.toContain('Creating file system watcher');
+    } finally {
+      watch.mockRestore();
+    }
+  });
+});
+
+describe('every update reports one status', () => {
+  let folder;
+  let file;
+
+  beforeEach(() => {
+    folder = newFolder();
+    file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+  });
+
+  // Records each status, and whether the data file was still marked as
+  // updating when it was reported.
+  const record = (service, dataFile) => {
+    const seen = [];
+    service.on('updateComplete', (status) => {
+      seen.push({ status, updating: dataFile.updating });
+    });
+    return seen;
+  };
+
+  test('a URL that cannot be parsed is reported and does not leave the ' +
+    'data file updating', async () => {
+    const { service } = loggingService();
+    const dataFile = standInDataFile({
+      updateUrl: 'not a url',
+      tempDataDirectory: folder
+    });
+    const seen = record(service, dataFile);
+    expect(() => service.updateDataFile(dataFile, true)).not.toThrow();
+    await sleep(100);
+    expect(seen).toEqual([
+      { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+    ]);
+    expect(dataFile.updating).toBe(false);
+  });
+
+  test('a download that is cut short is reported', async () => {
+    const server = http.createServer((request, response) => {
+      response.writeHead(200, { 'content-length': '1000' });
+      response.write('version');
+      setTimeout(() => request.socket.destroy(), 50);
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(500);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+      ]);
+      expect(dataFile.data).toBeUndefined();
+      expect(dataFile.updating).toBe(false);
+    } finally {
+      stop(server);
+    }
+  });
+
+  test('a copy that fails is reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: path.join(folder, 'missing-folder', 'data.dat')
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
+          updating: false
+        }
+      ]);
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a download that cannot be removed after a good refresh is a ' +
+    'success reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    const unlink = jest.spyOn(fs, 'unlink').mockImplementation(
+      (name, callback) => callback(new Error('cannot remove')));
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_SUCCESS, updating: false }
+      ]);
+      expect(logs.some((log) => log.level === 'error' &&
+        log.message.includes('cannot remove'))).toBe(true);
+    } finally {
+      unlink.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a failed refresh is reported after the data file stops ' +
+    'updating', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        refresh: () => {
+          throw new Error('The data cannot be used.');
+        }
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED, updating: false }
+      ]);
     } finally {
       stop(remote.server);
     }

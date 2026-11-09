@@ -42,6 +42,26 @@ const newDataFile = (prefix) => {
   return { folder, file };
 };
 
+// A data file is watched only while autoUpdate is on. The wait for its
+// next update is never run, because the timer is replaced while it is
+// registered.
+const watchedOptions = {
+  fileSystemWatcher: true,
+  autoUpdate: true,
+  pollingInterval: 60,
+  updateTimeMaximumRandomisation: 1,
+  getNextUpdate: () => new Date()
+};
+
+const register = (updateService, dataFile) => {
+  jest.useFakeTimers();
+  try {
+    updateService.registerDataFile(dataFile);
+  } finally {
+    jest.useRealTimers();
+  }
+};
+
 // Stands in for an engine that keeps the data it has when a refresh fails.
 // The refresh fails if the file does not start with 'version'.
 const standInDataFile = (file) => ({
@@ -180,10 +200,10 @@ test('file watcher keeps watching after a failed refresh', async () => {
     }
   });
   const dataFile = Object.assign(standInDataFile(file),
-    { fileSystemWatcher: true });
+    watchedOptions);
 
   try {
-    updateService.registerDataFile(dataFile);
+    register(updateService, dataFile);
     // On macOS fs.watch can miss a change made straight after it starts,
     // which leaves the test waiting for an event that never comes.
     await sleep(500);
@@ -225,10 +245,10 @@ test('file watcher with no error listener writes a failed refresh to the ' +
   const { file } = newDataFile('watcher-');
   const updateService = new DataFileUpdateService(new Pipeline([]));
   const dataFile = Object.assign(standInDataFile(file),
-    { fileSystemWatcher: true });
+    watchedOptions);
 
   try {
-    updateService.registerDataFile(dataFile);
+    register(updateService, dataFile);
     // The watcher is given time to start, as in the test above.
     await sleep(500);
 
@@ -269,10 +289,10 @@ test('file watcher with an error listener reports a failed refresh to it',
     pipeline.on('error', (message) => heard.push(message));
     const updateService = new DataFileUpdateService(pipeline);
     const dataFile = Object.assign(standInDataFile(file),
-      { fileSystemWatcher: true });
+      watchedOptions);
 
     try {
-      updateService.registerDataFile(dataFile);
+      register(updateService, dataFile);
       // The watcher is given time to start, as in the tests above.
       await sleep(500);
 
@@ -417,7 +437,7 @@ test('update route reports a good file as a success', async () => {
 const registerAndDrop = (file, registry) => {
   const updateService = new DataFileUpdateService({ log: function () {} });
   const watched = Object.assign(standInDataFile(file),
-    { fileSystemWatcher: true });
+    watchedOptions);
   const scheduled = Object.assign(standInDataFile(file), {
     autoUpdate: true,
     pollingInterval: 60,
