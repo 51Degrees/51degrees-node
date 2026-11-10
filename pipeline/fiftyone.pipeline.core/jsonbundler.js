@@ -132,22 +132,11 @@ class JSONBundlerElement extends FlowElement {
       const propertyCache = this.propertyCache[flowElement.dataKey];
 
       for (const property in properties) {
-        // Check if property has delayed execution and set in JSON if yes
-
-        if (propertyCache.delayExecutionList.indexOf(property) !== -1) {
-          output[flowElement.toLowerCase()][property.toLowerCase() + 'delayexecution'] = true;
-        }
-
-        // Check if property has any delayed execution evidence properties and set in JSON if yes
-
-        if (propertyCache.evidenceProperties[property]) {
-          output[flowElement.toLowerCase()][property.toLowerCase() + 'evidenceproperties'] = propertyCache.evidenceProperties[property];
-        }
-
         // Get the value
 
         let value;
         let nullReason = 'Unknown';
+        let found = true;
 
         try {
           const valueContainer = flowData.get(flowElement).get(property);
@@ -171,6 +160,24 @@ class JSONBundlerElement extends FlowElement {
         } catch (e) {
           // Catching missing property exceptions and other errors
 
+          found = false;
+        }
+
+        // A property with a value whose execution is delayed is marked, so
+        // the client does not run it straight away.
+
+        if (found && value !== null && value !== undefined &&
+          propertyCache.delayExecutionList.indexOf(property) !== -1) {
+          output[flowElement.toLowerCase()][property.toLowerCase() + 'delayexecution'] = true;
+        }
+
+        // Check if property has any delayed execution evidence properties and set in JSON if yes
+
+        if (propertyCache.evidenceProperties[property]) {
+          output[flowElement.toLowerCase()][property.toLowerCase() + 'evidenceproperties'] = propertyCache.evidenceProperties[property];
+        }
+
+        if (!found) {
           continue;
         }
 
