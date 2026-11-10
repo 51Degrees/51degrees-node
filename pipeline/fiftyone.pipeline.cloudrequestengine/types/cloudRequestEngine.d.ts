@@ -10,7 +10,13 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      *
      * @param {object} options options object
      * @param {string} options.resourceKey resourcekey for cloud service
-     * @param {string} options.licenseKey licensekey for cloud service
+     * @param {string} options.licenseKey licensekey for cloud service, beside
+     * a resourceKey or on its own. On its own, requestedProperties is
+     * required.
+     * @param {Array<string>|string} options.requestedProperties the fully
+     * qualified names of the properties to ask for, such as device.ismobile,
+     * as a list or one comma separated string. Beside a resourceKey the cloud
+     * service adds them to the properties the resource key carries.
      * @param {string} options.baseURL url the cloud service is located at
      * if overriding default
      * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -21,15 +27,18 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
      * @param {RequestClient} options.requestClient Set predefined RequestClient.
      */
-    constructor({ resourceKey, licenseKey, baseURL, cloudRequestOrigin, requestClient }: {
+    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient }: {
         resourceKey: string;
         licenseKey: string;
+        requestedProperties: Array<string> | string;
         baseURL: string;
         cloudRequestOrigin: string;
         requestClient: RequestClient;
     }, ...args: any[]);
     resourceKey: string;
     licenseKey: string;
+    requestedProperties: string[];
+    notCoveredReported: boolean;
     cloudRequestOrigin: string;
     requestClient: RequestClient;
     baseURL: string;
@@ -111,6 +120,18 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @returns {Promise} result of processing
      */
     getData(flowData: FlowData): Promise<any>;
+    /**
+     * Compares the requested properties with an answer and logs, once, the
+     * names the answer left out. The cloud service drops a property the keys
+     * do not cover without naming it, so only the engine can notice. A
+     * property present but null counts as answered, because its nullreason
+     * says why it has no value. The answer cannot change while the keys and
+     * the list stay the same, so one comparison is enough.
+     *
+     * @param {FlowData} flowData the flow data whose pipeline is logged to
+     * @param {string} body the JSON the cloud service answered with
+     */
+    reportPropertiesNotCovered(flowData: FlowData, body: string): void;
     /**
      * Internal function to get evidenceKeys used by cloud resourcekey
      *
