@@ -24,7 +24,7 @@
 // must never be stored in the cache or served from it.
 
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
-const { LruCache } = require('fiftyone.pipeline.engines');
+const { LruCache, AspectDataDictionary } = require('fiftyone.pipeline.engines');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const MockRequestClient = require('./classes/mockRequestClient');
 
@@ -82,6 +82,45 @@ describe('cloud request engine cache', () => {
       expect(client.posts).toBe(2);
       expect(first.fodid).toBe('first');
       expect(second.fodid).toBe('second');
+    });
+
+  // The specification says the member name is matched in any case.
+  test.each(['FodId', 'FODID'])(
+    'does not store or serve a response with a top level %s',
+    async (name) => {
+      const client = new CountingClient([
+        { ...baseJson, [name]: 'first' },
+        { ...baseJson, [name]: 'second' }
+      ]);
+      const pipeline = build(client);
+      const first = await request(pipeline);
+      const second = await request(pipeline);
+      expect(client.posts).toBe(2);
+      expect(first[name]).toBe('first');
+      expect(second[name]).toBe('second');
+    });
+
+  test('does not serve a response with a fodid that it finds in the cache',
+    async () => {
+      const client = new CountingClient([baseJson]);
+      const cache = new LruCache({ size: 10 });
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.add('header.User-Agent', 'iPhone');
+      const key = JSON.stringify(engine.evidenceKeyFilter
+        .filterEvidence(flowData.evidence.getAll()));
+      cache.put(key, new AspectDataDictionary({
+        flowElement: engine,
+        contents: { cloud: JSON.stringify({ ...baseJson, fodid: 'stale' }) }
+      }));
+      await flowData.process();
+      expect(client.posts).toBe(1);
+      expect(JSON.parse(flowData.cloud.cloud)).toEqual(baseJson);
     });
 
   test('caches a response that has a fodid below the top level',
