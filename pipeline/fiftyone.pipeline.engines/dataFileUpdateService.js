@@ -346,10 +346,25 @@ class DataFileUpdateService {
       request = http.get(requestOptions);
     }
 
+    // Each update reports one status, so the first handler to end the
+    // update reports it and any later one does nothing.
+    let ended = false;
+    const end = function () {
+      const first = !ended;
+      ended = true;
+      return first;
+    };
+    let responded = false;
+
     // Without an error listener a connection failure (for example a
     // refused or reset connection) emits an unhandled 'error' event,
-    // which crashes the whole process.
+    // which crashes the whole process. A connection reset part way through
+    // the download raises this error and then closes the response, so once
+    // the response has arrived the response's handlers report the failure.
     request.on('error', function (err) {
+      if (responded || !end()) {
+        return;
+      }
       dataFileUpdateService.log(
         'warn',
         'An error occurred when connecting to ' +
@@ -365,8 +380,12 @@ class DataFileUpdateService {
     });
 
     request.on('response', function (response) {
+      responded = true;
       if (response.statusCode !== 200) {
         response.resume();
+        if (!end()) {
+          return false;
+        }
 
         const downloadFailed = function (status) {
           dataFileUpdateService.log(
@@ -407,6 +426,9 @@ class DataFileUpdateService {
 
       if (!dataFile.tempDataDirectory) {
         response.resume();
+        if (!end()) {
+          return false;
+        }
         dataFileUpdateService.log(
           'error',
           "The data file '" + dataFile.identifier + "' is checking for " +
@@ -425,6 +447,9 @@ class DataFileUpdateService {
       output.on('error', function (err) {
         written = false;
         response.resume();
+        if (!end()) {
+          return;
+        }
         dataFileUpdateService.writeFailed(dataFile, filename, err);
         dataFileUpdateService.fail(
           dataFile,
@@ -442,6 +467,9 @@ class DataFileUpdateService {
         written = false;
         output.destroy();
         fs.unlink(filename, function () {});
+        if (!end()) {
+          return;
+        }
         dataFileUpdateService.log(
           'warn',
           'An error occurred while downloading a data file update for ' +
@@ -456,6 +484,11 @@ class DataFileUpdateService {
 
       output.on('finish', function () {
         if (!written) {
+          return;
+        }
+        if (!end()) {
+          // The update was reported as failed while the file was written.
+          fs.unlink(filename, function () {});
           return;
         }
 
@@ -473,7 +506,26 @@ class DataFileUpdateService {
           const hash = crypto.createHash('md5');
           hash.setEncoding('hex');
 
+          // A failed read is reported once, and the check is not made.
+          let checked = false;
+          fd.on('error', function (err) {
+            if (checked) {
+              return;
+            }
+            checked = true;
+            dataFileUpdateService.writeFailed(dataFile, filename, err);
+            fs.unlink(filename, function () {
+              dataFileUpdateService.fail(
+                dataFile,
+                AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+            });
+          });
+
           fd.on('end', function () {
+            if (checked) {
+              return;
+            }
+            checked = true;
             hash.end();
             if (hash.read() !== headerMD5) {
               dataFileUpdateService.integrityFailed(
