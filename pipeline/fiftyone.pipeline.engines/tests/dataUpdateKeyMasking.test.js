@@ -26,9 +26,15 @@
 
 const path = require('path');
 
-const { Pipeline } = require('fiftyone.pipeline.core');
+const { Pipeline, LicenseKeys } = require('fiftyone.pipeline.core');
 const DataFileUpdateService = require(
   path.resolve(__dirname, '..', 'dataFileUpdateService'));
+const DeviceDetectionDataFile = require(path.resolve(__dirname, '..', '..',
+  '..', 'device-detection', 'fiftyone.devicedetection.onpremise',
+  'deviceDetectionDataFile'));
+const IpIntelligenceDataFile = require(path.resolve(__dirname, '..', '..',
+  '..', 'ip-intelligence', 'fiftyone.ipintelligence.onpremise',
+  'ipIntelligenceDataFile'));
 
 const KEY = 'ABCDEFGH1234';
 const MASKED = '********1234';
@@ -60,3 +66,36 @@ test('a failed update request leaves only the masked key in the log',
     expect(text).toContain('LicenseKeys=' + MASKED);
     expect(text).not.toContain(KEY);
   });
+
+// The URL formatters put the license keys last, so a message that ends the
+// sentence after the URL puts a full stop straight after the key. A list of
+// keys joined by a bar is written with the bar encoded as %7C.
+describe.each([
+  ['Device Detection', DeviceDetectionDataFile],
+  ['IP Intelligence', IpIntelligenceDataFile]
+])('the %s update URL', (name, DataFile) => {
+  const url = (licenseKeys) => new DataFile({
+    updateURLParams: {
+      baseURL: 'https://h.example/api/v2/download',
+      product: 'V4Enterprise',
+      Type: 'HashV41',
+      licenseKeys
+    }
+  }).urlFormatter();
+
+  test('is masked when the key ends a sentence', () => {
+    const message = 'An error occurred while downloading a data file ' +
+      'update for ' + name + ' from ' + url('ABCDEFGH') +
+      '. Update will be attempted again later.';
+    expect(message).toContain('licenseKeys=ABCDEFGH. Update');
+    const masked = LicenseKeys.mask(message);
+    expect(masked).toBe(message.replace('ABCDEFGH', '****EFGH'));
+  });
+
+  test('masks each of two keys joined by a bar', () => {
+    const text = url(KEY + '|ZZZZZZZZ9999');
+    expect(text).toContain('licenseKeys=' + KEY + '%7CZZZZZZZZ9999');
+    expect(LicenseKeys.mask(text))
+      .toContain('licenseKeys=' + MASKED + '%7C********9999');
+  });
+});

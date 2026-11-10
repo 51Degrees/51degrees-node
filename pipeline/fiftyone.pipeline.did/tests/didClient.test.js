@@ -1664,6 +1664,26 @@ describe('DidClient redeem', () => {
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
     await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toThrow('fetch failed');
   });
+
+  // The cloud refuses a licence key with an error that names it. Only the
+  // key's last 4 characters may reach an error's message or body.
+  test.each([
+    [401, '{ "status":"401", "errors": ["Invalid license key(s) supplied: ' +
+      '\\u0027' + LICENCE + '\\u0027"] }', 'DidClientError'],
+    [400, { errors: ['Invalid license key(s) supplied: \'' + LICENCE + '\''] },
+      'DidArgumentError'],
+    [404, 'Nothing here for ' + LICENCE, 'DidNotSupportedError']
+  ])('a licence key named in a %s answer is masked', async (status, body, name) => {
+    const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
+    const { client } = redeemClient(status, body);
+    const error = await client.redeem(fod, RESULT, CHALLENGE)
+      .then(() => undefined, (e) => e);
+    expect(error).toHaveProperty('name', name);
+    expect(error.message).toContain(masked);
+    expect(error.body).toContain(masked);
+    expect(require('util').inspect(error, { showHidden: true }))
+      .not.toContain(LICENCE);
+  });
 });
 
 describe('RedeemResult.fromResponse', () => {

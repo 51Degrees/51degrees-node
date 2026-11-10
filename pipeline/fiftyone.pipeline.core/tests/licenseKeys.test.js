@@ -45,7 +45,18 @@ describe('LicenseKeys.mask', () => {
       'a?LicenseKeys=' + MASKED + ',********9999&b=1'],
     ['encoded comma', 'a?LicenseKeys=' + KEY + '%2CZZZZZZZZ9999',
       'a?LicenseKeys=' + MASKED + '%2C********9999'],
+    ['encoded bar', 'a?LicenseKeys=' + KEY + '%7CZZZZZZZZ9999',
+      'a?LicenseKeys=' + MASKED + '%7C********9999'],
+    ['encoded bar in lower case', 'a?LicenseKeys=' + KEY + '%7cZZZZZZZZ9999',
+      'a?LicenseKeys=' + MASKED + '%7c********9999'],
     ['a short key', 'a?license=abc', 'a?license=***'],
+    ['the example', 'a?license=ABCDEFGH', 'a?license=****EFGH'],
+    ['a key that ends a sentence', 'Failed from a?licenseKeys=ABCDEFGH. Again.',
+      'Failed from a?licenseKeys=****EFGH. Again.'],
+    ['a key before a comma', 'a?license=ABCDEFGH, then', 'a?license=****EFGH, then'],
+    ['a key in brackets', '(a?license=ABCDEFGH)', '(a?license=****EFGH)'],
+    ['a key before other punctuation', 'a?license=ABCDEFGH;:!?',
+      'a?license=****EFGH;:!?'],
     ['text around', 'Checking for update from \'a?licenseKeys=' + KEY +
       '\' for Engine \'E\'',
     'Checking for update from \'a?licenseKeys=' + MASKED + '\' for Engine \'E\'']
@@ -58,11 +69,99 @@ describe('LicenseKeys.mask', () => {
     expect(mask('')).toBe('');
   });
 
-  test('leaves a value that is not text or an error alone', () => {
-    const value = { a: 1 };
+  test('leaves a value that holds no key alone', () => {
+    const value = { a: 1, b: ['c', { d: 'e' }] };
     expect(mask(value)).toBe(value);
     expect(mask(undefined)).toBeUndefined();
+    expect(mask(null)).toBeNull();
     expect(mask(5)).toBe(5);
+  });
+
+  test('masks text inside arrays and plain objects', () => {
+    const value = {
+      source: 'CloudRequestEngine',
+      message: ['a?license=' + KEY, { url: 'b?licenseKeys=' + KEY }]
+    };
+    const masked = mask(value);
+    expect(masked).toEqual({
+      source: 'CloudRequestEngine',
+      message: ['a?license=' + MASKED, { url: 'b?licenseKeys=' + MASKED }]
+    });
+    expect(value.message[0]).toBe('a?license=' + KEY);
+  });
+
+  test('masks an object that refers to itself', () => {
+    const value = { text: 'a?license=' + KEY };
+    value.self = value;
+    const masked = mask(value);
+    expect(masked.text).toBe('a?license=' + MASKED);
+    expect(masked.self).toBe(masked);
+  });
+
+  test('masks every own property of an error', () => {
+    const error = new Error('failed for a?license=' + KEY);
+    error.errorMessage = 'failed for a?license=' + KEY;
+    error.input = 'a?license=' + KEY;
+    error.details = { url: 'a?license=' + KEY };
+    const masked = mask(error);
+    expect(masked).toBeInstanceOf(Error);
+    expect(masked.errorMessage).toBe('failed for a?license=' + MASKED);
+    expect(masked.input).toBe('a?license=' + MASKED);
+    expect(masked.details.url).toBe('a?license=' + MASKED);
+    expect(JSON.stringify(masked)).not.toContain(KEY);
+  });
+
+  test('masks the errors and the cause an error holds', () => {
+    const inner = new Error('a?license=' + KEY);
+    const error = new AggregateError([inner], 'failed',
+      { cause: new Error('b?license=' + KEY) });
+    const masked = mask(error);
+    expect(masked).toBeInstanceOf(AggregateError);
+    expect(masked.errors[0].message).toBe('a?license=' + MASKED);
+    expect(masked.cause.message).toBe('b?license=' + MASKED);
+    expect(require('util').inspect(masked, { depth: null }))
+      .not.toContain(KEY);
+  });
+
+  test('masks a known key wherever it appears', () => {
+    const text = 'Invalid license key(s) supplied: \'' + KEY + '\'';
+    expect(mask(text)).toBe(text);
+    expect(mask(text, KEY))
+      .toBe('Invalid license key(s) supplied: \'' + MASKED + '\'');
+    expect(mask(text, [null, '', KEY]))
+      .toBe('Invalid license key(s) supplied: \'' + MASKED + '\'');
+  });
+
+  test('masks a known key that ends a sentence', () => {
+    expect(mask('Key ABCDEFGH.', 'ABCDEFGH')).toBe('Key ****EFGH.');
+  });
+
+  test('masks each of several known keys', () => {
+    const keys = KEY + '|ZZZZZZZZ9999';
+    expect(mask('Refused ZZZZZZZZ9999 and ' + KEY, keys))
+      .toBe('Refused ********9999 and ' + MASKED);
+    expect(mask('Refused ' + keys, keys))
+      .toBe('Refused ' + MASKED + '|********9999');
+    expect(mask('Refused ' + KEY + ',ZZZZZZZZ9999',
+      KEY + ',ZZZZZZZZ9999'))
+      .toBe('Refused ' + MASKED + ',********9999');
+  });
+
+  test('masks a known key encoded for a URL', () => {
+    const key = 'ABCD/EFGH+1234';
+    expect(mask('Refused ABCD%2FEFGH%2B1234', key))
+      .toBe('Refused ' + encodeURIComponent('**********1234'));
+    expect(mask('Refused ABCD%2fEFGH%2b1234', key))
+      .toBe('Refused ' + encodeURIComponent('**********1234'));
+  });
+
+  test('masks a known key in an error', () => {
+    const error = new Error('Invalid license key(s) supplied: \'' + KEY +
+      '\'');
+    const masked = mask(error, KEY);
+    expect(masked.message)
+      .toBe('Invalid license key(s) supplied: \'' + MASKED + '\'');
+    expect(masked.stack).not.toContain(KEY);
   });
 
   test('masks the message of an error and keeps the rest', () => {
