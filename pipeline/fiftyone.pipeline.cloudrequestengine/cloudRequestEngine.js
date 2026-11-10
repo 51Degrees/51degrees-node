@@ -36,6 +36,31 @@ const CloudRequestError = require('./cloudRequestError');
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
  */
 
+// Whether each element data the engine has made may be cached.
+const cacheableData = new WeakMap();
+
+/**
+ * Whether the response in an element data has a top level member named
+ * fodid, in any case. A response that cannot be read is cached as before.
+ *
+ * @param {object} data the element data of a response
+ * @returns {boolean} true if the response has a top level fodid member
+ */
+function holdsFodId (data) {
+  try {
+    const text = data.get('cloud');
+    if (typeof text !== 'string' || !/fodid/i.test(text)) {
+      return false;
+    }
+    const response = JSON.parse(text);
+    return response !== null &&
+      typeof response === 'object' &&
+      Object.keys(response).some((name) => name.toLowerCase() === 'fodid');
+  } catch (e) {
+    return false;
+  }
+}
+
 // Engine that makes a call to the 51Degrees cloud service
 // Returns raw JSON as a "cloud" property under "cloud" dataKey
 class CloudRequestEngine extends Engine {
@@ -180,21 +205,24 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * A response with a top level `fodid` member holds a 51Did created for the
-   * one request, so it is neither stored in the cache nor served from it.
+   * A response with a top level `fodid` member, in any case, holds a 51Did
+   * created for the one request, so it is neither stored in the cache nor
+   * served from it. The answer is worked out once for each element data,
+   * so a cache hit does not parse the response again.
    *
    * @param {object} data the element data of a response
    * @returns {boolean} false if the response has a top level fodid member
    */
   isCacheable (data) {
-    try {
-      const response = JSON.parse(data.get('cloud'));
-      return !(response !== null &&
-        typeof response === 'object' &&
-        Object.prototype.hasOwnProperty.call(response, 'fodid'));
-    } catch (e) {
+    if (data === null || typeof data !== 'object') {
       return true;
     }
+    let cacheable = cacheableData.get(data);
+    if (cacheable === undefined) {
+      cacheable = !holdsFodId(data);
+      cacheableData.set(data, cacheable);
+    }
+    return cacheable;
   }
 
   /**
