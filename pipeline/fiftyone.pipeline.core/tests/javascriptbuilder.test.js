@@ -241,6 +241,42 @@ test('JSON bundler - Verify output where delayed execution = true', (done) => {
   });
 });
 
+// The JSON Builder page says delayexecution is added for each property that
+// has a value and whose delay execution flag is true.
+test('JSON bundler - delayexecution only for a property with a value',
+  async () => {
+    const engine = new core.FlowElement({
+      dataKey: 'jsontestengine',
+      properties: {
+        one: { delayexecution: true },
+        two: { delayexecution: true },
+        three: { delayexecution: true }
+      },
+      processInternal: function (flowData) {
+        flowData.setElementData(new core.ElementDataDictionary({
+          flowElement: this,
+          contents: {
+            one: new core.AspectPropertyValue(null, 'script'),
+            two: new core.AspectPropertyValue('No script on this request.'),
+            three: null
+          }
+        }));
+      }
+    });
+    const flowData = new core.PipelineBuilder().add(engine).build()
+      .createFlowData();
+
+    await flowData.process();
+
+    const json = flowData.jsonbundler.json.jsontestengine;
+    expect(json.onedelayexecution).toBe(true);
+    expect(json.one).toBe('script');
+    expect(json).not.toHaveProperty('twodelayexecution');
+    expect(json.two).toBeNull();
+    expect(json.twonullreason).toBe('No script on this request.');
+    expect(json).not.toHaveProperty('threedelayexecution');
+  });
+
 test('JSON bundler - Verify output where a property has multiple evidence properties', (done) => {
   const delayExecutionEngine1 = new core.FlowElement({
     dataKey: 'jsontestengine',
