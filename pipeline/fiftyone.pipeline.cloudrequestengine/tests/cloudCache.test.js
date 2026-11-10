@@ -55,11 +55,14 @@ const request = async (pipeline) => {
   return JSON.parse(flowData.cloud.cloud);
 };
 
-const build = (client) => new PipelineBuilder().add(new CloudRequestEngine({
-  resourceKey: 'AAAAAAAAAAAA',
-  requestClient: client,
-  cache: new LruCache({ size: 10 })
-})).build();
+// No Sequence Element, which would give each request a new session id and
+// so a new cache key, because the engine has not fetched its evidence keys.
+const build = (client) => new PipelineBuilder({ addSequenceElement: false })
+  .add(new CloudRequestEngine({
+    resourceKey: 'AAAAAAAAAAAA',
+    requestClient: client,
+    cache: new LruCache({ size: 10 })
+  })).build();
 
 describe('cloud request engine cache', () => {
   test('serves a response with no 51Did from the cache', async () => {
@@ -109,7 +112,8 @@ describe('cloud request engine cache', () => {
         requestClient: client,
         cache
       });
-      const pipeline = new PipelineBuilder().add(engine).build();
+      const pipeline = new PipelineBuilder({ addSequenceElement: false })
+        .add(engine).build();
       const flowData = pipeline.createFlowData();
       flowData.evidence.add('header.User-Agent', 'iPhone');
       const key = JSON.stringify(engine.evidenceKeyFilter
