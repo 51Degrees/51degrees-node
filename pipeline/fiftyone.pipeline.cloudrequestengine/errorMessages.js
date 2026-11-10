@@ -23,6 +23,24 @@
 module.exports = {
   // warning message to be shown for conflicted evidences
   evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s",
+  // Refused when the engine is built, each saying why the combination of
+  // resource key, license key and requested properties cannot work.
+  noCredential: 'CloudRequestEngine needs a resourceKey or a licenseKey ' +
+    'to authenticate with, as the cloud service answers 401 to a request ' +
+    'that carries neither. Create a resource key for free at ' +
+    'https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
+  licenseKeyNeedsProperties: 'CloudRequestEngine has a licenseKey and no ' +
+    'requestedProperties. A license key names no properties of its own, ' +
+    'so the cloud service answers 400 to every request made with one ' +
+    'that does not list the properties it wants. Set requestedProperties ' +
+    "to the fully qualified names wanted, for example ['device.ismobile', " +
+    "'device.iscrawler'].",
+  propertiesIgnoredWithResourceKey: 'CloudRequestEngine has ' +
+    'requestedProperties and a resourceKey. The cloud service ignores the ' +
+    'list whenever a resource key is present and answers with everything ' +
+    'the resource key carries, so the caller would believe the response ' +
+    'had narrowed when it had not. Either leave out requestedProperties, ' +
+    'or authenticate with a licenseKey alone.',
   // logged when the cloud answer has no element for an engine's data key
   elementMissing: '%s not populated. The resource key does not include ' +
     "the '%s' product, so the cloud service left it out of the answer. " +

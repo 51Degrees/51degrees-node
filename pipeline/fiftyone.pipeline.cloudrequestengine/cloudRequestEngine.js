@@ -44,7 +44,14 @@ class CloudRequestEngine extends Engine {
    *
    * @param {object} options options object
    * @param {string} options.resourceKey resourcekey for cloud service
-   * @param {string} options.licenseKey licensekey for cloud service
+   * @param {string} options.licenseKey licensekey for cloud service. With
+   * no resourceKey it authenticates the engine alone, and requestedProperties
+   * is then required.
+   * @param {Array<string>|string} options.requestedProperties the fully
+   * qualified names of the properties to ask for, such as
+   * device.ismobile, as a list or one comma separated string. Required with
+   * a licenseKey alone and refused with a resourceKey, because the cloud
+   * service ignores the list whenever a resource key is present.
    * @param {string} options.baseURL url the cloud service is located at
    * if overriding default
    * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -59,6 +66,7 @@ class CloudRequestEngine extends Engine {
     {
       resourceKey,
       licenseKey,
+      requestedProperties,
       baseURL,
       cloudRequestOrigin,
       requestClient
@@ -67,12 +75,17 @@ class CloudRequestEngine extends Engine {
 
     this.dataKey = 'cloud';
 
-    if (!resourceKey) {
-      throw 'Cloud engine needs a resourceKey';
-    }
+    // A credential read from an environment variable often arrives with a
+    // trailing newline, and a value that is only whitespace is a mistake
+    // rather than a key, so each is trimmed and an empty one counts as absent.
+    this.resourceKey = CloudRequestEngine.trimmed(resourceKey);
+    this.licenseKey = CloudRequestEngine.trimmed(licenseKey);
+    // Lower-cased because the cloud service lower-cases property names in
+    // its answer.
+    this.requestedProperties = CloudRequestEngine.propertyNames(
+      requestedProperties);
+    this.checkCredentials();
 
-    this.resourceKey = resourceKey;
-    this.licenseKey = licenseKey;
     this.cloudRequestOrigin = cloudRequestOrigin;
     if (requestClient !== undefined) {
       this.requestClient = requestClient;
@@ -105,6 +118,67 @@ class CloudRequestEngine extends Engine {
 
     // Properties of connected FlowElements
     this.flowElementProperties = {};
+  }
+
+  /**
+   * @param {*} value a setting
+   * @returns {string} the setting as trimmed text, or an empty string
+   */
+  static trimmed (value) {
+    return value === undefined || value === null ? '' : String(value).trim();
+  }
+
+  /**
+   * @param {Array<string>|string|undefined} value property names as a list
+   * or one comma separated string
+   * @returns {Array<string>} the names, trimmed, lower-cased and non-empty
+   */
+  static propertyNames (value) {
+    if (value === undefined || value === null) {
+      return [];
+    }
+    const names = typeof value === 'string' ? value.split(',') : value;
+    return names
+      .map((name) => String(name).trim().toLowerCase())
+      .filter((name) => name !== '');
+  }
+
+  /**
+   * Refuses a combination of resource key, license key and requested
+   * properties that the cloud service would refuse on every request, so a
+   * deployment sees one configuration error when the engine is built.
+   */
+  checkCredentials () {
+    const hasResourceKey = this.resourceKey !== '';
+    const hasLicenseKey = this.licenseKey !== '';
+    const hasProperties = this.requestedProperties.length > 0;
+
+    if (hasResourceKey === false && hasLicenseKey === false) {
+      throw new Error(errorMessages.noCredential);
+    }
+    if (hasResourceKey === false && hasProperties === false) {
+      throw new Error(errorMessages.licenseKeyNeedsProperties);
+    }
+    if (hasResourceKey && hasProperties) {
+      throw new Error(errorMessages.propertiesIgnoredWithResourceKey);
+    }
+  }
+
+  /**
+   * The credentials to send in the body of a request, under the names the
+   * cloud service reads them from. A key that is not set is left out.
+   *
+   * @returns {object} the credentials
+   */
+  getCredentials () {
+    const credentials = {};
+    if (this.resourceKey !== '') {
+      credentials.resource = this.resourceKey;
+    }
+    if (this.licenseKey !== '') {
+      credentials.license = this.licenseKey;
+    }
+    return credentials;
   }
 
   /**
@@ -243,17 +317,20 @@ class CloudRequestEngine extends Engine {
     const engine = this;
 
     return new Promise(function (resolve, reject) {
-      let url = engine
-        .baseURL +
-        'accessibleproperties?resource=' +
-        engine.resourceKey;
+      // A resource key alone goes in the query string as it always has. A
+      // license key is posted in the body instead, so it stays out of URLs
+      // and so out of anything that logs one.
+      const propertiesURL = engine.baseURL + 'accessibleproperties';
+      const request = engine.licenseKey === ''
+        ? engine.requestClient.get(
+          propertiesURL + '?resource=' + engine.resourceKey,
+          engine.cloudRequestOrigin)
+        : engine.requestClient.post(
+          propertiesURL,
+          engine.getCredentials(),
+          engine.cloudRequestOrigin);
 
-      // licenseKey is optional
-      if (engine.licenseKey) {
-        url += '&license=' + engine.licenseKey;
-      }
-
-      engine.requestClient.get(url, engine.cloudRequestOrigin)
+      request
         .then(function (properties) {
           const propertiesOutput = {};
 
@@ -326,12 +403,18 @@ class CloudRequestEngine extends Engine {
   getData (flowData) {
     const engine = this;
 
-    let url = this.baseURL +
-      this.resourceKey + '.json';
+    // A resource key names the route. A license key alone has no resource
+    // key to put there, so it uses the endpoint that takes none.
+    const url = this.resourceKey !== ''
+      ? this.baseURL + this.resourceKey + '.json'
+      : this.baseURL + sharedValues.licenseDataPath;
 
-    // licensekey is optional
-    if (this.licenseKey) {
-      url += '?license=' + this.licenseKey;
+    // The credentials and the requested properties follow the evidence, so
+    // nothing in the evidence can replace them.
+    const content = Object.assign(
+      engine.getContent(flowData), engine.getCredentials());
+    if (engine.requestedProperties.length > 0) {
+      content.values = engine.requestedProperties.join(',');
     }
 
     const self = this;
@@ -339,7 +422,7 @@ class CloudRequestEngine extends Engine {
     return new Promise(function (resolve, reject) {
       engine.requestClient.post(
         url,
-        engine.getContent(flowData),
+        content,
         engine.cloudRequestOrigin)
         .then(function (body) {
           const data = new AspectDataDictionary({

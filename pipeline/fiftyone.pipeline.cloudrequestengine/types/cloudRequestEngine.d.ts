@@ -10,7 +10,14 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      *
      * @param {object} options options object
      * @param {string} options.resourceKey resourcekey for cloud service
-     * @param {string} options.licenseKey licensekey for cloud service
+     * @param {string} options.licenseKey licensekey for cloud service. With
+     * no resourceKey it authenticates the engine alone, and requestedProperties
+     * is then required.
+     * @param {Array<string>|string} options.requestedProperties the fully
+     * qualified names of the properties to ask for, such as
+     * device.ismobile, as a list or one comma separated string. Required with
+     * a licenseKey alone and refused with a resourceKey, because the cloud
+     * service ignores the list whenever a resource key is present.
      * @param {string} options.baseURL url the cloud service is located at
      * if overriding default
      * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -21,15 +28,30 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
      * @param {RequestClient} options.requestClient Set predefined RequestClient.
      */
-    constructor({ resourceKey, licenseKey, baseURL, cloudRequestOrigin, requestClient }: {
+    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient }: {
         resourceKey: string;
         licenseKey: string;
+        requestedProperties: Array<string> | string;
         baseURL: string;
         cloudRequestOrigin: string;
         requestClient: RequestClient;
     }, ...args: any[]);
     resourceKey: string;
     licenseKey: string;
+    requestedProperties: string[];
+    /**
+     * Refuses a combination of resource key, license key and requested
+     * properties that the cloud service would refuse on every request, so a
+     * deployment sees one configuration error when the engine is built.
+     */
+    checkCredentials(): void;
+    /**
+     * The credentials to send in the body of a request, under the names the
+     * cloud service reads them from. A key that is not set is left out.
+     *
+     * @returns {object} the credentials
+     */
+    getCredentials(): object;
     cloudRequestOrigin: string;
     requestClient: RequestClient;
     baseURL: string;
