@@ -29,6 +29,7 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const { Readable } = require('stream');
 
 const DataFileUpdateService = require(
   path.resolve(__dirname, '..', 'dataFileUpdateService'));
@@ -617,6 +618,166 @@ describe('every update reports one status', () => {
       expect(dataFile.updating).toBe(false);
     } finally {
       stop(server);
+    }
+  });
+
+  // A reset raises an error on the request whilst the response is still
+  // arriving, and then closes the response. Each would report the update
+  // and schedule the next check.
+  test('a connection reset part way through the download is reported ' +
+    'once and schedules one check', async () => {
+    const server = http.createServer((request, response) => {
+      response.writeHead(200, { 'content-length': '1000' });
+      response.write('version');
+      setTimeout(() => request.socket.resetAndDestroy(), 50);
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+        tempDataDirectory: folder,
+        path: file
+      });
+      const checks = jest.spyOn(service, 'checkNextUpdate');
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(500);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+      ]);
+      expect(checks).toHaveBeenCalledTimes(1);
+      expect(logs.filter((log) => log.level === 'warn')
+        .map((log) => log.message)).toEqual([
+        'An error occurred while downloading a data file update for ' +
+        'TestEngine from ' + dataFile.updateUrl + '. Error detail: The ' +
+        'connection closed before the whole file was received.'
+      ]);
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
+    } finally {
+      stop(server);
+    }
+  });
+
+  test('a data file that is locked is an error reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    const writeFile = fs.writeFile;
+    const locked = jest.spyOn(fs, 'writeFile').mockImplementation(
+      (name, data, callback) => {
+        if (name === file) {
+          callback(Object.assign(new Error('resource busy or locked'),
+            { code: 'EBUSY' }));
+        } else {
+          writeFile(name, data, callback);
+        }
+      });
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
+          updating: false
+        }
+      ]);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([
+        'Unable to update data file. This is probably because the Engine ' +
+        'was built with the ‘use temp file’ option disabled.'
+      ]);
+      expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+    } finally {
+      locked.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a download that cannot be read is an error reported once',
+    async () => {
+      const remote = await serve(200, 'version 2');
+      const readFile = fs.readFile;
+      const failing = jest.spyOn(fs, 'readFile').mockImplementation(
+        (name, ...rest) => {
+          if (String(name).startsWith(folder)) {
+            rest[rest.length - 1](Object.assign(new Error('cannot read'),
+              { code: 'EACCES' }));
+          } else {
+            readFile(name, ...rest);
+          }
+        });
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: remote.url,
+          tempDataDirectory: folder,
+          path: file
+        });
+        const seen = record(service, dataFile);
+        service.updateDataFile(dataFile);
+        await sleep(1000);
+        expect(seen).toEqual([
+          {
+            status: AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME,
+            updating: false
+          }
+        ]);
+        const errors = logs.filter((log) => log.level === 'error');
+        expect(errors).toHaveLength(1);
+        expect(errors[0].message).toMatch(
+          /^An error occurred when writing to .+\. Error detail: .*cannot read/);
+        expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+      } finally {
+        failing.mockRestore();
+        stop(remote.server);
+      }
+    });
+
+  test('a download the MD5 check cannot read is reported once and ' +
+    'removed', async () => {
+    const remote = await serve(200, 'version 2');
+    const createReadStream = fs.createReadStream;
+    const failing = jest.spyOn(fs, 'createReadStream').mockImplementation(
+      (name, ...rest) => {
+        if (String(name).startsWith(folder)) {
+          const stream = new Readable({ read () {} });
+          process.nextTick(() => stream.destroy(
+            Object.assign(new Error('cannot read'), { code: 'EIO' })));
+          return stream;
+        }
+        return createReadStream(name, ...rest);
+      });
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        verifyMD5: true
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM,
+          updating: false
+        }
+      ]);
+      const errors = logs.filter((log) => log.level === 'error');
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('cannot read');
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
+      expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+    } finally {
+      failing.mockRestore();
+      stop(remote.server);
     }
   });
 

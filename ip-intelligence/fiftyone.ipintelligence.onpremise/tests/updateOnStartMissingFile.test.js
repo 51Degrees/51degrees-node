@@ -47,12 +47,14 @@ const DataFile = path.resolve((process.env.directory || __dirname) +
 const IpAddress = '8.8.8.8';
 
 // Answers every request with the status given, and the compressed data file
-// where the status is 200.
-const serve = (status) => new Promise((resolve) => {
+// where the status is 200. The headers of each request are kept in the list
+// given, if there is one.
+const serve = (status, requests = []) => new Promise((resolve) => {
   const body = status === 200
     ? zlib.gzipSync(fs.readFileSync(DataFile))
     : Buffer.alloc(0);
   const server = http.createServer((request, response) => {
+    requests.push(request.headers);
     response.statusCode = status;
     response.end(body);
   });
@@ -98,6 +100,20 @@ describe('update on start-up with no data file', () => {
     await flowData.process();
     expect(fs.existsSync(path.join(folder, 'missing.ipi'))).toBe(true);
     expect(flowData.ip.swigResults).toBeDefined();
+  });
+
+  // The engine has no published date before it has data, and there is no
+  // file to take a date from, so the request asks for the file whatever
+  // its date.
+  test('asks for the data file with no If-Modified-Since header', async () => {
+    const requests = [];
+    server = await serve(200, requests);
+    const pipeline = builderFor(server, folder, true).build();
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('query.client-ip', IpAddress);
+    await flowData.process();
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests[0]).not.toHaveProperty('if-modified-since');
   });
 
   test('fails to process where the download fails', async () => {
