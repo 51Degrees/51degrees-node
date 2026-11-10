@@ -29,7 +29,7 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 // The largest sequence that can be given, so that one more is still a
 // 32 bit whole number.
 const MaxGivenSequence = 2147483646;
-const SequencePattern = /^[0-9]{1,10}$/;
+const SequencePattern = /^[0-9]+$/;
 
 /**
  * @typedef {import('./flowData')} FlowData
