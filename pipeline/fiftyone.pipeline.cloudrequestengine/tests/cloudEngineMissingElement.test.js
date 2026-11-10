@@ -154,7 +154,8 @@ test('an answer without the element resolves and says the key lacks it',
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("'" + dataKey + "'");
-    expect(errors[0]).toContain('does not include');
+    expect(errors[0]).toContain(
+      "left the '" + dataKey + "' product out of the answer");
     expect(errors[0]).toContain('accessibleproperties?resource=');
     expect(errors[0]).not.toContain('undefined');
     expect(thrownReading(flowData, 'registeredcountry'))
@@ -229,7 +230,7 @@ test('an element with values still reads them and logs nothing',
 // Under a license key alone there is no resource key to name, and a product
 // is also left out when requestedProperties names none of its properties.
 describe('under a license key alone', () => {
-  test('a missing element names the key in use and requestedProperties',
+  test('a missing element names requestedProperties as a cause',
     async () => {
       const { pipeline, errors } = buildOnLicenseKey({
         device: { ismobile: false },
@@ -238,7 +239,8 @@ describe('under a license key alone', () => {
       await pipeline.createFlowData().process();
 
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toContain('The key in use does not include');
+      expect(errors[0]).toContain(
+        "left the '" + dataKey + "' product out of the answer");
       expect(errors[0]).toContain("'" + dataKey + "'");
       expect(errors[0]).toContain('requestedProperties');
       expect(errors[0]).not.toContain('resource key');
