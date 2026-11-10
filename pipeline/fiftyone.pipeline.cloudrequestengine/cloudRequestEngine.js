@@ -26,6 +26,7 @@ const AspectDataDictionary = require('fiftyone.pipeline.engines')
   .AspectDataDictionary;
 const BasicListEvidenceKeyFilter = require('fiftyone.pipeline.core')
   .BasicListEvidenceKeyFilter;
+const LicenseKeys = require('fiftyone.pipeline.core').LicenseKeys;
 const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
@@ -222,11 +223,14 @@ class CloudRequestEngine extends Engine {
       content = response.content;
     }
 
+    // The cloud's errors can name the license key it was sent, so the key
+    // is masked before the text goes into an error.
+    const licenseKey = this.licenseKey;
     const errors = this.getErrorMessages(content);
     const cloudErrors = [];
     errors.forEach(function (errorText) {
       cloudErrors.push(new CloudRequestError(
-        errorText,
+        LicenseKeys.mask(errorText, licenseKey),
         response.headers,
         response.statusCode));
     });
@@ -236,7 +240,7 @@ class CloudRequestEngine extends Engine {
       const message = 'Cloud service returned status code ' +
         response.statusCode + ' with content ' + content + '.';
       cloudErrors.push(new CloudRequestError(
-        message,
+        LicenseKeys.mask(message, licenseKey),
         response.headers,
         response.statusCode));
     }
