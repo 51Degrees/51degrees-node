@@ -35,19 +35,33 @@ module.exports = {
     'request made with one that does not list the properties it wants. ' +
     'Set requestedProperties to the fully qualified names wanted, for ' +
     "example ['device.ismobile', 'device.iscrawler'].",
-  // Logged once when an answer leaves out requested properties.
+  // Logged once when, with a license key, an answer leaves out requested
+  // properties.
   propertiesNotCovered: 'The cloud service did not return the ' +
     'requested properties %s. They are not covered by the keys in use, ' +
     'so they will be missing from every result. The other requested ' +
     'properties came back and are usable.',
-  // logged when the cloud answer has no element for an engine's data key
-  elementMissing: '%s not populated. The resource key does not include ' +
+  // Logged once when, with no license key, an answer leaves out
+  // requested properties.
+  propertiesNotProperties: 'The cloud service did not return the ' +
+    'requested properties %s. They are not properties the cloud service ' +
+    'knows, so they will be missing from every result. The other ' +
+    'requested properties came back and are usable.',
+  // logged when the cloud answer has no element for an engine's data key,
+  // followed by productHintResourceKey or productHintLicenseKey
+  elementMissing: '%s not populated. The key in use does not include ' +
     "the '%s' product, so the cloud service left it out of the answer. " +
-    'The other products in the answer can still be used. To see the ' +
-    'products a key includes, open ' +
+    'The other products in the answer can still be used. %s',
+  // logged when the element is null and the cloud gave no reason, followed
+  // by productHintResourceKey or productHintLicenseKey
+  elementNullNoReason: 'The cloud service gave no reason. %s',
+  // how to check a product, where a resource key is in use
+  productHintResourceKey: "To see whether the resource key includes the '%s' " +
+    'product, open ' +
     'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>',
-  // logged when the element is null and the cloud gave no reason
-  elementNullNoReason: 'The cloud service gave no reason. To see whether ' +
-    "the resource key includes the '%s' product, open " +
-    'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>'
+  // how to check a product, where a license key is used alone
+  productHintLicenseKey: 'With a license key alone, the ' +
+    'answer holds only the properties requestedProperties names that the ' +
+    "license key includes, so check that requestedProperties names the '%s' " +
+    'properties wanted and that the license key includes them.'
 };

@@ -18,6 +18,9 @@ declare class IpIntelligenceCloudPipelineBuilder extends IpIntelligenceCloudPipe
      * an empty string, but this will cause automatic updates
      * to be disabled.
      * @param {string} options.resourceKey resourceKey
+     * @param {Array<string>|string} options.requestedProperties the fully
+     * qualified names of the properties to ask the cloud service for, such
+     * as device.ismobile. Required with a license key and no resource key.
      * @param {number} options.cacheSize size of the default cache
      * (includes cache if set).
      * @param {string} options.cloudEndPoint Choose a non default endpoint
@@ -25,9 +28,10 @@ declare class IpIntelligenceCloudPipelineBuilder extends IpIntelligenceCloudPipe
      * @param {string} options.cloudRequestOrigin The value to set the
      * Origin header to when making requests to the cloud service
      */
-    constructor({ licenceKeys, resourceKey, cacheSize, cloudEndPoint, cloudRequestOrigin }: {
+    constructor({ licenceKeys, resourceKey, requestedProperties, cacheSize, cloudEndPoint, cloudRequestOrigin }: {
         licenceKeys: string;
         resourceKey: string;
+        requestedProperties: Array<string> | string;
         cacheSize: number;
         cloudEndPoint: string;
         cloudRequestOrigin: string;

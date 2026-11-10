@@ -136,15 +136,16 @@ class CloudEngine extends Engine {
         if (engine._missingElementReported === false) {
           engine._missingElementReported = true;
           flowData.pipeline.log('error', util.format(
-            errorMessages.elementMissing, engine.dataKey, engine.dataKey));
+            errorMessages.elementMissing, engine.dataKey, engine.dataKey,
+            productHint(flowData, engine.dataKey)));
         }
       } else if (elementData === null) {
         // A null element is an answer to this request, so its reason is
         // logged every time.
         const reason = cloudData[engine.dataKey + 'nullreason'];
         flowData.pipeline.log('error', engine.dataKey + ' not populated. ' +
-          (reason ||
-            util.format(errorMessages.elementNullNoReason, engine.dataKey)));
+          (reason || util.format(errorMessages.elementNullNoReason,
+            productHint(flowData, engine.dataKey))));
       } else {
         // A property with no value has a '<name>nullreason' beside it.
         Object.entries(elementData).forEach(function ([key, value]) {
@@ -167,6 +168,22 @@ class CloudEngine extends Engine {
       flowData.setElementData(data);
     });
   }
+}
+
+/**
+ * How to check whether the key in use includes a product. The hint names a
+ * resource key only where one is in use.
+ *
+ * @param {FlowData} flowData the flow data being processed
+ * @param {string} dataKey the product's data key
+ * @returns {string} the hint
+ */
+function productHint (flowData, dataKey) {
+  const cloud = flowData.pipeline.flowElements.cloud;
+  const licenseKeyAlone = cloud !== undefined && cloud.resourceKey === '';
+  return util.format(licenseKeyAlone
+    ? errorMessages.productHintLicenseKey
+    : errorMessages.productHintResourceKey, dataKey);
 }
 
 module.exports = CloudEngine;

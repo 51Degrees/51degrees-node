@@ -75,9 +75,10 @@ class CloudRequestEngine extends Engine {
 
     this.dataKey = 'cloud';
 
-    // A key that is empty or only whitespace counts as absent.
-    this.resourceKey = trimmed(resourceKey);
-    this.licenseKey = trimmed(licenseKey);
+    // A key that is empty or only whitespace counts as absent. Any other
+    // key is sent as it is given.
+    this.resourceKey = keyText(resourceKey);
+    this.licenseKey = keyText(licenseKey);
     this.requestedProperties = propertyNames(requestedProperties);
     refuseInvalidCredentials(this);
 
@@ -259,7 +260,7 @@ class CloudRequestEngine extends Engine {
     return new Promise(function (resolve, reject) {
       // A license key goes in the body of a POST rather than in the URL, so
       // it stays out of anything that logs the URL. A resource key on its
-      // own goes in the query string as it always has.
+      // own goes in the query string.
       const url = engine.baseURL + 'accessibleproperties';
       let request;
       if (engine.licenseKey === '') {
@@ -351,9 +352,8 @@ class CloudRequestEngine extends Engine {
   getData (flowData) {
     const engine = this;
 
-    // A resource key names the route as it always has. A license key on its
-    // own has no resource key to put there, so it uses the route that takes
-    // none.
+    // A resource key names the route. A license key on its own has no
+    // resource key to put there, so it uses the route that takes none.
     const url = this.resourceKey !== ''
       ? this.baseURL + this.resourceKey + '.json'
       : this.baseURL + sharedValues.licenseDataPath;
@@ -426,8 +426,13 @@ class CloudRequestEngine extends Engine {
     const notCovered = this.requestedProperties.filter(
       (name) => answerHolds(answer, name) === false);
     if (notCovered.length > 0) {
+      // With no license key, the resource key's licence answers a property
+      // it does not grant as null, so a name left out is not a property.
+      const message = this.licenseKey === ''
+        ? errorMessages.propertiesNotProperties
+        : errorMessages.propertiesNotCovered;
       flowData.pipeline.log('warn', util.format(
-        errorMessages.propertiesNotCovered, notCovered.join(', ')));
+        message, notCovered.join(', ')));
     }
   }
 
@@ -590,13 +595,18 @@ class CloudRequestEngine extends Engine {
 }
 
 /**
- * Reads a setting as text.
+ * Reads a key setting.
  *
- * @param {*} value a setting
- * @returns {string} the setting as trimmed text, or an empty string
+ * @param {*} value a key setting
+ * @returns {string} the key as given, or an empty string where it is
+ * absent, empty or only whitespace
  */
-function trimmed (value) {
-  return value === undefined || value === null ? '' : String(value).trim();
+function keyText (value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const text = String(value);
+  return text.trim() === '' ? '' : text;
 }
 
 /**
