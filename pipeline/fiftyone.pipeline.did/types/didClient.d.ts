@@ -257,7 +257,8 @@ export class DidClient {
      * A 200 and a 503 both produce a result, the 503 being the `unconfirmed`
      * outcome the caller may retry. Every cryptographic failure comes back as
      * the one word `unreadable` by design, so the client does not try to
-     * tell them apart either.
+     * tell them apart either. The licence key is shown only by its last 4
+     * characters in the message and body of each error.
      * @param {FodId | string} fodId the identifier the caller knows
      * independently, or its base64 in either alphabet
      * @param {string} result the sealed result exactly as the verify endpoint
