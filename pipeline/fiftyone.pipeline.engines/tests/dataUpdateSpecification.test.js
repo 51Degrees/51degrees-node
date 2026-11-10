@@ -259,6 +259,29 @@ describe('update from memory', () => {
     expect(dataFile.updating).toBe(false);
   });
 
+  // The status is reported from timer, request and file system watcher
+  // callbacks, where an error thrown by an application's listener would be
+  // uncaught and end the process.
+  test('a listener that throws is logged and the others still hear',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = memoryDataFile('version 1');
+      const heard = [];
+      service.on('updateComplete', () => {
+        throw new Error('The listener failed.');
+      });
+      service.once('updateComplete', (status) => heard.push(status));
+      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+        .toBe(true);
+      expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'Error: The listener failed.'
+      ]);
+      service.updateFromMemory(dataFile, Buffer.from('version 3'));
+      expect(heard).toHaveLength(1);
+    });
+
   test('keeps the data it has when the refresh fails', async () => {
     const { service, logs } = loggingService();
     const dataFile = memoryDataFile('version 1');
