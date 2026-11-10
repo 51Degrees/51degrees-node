@@ -231,6 +231,9 @@ class ShareUsage extends Engine {
       xml += '<Language>Node.JS</Language>';
       // The software language version
       xml += `<LanguageVersion>${nodeVersion}</LanguageVersion>`;
+      // The IP address of this server
+      xml += '<ServerIP>' + new ReplacedString(serverAddress()).result +
+        '</ServerIP>';
       // The OS name and version
       xml += `<Platform>${osVersion}</Platform>`;
       this.constantXml = xml;
@@ -259,11 +262,9 @@ class ShareUsage extends Engine {
     // The sequence number of the request in a series of requests.
     xml += '<Sequence>' + new ReplacedString(data.sequence).result +
       '</Sequence>';
-    // The client IP of the request, where there is one
-    if (data.clientIP !== null) {
-      xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
-        '</ClientIP>';
-    }
+    // The client IP of the request, empty where there is none
+    xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
+      '</ClientIP>';
 
     // The UTC date/time this entry was written
     const date = new Date().toISOString();
@@ -379,6 +380,33 @@ class ShareUsage extends Engine {
 }
 
 /**
+ * The first address of this server that is not a loopback address, an IPv4
+ * address before an IPv6 one, or an empty string where there is none.
+ *
+ * @returns {string} the address
+ */
+function serverAddress () {
+  let interfaces = {};
+  try {
+    interfaces = os.networkInterfaces();
+  } catch (e) {
+    // The addresses of this server cannot be read.
+  }
+  const addresses = [];
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (!entry.internal) {
+        addresses.push(entry);
+      }
+    }
+  }
+  const address = addresses.find(
+    (entry) => entry.family === 'IPv4' || entry.family === 4) ||
+    addresses[0];
+  return address ? address.address : '';
+}
+
+/**
  * Whether a character is allowed in XML 1.0, which allows tab, line feed,
  * carriage return, and the ranges U+0020 to U+D7FF, U+E000 to U+FFFD and
  * U+10000 to U+10FFFF.
@@ -449,7 +477,7 @@ class ShareUsageData {
   constructor () {
     this.evidenceData = {};
     this.sessionId = '';
-    this.clientIP = null;
+    this.clientIP = '';
     this.sequence = '';
   }
 
