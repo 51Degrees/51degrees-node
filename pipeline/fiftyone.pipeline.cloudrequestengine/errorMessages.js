@@ -49,9 +49,9 @@ module.exports = {
     'requested properties came back and are usable.',
   // logged when the cloud answer has no element for an engine's data key,
   // followed by productHintResourceKey or productHintLicenseKey
-  elementMissing: '%s not populated. The key in use does not include ' +
-    "the '%s' product, so the cloud service left it out of the answer. " +
-    'The other products in the answer can still be used. %s',
+  elementMissing: "%s not populated. The cloud service left the '%s' " +
+    'product out of the answer. The other products in the answer can ' +
+    'still be used. %s',
   // logged when the element is null and the cloud gave no reason, followed
   // by productHintResourceKey or productHintLicenseKey
   elementNullNoReason: 'The cloud service gave no reason. %s',

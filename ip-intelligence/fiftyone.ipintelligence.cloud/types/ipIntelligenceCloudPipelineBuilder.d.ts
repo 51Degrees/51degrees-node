@@ -20,7 +20,7 @@ declare class IpIntelligenceCloudPipelineBuilder extends IpIntelligenceCloudPipe
      * @param {string} options.resourceKey resourceKey
      * @param {Array<string>|string} options.requestedProperties the fully
      * qualified names of the properties to ask the cloud service for, such
-     * as device.ismobile. Required with a license key and no resource key.
+     * as ip.registeredcountry. Required with a license key and no resource key.
      * @param {number} options.cacheSize size of the default cache
      * (includes cache if set).
      * @param {string} options.cloudEndPoint Choose a non default endpoint

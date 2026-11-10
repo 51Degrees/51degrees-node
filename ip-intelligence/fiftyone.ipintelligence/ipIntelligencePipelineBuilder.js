@@ -47,7 +47,7 @@ class IpIntelligencePipelineBuilder extends PipelineBuilder {
    * to be disabled.
    * @param {Array<string>|string} options.requestedProperties the fully
    * qualified names of the properties to ask the cloud service for, such
-   * as device.ismobile. Required with a license key and no resource key.
+   * as ip.registeredcountry. Required with a license key and no resource key.
    * @param {string} options.resourceKey resourceKey, if using the
    * cloud engine
    * @param {string} options.dataFile dataFile path for the on premise engine
