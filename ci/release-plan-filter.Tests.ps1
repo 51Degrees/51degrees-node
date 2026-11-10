@@ -77,7 +77,6 @@ Describe 'release-plan-filter' {
         @{ Field = 'bugs'; Value = [ordered]@{ url = 'https://example.com/b2' } }
         @{ Field = 'author'; Value = 'Someone Else' }
         @{ Field = 'license'; Value = 'MIT' }
-        @{ Field = 'files'; Value = @('index.js', 'types') }
         @{ Field = 'readme'; Value = 'README.md' }
     ) {
         $manifest = Get-BaseManifest
@@ -94,6 +93,7 @@ Describe 'release-plan-filter' {
         @{ Field = 'exports'; Value = [ordered]@{ '.' = './main.js' } }
         @{ Field = 'scripts'; Value = [ordered]@{ test = 'jest'; build = 'tsc' } }
         @{ Field = 'peerDependencies'; Value = [ordered]@{ peer = '^1.0.0' } }
+        @{ Field = 'files'; Value = @('index.js', 'types') }
     ) {
         $manifest = Get-BaseManifest
         $manifest[$Field] = $Value
