@@ -94,7 +94,10 @@ const run = async (options, failures) => {
   const client = new RecordingClient(failures);
   const engine = new CloudRequestEngine(
     Object.assign({ requestClient: client }, options));
-  const pipeline = new PipelineBuilder().add(engine).build();
+  // No Sequence Element, so each request body holds only the credentials
+  // and the evidence the test gives.
+  const pipeline = new PipelineBuilder({ addSequenceElement: false })
+    .add(engine).build();
   const logged = [];
   pipeline.on('error', (message) => logged.push(message));
   pipeline.on('warn', (message) => logged.push(message));
