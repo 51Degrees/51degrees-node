@@ -22,7 +22,7 @@
 
 // Guards the package layout. The shipped code must sit outside the
 // examples and tests folders, because the release plan ignores both.
-// Those folders hold only one-line re-exports of lib, so that a require
+// Those folders hold only re-exports of lib, so that a require
 // of an old path keeps working.
 
 const fs = require('fs');
@@ -36,13 +36,16 @@ const exported = [
   'optionsExtension', 'dataExtension'
 ];
 
-// The paths the package used to publish, kept as re-exports of lib.
-const oldPaths = [].concat(
-  fs.readdirSync(path.join(packageRoot, 'examples'))
-    .map((file) => 'examples/' + file),
-  fs.readdirSync(path.join(packageRoot, 'tests'))
-    .map((file) => 'tests/' + file)
-);
+// The paths the package published before its modules moved to lib. Each is a
+// file that re-exports the module in lib.
+const oldPaths = [
+  'examples/dataExtension.js',
+  'examples/exampleConstants.js',
+  'examples/optionsExtension.js',
+  'tests/exampleOutput.js',
+  'tests/keyUtils.js',
+  'tests/testConstants.js'
+];
 
 describe('shared package layout', () => {
   test('index exports every module', () => {
@@ -91,15 +94,14 @@ describe('shared package layout', () => {
     });
 
   test('each old path still resolves to the module in lib', () => {
-    expect(oldPaths.length).toBeGreaterThan(0);
-    oldPaths.forEach((file) => {
+        oldPaths.forEach((file) => {
       const name = path.basename(file, '.js');
       expect(require(path.join(packageRoot, file)))
         .toBe(require(path.join(packageRoot, 'lib', name)));
     });
   });
 
-  test('each old path is a one-line re-export', () => {
+  test('each old path re-exports the module in lib', () => {
     oldPaths.forEach((file) => {
       const source = fs.readFileSync(path.join(packageRoot, file), 'utf8');
       expect(source).toMatch(

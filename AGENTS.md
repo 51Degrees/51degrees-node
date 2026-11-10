@@ -323,8 +323,11 @@ depends on it with it. `ci/release-plan.ps1` works this out with common-ci's
 `steps/release-plan.ps1`, and only the patch number moves.
 
 A package's examples are in its `ExcludePaths`, so a change only to them
-releases nothing. The two `shared` packages are the exception, because their
-`index.js` exports their `examples` and `tests` modules.
+releases nothing. The two `shared` packages keep the code their `index.js`
+exports in `lib`. Their `examples` and `tests` folders hold only files that
+re-export the module of the same name in `lib`, so a `require` of an old path
+still works. Those files never change, and a change to `lib` releases the
+package.
 
 `ci/check-version-bump.ps1` refuses a major or minor move for any package,
 against its own tags and against the version npm installs by default.

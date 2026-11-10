@@ -25,7 +25,6 @@ $MetadataFields = @(
     'bugs'
     'author'
     'license'
-    'files'
     'readme'
 )
 $ManifestNames = @('package.json', 'remote_package.json')
