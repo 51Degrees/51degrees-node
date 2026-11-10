@@ -10,6 +10,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --ignore-scripts --no-audit --no-fund --workspace pipeline/fiftyone.pipeline.cloudrequestengine --include-workspace-root=false
+      - run: npm install --ignore-scripts --no-audit --no-fund --workspace pipeline/fiftyone.pipeline.cloudrequestengine --include-workspace-root
       - run: npx jest --ci --runInBand --forceExit pipeline/fiftyone.pipeline.cloudrequestengine/tests --testPathIgnorePatterns=integration
       - run: npx eslint pipeline/fiftyone.pipeline.cloudrequestengine --ext .js
