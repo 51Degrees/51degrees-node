@@ -229,13 +229,25 @@ class DataFileUpdateService {
 
   /**
    * Reports how an update ended, to the listeners of 'updateComplete' and
-   * to the data file's own onUpdateComplete function, if it has one.
+   * to the data file's own onUpdateComplete function, if it has one. An
+   * error thrown by either is logged and goes no further.
    *
    * @param {DataFile} dataFile the data file the update was for
    * @param {string} status one of the AutoUpdateStatus values
    */
   complete (dataFile, status) {
-    this.eventEmitter.emit('updateComplete', status, dataFile);
+    // The status is reported from timer, request and file system watcher
+    // callbacks, so a listener that throws is logged rather than left
+    // uncaught, which would end the process, and the others are still
+    // called. The raw listeners are called so that a 'once' listener is
+    // removed as emit would remove it.
+    for (const listener of this.eventEmitter.rawListeners('updateComplete')) {
+      try {
+        listener.call(this.eventEmitter, status, dataFile);
+      } catch (e) {
+        this.log('error', e);
+      }
+    }
     if (typeof dataFile.onUpdateComplete === 'function') {
       try {
         dataFile.onUpdateComplete(status);
