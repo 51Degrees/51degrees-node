@@ -35,6 +35,10 @@ const licenseKey = 'LICENSEKEY1234567890';
 const requested = ['device.ismobile', 'device.istablet'];
 const base = sharedValues.baseURLDefault;
 
+// The cloud service refuses a license key with an error that names it.
+const refusal = 'Invalid license key(s) supplied: \'' + licenseKey + '\'';
+const maskedLicenseKey = '****************7890';
+
 // Records every request and answers each endpoint with canned data, the
 // data request with dataAnswer where one is given. A request whose URL
 // contains a key of failures is answered with that status instead.
@@ -54,7 +58,7 @@ class RecordingClient {
         return Promise.reject({ // eslint-disable-line
           statusCode,
           headers: {},
-          content: JSON.stringify({ errors: ['The request was refused.'] })
+          content: JSON.stringify({ errors: [refusal] })
         });
       }
     }
@@ -83,8 +87,9 @@ class RecordingClient {
 }
 
 // Builds the engine in a pipeline, fetches the accessible properties and
-// evidence keys as a cloud engine after it would, then processes one
-// request. Everything logged, thrown or requested is given back.
+// evidence keys as a cloud aspect engine added after it would, then
+// processes one request. Everything logged, thrown or requested is given
+// back.
 const run = async (options, failures) => {
   const client = new RecordingClient(failures);
   const engine = new CloudRequestEngine(
@@ -221,14 +226,16 @@ describe('accepted combinations', () => {
     expect(engine.requestedProperties).toEqual(requested);
   });
 
-  test('a key surrounded by whitespace is trimmed', () => {
+  // A blank key counts as absent, and any other key is sent as it is
+  // given, as .NET and Java send it.
+  test('a blank key is absent and any other key is kept as given', () => {
     const engine = new CloudRequestEngine({
       resourceKey: ' ' + resourceKey + '\n',
       licenseKey: '   ',
       requestedProperties: [' ', '']
     });
 
-    expect(engine.resourceKey).toBe(resourceKey);
+    expect(engine.resourceKey).toBe(' ' + resourceKey + '\n');
     expect(engine.licenseKey).toBe('');
     expect(engine.requestedProperties).toEqual([]);
   });
@@ -286,7 +293,8 @@ describe('the license key stays out of URLs and logs', () => {
           const { logged, thrown } = await run(options, { [failing]: 403 });
           expect(logged.length + thrown.length).toBeGreaterThan(0);
           const text = util.inspect([logged, thrown], { depth: 10 });
-          expect(text).toContain('The request was refused.');
+          expect(text).toContain('Invalid license key(s) supplied: \'' +
+            maskedLicenseKey + '\'');
           expect(text).not.toContain(licenseKey);
         }
       }
@@ -323,6 +331,33 @@ describe('requested properties the answer leaves out', () => {
       expect(warnings[0]).toBe(util.format(
         errorMessages.propertiesNotCovered, 'device.iscrawler'));
     });
+
+  test('with a resource key and no license key, a name left out is not ' +
+    'a Property', async () => {
+    const client = new RecordingClient({}, JSON.stringify({
+      device: {
+        ismobile: true,
+        hardwarevendor: null,
+        hardwarevendornullreason: 'A paid feature that needs a license key'
+      }
+    }));
+    const engine = new CloudRequestEngine({
+      resourceKey,
+      requestedProperties: [
+        'device.ismobile', 'device.hardwarevendor', 'device.notaproperty'],
+      requestClient: client
+    });
+    const pipeline = new PipelineBuilder().add(engine).build();
+    const warnings = [];
+    pipeline.on('warn', (message) => warnings.push(String(message)));
+    await engine.ready();
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('query.User-Agent', 'iPhone');
+    await flowData.process();
+
+    expect(warnings).toEqual([util.format(
+      errorMessages.propertiesNotProperties, 'device.notaproperty')]);
+  });
 
   test('nothing is logged when every property came back or none was named',
     async () => {
