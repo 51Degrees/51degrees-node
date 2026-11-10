@@ -1,0 +1,40 @@
+name: tmp fix checks
+on:
+  push:
+    branches: ['tmp/node37-fix-*']
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/checkout@v4
+        with:
+          repository: 51Degrees/common-ci
+          ref: rc
+          path: common-ci
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Filter tests
+        shell: pwsh
+        run: Invoke-Pester ./ci/release-plan-filter.Tests.ps1 -Output Detailed -CI
+      - run: npm install --ignore-scripts --no-audit --no-fund
+        if: always()
+      - name: Shared package tests
+        if: always()
+        run: >
+          node node_modules/jest/bin/jest.js --ci --runInBand
+          --selectProjects device-detection ip-intelligence
+          --testPathPattern "shared/__tests__"
+      - name: Release plan on this head
+        if: always()
+        shell: pwsh
+        run: |
+          $env:COMMON_CI = "$PWD/common-ci"
+          git rev-parse HEAD
+          (git tag -l 'fiftyone.*/4.5.102' | Measure-Object).Count
+          . ./ci/release-plan.ps1
+          Get-NodeReleasePlan $PWD | Format-Table Name, Previous, Version, Reason -AutoSize | Out-String -Width 200
