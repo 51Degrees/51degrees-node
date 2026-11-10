@@ -559,6 +559,87 @@ test('share usage - XML characters', done => {
 });
 
 /**
+ * Evidence that is not a string is shared as its text, as .NET writes it.
+ */
+test.each([
+  ['a number', 5, '5'],
+  ['zero', 0, '0'],
+  ['false', false, 'false']
+])('share usage - %s is shared as its text', (name, value, written) => {
+  return new Promise(resolve => {
+    sendAndCheck(value, xml => {
+      expect(xml).toContain(`<header Name="user-agent">${written}</header>`);
+    }, resolve);
+  });
+});
+
+/**
+ * Sends one request carrying the evidence given through a usage sharing
+ * element and passes the XML that was received to the check.
+ *
+ * @param {object} evidence the evidence keys and values
+ * @param {Function} check called with the XML text received
+ * @param {Function} done the test's callback
+ */
+function sendEvidenceAndCheck (evidence, check, done) {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  for (const [key, value] of Object.entries(evidence)) {
+    flowData.evidence.add(key, value);
+  }
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      check(received[0]);
+      done();
+    }, 2000);
+  });
+}
+
+/**
+ * The session id and the client IP come from the request, so the XML
+ * characters in them are escaped, as they are in evidence values.
+ */
+test('share usage - XML characters in the session id and client IP',
+  done => {
+    sendEvidenceAndCheck({
+      'query.session-id': 'a<b&c"d',
+      'server.client-ip': '1.2.3.4<>'
+    }, xml => {
+      expect(xml).toContain('<SessionId>a&lt;b&amp;c&quot;d</SessionId>');
+      expect(xml).toContain('<ClientIP>1.2.3.4&lt;&gt;</ClientIP>');
+    }, done);
+  });
+
+/**
+ * The name of an evidence entry is written in an attribute, so the XML
+ * characters in it are escaped.
+ */
+test('share usage - XML characters in an evidence name', done => {
+  sendEvidenceAndCheck({ 'header.x"y&z<': 'v' }, xml => {
+    expect(xml).toContain('<header Name="x&quot;y&amp;z&lt;">v</header>');
+  }, done);
+});
+
+/**
+ * A request with no client IP has no ClientIP element.
+ */
+test('share usage - no client IP is left out', done => {
+  sendEvidenceAndCheck({ 'header.user-agent': 'a' }, xml => {
+    expect(xml).not.toContain('<ClientIP>');
+    expect(xml).not.toContain('undefined');
+  }, done);
+});
+
+/**
  * Check that with no options the element shares headers and the 51Degrees
  * cookies and parameters, and leaves out other cookies, the Cookie header,
  * and other query string and form parameters.
