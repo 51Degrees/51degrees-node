@@ -1360,7 +1360,7 @@ describe('DidClient redeem', () => {
         platformname: 'verified',
         platformversion: 'mismatch',
         browsername: 'verified',
-        browserversion: null
+        browserversion: 'notrecorded'
       },
       verifiedAt: '2026-08-07T09:15:32Z',
       secondsSinceVerified: 2
@@ -1464,7 +1464,7 @@ describe('DidClient redeem', () => {
       const result = await client.redeem(fod, RESULT, CHALLENGE);
       expect(result.factors[Factor.TRANSPORT]).toBe(FactorResult.VERIFIED);
       expect(result.factors[Factor.DEVICE]).toBe(FactorResult.MISMATCH);
-      expect(result.factors[Factor.BROWSER_IP]).toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.BROWSER_IP]).toBe(FactorResult.VERIFIED);
       expect(result.factors[Factor.CONNECTION_IP])
         .toBe(FactorResult.MISMATCH);
       expect(result.factors[Factor.ASN]).toBe(FactorResult.MISMATCH);
@@ -1492,20 +1492,31 @@ describe('DidClient redeem', () => {
     expect(result.factors.device).toBe(FactorResult.VERIFIED);
   });
 
-  test('the factors are also kept exactly as the cloud sent them',
-    async () => {
-      const body = {
-        signature: 'verified',
-        context: 'mismatch',
-        factors: { device: 'somethingnew', transport: 'verified' }
-      };
-      const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
-      expect(result.factorsRaw).toEqual(body.factors);
-      expect(Object.isFrozen(result.factorsRaw)).toBe(true);
+  // The specification says the comparison ignores case, as .NET does.
+  test('a factor word in another case is read as that word', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: {
+        transport: 'Verified',
+        device: 'MISMATCH',
+        browserip: 'MisConfigured',
+        connectionip: 'NotRecorded'
+      }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors).toEqual({
+      transport: FactorResult.VERIFIED,
+      device: FactorResult.MISMATCH,
+      browserip: FactorResult.MISCONFIGURED,
+      connectionip: FactorResult.NOT_RECORDED
     });
+  });
 
-  test('a factor with nothing compared stays null', async () => {
+  // An unexpected value must never read as one that could not be compared,
+  // so null is a mismatch, as in .NET and Java.
+  test('a null factor is a mismatch', async () => {
     const body = {
       signature: 'verified',
       context: 'mismatch',
@@ -1513,7 +1524,20 @@ describe('DidClient redeem', () => {
     };
     const { client } = redeemClient(200, body);
     const result = await client.redeem(fod, RESULT, CHALLENGE);
-    expect(result.factors.device).toBeNull();
+    expect(result.factors.device).toBe(FactorResult.MISMATCH);
+    expect(result.factors.transport).toBe(FactorResult.VERIFIED);
+  });
+
+  test('the factor words as sent are in the raw body', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { device: 'somethingnew', transport: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(JSON.parse(result.raw).factors).toEqual(body.factors);
+    expect(result).not.toHaveProperty('factorsRaw');
   });
 
   test('the factor outcomes are the words the cloud writes', () => {
@@ -1526,18 +1550,17 @@ describe('DidClient redeem', () => {
     ]);
   });
 
-  test('a factor value this package does not list is a mismatch, and the ' +
-    'word as sent is kept', async () => {
-    const body = {
-      context: 'mismatch',
-      factors: { transport: 'somethingnewer' }
-    };
-    const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
-    expect(result.factors.transport).toBe(FactorResult.MISMATCH);
-    expect(result.factorsRaw.transport).toBe('somethingnewer');
-    expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
-  });
+  test('a factor value this package does not list is a mismatch',
+    async () => {
+      const body = {
+        context: 'mismatch',
+        factors: { transport: 'somethingnewer' }
+      };
+      const { client } = redeemClient(200, body);
+      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      expect(result.factors.transport).toBe(FactorResult.MISMATCH);
+      expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
+    });
 
   test('the factor names are the nine the cloud lists, in its order', () => {
     expect(Object.isFrozen(Factor)).toBe(true);
