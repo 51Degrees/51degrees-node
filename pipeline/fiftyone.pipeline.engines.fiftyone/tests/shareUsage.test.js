@@ -630,13 +630,47 @@ test('share usage - XML characters in an evidence name', done => {
 });
 
 /**
- * A request with no client IP has no ClientIP element.
+ * The record always has a ClientIP element, so a request with no client IP
+ * has an empty one.
  */
-test('share usage - no client IP is left out', done => {
+test('share usage - no client IP gives an empty ClientIP', done => {
   sendEvidenceAndCheck({ 'header.user-agent': 'a' }, xml => {
-    expect(xml).not.toContain('<ClientIP>');
+    expect(xml).toContain('<ClientIP></ClientIP>');
     expect(xml).not.toContain('undefined');
   }, done);
+});
+
+/**
+ * The record has a ServerIP element, being the first address of this server
+ * that is not a loopback address, IPv4 before IPv6, or empty when there is
+ * none.
+ */
+test.each([
+  ['an IPv4 address before an IPv6 one', {
+    lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true }],
+    eth0: [
+      { address: 'fe80::1', family: 'IPv6', internal: false },
+      { address: '10.1.2.3', family: 'IPv4', internal: false }
+    ]
+  }, '10.1.2.3'],
+  ['an IPv6 address where there is no IPv4 one', {
+    lo: [{ address: '::1', family: 'IPv6', internal: true }],
+    eth0: [{ address: '2001:db8::5', family: 'IPv6', internal: false }]
+  }, '2001:db8::5'],
+  ['nothing where there are only loopback addresses', {
+    lo: [
+      { address: '127.0.0.1', family: 'IPv4', internal: true },
+      { address: '::1', family: 'IPv6', internal: true }
+    ]
+  }, '']
+])('share usage - ServerIP is %s', (name, interfaces, written) => {
+  const networkInterfaces = jest.spyOn(os, 'networkInterfaces')
+    .mockReturnValue(interfaces);
+  return new Promise(resolve => {
+    sendEvidenceAndCheck({ 'header.user-agent': 'a' }, xml => {
+      expect(xml).toContain(`<ServerIP>${written}</ServerIP>`);
+    }, resolve);
+  }).finally(() => networkInterfaces.mockRestore());
 });
 
 /**
