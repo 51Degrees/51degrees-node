@@ -379,13 +379,15 @@ export class RedeemResult {
     signature: string;
     /**
      * @type {object | undefined} {@link Factor} name to
-     * {@link FactorResult} value (or null where nothing was compared),
-     * present only when the cloud sent `factors`, which it does where there
-     * is something to diagnose, being a mismatch or a misconfigured result
-     * that still compared some factors. Every name is kept exactly as the
-     * cloud sent it, including one this package does not list in
-     * {@link Factor}, so a factor the cloud adds later reaches the caller
-     * without a new release of this package.
+     * {@link FactorResult} value, present only when the cloud sent
+     * `factors`, which it does where there is something to diagnose, being
+     * a mismatch or a misconfigured result that still compared some
+     * factors. Every name is kept as the cloud sent it, including one this
+     * package does not list in {@link Factor}. Each word is read ignoring
+     * case, and a value this package does not know, null included, is a
+     * mismatch, so an unexpected value never reads as a factor that matched
+     * or one that could not be compared. {@link RedeemResult#raw} has the
+     * words as sent.
      */
     factors: object | undefined;
     /**
@@ -459,8 +461,7 @@ export const SignatureResult: Readonly<{
     UNKNOWN: "unknown";
 }>;
 /**
- * The outcome of one factor in a mismatch. The cloud reports `null` for a
- * factor that was not compared, which is passed through unchanged.
+ * The outcome of one factor in a mismatch.
  */
 export const FactorResult: Readonly<{
     VERIFIED: "verified";

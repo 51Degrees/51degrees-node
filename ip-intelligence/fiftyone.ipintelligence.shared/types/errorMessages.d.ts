@@ -2,6 +2,7 @@ export let cacheNotSupport: string;
 export let evidenceNotFound: string;
 export let dataFilePathRequired: string;
 export let fileNotFound: string;
+export let fileNotFoundNotDownloaded: string;
 export let moduleDirNotFound: string;
 export let nativeModuleNotFound: string;
 export let invalidFileExtension: string;

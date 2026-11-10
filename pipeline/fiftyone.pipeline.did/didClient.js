@@ -124,8 +124,7 @@ const SignatureResult = Object.freeze({
 });
 
 /**
- * The outcome of one factor in a mismatch. The cloud reports `null` for a
- * factor that was not compared, which is passed through unchanged.
+ * The outcome of one factor in a mismatch.
  */
 const FactorResult = Object.freeze({
   VERIFIED: 'verified',
@@ -144,6 +143,21 @@ const FactorResult = Object.freeze({
    */
   NOT_RECORDED: 'notrecorded'
 });
+
+const KNOWN_FACTOR_RESULTS = new Set(Object.values(FactorResult));
+
+/**
+ * Reads a factor word from the cloud, ignoring case. Verified,
+ * misconfigured and not recorded are each read only from their own word,
+ * and any other value, null included, is a mismatch.
+ *
+ * @param {*} word the value the cloud sent for a factor
+ * @returns {string} one of {@link FactorResult}
+ */
+function factorResult (word) {
+  const lower = typeof word === 'string' ? word.toLowerCase() : null;
+  return KNOWN_FACTOR_RESULTS.has(lower) ? lower : FactorResult.MISMATCH;
+}
 
 /**
  * The names of the creator context factors, as the cloud writes them as
@@ -274,18 +288,25 @@ class RedeemResult {
       : parsed.signature === SignatureResult.INVALID
         ? SignatureResult.INVALID
         : SignatureResult.UNKNOWN;
+    const factors = parsed.factors && typeof parsed.factors === 'object'
+      ? parsed.factors
+      : undefined;
     /**
      * @type {object | undefined} {@link Factor} name to
-     * {@link FactorResult} value (or null where nothing was compared),
-     * present only when the cloud sent `factors`, which it does where there
-     * is something to diagnose, being a mismatch or a misconfigured result
-     * that still compared some factors. Every name is kept exactly as the
-     * cloud sent it, including one this package does not list in
-     * {@link Factor}, so a factor the cloud adds later reaches the caller
-     * without a new release of this package.
+     * {@link FactorResult} value, present only when the cloud sent
+     * `factors`, which it does where there is something to diagnose, being
+     * a mismatch or a misconfigured result that still compared some
+     * factors. Every name is kept as the cloud sent it, including one this
+     * package does not list in {@link Factor}. Each word is read ignoring
+     * case, and a value this package does not know, null included, is a
+     * mismatch, so an unexpected value never reads as a factor that matched
+     * or one that could not be compared. {@link RedeemResult#raw} has the
+     * words as sent.
      */
-    this.factors = parsed.factors && typeof parsed.factors === 'object'
-      ? Object.freeze(Object.assign({}, parsed.factors))
+    this.factors = factors
+      ? Object.freeze(Object.fromEntries(
+        Object.entries(factors).map(
+          ([name, word]) => [name, factorResult(word)])))
       : undefined;
     const verifiedAt = typeof parsed.verifiedAt === 'string'
       ? new Date(parsed.verifiedAt)
