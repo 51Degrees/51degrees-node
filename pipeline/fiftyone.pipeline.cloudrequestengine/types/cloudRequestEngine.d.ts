@@ -66,6 +66,16 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     processInternal(flowData: FlowData): Promise<any>;
     /**
+     * A response with a top level `fodid` member, in any case, holds a 51Did
+     * created for the one request, so it is neither stored in the cache nor
+     * served from it. The answer is worked out once for each element data,
+     * so a cache hit does not parse the response again.
+     *
+     * @param {object} data the element data of a response
+     * @returns {boolean} false if the response has a top level fodid member
+     */
+    isCacheable(data: object): boolean;
+    /**
      * Typically, cloud will return errors as JSON.
      * However, transport level errors or other failures can result in
      * responses that are plain text. This function handles these cases.
