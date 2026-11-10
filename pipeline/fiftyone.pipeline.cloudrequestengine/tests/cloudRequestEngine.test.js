@@ -274,9 +274,9 @@ test('get content keeps dotted names apart', () => {
 
 /**
  * Test that the engine sends only the Evidence the cloud accepts, never
- * resource, license, licence or values from Evidence, as the Processing section of
- * cloud-request-engine.md says. Other Evidence is sent with the usual
- * precedence.
+ * resource, license, licence or values from Evidence, as the Processing
+ * section of cloud-request-engine.md says. Other Evidence is sent with the
+ * usual precedence.
  */
 test('evidence never supplies resource, license or values', async () => {
   const posts = [];
@@ -315,7 +315,8 @@ test('evidence never supplies resource, license or values', async () => {
   expect(url).toContain(testResourceKey + '.json?license=LICENSEKEY');
   expect(url).not.toContain('evidence_');
   expect(Object.keys(content).filter(
-    name => ['resource', 'license', 'licence', 'values'].includes(name.toLowerCase())
+    name => ['resource', 'license', 'licence', 'values']
+      .includes(name.toLowerCase())
   )).toStrictEqual([]);
   expect(JSON.stringify(content)).not.toContain('evidence_');
   expect(JSON.stringify(content)).not.toContain('header_resource');
