@@ -155,6 +155,8 @@ describe('Sequence Element session id and sequence', () => {
 
   test.each([
     ['5', 6],
+    ['00000000005', 6],
+    ['0000000000000000000012', 13],
     [5, 6],
     ['0', 1],
     [0, 1],
@@ -183,7 +185,8 @@ describe('Sequence Element session id and sequence', () => {
     });
 
   test.each([
-    ['abc'], [''], ['-1'], ['1.5'], ['1e3'], [' 4'], ['2147483647'],
+    ['abc'], [''], ['-1'], ['+5'], [' 5'], ['5 '], ['1.5'], ['1e3'], [' 4'],
+    ['2147483647'], ['00002147483647'],
     ['99999999999'], [-1], [1.5], [NaN], [Infinity], [2147483647],
     [[]], [['5']], [{}], [null], [true]
   ])('a sequence of %p counts as absent and gives 1', async (given) => {
