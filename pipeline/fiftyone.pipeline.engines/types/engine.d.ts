@@ -38,6 +38,15 @@ declare class Engine extends Engine_base {
      */
     inCache(flowData: FlowData): boolean;
     /**
+     * Whether a result may be stored in the cache and served from it. A result
+     * that holds a value created for the one request that asked for it, such
+     * as a 51Did, must not be.
+     *
+     * @param {object} data the element data of a result
+     * @returns {boolean} true unless the result holds such a value
+     */
+    isCacheable(data: object): boolean;
+    /**
      * An engine's process function checks cache for an item
      * (calling inCache)
      * If found it returns the cached object
