@@ -125,7 +125,7 @@ import url = require("url");
 declare class ShareUsageData {
     evidenceData: {};
     sessionId: string;
-    clientIp: string;
+    clientIP: string | null;
     sequence: string;
     /**
      * Try to add data to shared usage

@@ -35,7 +35,7 @@ const os = require('os');
  * The maximum number of code points in a piece of evidence's value which
  * can be added to the usage data being sent.
  */
-const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 10000;
+const SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
 
@@ -254,11 +254,16 @@ class ShareUsage extends Engine {
 
     // --- write variable data
     // The SessionID used to track a series of requests
-    xml += `<SessionId>${data.sessionId}</SessionId>`;
+    xml += '<SessionId>' + new ReplacedString(data.sessionId).result +
+      '</SessionId>';
     // The sequence number of the request in a series of requests.
-    xml += `<Sequence>${data.sequence}</Sequence>`;
-    // The client IP of the request
-    xml += `<ClientIP>${data.clientIP}</ClientIP>`;
+    xml += '<Sequence>' + new ReplacedString(data.sequence).result +
+      '</Sequence>';
+    // The client IP of the request, where there is one
+    if (data.clientIP !== null) {
+      xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
+        '</ClientIP>';
+    }
 
     // The UTC date/time this entry was written
     const date = new Date().toISOString();
@@ -273,7 +278,8 @@ class ShareUsage extends Engine {
         const replacedString = new ReplacedString(entryValue);
         // Write start element
         if (categoryKey.length > 0) {
-          xml += `<${categoryKey} Name="${entryKey}"`;
+          const name = new ReplacedString(entryKey).result;
+          xml += `<${categoryKey} Name="${name}"`;
         } else {
           xml += `<${entryKey}`;
         }
@@ -387,23 +393,26 @@ function isValidXmlChar (code) {
 }
 
 /**
- * Prepares a value for the XML. A value over the maximum number of code
- * points is cut, special XML characters are escaped, and a character XML 1.0
- * does not allow is written as \x and four lower case hexadecimal digits of
- * its code. A surrogate pair is one valid character and is kept whole.
+ * Prepares a value for the XML. A value that is not a string is written as
+ * its text, and undefined and null as nothing. A value over the maximum
+ * number of code points is cut, special XML characters are escaped, and a
+ * character XML 1.0 does not allow is written as \x and four lower case
+ * hexadecimal digits of its code. A surrogate pair is one valid character
+ * and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
     this.result = '';
     this.escaped = false;
     this.truncated = false;
-    if (text) {
+    if (text !== undefined && text !== null) {
       // The limit counts code points, so a character is never cut in two.
-      let value = text;
-      const points = Array.from(text);
-      if (points.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH) {
+      let value = String(text);
+      const points = Array.from(value);
+      if (points.length > SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS) {
         this.truncated = true;
-        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_LENGTH).join('');
+        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS)
+          .join('');
       }
       for (let i = 0; i < value.length; i++) {
         const code = value.charCodeAt(i);
@@ -440,7 +449,7 @@ class ShareUsageData {
   constructor () {
     this.evidenceData = {};
     this.sessionId = '';
-    this.clientIp = '';
+    this.clientIP = null;
     this.sequence = '';
   }
 
