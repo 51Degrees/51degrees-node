@@ -261,27 +261,39 @@ describe('update from memory', () => {
 
   // The status is reported from timer, request and file system watcher
   // callbacks, where an error thrown by an application's listener would be
-  // uncaught and end the process.
-  test('a listener that throws is logged and the others still hear',
-    () => {
-      const { service, logs } = loggingService();
-      const dataFile = memoryDataFile('version 1');
-      const heard = [];
-      service.on('updateComplete', () => {
-        throw new Error('The listener failed.');
-      });
-      service.once('updateComplete', (status) => heard.push(status));
-      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
-        .toBe(true);
-      expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
-      expect(logs.filter((log) => log.level === 'error')
-        .map((log) => String(log.message))).toEqual([
-        'An unhandled error occurred while checking for automatic updates ' +
-        "for engine 'TestEngine'. Error detail: The listener failed."
-      ]);
-      service.updateFromMemory(dataFile, Buffer.from('version 3'));
-      expect(heard).toHaveLength(1);
+  // uncaught and end the process. The specification says the callbacks
+  // after the one that raised the error are not called.
+  test('a listener that throws is logged and the callbacks after it are ' +
+    'not called', () => {
+    const { service, logs } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const heard = [];
+    service.on('updateComplete', (status) => heard.push('before ' + status));
+    service.on('updateComplete', () => {
+      throw new Error('The listener failed.');
     });
+    service.on('updateComplete', (status) => heard.push('after ' + status));
+    dataFile.onUpdateComplete = (status) => heard.push('data file ' + status);
+    expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+      .toBe(true);
+    expect(heard).toEqual(['before ' + AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+    expect(logs.filter((log) => log.level === 'error')
+      .map((log) => String(log.message))).toEqual([
+      'An unhandled error occurred while checking for automatic updates ' +
+      "for engine 'TestEngine'. Error detail: The listener failed."
+    ]);
+  });
+
+  // A 'once' listener is removed when it is called, as emit removes it.
+  test('a once listener hears one update', () => {
+    const { service } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const heard = [];
+    service.once('updateComplete', (status) => heard.push(status));
+    service.updateFromMemory(dataFile, Buffer.from('version 2'));
+    service.updateFromMemory(dataFile, Buffer.from('version 3'));
+    expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+  });
 
   // The data file's own onUpdateComplete is the other update complete
   // callback, so an error it throws is reported in the same words.
