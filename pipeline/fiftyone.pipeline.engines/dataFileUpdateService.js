@@ -392,7 +392,7 @@ class DataFileUpdateService {
     // Without an error listener a connection failure (for example a
     // refused or reset connection) emits an unhandled 'error' event,
     // which crashes the whole process.
-    request.on('error', function (err) {
+    request.on('error', function () {
       if (responded) {
         return;
       }
@@ -470,7 +470,7 @@ class DataFileUpdateService {
       const output = fs.createWriteStream(filename);
       // A failed write and a download cut short are each the end of the
       // update, so whichever comes first reports it.
-      output.on('error', function (err) {
+      output.on('error', function () {
         response.resume();
         if (!written) {
           return;
@@ -535,7 +535,7 @@ class DataFileUpdateService {
 
           // A failed read is reported once, and the check is not made.
           let checked = false;
-          fd.on('error', function (err) {
+          fd.on('error', function () {
             if (checked) {
               return;
             }
