@@ -214,7 +214,8 @@ test('file watcher keeps watching after a failed refresh', async () => {
     await failed;
     expect(dataFile.data).toBe('version 1');
     const error = logs.find((log) => log.level === 'error');
-    expect(error.message).toBe('An error occurred when applying a data ' +
+    expect(error.message).toBe('Error during check for data update. Error detail: ' +
+      'An error occurred when applying a data ' +
       "update to engine 'testEngine' after 1 tries. Error detail: The data " +
       'file cannot be used.');
     // The test resumes before the watcher has finished with the first

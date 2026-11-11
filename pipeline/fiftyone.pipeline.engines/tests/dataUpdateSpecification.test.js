@@ -347,7 +347,12 @@ describe('update from memory', () => {
     expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
     expect(dataFile.data.toString()).toBe('version 1');
     expect(dataFile.updating).toBe(false);
-    expect(logs.some((log) => log.level === 'error')).toBe(true);
+    expect(logs.filter((log) => log.level === 'error')
+      .map((log) => log.message)).toEqual([
+      'Error during check for data update. Error detail: ' +
+      'An error occurred when applying a data update to engine ' +
+      "'TestEngine'. Error detail: The data cannot be used."
+    ]);
   });
 
   test('does not run while the data file is updating', () => {
@@ -487,7 +492,8 @@ describe('log messages', () => {
     };
     const procedural = await run(false);
     expect(procedural.message).toEqual(expect.stringMatching(new RegExp(
-      "^Error accessing data update service at 'http://127\\.0\\.0\\.1:1/" +
+      '^Error during check for data update\\. Error detail: ' +
+      "Error accessing data update service at 'http://127\\.0\\.0\\.1:1/" +
       "datafile' for engine 'TestEngine'\\. Error detail: .*ECONNREFUSED")));
 
     const { service, logs } = loggingService();
@@ -521,6 +527,7 @@ describe('log messages', () => {
     service.updateDataFile(dataFile);
     expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
     expect(logs.find((log) => log.level === 'error').message).toBe(
+      'Error during check for data update. Error detail: ' +
       "Error accessing data update service at 'not a url' for engine " +
       "'TestEngine'. Error detail: Invalid URL");
   });
@@ -539,6 +546,7 @@ describe('log messages', () => {
       setTimeout(() => remote.server.closeAllConnections(), 10);
       expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         "No response from data update service at '" + remote.url +
         "' for engine 'TestEngine'");
     } finally {
@@ -562,7 +570,8 @@ describe('log messages', () => {
       service.updateDataFile(dataFile);
       await done;
       const error = logs.find((log) => log.level === 'error');
-      expect(error.message).toBe('An error occurred when applying a data ' +
+      expect(error.message).toBe('Error during check for data update. Error detail: ' +
+        'An error occurred when applying a data ' +
         "update to engine 'TestEngine' after 1 tries. Error detail: The " +
         'data cannot be used.');
     } finally {
@@ -615,7 +624,7 @@ describe('log messages', () => {
           .toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED);
         const error = logs.find((log) => log.level === 'error');
         expect(error.message).toMatch(
-          /^Integrity check failed\. MD5 hash in HTTP response 'not-the-right-hash' for 'TestEngine'data update does not match calculated hash for the downloaded file '[0-9a-f]{32}'\.$/);
+          /^Error during check for data update\. Error detail: Integrity check failed\. MD5 hash in HTTP response 'not-the-right-hash' for 'TestEngine'data update does not match calculated hash for the downloaded file '[0-9a-f]{32}'\.$/);
       } finally {
         stop(remote.server);
       }
@@ -634,6 +643,7 @@ describe('log messages', () => {
       expect(await done)
         .toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         "Too many requests to '" + remote.url + "' for engine 'TestEngine'");
     } finally {
       stop(remote.server);
@@ -652,6 +662,7 @@ describe('log messages', () => {
       service.updateDataFile(dataFile);
       expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         "Access denied to data update service at '" + remote.url +
         "' for engine 'TestEngine'");
     } finally {
@@ -671,6 +682,7 @@ describe('log messages', () => {
       service.updateDataFile(dataFile);
       expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         "HTTP status code '500' from data update service at '" + remote.url +
         "' for engine 'TestEngine'");
     } finally {
@@ -693,6 +705,7 @@ describe('log messages', () => {
       expect(await done)
         .toBe(AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         "The data file 'HashV41' is checking for updates but does not " +
         'have a temporary file path configured.');
       expect(dataFile.updating).toBe(false);
@@ -716,6 +729,7 @@ describe('log messages', () => {
       await done;
       await sleep(50);
       expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
         'An error occurred when copying a data file to replace the ' +
         'existing one at \'' + target + '\'. Error detail: ENOENT: no ' +
         "such file or directory, open '" + target + "'");
@@ -838,6 +852,7 @@ describe('every update reports one status', () => {
       expect(checks).toHaveBeenCalledTimes(1);
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([
+        'Error during check for data update. Error detail: ' +
         "No response from data update service at '" + dataFile.updateUrl +
         "' for engine 'TestEngine'"
       ]);
@@ -879,6 +894,7 @@ describe('every update reports one status', () => {
       // is the row .NET has.
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([
+        'Error during check for data update. Error detail: ' +
         'An error occurred when copying a data file to replace the ' +
         "existing one at '" + file + "'. Error detail: resource busy or " +
         'locked'
