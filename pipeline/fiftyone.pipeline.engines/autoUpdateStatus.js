@@ -45,10 +45,6 @@ const autoUpdateStatus = {
   AUTO_UPDATE_REFRESH_FAILED: 'Refresh Failed',
   // The data file has no temporary file path configured.
   AUTO_UPDATE_TEMP_PATH_NOT_SET: 'Temp Path Not Set',
-  // A watched file could not be opened for reading in time.
-  AUTO_UPDATE_TIMEOUT: 'Timeout',
-  // The engine has no configuration for the data file asked about.
-  AUTO_UPDATE_NO_CONFIGURATION: 'No Configuration',
   // An error with no status of its own.
   AUTO_UPDATE_UNKNOWN_ERROR: 'Unknown Error'
 };
