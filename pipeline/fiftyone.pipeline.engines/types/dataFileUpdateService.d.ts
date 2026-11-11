@@ -45,10 +45,40 @@ declare class DataFileUpdateService {
      * Method that updates a datafile when it is due an update
      *
      * @param {DataFile} dataFile the datafile to update
+     * @param {boolean} [automatic] true where the update is one the service
+     * started itself, on start-up or when the polling interval has passed,
+     * and not one an application asked for. Only the log messages differ.
      * @returns {boolean | void} returns false if already updating
      * or request failed
      */
-    updateDataFile(dataFile: DataFile): boolean | void;
+    updateDataFile(dataFile: DataFile, automatic?: boolean): boolean | void;
+    /**
+     * Writes a message to the log of the pipeline the service is attached to.
+     *
+     * @param {string} level the log level
+     * @param {*} message the message
+     */
+    log(level: string, message: any): void;
+    /**
+     * Reports how an update ended, to the listeners of 'updateComplete' and
+     * to the data file's own onUpdateComplete function, if it has one.
+     *
+     * @param {DataFile} dataFile the data file the update was for
+     * @param {string} status one of the AutoUpdateStatus values
+     */
+    complete(dataFile: DataFile, status: string): void;
+    /**
+     * Refreshes a data file that is held in memory with the bytes given. The
+     * data file keeps the data it has if the refresh fails. Nothing is
+     * downloaded and no file is written.
+     *
+     * @param {DataFile} dataFile the memory data file to refresh
+     * @param {Buffer | Uint8Array} buffer the new data
+     * @returns {boolean} false if the data file is already updating or the
+     * refresh failed, which is also logged and reported through the
+     * 'updateComplete' event
+     */
+    updateFromMemory(dataFile: DataFile, buffer: Buffer | Uint8Array): boolean;
     /**
      * Internal method called when the datafile has
      * been downloaded and is ready after an update

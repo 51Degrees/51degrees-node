@@ -26,15 +26,54 @@ const AspectDataDictionary = require('fiftyone.pipeline.engines')
   .AspectDataDictionary;
 const BasicListEvidenceKeyFilter = require('fiftyone.pipeline.core')
   .BasicListEvidenceKeyFilter;
+const LicenseKeys = require('fiftyone.pipeline.core').LicenseKeys;
 const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 
+// Names the cloud service reads its credentials and property list from,
+// which Evidence must not supply under any prefix or in any letter case.
+const reservedFields = ['resource', 'license', 'licence', 'values'];
+
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
  */
+
+// Whether an object has a member of its own by that name, so that a name
+// such as constructor is not found on the prototype.
+const hasOwn = (object, name) =>
+  Object.prototype.hasOwnProperty.call(object, name);
+
+// Whether each element data the engine has made may be cached.
+const cacheableData = new WeakMap();
+
+// The key a web integration gives the web request itself. It is a view of
+// the whole request and not a value to send, so it is left out.
+const webRequestKey = 'server.http-request';
+
+/**
+ * Whether the response in an element data has a top level member named
+ * fodid, in any case. A response that cannot be read is cached as before.
+ *
+ * @param {object} data the element data of a response
+ * @returns {boolean} true if the response has a top level fodid member
+ */
+function holdsFodId (data) {
+  try {
+    const text = data.get('cloud');
+    if (typeof text !== 'string' || !/fodid/i.test(text)) {
+      return false;
+    }
+    const response = JSON.parse(text);
+    return response !== null &&
+      typeof response === 'object' &&
+      Object.keys(response).some((name) => name.toLowerCase() === 'fodid');
+  } catch (e) {
+    return false;
+  }
+}
 
 // Engine that makes a call to the 51Degrees cloud service
 // Returns raw JSON as a "cloud" property under "cloud" dataKey
@@ -44,7 +83,13 @@ class CloudRequestEngine extends Engine {
    *
    * @param {object} options options object
    * @param {string} options.resourceKey resourcekey for cloud service
-   * @param {string} options.licenseKey licensekey for cloud service
+   * @param {string} options.licenseKey licensekey for cloud service, beside
+   * a resourceKey or on its own. On its own, requestedProperties is
+   * required.
+   * @param {Array<string>|string} options.requestedProperties the fully
+   * qualified names of the properties to ask for, such as device.ismobile,
+   * as a list or one comma separated string. Beside a resourceKey the cloud
+   * service adds them to the properties the resource key carries.
    * @param {string} options.baseURL url the cloud service is located at
    * if overriding default
    * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -59,6 +104,7 @@ class CloudRequestEngine extends Engine {
     {
       resourceKey,
       licenseKey,
+      requestedProperties,
       baseURL,
       cloudRequestOrigin,
       requestClient
@@ -67,12 +113,16 @@ class CloudRequestEngine extends Engine {
 
     this.dataKey = 'cloud';
 
-    if (!resourceKey) {
-      throw 'Cloud engine needs a resourceKey';
-    }
+    // A key that is empty or only whitespace counts as absent. Any other
+    // key is sent as it is given.
+    this.resourceKey = keyText(resourceKey);
+    this.licenseKey = keyText(licenseKey);
+    this.requestedProperties = propertyNames(requestedProperties);
+    refuseInvalidCredentials(this);
 
-    this.resourceKey = resourceKey;
-    this.licenseKey = licenseKey;
+    // Set once the requested properties have been compared with an answer.
+    this.notCoveredReported = false;
+
     this.cloudRequestOrigin = cloudRequestOrigin;
     if (requestClient !== undefined) {
       this.requestClient = requestClient;
@@ -180,6 +230,27 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * A response with a top level `fodid` member, in any case, holds a 51Did
+   * created for the one request, so it is neither stored in the cache nor
+   * served from it. The answer is worked out once for each element data,
+   * so a cache hit does not parse the response again.
+   *
+   * @param {object} data the element data of a response
+   * @returns {boolean} false if the response has a top level fodid member
+   */
+  isCacheable (data) {
+    if (data === null || typeof data !== 'object') {
+      return true;
+    }
+    let cacheable = cacheableData.get(data);
+    if (cacheable === undefined) {
+      cacheable = !holdsFodId(data);
+      cacheableData.set(data, cacheable);
+    }
+    return cacheable;
+  }
+
+  /**
    * Typically, cloud will return errors as JSON.
    * However, transport level errors or other failures can result in
    * responses that are plain text. This function handles these cases.
@@ -212,11 +283,14 @@ class CloudRequestEngine extends Engine {
       content = response.content;
     }
 
+    // The cloud's errors can name the license key it was sent, so the key
+    // is masked before the text goes into an error.
+    const licenseKey = this.licenseKey;
     const errors = this.getErrorMessages(content);
     const cloudErrors = [];
     errors.forEach(function (errorText) {
       cloudErrors.push(new CloudRequestError(
-        errorText,
+        LicenseKeys.mask(errorText, licenseKey),
         response.headers,
         response.statusCode));
     });
@@ -226,7 +300,7 @@ class CloudRequestEngine extends Engine {
       const message = 'Cloud service returned status code ' +
         response.statusCode + ' with content ' + content + '.';
       cloudErrors.push(new CloudRequestError(
-        message,
+        LicenseKeys.mask(message, licenseKey),
         response.headers,
         response.statusCode));
     }
@@ -243,17 +317,28 @@ class CloudRequestEngine extends Engine {
     const engine = this;
 
     return new Promise(function (resolve, reject) {
-      let url = engine
-        .baseURL +
-        'accessibleproperties?resource=' +
-        engine.resourceKey;
-
-      // licenseKey is optional
-      if (engine.licenseKey) {
-        url += '&license=' + engine.licenseKey;
+      // A license key goes in the body of a POST rather than in the URL, so
+      // it stays out of anything that logs the URL. A resource key on its
+      // own goes in the query string.
+      const url = engine.baseURL + 'accessibleproperties';
+      let request;
+      if (engine.licenseKey === '') {
+        request = engine.requestClient.get(
+          url + '?resource=' + engine.resourceKey,
+          engine.cloudRequestOrigin);
+      } else {
+        const credentials = {};
+        if (engine.resourceKey !== '') {
+          credentials.resource = engine.resourceKey;
+        }
+        credentials.license = engine.licenseKey;
+        request = engine.requestClient.post(
+          url,
+          credentials,
+          engine.cloudRequestOrigin);
       }
 
-      engine.requestClient.get(url, engine.cloudRequestOrigin)
+      request
         .then(function (properties) {
           const propertiesOutput = {};
 
@@ -326,20 +411,31 @@ class CloudRequestEngine extends Engine {
   getData (flowData) {
     const engine = this;
 
-    let url = this.baseURL +
-      this.resourceKey + '.json';
-
-    // licensekey is optional
-    if (this.licenseKey) {
-      url += '?license=' + this.licenseKey;
-    }
+    // A resource key names the route. A license key on its own has no
+    // resource key to put there, so it uses the route that takes none.
+    const url = this.resourceKey !== ''
+      ? this.baseURL + this.resourceKey + '.json'
+      : this.baseURL + sharedValues.licenseDataPath;
 
     const self = this;
 
     return new Promise(function (resolve, reject) {
+      // The keys go in the body, the license key never in the URL. They and
+      // the list are set after the evidence, so evidence cannot replace them.
+      const content = engine.getContent(flowData);
+      if (engine.resourceKey !== '') {
+        content.resource = engine.resourceKey;
+      }
+      if (engine.licenseKey !== '') {
+        content.license = engine.licenseKey;
+      }
+      if (engine.requestedProperties.length > 0) {
+        content.values = engine.requestedProperties.join(',');
+      }
+
       engine.requestClient.post(
         url,
-        engine.getContent(flowData),
+        content,
         engine.cloudRequestOrigin)
         .then(function (body) {
           const data = new AspectDataDictionary({
@@ -351,6 +447,7 @@ class CloudRequestEngine extends Engine {
           });
 
           flowData.setElementData(data);
+          engine.reportPropertiesNotCovered(flowData, body);
 
           resolve();
         }).catch(function (response) {
@@ -358,6 +455,44 @@ class CloudRequestEngine extends Engine {
           reject(self.errors);
         });
     });
+  }
+
+  /**
+   * Compares the requested properties with an answer and logs, once, the
+   * names the answer left out. The cloud service drops a property the keys
+   * do not cover without naming it, so only the engine can notice. A
+   * property present but null counts as answered, because its nullreason
+   * says why it has no value. The answer cannot change while the keys and
+   * the list stay the same, so one comparison is enough.
+   *
+   * @param {FlowData} flowData the flow data whose pipeline is logged to
+   * @param {string} body the JSON the cloud service answered with
+   */
+  reportPropertiesNotCovered (flowData, body) {
+    if (this.notCoveredReported || this.requestedProperties.length === 0) {
+      return;
+    }
+    let answer;
+    try {
+      answer = JSON.parse(body);
+    } catch (e) {
+      return;
+    }
+    if (answer === null || typeof answer !== 'object') {
+      return;
+    }
+    this.notCoveredReported = true;
+    const notCovered = this.requestedProperties.filter(
+      (name) => answerHolds(answer, name) === false);
+    if (notCovered.length > 0) {
+      // With no license key, the resource key's licence answers a property
+      // it does not grant as null, so a name left out is not a property.
+      const message = this.licenseKey === ''
+        ? errorMessages.propertiesNotProperties
+        : errorMessages.propertiesNotCovered;
+      flowData.pipeline.log('warn', util.format(
+        message, notCovered.join(', ')));
+    }
   }
 
   /**
@@ -391,13 +526,19 @@ class CloudRequestEngine extends Engine {
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
    *
+   * The engine sends every Evidence value in the Flow Data, including the
+   * values no element in the pipeline accepts, because what the cloud
+   * service uses changes over time and knowing about the other Evidence is
+   * important to continued optimization. The reserved names and the web
+   * request view are left out.
+   *
    * @param {FlowData} flowData FlowData to get evidence from
    * @returns {object} Evidence Dictionary
    */
   getContent (flowData) {
     const queryData = {};
 
-    const evidence = flowData.evidence.getAll();
+    const evidence = this.sendableEvidence(flowData.evidence);
 
     // Add evidence in reverse alphabetical order, excluding special keys.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'other'));
@@ -409,6 +550,45 @@ class CloudRequestEngine extends Engine {
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'query'));
 
     return queryData;
+  }
+
+  /**
+   * The evidence the engine sends, being every value in the Flow Data,
+   * whether an element accepted it or not, apart from the web request
+   * view. addQueryData then leaves out the reserved names. The accepted
+   * values come first, so where the two would give the same name the
+   * accepted one is sent.
+   *
+   * @param {Evidence} evidence the Flow Data's evidence
+   * @returns {object} the evidence keys and values to send
+   */
+  sendableEvidence (evidence) {
+    const sendable = {};
+    // An older fiftyone.pipeline.core throws unaccepted evidence away.
+    const unaccepted = typeof evidence.getUnaccepted === 'function'
+      ? evidence.getUnaccepted()
+      : {};
+
+    for (const source of [evidence.getAll(), unaccepted]) {
+      for (const [key, value] of Object.entries(source)) {
+        if (this.isSent(key) && hasOwn(sendable, key) === false) {
+          sendable[key] = value;
+        }
+      }
+    }
+
+    return sendable;
+  }
+
+  /**
+   * Whether an evidence key is sent to the cloud service. The reserved
+   * names are left out later, by addQueryData.
+   *
+   * @param {string} key the evidence key
+   * @returns {boolean} false for the web request view, in any letter case
+   */
+  isSent (key) {
+    return String(key).toLowerCase() !== webRequestKey;
   }
 
   /**
@@ -433,8 +613,13 @@ class CloudRequestEngine extends Engine {
         ? evidenceKey.substring(separatorIndex + 1)
         : evidenceKey;
 
+      // Evidence never supplies the request's own fields.
+      if (reservedFields.includes(suffix.toLowerCase())) {
+        continue;
+      }
+
       // Check and add the evidence to the query parameters.
-      if ((suffix in queryData) === false) {
+      if (hasOwn(queryData, suffix) === false) {
         queryData[suffix] = evidenceValue;
       } else {
         // If the queryParameter exists already.
@@ -515,6 +700,88 @@ class CloudRequestEngine extends Engine {
    */
   hasKeyPrefix (itemKey, prefix) {
     return itemKey.startsWith(prefix + '.');
+  }
+}
+
+/**
+ * Reads a key setting.
+ *
+ * @param {*} value a key setting
+ * @returns {string} the key as given, or an empty string where it is
+ * absent, empty or only whitespace
+ */
+function keyText (value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const text = String(value);
+  return text.trim() === '' ? '' : text;
+}
+
+/**
+ * Reads the requested properties setting.
+ *
+ * @param {Array<string>|string|undefined} value property names as a list
+ * or one comma separated string
+ * @returns {Array<string>} the names, trimmed, leaving out empty ones
+ */
+function propertyNames (value) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  const names = typeof value === 'string' ? value.split(',') : value;
+  return names
+    .map((name) => String(name).trim())
+    .filter((name) => name !== '');
+}
+
+/**
+ * Finds a key of an object, ignoring case, because the cloud service
+ * lower-cases the names in its answer.
+ *
+ * @param {object} object the object to search
+ * @param {string} name the name wanted
+ * @returns {string|undefined} the key as the object spells it
+ */
+function findKey (object, name) {
+  const lower = name.toLowerCase();
+  return Object.keys(object).find((key) => key.toLowerCase() === lower);
+}
+
+/**
+ * Whether an answer holds a property.
+ *
+ * @param {object} answer the parsed answer from the cloud service
+ * @param {string} name a fully qualified name such as device.ismobile
+ * @returns {boolean} true when the property is present, even as null
+ */
+function answerHolds (answer, name) {
+  const separator = name.indexOf('.');
+  if (separator < 0) {
+    return false;
+  }
+  const sectionKey = findKey(answer, name.substring(0, separator));
+  if (sectionKey === undefined) {
+    return false;
+  }
+  const section = answer[sectionKey];
+  return section !== null && typeof section === 'object' &&
+    findKey(section, name.substring(separator + 1)) !== undefined;
+}
+
+/**
+ * Refuses the two combinations the cloud service refuses on every request,
+ * so a deployment sees one error when the engine is built rather than a
+ * failure on each request.
+ *
+ * @param {CloudRequestEngine} engine the engine being built
+ */
+function refuseInvalidCredentials (engine) {
+  if (engine.resourceKey === '' && engine.licenseKey === '') {
+    throw new Error(errorMessages.noCredential);
+  }
+  if (engine.resourceKey === '' && engine.requestedProperties.length === 0) {
+    throw new Error(errorMessages.licenseKeyNeedsProperties);
   }
 }
 

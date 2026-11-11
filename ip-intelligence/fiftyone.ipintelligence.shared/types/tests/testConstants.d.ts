@@ -1,7 +1,5 @@
 export namespace envVars {
     let superResourceKeyEnvVar: string;
-    let ipiResourceKeyEnvVar: string;
-    let licenseKeyEnvVar: string;
 }
 export namespace ipAddresses {
     let switzerlandIpv4: string;

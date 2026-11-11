@@ -69,7 +69,7 @@ const KeyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
  * https://distributor.51degrees.com/api/v2/download?LicenseKeys=<your_license_key>&Type=27&Download=True&Product=22
  * ```
  * ## Lite Data File
- * Lite data files (free-to-use, limited capabilities, no license key required) are created roughly
+ * Lite data files (free-to-use, with a small number of Properties, no license key required) are created roughly
  * once a month and cannot be updated using auto-update, they may be downloaded with the
  * scripts in the (data repository)[href=https://github.com/51Degrees/data], which is
  * included with source distributions of this software.

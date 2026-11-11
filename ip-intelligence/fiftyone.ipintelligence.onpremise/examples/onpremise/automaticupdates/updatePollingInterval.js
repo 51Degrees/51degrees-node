@@ -46,7 +46,7 @@ const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUt
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
+// a small number of Properties.
 // Contact us for a copy of the Enterprise data file at
 // https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=lite_v_4_1_ipi
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
@@ -54,19 +54,20 @@ const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 // Load in a datafile
 const args = process.argv.slice(2);
 // Use the supplied path for the data file, the path in the
-// 51DEGREES_IPI_PATH environment variable, or find the lite
+// _51DEGREES_IPI_PATH environment variable, or find the lite
 // file that is included in the repository.
 const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
-// Set your licence key in the LICENSE_KEY environment variable. Contact us
-// for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=mylicensekey
+// Set your licence key in the _51DEGREES_LICENSE_KEY environment
+// variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=mylicensekey
 
-const myLicenseKey = process.env.LICENSE_KEY || '!!YOUR_LICENSE_KEY!!';
+const myLicenseKey = process.env._51DEGREES_LICENSE_KEY ||
+  '!!YOUR_LICENSE_KEY!!';
 
 if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   console.log('This example updates the data file automatically, which needs ' +
-    'a licence key. Set it in the LICENSE_KEY environment variable. Contact ' +
-    'us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=license-key-required');
+    'a licence key. Set it in the _51DEGREES_LICENSE_KEY environment ' +
+    'variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=license-key-required');
 } else {
   // Check if datafile exists
 

@@ -45,6 +45,9 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
    * If you do not wish to use a key then you can specify
    * an empty string, but this will cause automatic updates
    * to be disabled.
+   * @param {Array<string>|string} options.requestedProperties the fully
+   * qualified names of the properties to ask the cloud service for, such
+   * as device.ismobile. Required with a license key and no resource key.
    * @param {string} options.resourceKey resourceKey, if using the
    * cloud engine
    * @param {string} options.dataFile dataFile path for the on premise engine
@@ -116,6 +119,7 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
       updateTimeMaximumRandomisation = 10,
       shareUsage = true,
       resourceKey = null,
+      requestedProperties = null,
       cacheSize = null,
       restrictedProperties,
       performanceProfile = 'Balanced',
@@ -179,6 +183,7 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
         {
           resourceKey,
           licenseKey: licenceKeys,
+          requestedProperties,
           baseURL: cloudEndPoint,
           cloudRequestOrigin,
           cache

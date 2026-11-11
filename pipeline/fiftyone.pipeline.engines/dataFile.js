@@ -77,6 +77,9 @@ class DataFile {
    *  been registered with a datafile update service (defaults to false)
    * @param {Function} options.refresh callback to call when datafile
    * has been updated. Defaults to a refresh method on the attached FlowElement
+   * @param {Function} options.onUpdateComplete callback to call with the
+   * AutoUpdateStatus every time an update of the datafile ends, whether it
+   * worked or not
    *
    */
   constructor (
@@ -100,7 +103,8 @@ class DataFile {
       verifyIfModifiedSince = true,
       updateOnStart = false,
       isRegistered = false,
-      refresh
+      refresh,
+      onUpdateComplete
     }) {
     this.flowElement = flowElement;
     this.identifier = identifier;
@@ -125,6 +129,10 @@ class DataFile {
 
     if (refresh) {
       this.refresh = refresh;
+    }
+
+    if (onUpdateComplete) {
+      this.onUpdateComplete = onUpdateComplete;
     }
 
     if (path) {

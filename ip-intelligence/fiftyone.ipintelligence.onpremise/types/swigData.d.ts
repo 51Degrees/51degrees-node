@@ -34,6 +34,14 @@ declare class SwigData extends SwigData_base {
      * @returns {AspectPropertyValue} value property value
      */
     getInternal(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
+    /**
+     * Looks for a key again in lower case, which is how the engine keys its
+     * properties, so a key in any letter case finds its property.
+     *
+     * @param {string} key the property key to retrieve
+     * @returns {AspectPropertyValue} value property value
+     */
+    getInternalIgnoringCase(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
 }
 declare namespace SwigData {
     export { FlowElement };

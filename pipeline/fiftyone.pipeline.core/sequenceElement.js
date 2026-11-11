@@ -23,7 +23,13 @@
 const crypto = require('crypto');
 
 const FlowElement = require('./flowElement.js');
+const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
+
+// The largest sequence that can be given, so that one more is still a
+// 32 bit whole number.
+const MaxGivenSequence = 2147483646;
+const SequencePattern = /^[0-9]+$/;
 
 /**
  * @typedef {import('./flowData')} FlowData
@@ -38,7 +44,21 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
  **/
 class SequenceElement extends FlowElement {
   constructor () {
-    super(...arguments);
+    super({
+      properties: {
+        'session-id': {
+          name: 'session-id',
+          type: 'string',
+          description: 'An identifier for this session.'
+        },
+        sequence: {
+          name: 'sequence',
+          type: 'int',
+          description: 'A counter that records how many consecutive ' +
+            'callbacks have been made in this session.'
+        }
+      }
+    });
 
     this.dataKey = 'sequence';
 
@@ -49,33 +69,34 @@ class SequenceElement extends FlowElement {
    * Internal process function for the sequence element
    * Checks if there is a session id and sequence number set
    * if there is it increments the sequence number for that session
-   * if not it initialises both
+   * if not it initialises both. Both values are written to the evidence
+   * and to the element data.
    *
    * @param {FlowData} flowData flowData with the evidence in it
    */
   processInternal (flowData) {
-    // Check if session id is set in evidence
-
-    if (flowData.evidence.get('query.session-id')) {
-      // Get current sequence number
-
-      let sequence = flowData.evidence.get('query.sequence');
-
-      if (sequence) {
-        sequence = parseInt(sequence);
-      } else {
-        sequence = 1;
-      }
-
-      flowData.evidence.add('query.sequence', sequence + 1);
-    } else {
-      flowData.evidence.add(
-        'query.session-id',
-        crypto.randomBytes(16).toString('hex')
-      );
-
-      flowData.evidence.add('query.sequence', 1);
+    // The session id and the sequence are each read on their own. A value
+    // that is not usable counts as absent.
+    let sessionId = flowData.evidence.get('query.session-id');
+    if (typeof sessionId !== 'string' || sessionId.length === 0) {
+      sessionId = crypto.randomBytes(16).toString('hex');
     }
+
+    const given = flowData.evidence.get('query.sequence');
+    let sequence = 1;
+    if (typeof given === 'number' && Number.isInteger(given)) {
+      sequence = given >= 0 && given <= MaxGivenSequence ? given + 1 : 1;
+    } else if (typeof given === 'string' && SequencePattern.test(given)) {
+      sequence = Number(given) <= MaxGivenSequence ? Number(given) + 1 : 1;
+    }
+
+    flowData.evidence.add('query.session-id', sessionId);
+    flowData.evidence.add('query.sequence', sequence);
+
+    flowData.setElementData(new ElementDataDictionary({
+      flowElement: this,
+      contents: { 'session-id': sessionId, sequence }
+    }));
   }
 }
 

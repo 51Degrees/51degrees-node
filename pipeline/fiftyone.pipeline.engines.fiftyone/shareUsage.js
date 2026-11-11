@@ -26,18 +26,47 @@ const Engine = engines.Engine;
 const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
+const ShareUsageBackOff = require('./shareUsageBackOff');
 const zlib = require('zlib');
 const url = require('url');
 
 const os = require('os');
 
 /**
- * The maximum length of a piece of evidence's value which can be
- * added to the usage data being sent.
+ * The maximum number of code points in a piece of evidence's value which
+ * can be added to the usage data being sent.
  */
-const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+const SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
+
+/**
+ * The default maximum number of entries waiting to be sent, unless ten times
+ * the requested package size is larger.
+ */
+const MAX_QUEUE_SIZE_DEFAULT = 1000;
+
+/**
+ * While the queue is full, a message is logged for the first entry dropped
+ * and then once for every this many more, never one for each entry.
+ */
+const QUEUE_FULL_LOG_EVERY = 1000;
+
+/**
+ * The most characters of an answer's content that are logged.
+ */
+const LOGGED_CONTENT_LENGTH = 500;
+
+/**
+ * The default time in milliseconds to wait for the service to answer.
+ */
+const REQUEST_TIMEOUT_DEFAULT = 60000;
+
+/**
+ * The longest single wait during a pause. Longer pauses are waited out in
+ * parts, as a timer cannot wait longer than about 24 days.
+ */
+const LONGEST_WAIT_MILLIS = 86400000;
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
@@ -85,6 +114,23 @@ class ShareUsage extends Engine {
    * is shared again when it comes from a new session. False by default. It
    * needs cookie to be set, and has no effect when shareAll is true,
    * because every cookie is then shared and used to find repeats.
+   * @param {number} options.maximumQueueSize The most entries held while
+   * waiting to be sent. When the queue is full, new entries are dropped. The
+   * default is 1000, or ten times requestedPackageSize if that is larger.
+   * @param {number} options.requestTimeout The time in milliseconds to wait
+   * for the service to answer before the send counts as failed. 60000 by
+   * default.
+   * @param {number} options.failuresToEnterRecovery The number of failed
+   * sends within failuresWindowSeconds that pauses sending, from 1 to 100.
+   * Usage data is still queued while sending is paused. 10 by default.
+   * @param {number} options.failuresWindowSeconds The time in seconds over
+   * which failed sends are counted. 100 by default.
+   * @param {number} options.initialRecoveryDelaySeconds The length in
+   * seconds of the first pause after failed sends. 2 by default.
+   * @param {number} options.maxRecoveryDelaySeconds The longest a pause can
+   * be, in seconds. 300 by default.
+   * @param {number} options.recoveryMultiplier What the pause is multiplied
+   * by each time the send tried when a pause ends fails. 2 by default.
    */
   constructor (
     {
@@ -96,7 +142,14 @@ class ShareUsage extends Engine {
       sharePercentage = 1,
       endpoint = 'https://devices-v4.51degrees.com/new.ashx',
       shareAll = false,
-      trackSession = false
+      trackSession = false,
+      maximumQueueSize,
+      requestTimeout = REQUEST_TIMEOUT_DEFAULT,
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
     } = {}) {
     super(...arguments);
 
@@ -135,7 +188,36 @@ class ShareUsage extends Engine {
 
     this.sharePercentage = sharePercentage;
 
+    // The entries waiting to be sent, oldest first.
     this.shareData = [];
+
+    // The entries dropped since the queue last had room.
+    this.dropped = 0;
+
+    this.maximumQueueSize = maximumQueueSize === undefined
+      ? Math.max(MAX_QUEUE_SIZE_DEFAULT, 10 * requestedPackageSize)
+      : maximumQueueSize;
+    if (!(this.maximumQueueSize >= requestedPackageSize)) {
+      throw new RangeError(
+        'maximumQueueSize cannot be smaller than requestedPackageSize.');
+    }
+
+    this.requestTimeout = requestTimeout;
+
+    // Pauses sending after repeated failed sends.
+    this.backOff = new ShareUsageBackOff({
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
+    });
+
+    // True while a message is being sent. One is sent at a time.
+    this.sending = false;
+
+    // Starts sending again when a pause ends.
+    this.resumeTimer = null;
 
     if (endpoint.includes('https://') === false &&
       endpoint.includes('http://') === false) {
@@ -231,6 +313,9 @@ class ShareUsage extends Engine {
       xml += '<Language>Node.JS</Language>';
       // The software language version
       xml += `<LanguageVersion>${nodeVersion}</LanguageVersion>`;
+      // The IP address of this server
+      xml += '<ServerIP>' + new ReplacedString(serverAddress()).result +
+        '</ServerIP>';
       // The OS name and version
       xml += `<Platform>${osVersion}</Platform>`;
       this.constantXml = xml;
@@ -245,6 +330,19 @@ class ShareUsage extends Engine {
    * evidence in FlowData (filtered by the ShareUsageEvidenceKeyFilter)
    */
   addToShareUsage (data) {
+    // When the queue is full, the newest entries are dropped.
+    if (this.shareData.length >= this.maximumQueueSize) {
+      this.dropped++;
+      if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
+        this._log('warning', 'The usage sharing queue is full at ' +
+          `${this.maximumQueueSize} entries, so usage data is being ` +
+          `dropped. ${this.dropped} entries have been dropped since the ` +
+          'queue last had room.');
+      }
+      return;
+    }
+    this.dropped = 0;
+
     let xml = '';
 
     xml += '<Device>';
@@ -254,11 +352,14 @@ class ShareUsage extends Engine {
 
     // --- write variable data
     // The SessionID used to track a series of requests
-    xml += `<SessionId>${data.sessionId}</SessionId>`;
+    xml += '<SessionId>' + new ReplacedString(data.sessionId).result +
+      '</SessionId>';
     // The sequence number of the request in a series of requests.
-    xml += `<Sequence>${data.sequence}</Sequence>`;
-    // The client IP of the request
-    xml += `<ClientIP>${data.clientIP}</ClientIP>`;
+    xml += '<Sequence>' + new ReplacedString(data.sequence).result +
+      '</Sequence>';
+    // The client IP of the request, empty where there is none
+    xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
+      '</ClientIP>';
 
     // The UTC date/time this entry was written
     const date = new Date().toISOString();
@@ -273,13 +374,14 @@ class ShareUsage extends Engine {
         const replacedString = new ReplacedString(entryValue);
         // Write start element
         if (categoryKey.length > 0) {
-          xml += `<${categoryKey} Name="${entryKey}"`;
+          const name = new ReplacedString(entryKey).result;
+          xml += `<${categoryKey} Name="${name}"`;
         } else {
           xml += `<${entryKey}`;
         }
         // Write any attributes
-        if (replacedString.replaced) {
-          xml += ' replaced="true"';
+        if (replacedString.escaped) {
+          xml += ' escaped="true"';
         }
         if (replacedString.truncated) {
           xml += ' truncated="true"';
@@ -301,40 +403,156 @@ class ShareUsage extends Engine {
 
     this.shareData.push(xml);
 
-    if (this.shareData.length >= this.requestedPackageSize) {
-      this.sendShareUsage();
-    }
+    this.sendShareUsage();
   }
 
   /**
-   * Internal method to send the share usage bundle to the 51Degrees servers
+   * Internal method to start sending the share usage bundle to the 51Degrees
+   * servers. Nothing starts if a message is already being sent, if fewer
+   * than requestedPackageSize entries are queued, or while sending is paused
+   * after failed sends, in which case a timer starts sending when the pause
+   * ends.
    */
   sendShareUsage () {
+    if (this.sending) {
+      return;
+    }
+    const pause = this.backOff.remaining(ShareUsageBackOff.now());
+    if (pause > 0) {
+      this.scheduleResume(pause);
+      return;
+    }
+    if (this.shareData.length < this.requestedPackageSize) {
+      return;
+    }
+    this.sending = true;
+    this.sendNext();
+  }
+
+  /**
+   * Start sending when the pause ends.
+   *
+   * @param {number} pause the milliseconds until the pause ends
+   */
+  scheduleResume (pause) {
+    if (this.resumeTimer) {
+      return;
+    }
+    this.resumeTimer = setTimeout(() => {
+      this.resumeTimer = null;
+      this.sendShareUsage();
+    }, Math.min(pause, LONGEST_WAIT_MILLIS));
+    // The timer does not keep the process running.
+    this.resumeTimer.unref();
+  }
+
+  /**
+   * Send one message of at most twice requestedPackageSize entries, then the
+   * next until fewer than requestedPackageSize are queued or a failed send
+   * pauses sending.
+   */
+  sendNext () {
+    const shareData = this.shareData.splice(0, 2 * this.requestedPackageSize);
+    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join('')}</Devices>`;
+    this.post(data, accepted => {
+      let pause = 0;
+      if (accepted) {
+        if (this.backOff.succeeded()) {
+          this._log('info', 'Usage sharing resumed after a send succeeded.');
+        }
+      } else {
+        pause = this.backOff.failed(ShareUsageBackOff.now());
+        if (pause > 0) {
+          this._log('warning', `Usage sharing paused for ${pause / 1000} ` +
+            'seconds after failed sends. Usage data is still queued, up to ' +
+            'the maximum queue size, and sending starts again when the pause ' +
+            'ends.');
+          this.scheduleResume(pause);
+        }
+      }
+      if (pause > 0 || this.shareData.length < this.requestedPackageSize) {
+        this.sending = false;
+        return;
+      }
+      this.sendNext();
+    });
+  }
+
+  /**
+   * Post one message to the 51Degrees servers.
+   *
+   * @param {string} data the XML to send
+   * @param {Function} done called once with true if the service accepted the
+   * message, or false if the send failed
+   */
+  post (data, done) {
     const usageEngine = this;
-    const shareData = this.shareData;
-    this.shareData = [];
-    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join()}</Devices>`;
+    let finished = false;
+    const finish = accepted => {
+      if (finished === false) {
+        finished = true;
+        done(accepted);
+      }
+    };
 
     const options = {
       hostname: this.endpoint.hostname,
       path: this.endpoint.pathname,
       port: this.endpoint.port,
       method: 'POST',
-      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' }
+      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' },
+      timeout: this.requestTimeout
     };
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
         usageEngine._log('warning', err);
+        finish(false);
+        return;
       }
-      const req = usageEngine.http.request(options, function (res) {
-        usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
-      });
-      req.on('error', function (e) {
+      try {
+        const req = usageEngine.http.request(options, function (res) {
+          usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
+          if (res.statusCode === 200) {
+            // Reads the answer so the connection can be used again.
+            res.resume();
+            finish(true);
+            return;
+          }
+          let content = '';
+          res.setEncoding('utf8');
+          res.on('data', chunk => {
+            if (content.length < LOGGED_CONTENT_LENGTH) {
+              content += chunk;
+            }
+          });
+          res.on('end', function () {
+            usageEngine._log('warning', 'Usage sharing sent a message and ' +
+              `the service answered ${res.statusCode} with content ` +
+              `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
+            finish(false);
+          });
+          res.on('error', function () {
+            finish(false);
+          });
+          res.on('close', function () {
+            finish(false);
+          });
+        });
+        req.on('timeout', function () {
+          req.destroy(new Error(
+            `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
+        });
+        req.on('error', function (e) {
+          usageEngine._log('warning', e);
+          finish(false);
+        });
+        req.write(buffer);
+        req.end();
+      } catch (e) {
         usageEngine._log('warning', e);
-      });
-      req.write(buffer);
-      req.end();
+        finish(false);
+      }
     });
   }
 
@@ -372,57 +590,96 @@ class ShareUsage extends Engine {
   }
 }
 
-// a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-const VALID_XML_CHARS =
-  Array.from({ length: parseInt('0x7F', 16) - parseInt('0x20', 16) }, (v, k) => k + parseInt('0x20', 16))
-    .concat(
-      Array.from({ length: parseInt('0x100', 16) - parseInt('0x40', 16) }, (v, k) => k + parseInt('0x40', 16)));
-
-const IS_VALID_XML_CHAR = __getIsValidCharMap();
-
 /**
- * Get an object describing whether a character value is valid
+ * The first address of this server that is not a loopback address, an IPv4
+ * address before an IPv6 one, or an empty string where there is none.
  *
- * @returns {object} Object of valid chars
+ * @returns {string} the address
  */
-function __getIsValidCharMap () {
-  const maxChar = parseInt('0x100', 16);
-  const isValidChar = {};
-  for (let c = 0; c <= maxChar; c++) {
-    isValidChar[c] = VALID_XML_CHARS.includes(c);
+function serverAddress () {
+  let interfaces = {};
+  try {
+    interfaces = os.networkInterfaces();
+  } catch (e) {
+    // The addresses of this server cannot be read.
   }
-  return isValidChar;
+  const addresses = [];
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (!entry.internal) {
+        addresses.push(entry);
+      }
+    }
+  }
+  const address = addresses.find(
+    (entry) => entry.family === 'IPv4' || entry.family === 4) ||
+    addresses[0];
+  return address ? address.address : '';
 }
 
 /**
- * Replace characters that cause problems in XML with the "Replacement character"
+ * Whether a character is allowed in XML 1.0, which allows tab, line feed,
+ * carriage return, and the ranges U+0020 to U+D7FF, U+E000 to U+FFFD and
+ * U+10000 to U+10FFFF.
+ *
+ * @param {number} code the UTF-16 code unit
+ * @returns {boolean} true if the character is allowed
+ */
+function isValidXmlChar (code) {
+  return code === 0x9 || code === 0xA || code === 0xD ||
+    (code >= 0x20 && code <= 0xD7FF) ||
+    (code >= 0xE000 && code <= 0xFFFD);
+}
+
+/**
+ * Prepares a value for the XML. A value that is not a string is written as
+ * its text, and undefined and null as nothing. A value over the maximum
+ * number of code points is cut, special XML characters are escaped, and a
+ * character XML 1.0 does not allow is written as \x and four lower case
+ * hexadecimal digits of its code. A surrogate pair is one valid character
+ * and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
     this.result = '';
-    this.replaced = false;
+    this.escaped = false;
     this.truncated = false;
-    if (text) {
-      const escapedText = text
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const length = Math.min(escapedText.length, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
-      this.truncated = escapedText.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH;
-      Array.from(escapedText.substring(0, length))
-        .forEach(c => {
-          if (c.charCodeAt(0) < Object.keys(IS_VALID_XML_CHAR).length && IS_VALID_XML_CHAR[c.charCodeAt(0)]) {
-            this.result += c;
-          } else {
-            this.result += String.fromCharCode(parseInt('0xFFFD', 16));
-            this.replaced = true;
-          }
-        });
+    if (text !== undefined && text !== null) {
+      // The limit counts code points, so a character is never cut in two.
+      let value = String(text);
+      const points = Array.from(value);
+      if (points.length > SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS) {
+        this.truncated = true;
+        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS)
+          .join('');
+      }
+      for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code >= 0xD800 && code <= 0xDBFF &&
+          i + 1 < value.length &&
+          value.charCodeAt(i + 1) >= 0xDC00 &&
+          value.charCodeAt(i + 1) <= 0xDFFF) {
+          this.result += value.substring(i, i + 2);
+          i++;
+        } else if (isValidXmlChar(code)) {
+          this.result += ESCAPED_CHARS[value[i]] || value[i];
+        } else {
+          this.result += '\\x' + code.toString(16).padStart(4, '0');
+          this.escaped = true;
+        }
+      }
     }
   }
 }
+
+const ESCAPED_CHARS = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;',
+  '<': '&lt;',
+  '>': '&gt;'
+};
+
 /**
  * Internal class that is used to store details of data in memory
  * prior to it being sent to 51Degrees.
@@ -431,7 +688,7 @@ class ShareUsageData {
   constructor () {
     this.evidenceData = {};
     this.sessionId = '';
-    this.clientIp = '';
+    this.clientIP = '';
     this.sequence = '';
   }
 

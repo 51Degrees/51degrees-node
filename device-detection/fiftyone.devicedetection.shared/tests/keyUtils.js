@@ -20,29 +20,9 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const testConstants = require('./testConstants');
-
 // Placeholder written into example configuration files, which stands for
 // 'no key has been set here'.
 const PLACEHOLDER = '!!YOUR_RESOURCE_KEY!!';
-
-/**
- * The environment variable names to try for a resource key, aligned name
- * first and the name it replaced second.
- *
- * @param {string} envVarName One of testConstants.envVars
- * @returns {Array<string>} The names to try, in order
- */
-const resourceKeyNames = function (envVarName) {
-  const names = [envVarName];
-  const legacy = testConstants.legacyEnvVars[envVarName];
-
-  if (legacy) {
-    names.push(legacy);
-  }
-
-  return names;
-};
 
 /**
  * Helpers to obtain keys from the environment
@@ -64,24 +44,17 @@ module.exports = {
   },
 
   /**
-   * Obtain a resource key from the environment.
-   *
-   * The aligned '_51DEGREES_RESOURCE_KEY...' name is tried first, then the
-   * name this repository used before the convention was adopted, so an
-   * existing setup keeps working.
+   * Obtain a resource key from the environment, read under the one name
+   * that variable has.
    *
    * @param {string} envVarName One of testConstants.envVars
-   * @returns {string} The key, or undefined when neither name is set
+   * @returns {string} The key, or undefined when the name is not set
    */
   getResourceKey: function (envVarName) {
-    const names = resourceKeyNames(envVarName);
+    const value = process.env[envVarName];
 
-    for (const name of names) {
-      const value = process.env[name];
-
-      if (value && value !== PLACEHOLDER) {
-        return value;
-      }
+    if (value && value !== PLACEHOLDER) {
+      return value;
     }
 
     return undefined;
@@ -95,15 +68,8 @@ module.exports = {
    * @returns {string} The message
    */
   missingResourceKeyMessage: function (envVarName) {
-    const names = resourceKeyNames(envVarName);
-    let message = 'No resource key found. Set the environment variable ' +
-      `'${names[0]}'`;
-
-    if (names.length > 1) {
-      message += ` (the older name '${names[1]}' is still read)`;
-    }
-
-    return message + '. Create a resource key for free at ' +
+    return 'No resource key found. Set the environment variable ' +
+      `'${envVarName}'. Create a resource key for free at ` +
       'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-tests-keyutils.js&utm_term=resource-key-required';
   },
 

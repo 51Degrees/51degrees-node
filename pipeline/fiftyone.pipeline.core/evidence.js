@@ -118,6 +118,12 @@ class Evidence {
   constructor (flowData) {
     this.flowData = flowData;
     this.evidenceStore = {};
+    // The key each value is held under in evidenceStore, by that key in
+    // lower case. Evidence keys ignore letter case, so a key added again in
+    // other letters replaces the value and keeps the letters it was first
+    // added with.
+    this.keys = Object.create(null);
+    this.unacceptedStore = {};
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
@@ -129,13 +135,25 @@ class Evidence {
   }
 
   /**
-   * Add a piece of evidence to flowData
+   * Add a piece of evidence to flowData. Keys ignore letter case, so a key
+   * that differs from one already added only in its letters replaces that
+   * value under the letters it was first added with.
    *
    * @param {string} key evidence key to add
    * @param {*} value value of evidence key
    */
   add (key, value) {
-    // Filter out any evidence that isn't needed in the pipeline
+    const folded = String(key).toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(this.keys, folded)) {
+      key = this.keys[folded];
+    }
+
+    // Keep the evidence no element in the pipeline accepts apart from the
+    // rest, so an element that needs it can still reach it through
+    // getUnaccepted. getAll stays the accepted evidence alone, which is
+    // what an engine's cache key and usage sharing read. Both stores are
+    // keyed through the same table, so two spellings of one key are one
+    // entry in either.
 
     let keep;
 
@@ -150,12 +168,18 @@ class Evidence {
     if (keep) {
       this.flowData.pipeline.log('debug', key + ' added to evidence');
 
+      this.keys[folded] = key;
+      delete this.unacceptedStore[key];
       this.evidenceStore[key] = value;
     } else {
       this.flowData.pipeline.log(
         'debug',
-        key + ' filtered out of evidence. Not added.'
+        key + ' not accepted by any element. Set aside.'
       );
+
+      this.keys[folded] = key;
+      delete this.evidenceStore[key];
+      this.unacceptedStore[key] = value;
     }
   }
 
@@ -308,13 +332,18 @@ class Evidence {
   }
 
   /**
-   * Get a piece of evidence
+   * Get a piece of evidence by key, in any letter case
    *
    * @param {string} key evidence key to retreive
-   * @returns {*} the evidence value
+   * @returns {*} the evidence value, or undefined where there is none
    */
   get (key) {
-    return this.evidenceStore[key];
+    // The table also holds the set aside keys, which get does not read.
+    const stored = this.keys[String(key).toLowerCase()];
+    return stored !== undefined &&
+      Object.prototype.hasOwnProperty.call(this.evidenceStore, stored)
+      ? this.evidenceStore[stored]
+      : undefined;
   }
 
   /**
@@ -324,6 +353,19 @@ class Evidence {
    */
   getAll () {
     return this.evidenceStore;
+  }
+
+  /**
+   * Get the evidence no element in the pipeline accepts, which add set
+   * aside rather than throwing away. The Cloud Request Engine sends it
+   * along with the accepted evidence, because what the cloud service uses
+   * changes over time.
+   *
+   * @returns {object} the evidence set aside, empty where every key was
+   * accepted
+   */
+  getUnaccepted () {
+    return this.unacceptedStore;
   }
 }
 

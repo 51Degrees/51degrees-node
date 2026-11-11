@@ -35,7 +35,7 @@ const keys = require('./liveCloudKeys');
 
 const resourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
 const licenceKey = process.env._51DEGREES_LICENSE_KEY_51DID ||
-  process.env._51DEGREES_LICENSE_KEY || process.env.LICENSE_KEY || '';
+  process.env._51DEGREES_LICENSE_KEY || '';
 
 const noKey = keys.noKeyMessage(keys.RESOURCE_KEY_NAMES, 'FODid',
   'FODiD.IdProbGlobal and FODiD.IdProbLic for each usage, which for the ' +

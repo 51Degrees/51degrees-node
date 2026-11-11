@@ -60,10 +60,13 @@ const defaultObjectName = 'fod';
 
 // Words the pattern accepts that cannot be the name of the object. These are
 // the reserved words of the language, including those reserved only in
-// strict mode, plus the three global values a top level var cannot replace,
-// where the object would silently never be created. The last entry is the
-// constructor the script itself defines and calls to create the object, so
-// that name would clash with it.
+// strict mode, then eval and arguments, which strict mode code cannot
+// declare and of which eval would replace the page's own eval function, then
+// the three global values and the properties of the browser's Window object
+// that a top level var cannot replace, so the object would never be created,
+// and location, where a top level var navigates the page away. The last
+// entry is the constructor the script itself defines and calls to create the
+// object, so that name would clash with it.
 const reservedObjectNames = [
   'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
   'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export',
@@ -72,6 +75,14 @@ const reservedObjectNames = [
   'package', 'private', 'protected', 'public', 'return', 'static', 'super',
   'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void',
   'while', 'with', 'yield', 'Infinity', 'NaN', 'undefined',
+  'eval', 'arguments',
+  'window', 'document', 'top', 'name', 'status', 'history', 'navigator',
+  'closed', 'location', 'frameElement', 'isSecureContext',
+  'crossOriginIsolated', 'trustedTypes', 'crypto', 'indexedDB',
+  'localStorage', 'sessionStorage', 'caches', 'cookieStore',
+  'speechSynthesis', 'styleMedia', 'crashReport', 'credentialless',
+  'customElements', 'documentPictureInPicture', 'fence', 'launchQueue',
+  'originAgentCluster',
   'fiftyoneDegreesManager'
 ];
 
@@ -177,7 +188,9 @@ function quotedForLog (text) {
  **/
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    return key.indexOf('query.') !== -1 || key.indexOf('header.') !== -1;
+    // Evidence keys ignore letter case.
+    const lower = String(key).toLowerCase();
+    return lower.indexOf('query.') !== -1 || lower.indexOf('header.') !== -1;
   }
 }
 
