@@ -1078,11 +1078,16 @@ describe('the statuses the service can report', () => {
   test('carry the names the .NET service uses', () => {
     expect(AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET)
       .toBe('Temp Path Not Set');
-    expect(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT).toBe('Timeout');
-    expect(AutoUpdateStatus.AUTO_UPDATE_NO_CONFIGURATION)
-      .toBe('No Configuration');
     expect(AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR)
       .toBe('Unknown Error');
+  });
+
+  // .NET reports these from the watched file wait and from a programmatic
+  // check with no configuration, which this service does not have, so a
+  // status nothing sets is not offered.
+  test('leave out the statuses nothing here reports', () => {
+    expect(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT).toBeUndefined();
+    expect(AutoUpdateStatus.AUTO_UPDATE_NO_CONFIGURATION).toBeUndefined();
   });
 });
 
