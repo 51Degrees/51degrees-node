@@ -182,19 +182,16 @@ function quotedForLog (text) {
  */
 
 /**
- * The host and protocol the script calls back to, the name it is given and
- * whether it may set cookies, being the evidence that changes the script.
- * The query string it carries into its callback changes the answer to that
- * callback rather than the script, so it is not accepted here.
+ * The script reads the query string, and the host and protocol it calls
+ * back to, so those are the evidence that can change it.
  */
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
     // Evidence keys ignore letter case.
     const lower = String(key).toLowerCase();
-    return lower === 'header.host' ||
-      lower === 'header.protocol' ||
-      lower === Constants.evidenceObjectName ||
-      lower === Constants.evidenceEnableCookies;
+    return lower.startsWith('query.') ||
+      lower === 'header.host' ||
+      lower === 'header.protocol';
   }
 }
 
@@ -343,17 +340,14 @@ class JavaScriptBuilderElement extends FlowElement {
     if (url !== null && url.valid) {
       settings._url = url.url;
 
-      // The parameters are the query evidence the flow data holds, whether
-      // or not an element accepts it, because the callback is answered with
-      // the evidence the page carries rather than with what changes this
-      // script. Each is named by everything after the first dot of its key
-      // so that a name such as id.usage is kept whole, and the two the
-      // script appends itself are left out. The script joins them into its
-      // request body as they stand, so each name and value is encoded here.
-      const evidence = {
-        ...flowData.evidence.getAll(),
-        ...flowData.evidence.getUnaccepted()
-      };
+      // The parameters are the query evidence, each named by everything
+      // after the first dot of its key so that a name such as id.usage is
+      // kept whole, and leaving out the two the script appends itself. The
+      // script joins them into its request body as they stand, so each name
+      // and value is encoded here.
+      const evidence = this.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll()
+      );
       const scriptParameters = {};
       for (const key in evidence) {
         if (key.startsWith('query.')) {
