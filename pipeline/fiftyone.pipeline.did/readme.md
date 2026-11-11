@@ -612,8 +612,8 @@ redeemed.factors      // on a mismatch, on a misconfigured result where the
                       //   { transport, device, browserip, connectionip,
                       //   asn, platformname, platformversion,
                       //   browsername, browserversion } each 'verified',
-                      //   'mismatch', 'misconfigured', 'notrecorded', or
-                      //   null where nothing was compared
+                      //   'mismatch', 'misconfigured' or 'notrecorded'.
+                      //   Any other value, null included, is 'mismatch'.
 redeemed.verifiedAt   // Date, on the redeemed and expired outcomes
 redeemed.secondsSinceVerified
 redeemed.statusCode   // 200, or 503 for 'unconfirmed', which may be retried
@@ -629,9 +629,12 @@ different operating system or browser. `factors` keeps every name exactly as
 the cloud sent it, including a name that is not in `Factor`, so a factor the
 cloud adds later reaches the caller without a new release of this package,
 and an older service's `browser` key stays under its own name rather than
-filling any of the four. Neither `misconfigured` nor `notrecorded` is a
-mismatch, and neither must ever be read as one, but they say different
-things, because `misconfigured` means the checking service could not
+filling any of the four. Each word is read ignoring case, and a word this
+package does not know is `mismatch`, so an outcome added later is never read
+as a pass. `raw` keeps the words as the cloud sent them. Neither
+`misconfigured` nor `notrecorded` is a mismatch, and neither must ever be
+read as one, but they say different things, because `misconfigured` means
+the checking service could not
 determine the factor whilst `notrecorded` means the creating service
 recorded no value for it, so the identifier says nothing about it. A
 `notrecorded` factor is left out of the overall result, so `verified` can

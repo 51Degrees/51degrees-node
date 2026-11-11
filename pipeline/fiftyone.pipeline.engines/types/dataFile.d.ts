@@ -53,9 +53,12 @@ declare class DataFile {
      *  been registered with a datafile update service (defaults to false)
      * @param {Function} options.refresh callback to call when datafile
      * has been updated. Defaults to a refresh method on the attached FlowElement
+     * @param {Function} options.onUpdateComplete callback to call with the
+     * AutoUpdateStatus every time an update of the datafile ends, whether it
+     * worked or not
      *
      */
-    constructor({ flowElement, identifier, updateURLParams, tempDataDirectory, createTempDataCopy, data, path, autoUpdate, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, verifyMD5, decompress, download, getDatePublished, getNextUpdate, verifyIfModifiedSince, updateOnStart, isRegistered, refresh }: {
+    constructor({ flowElement, identifier, updateURLParams, tempDataDirectory, createTempDataCopy, data, path, autoUpdate, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, verifyMD5, decompress, download, getDatePublished, getNextUpdate, verifyIfModifiedSince, updateOnStart, isRegistered, refresh, onUpdateComplete }: {
         flowElement: FlowElement;
         identifier: string;
         updateURLParams: object;
@@ -76,6 +79,7 @@ declare class DataFile {
         updateOnStart: boolean;
         isRegistered: boolean;
         refresh: Function;
+        onUpdateComplete: Function;
     });
     flowElement: import("fiftyone.pipeline.core/types/flowElement");
     identifier: string;

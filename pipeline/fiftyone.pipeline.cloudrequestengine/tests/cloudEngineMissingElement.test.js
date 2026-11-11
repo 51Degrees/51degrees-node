@@ -87,6 +87,39 @@ function build (json) {
   return { pipeline, errors };
 }
 
+// Answers the discovery POST a license key alone makes, as well as the
+// requests the mock client already answers.
+class LicenseKeyClient extends MockRequestClient {
+  post (url, data, origin) {
+    if (url.toLowerCase().includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(this.properties));
+    }
+    return super.post(url, data, origin);
+  }
+}
+
+/**
+ * Builds a pipeline on a license key alone whose cloud answer is the JSON
+ * given, and collects the errors it logs.
+ *
+ * @param {object} json the answer from the cloud service
+ * @returns {{pipeline: object, errors: string[]}} the pipeline and the
+ * errors it has logged so far
+ */
+function buildOnLicenseKey (json) {
+  const pipeline = new PipelineBuilder()
+    .add(new CloudRequestEngine({
+      licenseKey: 'LICENSEKEY1234567890',
+      requestedProperties: ['device.ismobile'],
+      requestClient: new LicenseKeyClient({ properties, json })
+    }))
+    .add(new TestCloudEngine())
+    .build();
+  const errors = [];
+  pipeline.on('error', (message) => errors.push(String(message)));
+  return { pipeline, errors };
+}
+
 /**
  * Reads a property and returns what reading it threw.
  *
@@ -121,7 +154,9 @@ test('an answer without the element resolves and says the key lacks it',
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("'" + dataKey + "'");
-    expect(errors[0]).toContain('does not include');
+    expect(errors[0]).toContain(
+      "left the '" + dataKey + "' product out of the answer");
+    expect(errors[0]).toContain('accessibleproperties?resource=');
     expect(errors[0]).not.toContain('undefined');
     expect(thrownReading(flowData, 'registeredcountry'))
       .toBe(missingPropertyMessage);
@@ -191,3 +226,39 @@ test('an element with values still reads them and logs nothing',
     expect(registeredName.hasValue).toBe(false);
     expect(registeredName.noValueMessage).toBe('No value for this address.');
   });
+
+// Under a license key alone there is no resource key to name, and a product
+// is also left out when requestedProperties names none of its properties.
+describe('under a license key alone', () => {
+  test('a missing element names requestedProperties as a cause',
+    async () => {
+      const { pipeline, errors } = buildOnLicenseKey({
+        device: { ismobile: false },
+        javascriptProperties: []
+      });
+      await pipeline.createFlowData().process();
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain(
+        "left the '" + dataKey + "' product out of the answer");
+      expect(errors[0]).toContain("'" + dataKey + "'");
+      expect(errors[0]).toContain('requestedProperties');
+      expect(errors[0]).not.toContain('resource key');
+      expect(errors[0]).not.toContain('undefined');
+    });
+
+  test('a null element with no reason names no resource key', async () => {
+    const { pipeline, errors } = buildOnLicenseKey({
+      device: { ismobile: false },
+      [dataKey]: null,
+      javascriptProperties: []
+    });
+    await pipeline.createFlowData().process();
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].startsWith(dataKey + ' not populated. ')).toBe(true);
+    expect(errors[0]).toContain('requestedProperties');
+    expect(errors[0]).not.toContain('resource key');
+    expect(errors[0]).not.toContain('undefined');
+  });
+});

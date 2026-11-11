@@ -23,6 +23,7 @@
 const util = require('util');
 const errorMessages = require('./errorMessages');
 const Evidence = require('./evidence');
+const LicenseKeys = require('./licenseKeys');
 
 /**
  * @typedef {import('./pipeline')} Pipeline
@@ -138,6 +139,8 @@ class FlowData {
       // catch error when flowElement datakey isn't available
       errorKey = 'other';
     }
+
+    error = LicenseKeys.mask(error);
 
     this.errors[errorKey] = error;
 

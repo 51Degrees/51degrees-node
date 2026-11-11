@@ -24,6 +24,7 @@ const core = require('fiftyone.pipeline.core');
 const engines = require('fiftyone.pipeline.engines');
 
 const Engine = engines.Engine;
+const AutoUpdateStatus = engines.AutoUpdateStatus;
 const DataFile = require('./deviceDetectionDataFile');
 const SwigData = require('./swigData');
 const swigHelpers = require('./swigHelpers');
@@ -238,7 +239,8 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {string} options.tempDataDir The directory to use for the
    * temporary data copy if 'createTempDataCopy' is set to true.
    * @param {boolean} options.updateOnStart whether to download / update
-   * the datafile on initialisation
+   * the datafile on initialisation. If there is no file at dataFilePath it
+   * is downloaded, and processing fails if the download does not work.
    */
   constructor (
     {
@@ -284,7 +286,13 @@ class DeviceDetectionOnPremise extends Engine {
     if (typeof dataFilePath === 'undefined') {
       throw errorMessages.dataFilePathRequired;
     }
-    if (fs.existsSync(dataFilePath) === false) {
+    // A file that is not there is downloaded when the engine updates on
+    // start-up, so only an engine that cannot do so needs the file.
+    const downloadsOnStart = updateOnStart && (
+      dataUpdateUrl !== constants.dataUpdateUrl ||
+      (licenceKeys && licenceKeys.length > 0));
+    const fileMissing = fs.existsSync(dataFilePath) === false;
+    if (fileMissing && !downloadsOnStart) {
       throw util.format(errorMessages.fileNotFound, dataFilePath);
     }
     // look at dataFile extension to detect type
@@ -495,12 +503,13 @@ class DeviceDetectionOnPremise extends Engine {
       useUrlFormatter: dataUpdateUseUrlFormatter
     };
 
+    // An engine with no data file yet has no published date, so the update
+    // service falls back to the date of the file, if there is one.
     dataFileSettings.getDatePublished = function () {
       if (current.engine) {
         return swigHelpers.swigDateToDate(current.engine.getPublishedTime());
-      } else {
-        return new Date();
       }
+      return undefined;
     };
 
     dataFileSettings.getNextUpdate = function () {
@@ -511,8 +520,25 @@ class DeviceDetectionOnPremise extends Engine {
       }
     };
 
+    // The first refresh of an engine started without its data file
+    // creates the engine from the file just downloaded.
     dataFileSettings.refresh = function () {
-      current.engine.refreshData();
+      if (current.engine) {
+        current.engine.refreshData();
+      } else {
+        current.initEngine();
+        current.startUpError = undefined;
+        current.updateProperties();
+      }
+    };
+
+    // An engine with no data file at all has nothing to process with if the
+    // download fails.
+    dataFileSettings.onUpdateComplete = function (status) {
+      if (!current.engine && status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS) {
+        current.startUpError = util.format(
+          errorMessages.fileNotFoundNotDownloaded, dataFilePath, status);
+      }
     };
 
     const params = {
@@ -532,7 +558,9 @@ class DeviceDetectionOnPremise extends Engine {
 
     const ddDatafile = new DataFile(dataFileSettings);
 
-    this.initEngine();
+    if (!fileMissing) {
+      this.initEngine();
+    }
 
     this.registerDataFile(ddDatafile);
   }
@@ -562,7 +590,12 @@ class DeviceDetectionOnPremise extends Engine {
 
       const evidence = new dd.swigWrapper.EvidenceDeviceDetectionSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = dd.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 
@@ -580,14 +613,21 @@ class DeviceDetectionOnPremise extends Engine {
     } else {
       // wait until initialised
 
-      return new Promise(function (resolve) {
+      return new Promise(function (resolve, reject) {
         const dataFileChecker = setInterval(function () {
           if (dd.engine) {
-            process();
-
             clearInterval(dataFileChecker);
 
-            resolve();
+            try {
+              process();
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          } else if (dd.startUpError) {
+            clearInterval(dataFileChecker);
+
+            reject(new Error(dd.startUpError));
           }
         }, 500);
       });
