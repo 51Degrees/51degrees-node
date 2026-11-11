@@ -160,6 +160,9 @@ class CloudRequestEngine extends Engine {
     // and getEvidenceKeys replaces this with the keys the service lists.
     this.evidenceKeyFilter = new EvidenceKeyFilter();
 
+    // Set once the cloud service's evidence keys have arrived.
+    this.evidenceKeysFetched = false;
+
     // Properties of connected FlowElements
     this.flowElementProperties = {};
   }
@@ -167,13 +170,15 @@ class CloudRequestEngine extends Engine {
   /**
    * Check if the keys and properties have been fetched.
    *
-   * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-   * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+   * True once the cloud service's evidence keys have arrived and its
+   * properties have been read, so they are fetched once rather than for
+   * every request.
    *
    * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
    */
   get keysAndPropertiesFetched () {
-    return Object.keys(this.flowElementProperties).length > 0 && this.evidenceKeyFilter.length > 0;
+    return Object.keys(this.flowElementProperties).length > 0 &&
+      this.evidenceKeysFetched;
   }
 
   /**
@@ -234,6 +239,28 @@ class CloudRequestEngine extends Engine {
   processInternal (flowData) {
     const engine = this;
     return engine.getData(flowData);
+  }
+
+  /**
+   * Fetches the evidence keys and properties before the first process,
+   * whatever else is in the pipeline, because the cache key is built from
+   * the evidence keys. A fetch that fails is tried again on the next
+   * process, and its error is the process error.
+   *
+   * @param {FlowData} flowData FlowData to process
+   * @returns {Promise} resolved once the FlowData is processed
+   */
+  process (flowData) {
+    if (this.keysAndPropertiesFetched) {
+      return super.process(flowData);
+    }
+    // One fetch at a time, shared by the requests that wait on it.
+    if (this.discovery === undefined) {
+      this.discovery = this.ready().finally(() => {
+        this.discovery = undefined;
+      });
+    }
+    return this.discovery.then(() => super.process(flowData));
   }
 
   /**
@@ -516,6 +543,7 @@ class CloudRequestEngine extends Engine {
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
+          engine.evidenceKeysFetched = true;
 
           resolve();
         }).catch(function (response) {

@@ -321,6 +321,11 @@ test('evidence never supplies resource, license or values', async () => {
     ]
   });
   client.post = (url, content) => {
+    // A license key asks for the accessible properties by post before the
+    // first process, which is not the request this test reads.
+    if (url.includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(client.properties));
+    }
     posts.push({ url, content });
     return Promise.resolve(JSON.stringify({}));
   };

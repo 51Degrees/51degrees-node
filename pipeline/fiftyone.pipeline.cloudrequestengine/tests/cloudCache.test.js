@@ -33,18 +33,25 @@ const baseJson = {
   javascriptProperties: []
 };
 
-// Answers each request with the next body, and counts the requests.
+// Answers each request with the next body, and counts the requests. Under a
+// resource key the evidence keys and accessible properties are both gets.
 class CountingClient extends MockRequestClient {
   constructor (bodies) {
     super({ json: bodies[0] });
     this.bodies = bodies;
     this.posts = 0;
+    this.gets = 0;
   }
 
   post (url, headers, data) {
     this.json = this.bodies[Math.min(this.posts, this.bodies.length - 1)];
     this.posts++;
     return super.post(url, headers, data);
+  }
+
+  get (url, origin) {
+    this.gets++;
+    return super.get(url, origin);
   }
 }
 
@@ -55,9 +62,7 @@ const request = async (pipeline) => {
   return JSON.parse(flowData.cloud.cloud);
 };
 
-// No JavaScript elements. The Sequence Element would give each request a new
-// session id and so a new cache key, because the engine has not fetched its
-// evidence keys, and the JSON Builder fails without the Sequence Element.
+// No JavaScript elements, which these tests of the cache do not need.
 const build = (client) => new PipelineBuilder({ addJavaScriptBuilder: false })
   .add(new CloudRequestEngine({
     resourceKey: 'AAAAAAAAAAAA',
@@ -89,6 +94,48 @@ describe('cloud request engine cache', () => {
       }
       expect(typeof sessions[0]).toBe('string');
       expect(sessions[0]).not.toBe(sessions[1]);
+      expect(client.posts).toBe(1);
+    });
+
+  test('serves a repeated request from the cache with no cloud engine',
+    async () => {
+      // Nothing calls ready, as only a cloud engine does, so the engine has
+      // to fetch its evidence keys itself before it builds a cache key.
+      const client = new CountingClient([baseJson]);
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      const sessions = [];
+      for (let i = 0; i < 2; i++) {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.User-Agent', 'iPhone');
+        await flowData.process();
+        sessions.push(flowData.evidence.get('query.session-id'));
+      }
+      expect(sessions[0]).not.toBe(sessions[1]);
+      expect(client.posts).toBe(1);
+    });
+
+  test('fetches the evidence keys and properties once for many requests',
+    async () => {
+      const client = new CountingClient([baseJson]);
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      for (let i = 0; i < 3; i++) {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.User-Agent', 'iPhone');
+        await flowData.process();
+      }
+      await engine.ready();
+      // One get for the evidence keys and one for the accessible properties.
+      expect(client.gets).toBe(2);
       expect(client.posts).toBe(1);
     });
 

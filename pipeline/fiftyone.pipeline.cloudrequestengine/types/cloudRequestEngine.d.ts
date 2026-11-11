@@ -43,12 +43,14 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     requestClient: RequestClient;
     baseURL: string;
     evidenceKeys: any[];
+    evidenceKeysFetched: boolean;
     flowElementProperties: {};
     /**
      * Check if the keys and properties have been fetched.
      *
-     * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-     * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+     * True once the cloud service's evidence keys have arrived and its
+     * properties have been read, so they are fetched once rather than for
+     * every request.
      *
      * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
      */
@@ -74,6 +76,17 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @returns {Promise} data from cloud service
      */
     processInternal(flowData: FlowData): Promise<any>;
+    /**
+     * Fetches the evidence keys and properties before the first process,
+     * whatever else is in the pipeline, because the cache key is built from
+     * the evidence keys. A fetch that fails is tried again on the next
+     * process, and its error is the process error.
+     *
+     * @param {FlowData} flowData FlowData to process
+     * @returns {Promise} resolved once the FlowData is processed
+     */
+    process(flowData: FlowData): Promise<any>;
+    discovery: Promise<any>;
     /**
      * A response with a top level `fodid` member, in any case, holds a 51Did
      * created for the one request, so it is neither stored in the cache nor
