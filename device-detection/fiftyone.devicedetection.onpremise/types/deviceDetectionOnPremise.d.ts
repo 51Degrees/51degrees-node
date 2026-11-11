@@ -69,7 +69,8 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation
+     * the datafile on initialisation. If there is no file at dataFilePath it
+     * is downloaded, and processing fails if the download does not work.
      */
     constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, concurrency, allowUnmatched, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
@@ -96,6 +97,22 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
         tempDataDir: string;
         updateOnStart: boolean;
     }, ...args: any[]);
+    /**
+     * The property names the engine was built with, in the order given. A
+     * property's index is its place in this list.
+     *
+     * @type {Array<string>}
+     */
+    buildPropertyNames: Array<string>;
+    /**
+     * The index of each build-time property name, keyed by the name in lower
+     * case. Made once here and never from the data set, so every read goes
+     * by index. An engine built with no names has an empty table and reads
+     * by name.
+     *
+     * @type {object}
+     */
+    propertyIndexes: object;
     /**
      * Function for initialising the engine, wrapped like this so
      * that an engine can be initialised once the datafile is
