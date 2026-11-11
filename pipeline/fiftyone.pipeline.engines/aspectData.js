@@ -65,7 +65,9 @@ class AspectData extends ElementData {
    * service if the property is referenced by the
    * flowElement/engine. If the property is found a further
    * check to see if it is restricted by a list passed
-   * into the flowElement/engine.
+   * into the flowElement/engine. A key that finds nothing as given is
+   * looked for again ignoring its letter case, so a read that found its
+   * value before costs no more.
    *
    * @param {string} key the property key to lookup
    * @returns {FlowData} result
@@ -77,7 +79,10 @@ class AspectData extends ElementData {
       result = this.getInternal(key);
 
       if (typeof result === 'undefined') {
-        return this.missingPropertyService.check(key, this.flowElement);
+        result = this.getInternalIgnoringCase(key);
+        if (typeof result === 'undefined') {
+          return this.missingPropertyService.check(key, this.flowElement);
+        }
       }
     } catch (e) {
       return this.missingPropertyService.check(key, this.flowElement);

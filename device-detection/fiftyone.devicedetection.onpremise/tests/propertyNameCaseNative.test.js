@@ -110,18 +110,20 @@ describe('property names in any letter case with the native engine', () => {
     });
 });
 
-// Reads each key exactly as given, as every read did before letter case was
-// ignored, so the read before and after can be timed in the same job.
+// Finds nothing for a key not found as given, as every read did before letter
+// case was ignored, so the read before and after can be timed in the same
+// job.
 class ReadByKeyOnly extends SwigData {
-  getInternal (key) {
-    return this.getByKey(key);
+  getInternalIgnoringCase (key) {
+    return undefined;
   }
 }
 
 // Reads timed in each round for the figures the test prints.
 const timedReads = 20000;
-// Rounds of each, taking the fastest, so a pause in one does not decide it.
-const rounds = 5;
+// Rounds of each, taking the fastest, and changing which goes first, so a
+// pause in one round or the order does not decide it.
+const rounds = 10;
 
 // The time of one read of the key, in nanoseconds.
 const timeOf = (data, key) => {
@@ -144,8 +146,13 @@ describe('the time of a read with the native engine', () => {
     let beforeTime = Infinity;
     let afterTime = Infinity;
     for (let round = 0; round < rounds; round++) {
-      beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
-      afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
+      if (round % 2 === 0) {
+        beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
+        afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
+      } else {
+        afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
+        beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
+      }
     }
     const mixedCaseTime = timeOf(after, 'IsMobile');
     console.log(

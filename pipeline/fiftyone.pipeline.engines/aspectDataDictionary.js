@@ -58,19 +58,25 @@ class AspectDataDictionary extends AspectData {
   }
 
   /**
-   * getInternal retrieves a value from the dictionary. A key that is not in
-   * the dictionary as given is looked for ignoring letter case, as the core
-   * dictionary does.
+   * getInternal retrieves a value from the dictionary
    *
    * @param {string} key property key
    * @returns {*} property value
    */
   getInternal (key) {
-    const value = this.contents[key];
-    if (value !== undefined) {
-      return value;
-    }
-    return ElementDataDictionary.prototype.getInternal.call(this, key);
+    return this.contents[key];
+  }
+
+  /**
+   * Looks for a key in the dictionary ignoring its letter case, as the core
+   * dictionary does.
+   *
+   * @param {string} key property key
+   * @returns {*} property value, or undefined if there is none
+   */
+  getInternalIgnoringCase (key) {
+    return ElementDataDictionary.prototype.getInternalIgnoringCase.call(
+      this, key);
   }
 }
 

@@ -56,34 +56,12 @@ class SwigData extends AspectData {
 
   /**
    * Retrieves elementData via the swigWrapper but also casts it to the
-   * correct type via a check of the engine's property list metadata.
-   * Property names are compared ignoring case, so a key that finds nothing
-   * as given is tried again as the engine's own key for that name.
+   * correct type via a check of the engine's property list metadata
    *
    * @param {string} key the property key to retrieve
    * @returns {AspectPropertyValue} value property value
    */
   getInternal (key) {
-    const value = this.getByKey(key);
-    if (value !== undefined || typeof key !== 'string') {
-      return value;
-    }
-    const keys = this.flowElement.propertyKeys;
-    const engineKey = keys === undefined
-      ? undefined
-      : keys[key.toLowerCase()];
-    return engineKey === undefined || engineKey === key
-      ? undefined
-      : this.getByKey(engineKey);
-  }
-
-  /**
-   * Retrieves elementData for a key exactly as the engine keys it.
-   *
-   * @param {string} key the property key to retrieve
-   * @returns {AspectPropertyValue} value property value
-   */
-  getByKey (key) {
     // Start with special properties
 
     const result = new AspectPropertyValue();
@@ -194,6 +172,26 @@ class SwigData extends AspectData {
 
       return result;
     }
+  }
+
+  /**
+   * Looks for a key again as the engine's own key for that name, ignoring
+   * letter case. The engine maps each key in lower case to its own key when
+   * the data file loads, because the match metric keys are not all in lower
+   * case.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {AspectPropertyValue} value property value
+   */
+  getInternalIgnoringCase (key) {
+    const keys = this.flowElement.propertyKeys;
+    if (keys === undefined || typeof key !== 'string') {
+      return undefined;
+    }
+    const engineKey = keys[key.toLowerCase()];
+    return engineKey === undefined || engineKey === key
+      ? undefined
+      : this.getInternal(engineKey);
   }
 }
 

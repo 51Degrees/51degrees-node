@@ -26,14 +26,20 @@ declare class AspectDataDictionary extends AspectData {
     }, ...args: any[]);
     contents: object;
     /**
-     * getInternal retrieves a value from the dictionary. A key that is not in
-     * the dictionary as given is looked for ignoring letter case, as the core
-     * dictionary does.
+     * getInternal retrieves a value from the dictionary
      *
      * @param {string} key property key
      * @returns {*} property value
      */
     getInternal(key: string): any;
+    /**
+     * Looks for a key in the dictionary ignoring its letter case, as the core
+     * dictionary does.
+     *
+     * @param {string} key property key
+     * @returns {*} property value, or undefined if there is none
+     */
+    getInternalIgnoringCase(key: string): any;
     [Symbol.iterator](): Generator<string, void, unknown>;
 }
 declare namespace AspectDataDictionary {

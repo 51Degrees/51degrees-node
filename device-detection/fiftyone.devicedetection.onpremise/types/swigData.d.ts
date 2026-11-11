@@ -24,21 +24,22 @@ declare class SwigData extends SwigData_base {
     missingPropertyService: DataFileMissingPropertyService;
     /**
      * Retrieves elementData via the swigWrapper but also casts it to the
-     * correct type via a check of the engine's property list metadata.
-     * Property names are compared ignoring case, so a key that finds nothing
-     * as given is tried again as the engine's own key for that name.
+     * correct type via a check of the engine's property list metadata
      *
      * @param {string} key the property key to retrieve
      * @returns {AspectPropertyValue} value property value
      */
     getInternal(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
     /**
-     * Retrieves elementData for a key exactly as the engine keys it.
+     * Looks for a key again as the engine's own key for that name, ignoring
+     * letter case. The engine maps each key in lower case to its own key when
+     * the data file loads, because the match metric keys are not all in lower
+     * case.
      *
      * @param {string} key the property key to retrieve
      * @returns {AspectPropertyValue} value property value
      */
-    getByKey(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
+    getInternalIgnoringCase(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
 }
 declare namespace SwigData {
     export { FlowElement };

@@ -164,19 +164,21 @@ test('a dictionary of aspect data finds a key whatever its letter case', () => {
   expect(data.get('nocache')).toBe(false);
 });
 
-// Reads each key exactly as given, as the dictionary did before letter case
-// was ignored, so the read before and after can be timed in the same job.
+// Finds nothing for a key not found as given, as the dictionary did before
+// letter case was ignored, so the read before and after can be timed in the
+// same job.
 class ReadByKeyOnly extends AspectDataDictionary {
-  getInternal (key) {
-    return this.contents[key];
+  getInternalIgnoringCase (key) {
+    return undefined;
   }
 }
 
 test('a dictionary read is no slower than it was', () => {
-  // Reads timed in each round, and rounds of each, taking the fastest, so a
-  // pause in one does not decide it.
-  const timedReads = 1000000;
-  const rounds = 5;
+  // Reads timed in each round, and rounds of each, taking the fastest and
+  // changing which goes first, so a pause in one round or the order does not
+  // decide it.
+  const timedReads = 200000;
+  const rounds = 10;
   const timeOf = (data, key) => {
     for (let i = 0; i < timedReads; i++) {
       data.get(key);
@@ -194,12 +196,20 @@ test('a dictionary read is no slower than it was', () => {
   let beforeTime = Infinity;
   let afterTime = Infinity;
   for (let round = 0; round < rounds; round++) {
-    beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
-    afterTime = Math.min(afterTime, timeOf(after, 'one'));
+    if (round % 2 === 0) {
+      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+      afterTime = Math.min(afterTime, timeOf(after, 'one'));
+    } else {
+      afterTime = Math.min(afterTime, timeOf(after, 'one'));
+      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+    }
   }
+  const mixedCaseTime = timeOf(after, 'One');
   console.log(
     `Dictionary read of one, fastest of ${rounds} rounds of ${timedReads}, ` +
-    `before ${beforeTime.toFixed(1)} ns, after ${afterTime.toFixed(1)} ns.`);
+    `before ${beforeTime.toFixed(1)} ns, after ${afterTime.toFixed(1)} ns. ` +
+    'A read of One, which found nothing before, ' +
+    `${mixedCaseTime.toFixed(1)} ns.`);
   // A tenth is allowed for timing noise.
   expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
 });
