@@ -220,18 +220,17 @@ describe('reading by index with the native engine', () => {
     expect(after).toBeLessThanOrEqual(before);
   });
 
-  // DIAGNOSTIC, to be removed. Times the same native reads with the stack
-  // trace limit varied, to show whether the extra cost of a read by index is
-  // the Error object the wrapper's overload dispatch makes when the string
-  // overload, tried first, refuses a number.
-  test('diagnostic: the cost of a native read with the stack limit varied',
+  // DIAGNOSTIC, to be removed. The first run showed the index read flat when
+  // the test's own Error.stackTraceLimit moved, and slower the deeper the
+  // stack. This finds the Error constructor of the context the native code
+  // makes its errors in, from an error it throws, and varies that one's
+  // limit and the depth of the stack.
+  test('diagnostic: the cost of a native read with the stack varied',
     async () => {
       const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
       const data = (await processed(engine)).device;
       const results = data.swigResults;
       const index = engine.propertyIndexes.ismobile;
-      const message = 'in method \'ResultsBaseSwig_getValueAsBool\', ' +
-        'argument 2 of type \'std::string const &\'';
       const time = (read) => {
         for (let i = 0; i < warmUpReads; i++) {
           read();
@@ -243,27 +242,39 @@ describe('reading by index with the native engine', () => {
         return (Number(process.hrtime.bigint() - start) / timedReads)
           .toFixed(0);
       };
-      // Runs the timing 60 frames down, so a limit of 50 has frames to take.
+      const byName = () => results.getValueAsBool('IsMobile');
+      const byIndex = () => results.getValueAsBool(index);
       const deep = (depth, run) => depth === 0 ? run() : deep(depth - 1, run);
-      const limit = Error.stackTraceLimit;
       const rows = [];
+
+      // Neither overload takes an object, so the native code throws.
+      let nativeError;
       try {
-        for (const frames of [0, 10, 50]) {
-          Error.stackTraceLimit = frames;
-          deep(60, () => rows.push(
-            `DIAG stackTraceLimit ${frames}: ` +
-            'getValueAsBool(IsMobile) ' +
-            `${time(() => results.getValueAsBool('IsMobile'))} ns, ` +
-            `getValueAsBool(${index}) ` +
-            `${time(() => results.getValueAsBool(index))} ns, ` +
-            `getPropertyName(${index}) one overload ` +
-            `${time(() => results.getPropertyName(index))} ns, ` +
-            'containsProperty(IsMobile) one overload ' +
-            `${time(() => results.containsProperty('IsMobile'))} ns, ` +
-            `new Error(message) ${time(() => new Error(message))} ns`));
+        results.getValueAsBool({});
+      } catch (e) {
+        nativeError = e;
+      }
+      const NativeError = Object.getPrototypeOf(nativeError).constructor;
+      rows.push(
+        'DIAG native error: ' + String(nativeError.message) +
+        ', instanceof the test Error ' + (nativeError instanceof Error) +
+        ', same constructor ' + (NativeError === Error) +
+        ', native Error.stackTraceLimit ' + NativeError.stackTraceLimit +
+        ', test Error.stackTraceLimit ' + Error.stackTraceLimit +
+        ', native stack lines ' + String(nativeError.stack).split('\n').length);
+
+      const limit = NativeError.stackTraceLimit;
+      try {
+        for (const frames of [0, 10, 100]) {
+          NativeError.stackTraceLimit = frames;
+          for (const depth of [0, 30, 60]) {
+            deep(depth, () => rows.push(
+              `DIAG native limit ${frames}, ${depth} frames deeper: ` +
+              `by name ${time(byName)} ns, by index ${time(byIndex)} ns`));
+          }
         }
       } finally {
-        Error.stackTraceLimit = limit;
+        NativeError.stackTraceLimit = limit;
       }
       console.log(rows.join('\n'));
     });
