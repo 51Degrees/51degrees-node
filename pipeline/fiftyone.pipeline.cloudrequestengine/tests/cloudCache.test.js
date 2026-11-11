@@ -55,9 +55,7 @@ const request = async (pipeline) => {
   return JSON.parse(flowData.cloud.cloud);
 };
 
-// No JavaScript elements. The Sequence Element would give each request a new
-// session id and so a new cache key, because the engine has not fetched its
-// evidence keys, and the JSON Builder fails without the Sequence Element.
+// No JavaScript elements, which these tests of the cache do not need.
 const build = (client) => new PipelineBuilder({ addJavaScriptBuilder: false })
   .add(new CloudRequestEngine({
     resourceKey: 'AAAAAAAAAAAA',

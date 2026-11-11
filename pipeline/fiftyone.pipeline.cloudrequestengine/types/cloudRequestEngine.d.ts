@@ -73,6 +73,17 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @param {FlowData} flowData flowData to process
      * @returns {Promise} data from cloud service
      */
+    /**
+     * Fetches the evidence keys and properties before the first process,
+     * whatever else is in the pipeline, because the cache key is built from
+     * the evidence keys. A fetch that fails is tried again on the next
+     * process, and its error is the process error.
+     *
+     * @param {FlowData} flowData FlowData to process
+     * @returns {Promise} resolved once the FlowData is processed
+     */
+    process(flowData: FlowData): Promise<any>;
+    discovery: Promise<any>;
     processInternal(flowData: FlowData): Promise<any>;
     /**
      * A response with a top level `fodid` member, in any case, holds a 51Did

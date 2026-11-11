@@ -211,6 +211,28 @@ class CloudRequestEngine extends Engine {
    * @param {FlowData} flowData flowData to process
    * @returns {Promise} data from cloud service
    */
+  /**
+   * Fetches the evidence keys and properties before the first process,
+   * whatever else is in the pipeline, because the cache key is built from
+   * the evidence keys. A fetch that fails is tried again on the next
+   * process, and its error is the process error.
+   *
+   * @param {FlowData} flowData FlowData to process
+   * @returns {Promise} resolved once the FlowData is processed
+   */
+  process (flowData) {
+    if (this.keysAndPropertiesFetched) {
+      return super.process(flowData);
+    }
+    // One fetch at a time, shared by the requests that wait on it.
+    if (this.discovery === undefined) {
+      this.discovery = this.ready().finally(() => {
+        this.discovery = undefined;
+      });
+    }
+    return this.discovery.then(() => super.process(flowData));
+  }
+
   processInternal (flowData) {
     const engine = this;
     return engine.getData(flowData);
