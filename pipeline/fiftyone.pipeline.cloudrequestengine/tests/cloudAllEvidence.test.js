@@ -201,3 +201,16 @@ test('a key named like an object member is still sent', async () => {
   expect(own('toString') && content.toString).toBe('a string');
   expect(own('valueOf') && content.valueOf).toBe('a value');
 });
+
+// Evidence keys ignore letter case, so two spellings of one key no element
+// accepts are one entry and are sent once, under the first spelling.
+test('two spellings of one set aside key are sent once', async () => {
+  const content = await sendEvidence({
+    'header.X-Custom': 'first',
+    'header.x-custom': 'second'
+  });
+
+  expect(Object.keys(content).filter(
+    (name) => name.toLowerCase() === 'x-custom')).toEqual(['X-Custom']);
+  expect(content['X-Custom']).toBe('second');
+});
