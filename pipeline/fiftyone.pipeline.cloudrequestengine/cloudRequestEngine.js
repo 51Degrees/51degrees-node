@@ -531,7 +531,6 @@ class CloudRequestEngine extends Engine {
    * fiftyone and location, then any other prefix alphabetically. The
    * groups are added lowest precedence first, so a later value replaces
    * an earlier one.
-   * 'query.' evidence should take precedence over all other evidence.
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
    *
@@ -610,6 +609,13 @@ class CloudRequestEngine extends Engine {
    * @param {object} evidence Evidence to add to the query Data.
    */
   addQueryData (flowData, queryData, allEvidence, evidence) {
+    // The names already added, by their lower case form, so a name in other
+    // letters is found with one read.
+    const added = new Map();
+    for (const name of Object.keys(queryData)) {
+      added.set(name.toLowerCase(), name);
+    }
+
     for (const [evidenceKey, evidenceValue] of Object.entries(evidence)) {
       // Split the key at its first dot only. The prefix is the part before
       // it and the name sent to the cloud is everything after it, so a name
@@ -631,8 +637,7 @@ class CloudRequestEngine extends Engine {
       // letters is the same name, and the later, higher precedence value
       // replaces it under its own spelling.
       const lowerSuffix = suffix.toLowerCase();
-      const existing = Object.keys(queryData)
-        .find(name => name.toLowerCase() === lowerSuffix);
+      const existing = added.get(lowerSuffix);
 
       // Check and add the evidence to the query parameters.
       if (existing === undefined) {
@@ -672,6 +677,7 @@ class CloudRequestEngine extends Engine {
         delete queryData[existing];
         queryData[suffix] = evidenceValue;
       }
+      added.set(lowerSuffix, suffix);
     }
   }
 
