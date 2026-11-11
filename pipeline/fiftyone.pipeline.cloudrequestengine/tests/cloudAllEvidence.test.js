@@ -43,9 +43,9 @@ class RecordingClient extends MockRequestClient {
 }
 
 /**
- * Builds a cloud-only pipeline over a recording client, adds the evidence
- * given, processes it and gives back the body of the one post the engine
- * made.
+ * Builds a cloud-only pipeline over a recording client, waits for the engine
+ * to be ready, adds the evidence given, processes it and gives back the
+ * body of the one post the engine made.
  *
  * @param {object} evidence the evidence keys and values to add
  * @param {object} [settings] extra engine settings
@@ -58,6 +58,9 @@ const sendEvidence = async function (evidence, settings = {}) {
     requestClient: client
   }, settings));
   const pipeline = new PipelineBuilder().add(engine).build();
+  // Wait for the cloud's evidencekeys answer, so the engine's filter is
+  // the one a running service has when the evidence is added.
+  await engine.ready();
   const flowData = pipeline.createFlowData();
   for (const [key, value] of Object.entries(evidence)) {
     flowData.evidence.add(key, value);
