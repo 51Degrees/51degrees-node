@@ -34,7 +34,8 @@
  * @returns {object} the index of each name, keyed by the name in lower case
  */
 const fromNames = function (names) {
-  const indexes = {};
+  // No prototype, so a name such as constructor is not already present.
+  const indexes = Object.create(null);
 
   if (!names) {
     return indexes;

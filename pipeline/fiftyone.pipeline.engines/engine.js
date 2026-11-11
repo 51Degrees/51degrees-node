@@ -64,6 +64,15 @@ class Engine extends FlowElement {
 
     if (restrictedProperties) {
       this.restrictedProperties = restrictedProperties;
+
+      /**
+       * The restricted property names in lower case, because property
+       * names are compared ignoring case.
+       *
+       * @type {Set<string>}
+       */
+      this.restrictedPropertyKeys = new Set(
+        restrictedProperties.map((name) => name.toLowerCase()));
     }
   }
 

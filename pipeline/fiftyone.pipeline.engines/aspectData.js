@@ -83,8 +83,13 @@ class AspectData extends ElementData {
       return this.missingPropertyService.check(key, this.flowElement);
     }
 
-    if (this.flowElement.restrictedProperties) {
-      if (!this.flowElement.restrictedProperties.includes(key)) {
+    const restricted = this.flowElement.restrictedProperties;
+    if (restricted) {
+      // Property names are compared ignoring case. An engine holds its
+      // restricted names in lower case already.
+      const keys = this.flowElement.restrictedPropertyKeys ||
+        new Set(restricted.map((name) => name.toLowerCase()));
+      if (!keys.has(key) && !keys.has(key.toLowerCase())) {
         throw util.format(errorMessages.propertyExcluded, key);
       }
     }
