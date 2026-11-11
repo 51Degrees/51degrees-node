@@ -92,6 +92,28 @@ describe('cloud request engine cache', () => {
       expect(client.posts).toBe(1);
     });
 
+  test('serves a repeated request from the cache with no cloud engine',
+    async () => {
+      // Nothing calls ready, as only a cloud engine does, so the engine has
+      // to fetch its evidence keys itself before it builds a cache key.
+      const client = new CountingClient([baseJson]);
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      const sessions = [];
+      for (let i = 0; i < 2; i++) {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.User-Agent', 'iPhone');
+        await flowData.process();
+        sessions.push(flowData.evidence.get('query.session-id'));
+      }
+      expect(sessions[0]).not.toBe(sessions[1]);
+      expect(client.posts).toBe(1);
+    });
+
   test('serves a response with no 51Did from the cache', async () => {
     const client = new CountingClient([baseJson]);
     const pipeline = build(client);
