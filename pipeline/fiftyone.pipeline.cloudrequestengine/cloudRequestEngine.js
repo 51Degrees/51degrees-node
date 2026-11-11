@@ -37,6 +37,11 @@ const CloudRequestError = require('./cloudRequestError');
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
  */
 
+// Whether an object has a member of its own by that name, so that a name
+// such as constructor is not found on the prototype.
+const hasOwn = (object, name) =>
+  Object.prototype.hasOwnProperty.call(object, name);
+
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
 
@@ -567,7 +572,7 @@ class CloudRequestEngine extends Engine {
 
     for (const source of [evidence.getAll(), unaccepted]) {
       for (const [key, value] of Object.entries(source)) {
-        if (this.isSent(key) && (key in sendable) === false) {
+        if (this.isSent(key) && hasOwn(sendable, key) === false) {
           sendable[key] = value;
         }
       }
@@ -618,7 +623,7 @@ class CloudRequestEngine extends Engine {
         : evidenceKey;
 
       // Check and add the evidence to the query parameters.
-      if ((suffix in queryData) === false) {
+      if (hasOwn(queryData, suffix) === false) {
         queryData[suffix] = evidenceValue;
       } else {
         // If the queryParameter exists already.
