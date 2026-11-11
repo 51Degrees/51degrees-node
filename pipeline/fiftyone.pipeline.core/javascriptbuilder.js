@@ -177,7 +177,9 @@ function quotedForLog (text) {
  **/
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    return key.indexOf('query.') !== -1 || key.indexOf('header.') !== -1;
+    // Evidence keys ignore letter case.
+    const lower = String(key).toLowerCase();
+    return lower.indexOf('query.') !== -1 || lower.indexOf('header.') !== -1;
   }
 }
 

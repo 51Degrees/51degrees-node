@@ -122,7 +122,7 @@ class Evidence {
     // lower case. Evidence keys ignore letter case, so a key added again in
     // other letters replaces the value and keeps the letters it was first
     // added with.
-    this.keys = {};
+    this.keys = Object.create(null);
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
