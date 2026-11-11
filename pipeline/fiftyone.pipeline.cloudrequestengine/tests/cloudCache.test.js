@@ -55,9 +55,10 @@ const request = async (pipeline) => {
   return JSON.parse(flowData.cloud.cloud);
 };
 
-// No Sequence Element, which would give each request a new session id and
-// so a new cache key, because the engine has not fetched its evidence keys.
-const build = (client) => new PipelineBuilder({ addSequenceElement: false })
+// No JavaScript elements. The Sequence Element would give each request a new
+// session id and so a new cache key, because the engine has not fetched its
+// evidence keys, and the JSON Builder fails without the Sequence Element.
+const build = (client) => new PipelineBuilder({ addJavaScriptBuilder: false })
   .add(new CloudRequestEngine({
     resourceKey: 'AAAAAAAAAAAA',
     requestClient: client,
@@ -138,7 +139,7 @@ describe('cloud request engine cache', () => {
         requestClient: client,
         cache
       });
-      const pipeline = new PipelineBuilder({ addSequenceElement: false })
+      const pipeline = new PipelineBuilder({ addJavaScriptBuilder: false })
         .add(engine).build();
       const flowData = pipeline.createFlowData();
       flowData.evidence.add('header.User-Agent', 'iPhone');
