@@ -40,6 +40,16 @@ const CloudRequestError = require('./cloudRequestError');
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
 
+// The names the service reads its credentials and its property list from.
+// Evidence under any prefix whose name strips to one of these, in any
+// letter case, is left out of the request, because it would sit beside the
+// engine's own values with no way to know which one the service applied.
+const reservedNames = ['resource', 'license', 'licence', 'values'];
+
+// The key a web integration gives the web request itself. It is a view of
+// the whole request and not a value to send, so it is left out.
+const webRequestKey = 'server.http-request';
+
 /**
  * Whether the response in an element data has a top level member named
  * fodid, in any case. A response that cannot be read is cached as before.
@@ -513,13 +523,19 @@ class CloudRequestEngine extends Engine {
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
    *
+   * The engine sends every Evidence value in the Flow Data, including the
+   * values no element in the pipeline accepts, because what the cloud
+   * service uses changes over time and knowing about the other Evidence is
+   * important to continued optimization. The reserved names and the web
+   * request view are left out.
+   *
    * @param {FlowData} flowData FlowData to get evidence from
    * @returns {object} Evidence Dictionary
    */
   getContent (flowData) {
     const queryData = {};
 
-    const evidence = flowData.evidence.getAll();
+    const evidence = this.sendableEvidence(flowData.evidence);
 
     // Add evidence in reverse alphabetical order, excluding special keys.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'other'));
@@ -531,6 +547,52 @@ class CloudRequestEngine extends Engine {
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'query'));
 
     return queryData;
+  }
+
+  /**
+   * The evidence the engine sends, being every value in the Flow Data,
+   * whether an element accepted it or not, apart from the reserved names
+   * and the web request view. An accepted value wins over a set aside one
+   * of the same key.
+   *
+   * @param {Evidence} evidence the Flow Data's evidence
+   * @returns {object} the evidence keys and values to send
+   */
+  sendableEvidence (evidence) {
+    const sendable = {};
+    // An older fiftyone.pipeline.core throws unaccepted evidence away.
+    const unaccepted = typeof evidence.getUnaccepted === 'function'
+      ? evidence.getUnaccepted()
+      : {};
+
+    for (const source of [unaccepted, evidence.getAll()]) {
+      for (const [key, value] of Object.entries(source)) {
+        if (this.isSent(key)) {
+          sendable[key] = value;
+        }
+      }
+    }
+
+    return sendable;
+  }
+
+  /**
+   * Whether an evidence key is sent to the cloud service.
+   *
+   * @param {string} key the evidence key
+   * @returns {boolean} false for a reserved name under any prefix, in any
+   * letter case, and for the web request view
+   */
+  isSent (key) {
+    const lower = String(key).toLowerCase();
+    if (lower === webRequestKey) {
+      return false;
+    }
+    const separatorIndex = lower.indexOf('.');
+    const name = separatorIndex >= 0
+      ? lower.substring(separatorIndex + 1)
+      : lower;
+    return reservedNames.includes(name) === false;
   }
 
   /**

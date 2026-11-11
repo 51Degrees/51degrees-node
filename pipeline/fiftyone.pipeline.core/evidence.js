@@ -118,6 +118,7 @@ class Evidence {
   constructor (flowData) {
     this.flowData = flowData;
     this.evidenceStore = {};
+    this.unacceptedStore = {};
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
@@ -135,7 +136,10 @@ class Evidence {
    * @param {*} value value of evidence key
    */
   add (key, value) {
-    // Filter out any evidence that isn't needed in the pipeline
+    // Keep the evidence no element in the pipeline accepts apart from the
+    // rest, so an element that needs it can still reach it through
+    // getUnaccepted. getAll stays the accepted evidence alone, which is
+    // what an engine's cache key and usage sharing read.
 
     let keep;
 
@@ -150,12 +154,16 @@ class Evidence {
     if (keep) {
       this.flowData.pipeline.log('debug', key + ' added to evidence');
 
+      delete this.unacceptedStore[key];
       this.evidenceStore[key] = value;
     } else {
       this.flowData.pipeline.log(
         'debug',
-        key + ' filtered out of evidence. Not added.'
+        key + ' not accepted by any element. Set aside.'
       );
+
+      delete this.evidenceStore[key];
+      this.unacceptedStore[key] = value;
     }
   }
 
@@ -324,6 +332,19 @@ class Evidence {
    */
   getAll () {
     return this.evidenceStore;
+  }
+
+  /**
+   * Get the evidence no element in the pipeline accepts, which add set
+   * aside rather than throwing away. The Cloud Request Engine sends it
+   * along with the accepted evidence, because what the cloud service uses
+   * changes over time.
+   *
+   * @returns {object} the evidence set aside, empty where every key was
+   * accepted
+   */
+  getUnaccepted () {
+    return this.unacceptedStore;
   }
 }
 

@@ -14,6 +14,7 @@ declare class Evidence {
     constructor(flowData: FlowData);
     flowData: import("./flowData");
     evidenceStore: {};
+    unacceptedStore: {};
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
@@ -88,6 +89,16 @@ declare class Evidence {
      * @returns {object} all evidence
      */
     getAll(): object;
+    /**
+     * Get the evidence no element in the pipeline accepts, which add set
+     * aside rather than throwing away. The Cloud Request Engine sends it
+     * along with the accepted evidence, because what the cloud service uses
+     * changes over time.
+     *
+     * @returns {object} the evidence set aside, empty where every key was
+     * accepted
+     */
+    getUnaccepted(): object;
 }
 declare namespace Evidence {
     export { FlowData };
