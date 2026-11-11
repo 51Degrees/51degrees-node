@@ -164,6 +164,20 @@ test('a dictionary of aspect data finds a key whatever its letter case', () => {
   expect(data.get('nocache')).toBe(false);
 });
 
+// An element given restricted names without an engine's constructor makes
+// its lower case set on the first read and keeps it for later reads.
+test('an element restricted without an engine keeps its lower case names',
+  () => {
+    const flowElement = { dataKey: 'plain', restrictedProperties: ['One'] };
+    const data = new AspectDataDictionary(
+      { flowElement, contents: { one: 1 } });
+    expect(data.get('one')).toBe(1);
+    const keys = flowElement.restrictedPropertyKeys;
+    expect(keys).toEqual(new Set(['one']));
+    expect(data.get('one')).toBe(1);
+    expect(flowElement.restrictedPropertyKeys).toBe(keys);
+  });
+
 // Finds nothing for a key not found as given, as the dictionary did before
 // letter case was ignored, so the read before and after can be timed in the
 // same job.
