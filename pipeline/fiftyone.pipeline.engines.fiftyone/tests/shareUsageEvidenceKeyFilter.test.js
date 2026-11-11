@@ -111,7 +111,7 @@ test('share usage filter - session cookie', () => {
 test('share usage filter - share all', () => {
   const filter = new ShareUsageEvidenceKeyFilter({ shareAll: true });
 
-  expect(filter.filterEvidenceKey('header.cookie')).toBe(true);
+  expect(filter.filterEvidenceKey('header.cookie')).toBe(false);
   expect(filter.filterEvidenceKey('cookie.sessionid')).toBe(true);
   expect(filter.filterEvidenceKey('query.password')).toBe(true);
   expect(filter.filterEvidenceKey('query.id.usage')).toBe(true);
@@ -126,7 +126,7 @@ test('share usage filter - share all', () => {
 
 /**
  * Check that the email address, the salt for hashed email identifiers, the
- * query string and the path are never shared, whether bare or after a
+ * query string, the path and the Cookie header are never shared, whether bare or after a
  * prefix, and without regard to case.
  */
 test('share usage filter - never shared in every mode', () => {
@@ -140,7 +140,8 @@ test('share usage filter - never shared in every mode', () => {
     'query.id.email', 'QUERY.ID.EMAIL',
     'header.id.salt', 'HEADER.ID.SALT',
     'server.request-query', 'SERVER.REQUEST-QUERY',
-    'server.request-path', 'SERVER.REQUEST-PATH'
+    'server.request-path', 'SERVER.REQUEST-PATH',
+    'header.cookie', 'HEADER.COOKIE'
   ];
   for (const filter of filters) {
     for (const key of keys) {
