@@ -219,4 +219,52 @@ describe('reading by index with the native engine', () => {
 
     expect(after).toBeLessThanOrEqual(before);
   });
+
+  // DIAGNOSTIC, to be removed. Times the same native reads with the stack
+  // trace limit varied, to show whether the extra cost of a read by index is
+  // the Error object the wrapper's overload dispatch makes when the string
+  // overload, tried first, refuses a number.
+  test('diagnostic: the cost of a native read with the stack limit varied',
+    async () => {
+      const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
+      const data = (await processed(engine)).device;
+      const results = data.swigResults;
+      const index = engine.propertyIndexes.ismobile;
+      const message = 'in method \'ResultsBaseSwig_getValueAsBool\', ' +
+        'argument 2 of type \'std::string const &\'';
+      const time = (read) => {
+        for (let i = 0; i < warmUpReads; i++) {
+          read();
+        }
+        const start = process.hrtime.bigint();
+        for (let i = 0; i < timedReads; i++) {
+          read();
+        }
+        return (Number(process.hrtime.bigint() - start) / timedReads)
+          .toFixed(0);
+      };
+      // Runs the timing 60 frames down, so a limit of 50 has frames to take.
+      const deep = (depth, run) => depth === 0 ? run() : deep(depth - 1, run);
+      const limit = Error.stackTraceLimit;
+      const rows = [];
+      try {
+        for (const frames of [0, 10, 50]) {
+          Error.stackTraceLimit = frames;
+          deep(60, () => rows.push(
+            `DIAG stackTraceLimit ${frames}: ` +
+            `getValueAsBool('IsMobile') ` +
+            `${time(() => results.getValueAsBool('IsMobile'))} ns, ` +
+            `getValueAsBool(${index}) ` +
+            `${time(() => results.getValueAsBool(index))} ns, ` +
+            `getPropertyName(${index}) one overload ` +
+            `${time(() => results.getPropertyName(index))} ns, ` +
+            `containsProperty('IsMobile') one overload ` +
+            `${time(() => results.containsProperty('IsMobile'))} ns, ` +
+            `new Error(message) ${time(() => new Error(message))} ns`));
+        }
+      } finally {
+        Error.stackTraceLimit = limit;
+      }
+      console.log(rows.join('\n'));
+    });
 });

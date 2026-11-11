@@ -101,6 +101,13 @@ describe('the table from build-time names to indexes', () => {
     expect(propertyIndexes.fromNames([])).toEqual({});
     expect(propertyIndexes.fromNames(undefined)).toEqual({});
   });
+
+  test('gives an index to a name every object already has', () => {
+    // A plain object already answers constructor, so a table made from one
+    // would skip the name and hand back a function where an index belongs.
+    const indexes = propertyIndexes.fromNames(['IsMobile', 'Constructor']);
+    expect(indexes.constructor).toBe(1);
+  });
 });
 
 describe('a read through Element Data', () => {
@@ -110,6 +117,15 @@ describe('a read through Element Data', () => {
     const results = recordingResults();
     const data = new SwigData({ flowElement: element, swigResults: results });
     data.getInternal('ismobile');
+    expect(results.asked).toEqual([1]);
+  });
+
+  test('reads a property named constructor by its index', () => {
+    const element = engineBuiltWith(
+      ['IsMobile', 'Constructor'], ['Constructor', 'IsMobile']);
+    const results = recordingResults();
+    const data = new SwigData({ flowElement: element, swigResults: results });
+    data.getInternal('constructor');
     expect(results.asked).toEqual([1]);
   });
 

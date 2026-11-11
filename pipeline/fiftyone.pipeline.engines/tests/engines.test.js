@@ -96,6 +96,37 @@ test('restricted properties', done => {
   });
 });
 
+test('restricted properties are compared ignoring case', async () => {
+  // An engine restricted to a name in the data set's own spelling still
+  // gives that property under its lower case key, and still refuses one it
+  // was not given.
+  expect.assertions(2);
+  const engine = new Engine(
+    {
+      dataKey: 'caseEngine',
+      restrictedProperties: ['One'],
+      evidenceKeyFilter: new BasicListEvidenceKeyFilter(['header.user-agent']),
+      properties: {
+        one: { meta: { type: 'int' } },
+        two: { meta: { type: 'int' } }
+      },
+      processInternal: function (flowData) {
+        flowData.setElementData(new AspectDataDictionary(
+          { flowElement: this, contents: { one: 1, two: 2 } }));
+      }
+    }
+  );
+  const caseFlowData = new PipelineBuilder().add(engine).build()
+    .createFlowData();
+  await caseFlowData.process();
+  expect(caseFlowData.get('caseEngine').get('one')).toBe(1);
+  try {
+    caseFlowData.get('caseEngine').get('two');
+  } catch (e) {
+    expect(e).toBe(util.format(errorMessages.propertyExcluded, 'two'));
+  }
+});
+
 test('missing property service', done => {
   flowData.process().then(function () {
     try {
