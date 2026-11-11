@@ -162,11 +162,12 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getEvidenceKeys(): Promise<any>;
     /**
-     * Generate the Content to send in the POST request. The evidence keys
-     * e.g. 'query.' and 'header.' have an order of precedence. These are
-     * added to the evidence in reverse order, if there is conflict then
-     * the queryData value is overwritten.
-     * 'query.' evidence should take precedence over all other evidence.
+     * Generate the Content to send in the POST request. One name under
+     * several prefixes is sent once, with the value of the prefix that
+     * evidence.md ranks highest, being query, header, cookie, server,
+     * fiftyone and location, then any other prefix alphabetically. The
+     * groups are added lowest precedence first, so a later value replaces
+     * an earlier one.
      * If there are evidence keys other than 'query.' that conflict then
      * this is unexpected so a warning will be logged.
      *
