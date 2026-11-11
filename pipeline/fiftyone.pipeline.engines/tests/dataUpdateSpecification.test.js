@@ -276,10 +276,29 @@ describe('update from memory', () => {
       expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => String(log.message))).toEqual([
-        'Error: The listener failed.'
+        'An update complete callback raised an error for TestEngine. ' +
+        'Error detail: The listener failed.'
       ]);
       service.updateFromMemory(dataFile, Buffer.from('version 3'));
       expect(heard).toHaveLength(1);
+    });
+
+  // The data file's own onUpdateComplete is the other update complete
+  // callback, so an error it throws is reported in the same words.
+  test('an error from the data file callback is logged in the same words',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = memoryDataFile('version 1');
+      dataFile.onUpdateComplete = () => {
+        throw new Error('The data file callback failed.');
+      };
+      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+        .toBe(true);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An update complete callback raised an error for TestEngine. ' +
+        'Error detail: The data file callback failed.'
+      ]);
     });
 
   test('keeps the data it has when the refresh fails', async () => {
