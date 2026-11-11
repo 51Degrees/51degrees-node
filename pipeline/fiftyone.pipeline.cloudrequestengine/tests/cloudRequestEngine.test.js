@@ -273,10 +273,10 @@ test('get content keeps dotted names apart', () => {
 });
 
 /**
- * Test that the engine sends only the Evidence the cloud accepts, never
- * resource, license, licence or values from Evidence, as the Processing
- * section of cloud-request-engine.md says. Other Evidence is sent with the
- * usual precedence.
+ * Test that Evidence never supplies resource, license, licence or values,
+ * under any prefix and in any letter case, as the Processing section of
+ * cloud-request-engine.md says, and that the engine's own keys are sent.
+ * Other Evidence is sent with the usual precedence.
  */
 test('evidence never supplies resource, license or values', async () => {
   const posts = [];
@@ -312,12 +312,16 @@ test('evidence never supplies resource, license or values', async () => {
 
   expect(posts).toHaveLength(1);
   const { url, content } = posts[0];
-  expect(url).toContain(testResourceKey + '.json?license=LICENSEKEY');
+  expect(url).toContain(testResourceKey + '.json');
+  expect(url).not.toContain('license=');
   expect(url).not.toContain('evidence_');
+  // The engine's own keys are the only reserved fields in the body.
   expect(Object.keys(content).filter(
     name => ['resource', 'license', 'licence', 'values']
       .includes(name.toLowerCase())
-  )).toStrictEqual([]);
+  )).toStrictEqual(['resource', 'license']);
+  expect(content.resource).toBe(testResourceKey);
+  expect(content.license).toBe('LICENSEKEY');
   expect(JSON.stringify(content)).not.toContain('evidence_');
   expect(JSON.stringify(content)).not.toContain('header_resource');
   expect(JSON.stringify(content)).not.toContain('cookie_license');
