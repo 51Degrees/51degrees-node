@@ -27,12 +27,15 @@ const path = require('path');
 // The repository root, two levels above this file.
 const REPOSITORY_ROOT = path.join(__dirname, '..', '..');
 
+// Both expressions below ignore letter case, because Windows does, so a
+// lower-case name reaches the same variable there and is banned too.
+
 // A POSIX shell cannot set a variable whose name starts with a digit, so
 // every 51Degrees name carries a leading underscore. This matches the old
 // digit-initial form, and only where no word character runs before it, so
 // the correct '_51DEGREES_' form and a name holding the text inside a
 // longer word are both left alone.
-const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/g;
+const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
 
 // Each variable has one name and nothing stands behind it, so a bare
 // RESOURCE_KEY or LICENSE_KEY must never be read from the environment.
@@ -42,7 +45,7 @@ const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/g;
 // TEST_SUPER_RESOURCE_KEY is left alone. A read is what restores a
 // fallback, whereas prose naming the old name cannot.
 const FALLBACK_NAME =
-  /(?:process\.env\.|process\.env\[\s*['"]|\$env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/g;
+  /(?:process\.env\.|process\.env\[\s*['"]|\$env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
 
 // Reading a binary file as text yields no useful name and wastes time, so
 // files that never carry one are skipped by extension.
