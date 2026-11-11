@@ -3,6 +3,7 @@ export let errorMessages: {
     evidenceNotFound: string;
     dataFilePathRequired: string;
     fileNotFound: string;
+    fileNotFoundNotDownloaded: string;
     moduleDirNotFound: string;
     nativeModuleNotFound: string;
     invalidFileExtension: string;
