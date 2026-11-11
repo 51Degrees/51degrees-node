@@ -163,3 +163,43 @@ test('a dictionary of aspect data finds a key whatever its letter case', () => {
   expect(data.get('noCache')).toBe(false);
   expect(data.get('nocache')).toBe(false);
 });
+
+// Reads each key exactly as given, as the dictionary did before letter case
+// was ignored, so the read before and after can be timed in the same job.
+class ReadByKeyOnly extends AspectDataDictionary {
+  getInternal (key) {
+    return this.contents[key];
+  }
+}
+
+test('a dictionary read is no slower than it was', () => {
+  // Reads timed in each round, and rounds of each, taking the fastest, so a
+  // pause in one does not decide it.
+  const timedReads = 1000000;
+  const rounds = 5;
+  const timeOf = (data, key) => {
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    const start = process.hrtime.bigint();
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    return Number(process.hrtime.bigint() - start) / timedReads;
+  };
+  const flowElement = { dataKey: 'timing' };
+  const contents = { one: 1, two: 2, noCache: false };
+  const before = new ReadByKeyOnly({ flowElement, contents });
+  const after = new AspectDataDictionary({ flowElement, contents });
+  let beforeTime = Infinity;
+  let afterTime = Infinity;
+  for (let round = 0; round < rounds; round++) {
+    beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+    afterTime = Math.min(afterTime, timeOf(after, 'one'));
+  }
+  console.log(
+    `Dictionary read of one, fastest of ${rounds} rounds of ${timedReads}, ` +
+    `before ${beforeTime.toFixed(1)} ns, after ${afterTime.toFixed(1)} ns.`);
+  // A tenth is allowed for timing noise.
+  expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
+});

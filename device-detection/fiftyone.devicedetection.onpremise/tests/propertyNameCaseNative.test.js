@@ -39,6 +39,7 @@ const core = require51('fiftyone.pipeline.core');
 const EngineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremise;
 const testHelper = require('./testHelper');
+const SwigData = require(path.resolve(__dirname, '..', 'swigData'));
 
 const dataFile = testHelper.getDataFilePath(testHelper.liteDataFileName);
 const mobileUserAgent =
@@ -107,4 +108,52 @@ describe('property names in any letter case with the native engine', () => {
       expect(shown(data.get('userAgents')))
         .toBe(shown(data.get('USERAGENTS')));
     });
+});
+
+// Reads each key exactly as given, as every read did before letter case was
+// ignored, so the read before and after can be timed in the same job.
+class ReadByKeyOnly extends SwigData {
+  getInternal (key) {
+    return this.getByKey(key);
+  }
+}
+
+// Reads timed in each round for the figures the test prints.
+const timedReads = 20000;
+// Rounds of each, taking the fastest, so a pause in one does not decide it.
+const rounds = 5;
+
+// The time of one read of the key, in nanoseconds.
+const timeOf = (data, key) => {
+  for (let i = 0; i < timedReads; i++) {
+    data.get(key);
+  }
+  const start = process.hrtime.bigint();
+  for (let i = 0; i < timedReads; i++) {
+    data.get(key);
+  }
+  return Number(process.hrtime.bigint() - start) / timedReads;
+};
+
+describe('the time of a read with the native engine', () => {
+  test('a read by name is no slower than it was', async () => {
+    const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
+    const swigResults = (await processed(engine)).device.swigResults;
+    const before = new ReadByKeyOnly({ flowElement: engine, swigResults });
+    const after = new SwigData({ flowElement: engine, swigResults });
+    let beforeTime = Infinity;
+    let afterTime = Infinity;
+    for (let round = 0; round < rounds; round++) {
+      beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
+      afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
+    }
+    const mixedCaseTime = timeOf(after, 'IsMobile');
+    console.log(
+      `Read of ismobile, fastest of ${rounds} rounds of ${timedReads}, ` +
+      `before ${beforeTime.toFixed(0)} ns, after ${afterTime.toFixed(0)} ns. ` +
+      'A read of IsMobile, which found nothing before, ' +
+      `${mixedCaseTime.toFixed(0)} ns.`);
+    // A tenth is allowed for timing noise.
+    expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
+  });
 });
