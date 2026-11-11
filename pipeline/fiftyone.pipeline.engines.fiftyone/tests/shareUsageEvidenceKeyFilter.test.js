@@ -126,8 +126,8 @@ test('share usage filter - share all', () => {
 
 /**
  * Check that the email address, the salt for hashed email identifiers, the
- * query string, the path and the Cookie header are never shared, whether bare or after a
- * prefix, and without regard to case.
+ * query string, the path and the Cookie header are never shared, whether
+ * bare or after a prefix, and without regard to case.
  */
 test('share usage filter - never shared in every mode', () => {
   const filters = [
