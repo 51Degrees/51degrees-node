@@ -590,7 +590,12 @@ class DeviceDetectionOnPremise extends Engine {
 
       const evidence = new dd.swigWrapper.EvidenceDeviceDetectionSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = dd.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 

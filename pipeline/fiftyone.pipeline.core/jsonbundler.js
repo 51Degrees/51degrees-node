@@ -28,7 +28,9 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
  * @typedef {import('./flowData')} FlowData
  */
 
-const elementBlacklist = ['jsonbundler', 'javascriptbuilder', 'sequence', 'set-headers'];
+const elementBlacklist = [
+  'jsonbundler', 'javascriptbuilder', 'set-headers', 'cloud', 'shareUsage'
+];
 
 /**
  * The JSONBundler aggregates all properties from FlowElements
