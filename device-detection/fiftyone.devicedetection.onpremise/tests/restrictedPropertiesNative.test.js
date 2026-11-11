@@ -20,7 +20,6 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-
 // An engine built with names in the data set's own spelling gives each
 // property under its lower case key, because the pipeline compares property
 // names ignoring case. Checked against the native engine and a real data
