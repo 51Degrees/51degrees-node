@@ -29,6 +29,7 @@ const url = require('url');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
+const { LicenseKeys } = require('fiftyone.pipeline.core');
 
 const minToMs = (min) => min * 60000;
 
@@ -80,16 +81,17 @@ const withCause = function (text, error) {
 };
 
 /**
- * The message logged when an update complete callback throws, in the words
- * Python uses for the same error.
+ * The message for an error with no message of its own, such as one an
+ * update complete callback throws. .NET logs it as an unhandled error, in
+ * these words, with the exception attached, so the cause follows the text.
  *
  * @param {DataFile} dataFile the data file the update was for
- * @param {*} error the error the callback threw
+ * @param {*} error the error, or whatever was thrown
  * @returns {string} the message to log
  */
-const callbackErrorText = function (dataFile, error) {
-  return 'An update complete callback raised an error for ' +
-    engineName(dataFile) + '. Error detail: ' + errorDetail(error);
+const unhandledErrorText = function (dataFile, error) {
+  return withCause('An unhandled error occurred while checking for ' +
+    "automatic updates for engine '" + engineName(dataFile) + "'", error);
 };
 
 /**
@@ -241,6 +243,8 @@ class DataFileUpdateService {
 
   /**
    * Writes a message to the log of the pipeline the service is attached to.
+   * With no pipeline, an error is written to the console, as a pipeline
+   * with no error listener does, so that it is not lost.
    *
    * @param {string} level the log level
    * @param {*} message the message
@@ -248,6 +252,8 @@ class DataFileUpdateService {
   log (level, message) {
     if (this.pipeline) {
       this.pipeline.log(level, message);
+    } else if (level === 'error') {
+      console.error(LicenseKeys.mask(message));
     }
   }
 
@@ -269,14 +275,14 @@ class DataFileUpdateService {
       try {
         listener.call(this.eventEmitter, status, dataFile);
       } catch (e) {
-        this.log('error', callbackErrorText(dataFile, e));
+        this.log('error', unhandledErrorText(dataFile, e));
       }
     }
     if (typeof dataFile.onUpdateComplete === 'function') {
       try {
         dataFile.onUpdateComplete(status);
       } catch (e) {
-        this.log('error', callbackErrorText(dataFile, e));
+        this.log('error', unhandledErrorText(dataFile, e));
       }
     }
   }
@@ -597,9 +603,7 @@ class DataFileUpdateService {
    * @param {*} error the error, or whatever was thrown
    */
   unhandled (dataFile, error) {
-    this.log('error', withCause(
-      'An unhandled error occurred while checking for automatic updates ' +
-      "for engine '" + engineName(dataFile) + "'", error));
+    this.log('error', unhandledErrorText(dataFile, error));
   }
 
   /**
