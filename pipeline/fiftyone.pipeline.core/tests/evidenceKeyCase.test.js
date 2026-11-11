@@ -74,15 +74,17 @@ describe('evidence key case', () => {
 
   test('the JavaScript Builder keeps a key added in other letters', () => {
     // The JavaScript Builder alone, so its own filter decides whether a key
-    // is kept, and that decision ignores letter case as get does.
+    // is kept, and that decision ignores letter case as get does. The keys
+    // are ones the builder accepts, being a query string parameter and the
+    // host it calls back to.
     const data = new core.PipelineBuilder({
       addJavaScriptBuilder: false,
       useSetHeaderProperties: false
     }).add(new core.JavascriptBuilder({})).build().createFlowData();
     data.evidence.add('Query.Client-IP', '192.0.2.1');
-    data.evidence.add('HEADER.User-Agent', 'a browser');
+    data.evidence.add('HEADER.Host', 'example.com');
     expect(data.evidence.get('query.client-ip')).toBe('192.0.2.1');
-    expect(data.evidence.get('header.user-agent')).toBe('a browser');
+    expect(data.evidence.get('header.host')).toBe('example.com');
   });
 
   test('a key that is not there is still undefined', () => {
