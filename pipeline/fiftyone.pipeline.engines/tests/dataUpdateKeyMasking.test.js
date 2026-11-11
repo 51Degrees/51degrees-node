@@ -84,10 +84,9 @@ describe.each([
   }).urlFormatter();
 
   test('is masked when the key ends a sentence', () => {
-    const message = 'An error occurred while downloading a data file ' +
-      'update for ' + name + ' from ' + url('ABCDEFGH') +
-      '. Update will be attempted again later.';
-    expect(message).toContain('licenseKeys=ABCDEFGH. Update');
+    const message = "Error accessing data update service at '" +
+      url('ABCDEFGH') + "' for engine '" + name + "'. See the log.";
+    expect(message).toContain("licenseKeys=ABCDEFGH' for");
     const masked = LicenseKeys.mask(message);
     expect(masked).toBe(message.replace('ABCDEFGH', '****EFGH'));
   });
