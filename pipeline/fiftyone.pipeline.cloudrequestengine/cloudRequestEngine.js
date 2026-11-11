@@ -505,10 +505,12 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Generate the Content to send in the POST request. The evidence keys
-   * e.g. 'query.' and 'header.' have an order of precedence. These are
-   * added to the evidence in reverse order, if there is conflict then
-   * the queryData value is overwritten.
+   * Generate the Content to send in the POST request. One name under
+   * several prefixes is sent once, with the value of the prefix that
+   * evidence.md ranks highest, being query, header, cookie, server,
+   * fiftyone and location, then any other prefix alphabetically. The
+   * groups are added lowest precedence first, so a later value replaces
+   * an earlier one.
    * 'query.' evidence should take precedence over all other evidence.
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
@@ -521,7 +523,7 @@ class CloudRequestEngine extends Engine {
 
     const evidence = flowData.evidence.getAll();
 
-    // Add evidence in reverse alphabetical order, excluding special keys.
+    // Add the other evidence lowest precedence first.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'other'));
     // Add cookie evidence.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'cookie'));
@@ -564,7 +566,7 @@ class CloudRequestEngine extends Engine {
         // warning, if the evidence prefix is not query. Otherwise a
         // warning is not needed as query evidence is expected
         // to overwrite any existing evidence with the same suffix.
-        if (prefix !== 'query') {
+        if (prefix.toLowerCase() !== 'query') {
           const conflicts = {};
           for (const [key, value] of Object.entries(allEvidence)) {
             if (key !== evidenceKey && key.includes(suffix)) {
@@ -611,13 +613,13 @@ class CloudRequestEngine extends Engine {
           selectedEvidence[key] = value;
         }
       }
-      selectedEvidence = Object.keys(selectedEvidence).sort().reverse().reduce(
-        (obj, key) => {
+      // Lowest precedence first, so the value added last wins.
+      selectedEvidence = Object.keys(selectedEvidence)
+        .sort((a, b) => compareOtherKeys(b, a))
+        .reduce((obj, key) => {
           obj[key] = selectedEvidence[key];
           return obj;
-        },
-        {}
-      );
+        }, {});
     } else {
       for (const [key, value] of Object.entries(evidence)) {
         if (this.hasKeyPrefix(key, type)) {
@@ -629,14 +631,15 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Check that the key of a KeyValuePair has the given prefix.
+   * Check that the key of a KeyValuePair has the given prefix, ignoring
+   * letter case as evidence keys do.
    *
    * @param {string} itemKey Key to check
    * @param {string} prefix The prefix to check for.
    * @returns {boolean} True if the key has the prefix.
    */
   hasKeyPrefix (itemKey, prefix) {
-    return itemKey.startsWith(prefix + '.');
+    return itemKey.toLowerCase().startsWith(prefix.toLowerCase() + '.');
   }
 }
 
@@ -720,6 +723,52 @@ function refuseInvalidCredentials (engine) {
   if (engine.resourceKey === '' && engine.requestedProperties.length === 0) {
     throw new Error(errorMessages.licenseKeyNeedsProperties);
   }
+}
+
+// The prefixes after query, header and cookie, highest precedence first, as
+// evidence.md lists them. Any other prefix ranks after these, alphabetically.
+const OTHER_PREFIX_PRECEDENCE = ['server', 'fiftyone', 'location'];
+
+/**
+ * The prefix of an evidence key in lower case, being the text before the
+ * first dot, or the whole key where there is no dot.
+ *
+ * @param {string} key the evidence key
+ * @returns {string} the prefix
+ */
+function keyPrefix (key) {
+  const separatorIndex = key.indexOf('.');
+  return (separatorIndex >= 0 ? key.substring(0, separatorIndex) : key)
+    .toLowerCase();
+}
+
+/**
+ * Compares two evidence keys that are not query, header or cookie evidence
+ * by precedence. server, fiftyone and location come first, in the order
+ * evidence.md lists them, then any other prefix alphabetically, all
+ * ignoring letter case.
+ *
+ * @param {string} a the first evidence key
+ * @param {string} b the second evidence key
+ * @returns {number} negative where a has the higher precedence
+ */
+function compareOtherKeys (a, b) {
+  const prefixA = keyPrefix(a);
+  const prefixB = keyPrefix(b);
+  const rank = prefix => {
+    const index = OTHER_PREFIX_PRECEDENCE.indexOf(prefix);
+    return index >= 0 ? index : OTHER_PREFIX_PRECEDENCE.length;
+  };
+  const byRank = rank(prefixA) - rank(prefixB);
+  if (byRank !== 0) {
+    return byRank;
+  }
+  if (prefixA !== prefixB) {
+    return prefixA < prefixB ? -1 : 1;
+  }
+  const lowerA = a.toLowerCase();
+  const lowerB = b.toLowerCase();
+  return lowerA < lowerB ? -1 : (lowerA > lowerB ? 1 : 0);
 }
 
 module.exports = CloudRequestEngine;
