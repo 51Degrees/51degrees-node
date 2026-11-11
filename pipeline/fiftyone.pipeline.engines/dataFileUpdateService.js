@@ -29,6 +29,7 @@ const url = require('url');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
+const { LicenseKeys } = require('fiftyone.pipeline.core');
 
 const minToMs = (min) => min * 60000;
 
@@ -69,16 +70,18 @@ const errorDetail = function (error) {
 };
 
 /**
- * The message logged when an update complete callback throws, in the words
- * Python uses for the same error.
+ * The message logged when an update complete callback throws. .NET logs it
+ * as an unhandled error, in these words, with the exception attached, so
+ * the cause follows the text.
  *
  * @param {DataFile} dataFile the data file the update was for
  * @param {*} error the error the callback threw
  * @returns {string} the message to log
  */
 const callbackErrorText = function (dataFile, error) {
-  return 'An update complete callback raised an error for ' +
-    engineName(dataFile) + '. Error detail: ' + errorDetail(error);
+  return 'An unhandled error occurred while checking for automatic ' +
+    "updates for engine '" + engineName(dataFile) + "'. Error detail: " +
+    errorDetail(error);
 };
 
 /**
@@ -230,6 +233,8 @@ class DataFileUpdateService {
 
   /**
    * Writes a message to the log of the pipeline the service is attached to.
+   * With no pipeline, an error is written to the console, as a pipeline
+   * with no error listener does, so that it is not lost.
    *
    * @param {string} level the log level
    * @param {*} message the message
@@ -237,6 +242,8 @@ class DataFileUpdateService {
   log (level, message) {
     if (this.pipeline) {
       this.pipeline.log(level, message);
+    } else if (level === 'error') {
+      console.error(LicenseKeys.mask(message));
     }
   }
 
