@@ -14,6 +14,7 @@ declare class Evidence {
     constructor(flowData: FlowData);
     flowData: import("./flowData");
     evidenceStore: {};
+    keys: {};
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
@@ -23,7 +24,9 @@ declare class Evidence {
      */
     requestEvidence: Readonly<object> | undefined;
     /**
-     * Add a piece of evidence to flowData
+     * Add a piece of evidence to flowData. Keys ignore letter case, so a key
+     * that differs from one already added only in its letters replaces that
+     * value under the letters it was first added with.
      *
      * @param {string} key evidence key to add
      * @param {*} value value of evidence key
@@ -76,10 +79,10 @@ declare class Evidence {
      */
     addFromRequestAsync(request: object, maxFormBytes?: number): Promise<Evidence>;
     /**
-     * Get a piece of evidence
+     * Get a piece of evidence by key, in any letter case
      *
      * @param {string} key evidence key to retreive
-     * @returns {*} the evidence value
+     * @returns {*} the evidence value, or undefined where there is none
      */
     get(key: string): any;
     /**
