@@ -35,17 +35,6 @@ module.exports = {
     noSetHeaderResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_NO_SETHEADER',
     licenseKeyEnvVar: 'TEST_LICENSE_KEY'
   },
-  // The names used before the convention above was adopted. They are still
-  // read as a fallback, so an existing setup keeps working until the
-  // secrets behind them are renamed.
-  legacyEnvVars: {
-    _51DEGREES_RESOURCE_KEY: 'RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_SUPER: 'TEST_SUPER_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_PLATFORM: 'TEST_PLATFORM_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_HARDWARE: 'TEST_HARDWARE_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_BROWSER: 'TEST_BROWSER_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_NO_SETHEADER: 'TEST_NO_SETHEADER_RESOURCE_KEY'
-  },
   // User-Agent string for testing
   userAgents: {
     chromeUA: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +

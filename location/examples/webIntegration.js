@@ -36,7 +36,8 @@ const FiftyOneDegreesLocation = require((process.env.directory || __dirname) + '
 // example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
-const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+  '!!YOUR_RESOURCE_KEY!!';
 // We need 'server' to be defined here so that, when this example
 // is executed as part of a unit test, the server can be closed
 // once the test is complete.

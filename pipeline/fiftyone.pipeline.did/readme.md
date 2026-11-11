@@ -835,8 +835,8 @@ build and is refreshed by common-ci's `update-example-assets` step.
 
 | Variable | Meaning |
 | --- | --- |
-| `_51DEGREES_RESOURCE_KEY`, then `RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
-| `_51DEGREES_LICENSE_KEY`, then `LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
+| `_51DEGREES_RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
+| `_51DEGREES_LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
 | `FOD_CLOUD_API_URL` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
 | `PORT` | Web demo only. Defaults to `5100` |
 
@@ -855,8 +855,9 @@ or past it, or fails its signature check.
 
 `npm test` runs the unit tests, which use an injected transport and touch no
 network. `tests/didClient.integration.test.js` runs against the live cloud
-with the first of `_51DEGREES_RESOURCE_KEY`, `_51DEGREES_RESOURCE_KEY_BESPOKE`
-and `RESOURCE_KEY` that is set, and fails when none is. The key has to carry
+with the first of `_51DEGREES_RESOURCE_KEY` and
+`_51DEGREES_RESOURCE_KEY_BESPOKE` that is set, and fails when none is. The
+key has to carry
 the FODid product, and the CloudV5FODiD product for the marketing usages.
 `tests/tierEntitlement.integration.test.js` checks what a Basic tier key is
 given, with the key in `_51DEGREES_RESOURCE_KEY_BASIC`.

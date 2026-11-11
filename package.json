@@ -39,6 +39,10 @@
   "jest": {
     "projects": [
       {
+        "displayName": "ci",
+        "rootDir": "ci"
+      },
+      {
         "displayName": "pipeline",
         "rootDir": "pipeline",
         "setupFilesAfterEnv": ["<rootDir>/setup.js"]

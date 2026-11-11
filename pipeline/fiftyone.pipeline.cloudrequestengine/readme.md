@@ -54,9 +54,8 @@ Then, navigate to the module directory and execute:
 npm test
 ```
 
-The integration tests read the resource key from the aligned
-`_51DEGREES_RESOURCE_KEY` environment variable first, then the legacy
-`RESOURCE_KEY` variable.
+The integration tests read the resource key from the
+`_51DEGREES_RESOURCE_KEY` environment variable.
 
 ## Pointing the engine at another host
 

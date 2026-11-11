@@ -24,14 +24,6 @@ export let testConstants: {
         noSetHeaderResourceKeyEnvVar: string;
         licenseKeyEnvVar: string;
     };
-    legacyEnvVars: {
-        _51DEGREES_RESOURCE_KEY: string;
-        _51DEGREES_RESOURCE_KEY_SUPER: string;
-        _51DEGREES_RESOURCE_KEY_PLATFORM: string;
-        _51DEGREES_RESOURCE_KEY_HARDWARE: string;
-        _51DEGREES_RESOURCE_KEY_BROWSER: string;
-        _51DEGREES_RESOURCE_KEY_NO_SETHEADER: string;
-    };
     userAgents: {
         chromeUA: string;
         edgeUA: string;

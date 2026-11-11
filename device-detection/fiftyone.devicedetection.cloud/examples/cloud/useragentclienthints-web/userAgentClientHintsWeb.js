@@ -119,8 +119,8 @@ const getValueHelper = (flowData, propertyKey) => {
   }
 };
 
-// The aligned '_51DEGREES_RESOURCE_KEY' environment variable is checked
-// first, followed by the legacy 'RESOURCE_KEY' variable.
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// environment variable.
 const myResourceKey = ExampleUtils.getResourceKeyFromEnv() || '!!YOUR_RESOURCE_KEY!!';
 
 // We need 'server' to be defined here so that, when this example

@@ -302,7 +302,7 @@ const run = async function (
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // _51DEGREES_IPI_PATH environment variable, or find the lite file,
   // which is downloaded if it is missing.
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
