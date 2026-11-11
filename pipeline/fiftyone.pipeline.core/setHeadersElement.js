@@ -23,6 +23,7 @@
 const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const AspectPropertyValue = require('./aspectPropertyValue');
+const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 // SetHeader source headers separator
 const SOURCE_HEADER_SEPARATOR = ',';
 
@@ -40,6 +41,8 @@ class SetHeadersElement extends FlowElement {
     super(...arguments);
 
     this.dataKey = 'set-headers';
+    // It reads the results of the other elements and no evidence.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
     this.properties = {
       responseheadersdictionary: {
         name: 'ResponseHeadersDictionary',

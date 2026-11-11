@@ -26,6 +26,8 @@ const AspectDataDictionary = require('fiftyone.pipeline.engines')
   .AspectDataDictionary;
 const BasicListEvidenceKeyFilter = require('fiftyone.pipeline.core')
   .BasicListEvidenceKeyFilter;
+const EvidenceKeyFilter = require('fiftyone.pipeline.core')
+  .EvidenceKeyFilter;
 const LicenseKeys = require('fiftyone.pipeline.core').LicenseKeys;
 const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
@@ -153,6 +155,11 @@ class CloudRequestEngine extends Engine {
     }
     this.baseURL = baseURL;
     this.evidenceKeys = [];
+
+    // The cloud service's keys are fetched when the Pipeline first processes.
+    // Until then every key is kept, so evidence set before then is not lost,
+    // and getEvidenceKeys replaces this with the keys the service lists.
+    this.evidenceKeyFilter = new EvidenceKeyFilter();
 
     // Properties of connected FlowElements
     this.flowElementProperties = {};
