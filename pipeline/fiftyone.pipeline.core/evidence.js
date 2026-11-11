@@ -26,15 +26,25 @@ const Constants = require('./constants');
 const formContentType = 'application/x-www-form-urlencoded';
 
 /**
- * The path of a request line's target, undecoded, being what comes before
- * any query string and, when the target is a full URL, after its host.
+ * The path and the query string of a request line's target, undecoded and
+ * byte for byte as the request line carried them, being what comes before
+ * and after the first question mark and, when the target is a full URL,
+ * after its host. The query is empty where the target carries none.
  *
- * @param {string} target the request target, such as /page?a=1
- * @returns {string} the path
+ * @param {*} target the request target, such as /page?a=1
+ * @returns {{path: string, query: string}} the two parts
  */
-const requestLinePath = function (target) {
-  const withoutScheme = target.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '');
-  return withoutScheme.split(/[?#]/)[0] || '/';
+const requestLineParts = function (target) {
+  const text = typeof target === 'string' ? target : '';
+  const withoutScheme = text.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '');
+  const mark = withoutScheme.indexOf('?');
+  if (mark < 0) {
+    return { path: withoutScheme, query: '' };
+  }
+  return {
+    path: withoutScheme.substring(0, mark),
+    query: withoutScheme.substring(mark + 1)
+  };
 };
 
 /**
@@ -237,8 +247,9 @@ class Evidence {
    *
    * The web request is also added as server.http-request, whether or not an
    * element accepts it, as a frozen object holding every value read from
-   * the request under the key it has as evidence, with the request's method
-   * and path as server.request-method and server.request-path. It is there
+   * the request under the key it has as evidence, with the request line as
+   * server.request-method, server.request-path and server.request-query.
+   * It is there
    * for elements that read the request without accepting evidence, such as
    * the usage sharing element, and so that what the request carried can be
    * used once processing is done, when the request's socket may have
@@ -348,12 +359,15 @@ class Evidence {
       httpRequest[key] = value;
     }
 
-    // The method and path of the request line are part of the request as
-    // well, exactly as the request line has them.
-    if (typeof request.method === 'string') {
-      httpRequest['server.request-method'] = request.method;
-    }
-    httpRequest['server.request-path'] = requestLinePath(request.url);
+    // The request line is part of the request as well, exactly as the
+    // request line has it. All three values are always on the view, with
+    // the query empty where there was none, so an absent key says the
+    // request line was not supplied rather than that it had no query.
+    const requestLine = requestLineParts(request.url);
+    httpRequest['server.request-method'] =
+      typeof request.method === 'string' ? request.method : '';
+    httpRequest['server.request-path'] = requestLine.path;
+    httpRequest['server.request-query'] = requestLine.query;
     this.add(Constants.evidenceHttpRequest, Object.freeze(httpRequest));
 
     return this;

@@ -64,8 +64,9 @@ declare class Evidence {
      *
      * The web request is also added as server.http-request, whether or not an
      * element accepts it, as a frozen object holding every value read from
-     * the request under the key it has as evidence, with the request's method
-     * and path as server.request-method and server.request-path. It is there
+     * the request under the key it has as evidence, with the request line as
+     * server.request-method, server.request-path and server.request-query.
+     * It is there
      * for elements that read the request without accepting evidence, such as
      * the usage sharing element, and so that what the request carried can be
      * used once processing is done, when the request's socket may have

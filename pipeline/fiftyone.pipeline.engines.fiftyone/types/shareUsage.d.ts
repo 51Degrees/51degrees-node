@@ -111,8 +111,9 @@ declare class ShareUsage extends ShareUsage_base {
      * The values the element finds to share, before its rules leave any out.
      * They are every value of the web request the web integration supplied
      * as server.http-request, under the key each has as evidence, and every
-     * evidence value. A key in both has the evidence value. The web request
-     * itself is not one of them.
+     * evidence value. Keys ignore letter case, so a key in both places is
+     * one value, under the evidence spelling. The web request itself is not
+     * one of them.
      *
      * @param {FlowData} flowData the flow data to look in
      * @returns {object} the values, keyed as evidence is
