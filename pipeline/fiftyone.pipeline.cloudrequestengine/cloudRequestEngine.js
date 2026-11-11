@@ -49,12 +49,6 @@ const hasOwn = (object, name) =>
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
 
-// The names the service reads its credentials and its property list from.
-// Evidence under any prefix whose name strips to one of these, in any
-// letter case, is left out of the request, because it would sit beside the
-// engine's own values with no way to know which one the service applied.
-const reservedNames = ['resource', 'license', 'licence', 'values'];
-
 // The key a web integration gives the web request itself. It is a view of
 // the whole request and not a value to send, so it is left out.
 const webRequestKey = 'server.http-request';
@@ -560,9 +554,10 @@ class CloudRequestEngine extends Engine {
 
   /**
    * The evidence the engine sends, being every value in the Flow Data,
-   * whether an element accepted it or not, apart from the reserved names
-   * and the web request view. The accepted values come first, so where
-   * the two would give the same name the accepted one is sent.
+   * whether an element accepted it or not, apart from the web request
+   * view. addQueryData then leaves out the reserved names. The accepted
+   * values come first, so where the two would give the same name the
+   * accepted one is sent.
    *
    * @param {Evidence} evidence the Flow Data's evidence
    * @returns {object} the evidence keys and values to send
@@ -586,22 +581,14 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Whether an evidence key is sent to the cloud service.
+   * Whether an evidence key is sent to the cloud service. The reserved
+   * names are left out later, by addQueryData.
    *
    * @param {string} key the evidence key
-   * @returns {boolean} false for a reserved name under any prefix, in any
-   * letter case, and for the web request view
+   * @returns {boolean} false for the web request view, in any letter case
    */
   isSent (key) {
-    const lower = String(key).toLowerCase();
-    if (lower === webRequestKey) {
-      return false;
-    }
-    const separatorIndex = lower.indexOf('.');
-    const name = separatorIndex >= 0
-      ? lower.substring(separatorIndex + 1)
-      : lower;
-    return reservedNames.includes(name) === false;
+    return String(key).toLowerCase() !== webRequestKey;
   }
 
   /**

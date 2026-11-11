@@ -169,20 +169,21 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     getContent(flowData: FlowData): object;
     /**
      * The evidence the engine sends, being every value in the Flow Data,
-     * whether an element accepted it or not, apart from the reserved names
-     * and the web request view. An accepted value wins over a set aside one
-     * of the same key.
+     * whether an element accepted it or not, apart from the web request
+     * view. addQueryData then leaves out the reserved names. The accepted
+     * values come first, so where the two would give the same name the
+     * accepted one is sent.
      *
      * @param {Evidence} evidence the Flow Data's evidence
      * @returns {object} the evidence keys and values to send
      */
     sendableEvidence(evidence: Evidence): object;
     /**
-     * Whether an evidence key is sent to the cloud service.
+     * Whether an evidence key is sent to the cloud service. The reserved
+     * names are left out later, by addQueryData.
      *
      * @param {string} key the evidence key
-     * @returns {boolean} false for a reserved name under any prefix, in any
-     * letter case, and for the web request view
+     * @returns {boolean} false for the web request view, in any letter case
      */
     isSent(key: string): boolean;
     /**
