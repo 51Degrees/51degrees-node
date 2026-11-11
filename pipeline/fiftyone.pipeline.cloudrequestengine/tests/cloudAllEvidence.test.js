@@ -169,3 +169,21 @@ test('a reserved name is left out under any prefix and case', async () => {
 
   expect(JSON.stringify(content)).not.toContain('evidence_');
 });
+
+// The accepted values come first, so within a group the engine's
+// addQueryData, which keeps the first value it meets for a name, takes the
+// accepted one where a set aside value would give the same name.
+test('the accepted evidence comes before the set aside evidence', () => {
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new RecordingClient({})
+  });
+  const sendable = engine.sendableEvidence({
+    getAll: () => ({ 'header.accepted': 'a', 'header.both': 'accepted' }),
+    getUnaccepted: () => ({ 'header.aside': 'b', 'header.both': 'aside' })
+  });
+
+  expect(Object.keys(sendable)).toEqual(
+    ['header.accepted', 'header.both', 'header.aside']);
+  expect(sendable['header.both']).toBe('accepted');
+});
