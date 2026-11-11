@@ -72,6 +72,19 @@ describe('evidence key case', () => {
     expect(data.evidence.get('query.sequence')).toBe(6);
   });
 
+  test('the JavaScript Builder keeps a key added in other letters', () => {
+    // The JavaScript Builder alone, so its own filter decides whether a key
+    // is kept, and that decision ignores letter case as get does.
+    const data = new core.PipelineBuilder({
+      addJavaScriptBuilder: false,
+      useSetHeaderProperties: false
+    }).add(new core.JavascriptBuilder({})).build().createFlowData();
+    data.evidence.add('Query.Client-IP', '192.0.2.1');
+    data.evidence.add('HEADER.User-Agent', 'a browser');
+    expect(data.evidence.get('query.client-ip')).toBe('192.0.2.1');
+    expect(data.evidence.get('header.user-agent')).toBe('a browser');
+  });
+
   test('a key that is not there is still undefined', () => {
     const data = flowData();
     expect(data.evidence.get('query.session-id')).toBeUndefined();
