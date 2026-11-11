@@ -31,7 +31,11 @@ const DataFileMissingPropertyService = require('./dataFileMissingPropertyService
 // number or a point in a WKT string.
 const defaultDecimalPlaces = 3;
 
-// Properties whose numbers are given to the decimal places above.
+// Properties whose numbers are given to the decimal places above. The rule
+// covers a value the data file stores as an Azimuth or a Declination, and
+// the swig results do not say which stored type a value came from, so the
+// two properties the IP Intelligence data model gives as those types are
+// named here instead.
 const locationProperties = ['latitude', 'longitude'];
 
 /**
