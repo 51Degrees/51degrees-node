@@ -56,13 +56,15 @@ const build = (restrictedProperties) => new EngineBuilder({
   restrictedProperties
 });
 
-// Processes one User-Agent and gives back the Element Data.
+// Processes one User-Agent and gives back the Element Data. The Element
+// Data throws for a property it does not hold, `then` included, so it is
+// read from the Flow Data after the wait rather than given to a promise.
 const processed = async (engine) => {
   const pipeline = new core.PipelineBuilder().add(engine).build();
   const flowData = pipeline.createFlowData();
   flowData.evidence.add('header.user-agent', mobileUserAgent);
   await flowData.process();
-  return flowData.device;
+  return flowData;
 };
 
 // What a caller sees of a value, whether or not it has one.
@@ -95,7 +97,7 @@ describe('reading by index with the native engine', () => {
       // place of its name among the names given, whatever order the data set
       // holds, so the table and the native engine must agree.
       const names = ['PlatformName', 'IsMobile', 'BrowserName'];
-      const data = await processed(build(names));
+      const data = (await processed(build(names))).device;
       names.forEach((name, index) => {
         expect(data.swigResults.getPropertyName(index)).toBe(name);
       });
@@ -106,8 +108,9 @@ describe('reading by index with the native engine', () => {
     // different indexes. Every value still matches, which is what a reload
     // into a different data set order does.
     const names = ['IsMobile', 'BrowserName', 'PlatformName', 'IsCrawler'];
-    const forwards = await processed(build(names));
-    const backwards = await processed(build([...names].reverse()));
+    const forwards = (await processed(build(names))).device;
+    const backwards =
+      (await processed(build([...names].reverse()))).device;
     for (const name of names) {
       expect(shown(backwards.get(name.toLowerCase())))
         .toBe(shown(forwards.get(name.toLowerCase())));
@@ -119,8 +122,8 @@ describe('reading by index with the native engine', () => {
     // shared names read the same although their indexes differ.
     const few = ['IsMobile', 'BrowserName'];
     const many = ['PlatformName', 'IsMobile', 'IsCrawler', 'BrowserName'];
-    const small = await processed(build(few));
-    const large = await processed(build(many));
+    const small = (await processed(build(few))).device;
+    const large = (await processed(build(many))).device;
     for (const name of few) {
       expect(shown(large.get(name.toLowerCase())))
         .toBe(shown(small.get(name.toLowerCase())));
@@ -128,8 +131,8 @@ describe('reading by index with the native engine', () => {
   });
 
   test('a read by name and a typed read give the same value', async () => {
-    const data = await processed(
-      build(['IsMobile', 'BrowserName', 'PlatformName']));
+    const data = (await processed(
+      build(['IsMobile', 'BrowserName', 'PlatformName']))).device;
     const byName = data.get('ismobile');
     const typed = data.ismobile;
     expect(shown(typed)).toBe(shown(byName));
@@ -148,7 +151,7 @@ describe('reading by index with the native engine', () => {
 
   test('a read by index is not slower than a read by name', async () => {
     const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
-    const data = await processed(engine);
+    const data = (await processed(engine)).device;
     const results = data.swigResults;
     const index = engine.propertyIndexes.ismobile;
 
@@ -188,7 +191,7 @@ describe('reading by index with the native engine', () => {
     // taken away, so the figures are before and after on one engine and one
     // set of results.
     const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
-    const data = await processed(engine);
+    const data = (await processed(engine)).device;
     const table = engine.propertyIndexes;
 
     const time = () => {
