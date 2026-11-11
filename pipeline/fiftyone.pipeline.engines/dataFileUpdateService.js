@@ -69,6 +69,19 @@ const errorDetail = function (error) {
 };
 
 /**
+ * The message logged when an update complete callback throws. The wording
+ * is the one every language uses for this error.
+ *
+ * @param {DataFile} dataFile the data file the update was for
+ * @param {*} error the error the callback threw
+ * @returns {string} the message to log
+ */
+const callbackErrorText = function (dataFile, error) {
+  return 'An update complete callback raised an error for ' +
+    engineName(dataFile) + '. Error detail: ' + errorDetail(error);
+};
+
+/**
  * The value for the If-Modified-Since header of a request for new data. It
  * is the published date of the data file, or the last time the file at its
  * path changed where the data file has no published date. The date is an
@@ -245,14 +258,14 @@ class DataFileUpdateService {
       try {
         listener.call(this.eventEmitter, status, dataFile);
       } catch (e) {
-        this.log('error', e);
+        this.log('error', callbackErrorText(dataFile, e));
       }
     }
     if (typeof dataFile.onUpdateComplete === 'function') {
       try {
         dataFile.onUpdateComplete(status);
       } catch (e) {
-        this.log('error', e);
+        this.log('error', callbackErrorText(dataFile, e));
       }
     }
   }
