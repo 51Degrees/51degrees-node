@@ -46,7 +46,7 @@ const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUt
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
+// a small number of Properties.
 // Contact us for a copy of the Enterprise data file at
 // https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updateonstartup.js&utm_term=lite_v_4_1_ipi
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
@@ -88,6 +88,10 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     // Path to your data file
     dataFile: datafile,
+    // With a licence key the update replaces the file with the Enterprise
+    // data file, which is about 6 GB, so the low memory profile reads the
+    // file as it goes rather than holding all of it in memory.
+    performanceProfile: 'LowMemory',
     // For automatic updates to work you will need to provide a license key.
     // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updateonstartup.js&utm_term=licencekeys
     licenceKeys: myLicenseKey,

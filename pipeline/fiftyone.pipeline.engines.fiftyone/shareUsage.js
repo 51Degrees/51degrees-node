@@ -35,10 +35,10 @@ const url = require('url');
 const os = require('os');
 
 /**
- * The maximum length of a piece of evidence's value which can be
- * added to the usage data being sent.
+ * The maximum number of code points in a piece of evidence's value which
+ * can be added to the usage data being sent.
  */
-const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+const SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
 
@@ -262,6 +262,9 @@ class ShareUsage extends Engine {
       xml += '<Language>Node.JS</Language>';
       // The software language version
       xml += `<LanguageVersion>${nodeVersion}</LanguageVersion>`;
+      // The IP address of this server
+      xml += '<ServerIP>' + new ReplacedString(serverAddress()).result +
+        '</ServerIP>';
       // The OS name and version
       xml += `<Platform>${osVersion}</Platform>`;
       this.constantXml = xml;
@@ -285,11 +288,14 @@ class ShareUsage extends Engine {
 
     // --- write variable data
     // The SessionID used to track a series of requests
-    xml += `<SessionId>${data.sessionId}</SessionId>`;
+    xml += '<SessionId>' + new ReplacedString(data.sessionId).result +
+      '</SessionId>';
     // The sequence number of the request in a series of requests.
-    xml += `<Sequence>${data.sequence}</Sequence>`;
-    // The client IP of the request
-    xml += `<ClientIP>${data.clientIP}</ClientIP>`;
+    xml += '<Sequence>' + new ReplacedString(data.sequence).result +
+      '</Sequence>';
+    // The client IP of the request, empty where there is none
+    xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
+      '</ClientIP>';
 
     // The UTC date/time this entry was written
     const date = new Date().toISOString();
@@ -304,13 +310,14 @@ class ShareUsage extends Engine {
         const replacedString = new ReplacedString(entryValue);
         // Write start element
         if (categoryKey.length > 0) {
-          xml += `<${categoryKey} Name="${entryKey}"`;
+          const name = new ReplacedString(entryKey).result;
+          xml += `<${categoryKey} Name="${name}"`;
         } else {
           xml += `<${entryKey}`;
         }
         // Write any attributes
-        if (replacedString.replaced) {
-          xml += ' replaced="true"';
+        if (replacedString.escaped) {
+          xml += ' escaped="true"';
         }
         if (replacedString.truncated) {
           xml += ' truncated="true"';
@@ -403,57 +410,96 @@ class ShareUsage extends Engine {
   }
 }
 
-// a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-const VALID_XML_CHARS =
-  Array.from({ length: parseInt('0x7F', 16) - parseInt('0x20', 16) }, (v, k) => k + parseInt('0x20', 16))
-    .concat(
-      Array.from({ length: parseInt('0x100', 16) - parseInt('0x40', 16) }, (v, k) => k + parseInt('0x40', 16)));
-
-const IS_VALID_XML_CHAR = __getIsValidCharMap();
-
 /**
- * Get an object describing whether a character value is valid
+ * The first address of this server that is not a loopback address, an IPv4
+ * address before an IPv6 one, or an empty string where there is none.
  *
- * @returns {object} Object of valid chars
+ * @returns {string} the address
  */
-function __getIsValidCharMap () {
-  const maxChar = parseInt('0x100', 16);
-  const isValidChar = {};
-  for (let c = 0; c <= maxChar; c++) {
-    isValidChar[c] = VALID_XML_CHARS.includes(c);
+function serverAddress () {
+  let interfaces = {};
+  try {
+    interfaces = os.networkInterfaces();
+  } catch (e) {
+    // The addresses of this server cannot be read.
   }
-  return isValidChar;
+  const addresses = [];
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (!entry.internal) {
+        addresses.push(entry);
+      }
+    }
+  }
+  const address = addresses.find(
+    (entry) => entry.family === 'IPv4' || entry.family === 4) ||
+    addresses[0];
+  return address ? address.address : '';
 }
 
 /**
- * Replace characters that cause problems in XML with the "Replacement character"
+ * Whether a character is allowed in XML 1.0, which allows tab, line feed,
+ * carriage return, and the ranges U+0020 to U+D7FF, U+E000 to U+FFFD and
+ * U+10000 to U+10FFFF.
+ *
+ * @param {number} code the UTF-16 code unit
+ * @returns {boolean} true if the character is allowed
+ */
+function isValidXmlChar (code) {
+  return code === 0x9 || code === 0xA || code === 0xD ||
+    (code >= 0x20 && code <= 0xD7FF) ||
+    (code >= 0xE000 && code <= 0xFFFD);
+}
+
+/**
+ * Prepares a value for the XML. A value that is not a string is written as
+ * its text, and undefined and null as nothing. A value over the maximum
+ * number of code points is cut, special XML characters are escaped, and a
+ * character XML 1.0 does not allow is written as \x and four lower case
+ * hexadecimal digits of its code. A surrogate pair is one valid character
+ * and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
     this.result = '';
-    this.replaced = false;
+    this.escaped = false;
     this.truncated = false;
-    if (text) {
-      const escapedText = text
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const length = Math.min(escapedText.length, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
-      this.truncated = escapedText.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH;
-      Array.from(escapedText.substring(0, length))
-        .forEach(c => {
-          if (c.charCodeAt(0) < Object.keys(IS_VALID_XML_CHAR).length && IS_VALID_XML_CHAR[c.charCodeAt(0)]) {
-            this.result += c;
-          } else {
-            this.result += String.fromCharCode(parseInt('0xFFFD', 16));
-            this.replaced = true;
-          }
-        });
+    if (text !== undefined && text !== null) {
+      // The limit counts code points, so a character is never cut in two.
+      let value = String(text);
+      const points = Array.from(value);
+      if (points.length > SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS) {
+        this.truncated = true;
+        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS)
+          .join('');
+      }
+      for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code >= 0xD800 && code <= 0xDBFF &&
+          i + 1 < value.length &&
+          value.charCodeAt(i + 1) >= 0xDC00 &&
+          value.charCodeAt(i + 1) <= 0xDFFF) {
+          this.result += value.substring(i, i + 2);
+          i++;
+        } else if (isValidXmlChar(code)) {
+          this.result += ESCAPED_CHARS[value[i]] || value[i];
+        } else {
+          this.result += '\\x' + code.toString(16).padStart(4, '0');
+          this.escaped = true;
+        }
+      }
     }
   }
 }
+
+const ESCAPED_CHARS = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;',
+  '<': '&lt;',
+  '>': '&gt;'
+};
+
 /**
  * Internal class that is used to store details of data in memory
  * prior to it being sent to 51Degrees.
@@ -462,7 +508,7 @@ class ShareUsageData {
   constructor () {
     this.evidenceData = {};
     this.sessionId = '';
-    this.clientIp = '';
+    this.clientIP = '';
     this.sequence = '';
   }
 

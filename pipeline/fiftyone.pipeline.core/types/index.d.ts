@@ -19,6 +19,7 @@ export let Pipeline: typeof import("./pipeline");
 export let PipelineBuilder: typeof import("./pipelineBuilder");
 export let AspectPropertyValue: typeof import("./aspectPropertyValue");
 export let JsonBundler: typeof import("./jsonbundler");
+export let LicenseKeys: typeof import("./licenseKeys");
 export let JavascriptBuilder: typeof import("./javascriptbuilder");
 export let SequenceElement: typeof import("./sequenceElement");
 export let SetHeadersElement: typeof import("./setHeadersElement");

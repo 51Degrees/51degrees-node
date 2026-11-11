@@ -68,6 +68,19 @@ class Engine extends FlowElement {
   }
 
   /**
+   * Whether a result may be stored in the cache and served from it. A result
+   * that holds a value created for the one request that asked for it, such
+   * as a 51Did, must not be, or the next request with the same evidence
+   * would be given it.
+   *
+   * @param {object} data the element data of a result
+   * @returns {boolean} true unless the result holds such a value
+   */
+  isCacheable (data) {
+    return true;
+  }
+
+  /**
    * Checks cache and returns cached result if found.
    *
    * @param {FlowData} flowData checks if a FlowData's evidence
@@ -82,7 +95,7 @@ class Engine extends FlowElement {
 
     const cached = this.cache.get(keys);
 
-    if (cached) {
+    if (cached && this.isCacheable(cached)) {
       flowData.setElementData(cached);
 
       return true;
@@ -117,7 +130,10 @@ class Engine extends FlowElement {
 
         keys = JSON.stringify(keys);
 
-        engine.cache.put(keys, flowData.get(engine.dataKey));
+        const data = flowData.get(engine.dataKey);
+        if (engine.isCacheable(data)) {
+          engine.cache.put(keys, data);
+        }
       }
     });
   }

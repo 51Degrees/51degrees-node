@@ -64,7 +64,7 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
  * customers may choose to download the files themselves and move them into place to be detected
  * by the 51Degrees filesystem watcher.
  * ## Lite Data File
- * Lite data files (free-to-use, limited capabilities, no license key required) are created
+ * Lite data files (free-to-use, with a small number of Properties, no license key required) are created
  * regularly and cannot be updated using auto-update, they may be downloaded with the scripts
  * in the (data repository)[href=https://github.com/51Degrees/data], which is included with
  * source distributions of this software.
@@ -187,7 +187,10 @@ const explainLicenseKey = function (dataFilePath, output) {
   if (dataFile !== undefined && fs.existsSync(dataFile)) {
     const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
       dataFile,
-      performanceProfile: 'Balanced',
+      // The low memory profile reads the file as it goes, because a file
+      // given to this example is the Enterprise data file, which is about
+      // 6 GB, rather than the free ASN data file used otherwise.
+      performanceProfile: 'LowMemory',
       shareUsage: false,
       autoUpdate: false,
       updateOnStart: false,
@@ -244,7 +247,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // let's check this file out
     const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
       dataFile: dataFilePath,
-      performanceProfile: 'Balanced',
+      // The low memory profile reads the file as it goes, because the
+      // Enterprise data file this example works with is about 6 GB.
+      performanceProfile: 'LowMemory',
       shareUsage: false,
       autoUpdate: false,
       updateOnStart: false,
@@ -342,6 +347,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // file to a temporary file (createTempDataCopy parameter == true.
     dataFile: dataFilePath,
     createTempDataCopy: true,
+    // The low memory profile reads the file as it goes, because the
+    // Enterprise data file this example downloads is about 6 GB.
+    performanceProfile: 'LowMemory',
     // Enable automatic updates once the pipeline has started
     autoUpdate: true,
     // For automatic updates to work you will need to provide a license key.

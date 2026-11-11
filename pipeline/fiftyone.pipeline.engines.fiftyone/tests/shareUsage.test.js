@@ -20,7 +20,9 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const {
+  PipelineBuilder, FlowElement, ElementDataDictionary
+} = require('fiftyone.pipeline.core');
 const ShareUsage = require('../shareUsage');
 const http = require('http');
 const os = require('os');
@@ -43,6 +45,8 @@ const requestListener = function (req, res) {
   let data = '';
   // Unzip the data.
   const gunzip = zlib.createGunzip();
+  // Decode as the chunks arrive, without splitting a character in two.
+  gunzip.setEncoding('utf8');
   req.pipe(gunzip);
   gunzip.on('data', function (chunk) {
     data += chunk;
@@ -291,7 +295,19 @@ test('share usage - session and sequence', done => {
     endpoint: 'http://127.0.0.1:8080/'
   });
 
-  const pipeline = new PipelineBuilder()
+  // The JSON bundler needs a sequence number, which this stand-in gives
+  // without touching the evidence.
+  const standIn = new FlowElement({
+    dataKey: 'sequence',
+    processInternal: function (flowData) {
+      flowData.setElementData(new ElementDataDictionary({
+        flowElement: this,
+        contents: { 'session-id': '', sequence: 1 }
+      }));
+    }
+  });
+  const pipeline = new PipelineBuilder({ addSequenceElement: false })
+    .add(standIn)
     .add(usageEngine)
     .build();
 
@@ -310,60 +326,167 @@ test('share usage - session and sequence', done => {
 });
 
 /**
- * Check that invalid characters are escaped correctly.
+ * The Sequence Element runs before the usage sharing element, so the
+ * sequence shared is the one it has added one to.
  */
-test('share usage - invalid char', done => {
+test('share usage - sequence after the Sequence Element', done => {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/'
   });
 
-  const replacementChar = String.fromCharCode(parseInt('0xFFFD', 16));
   const pipeline = new PipelineBuilder()
     .add(usageEngine)
     .build();
 
   const flowData = pipeline.createFlowData();
-  flowData.evidence.add('header.user-agent', '1ƌ2');
+  flowData.evidence.add('query.session-id', '1');
+  flowData.evidence.add('query.sequence', '1');
 
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).not.toContain('ƌ');
-      expect(received[0]).toContain(replacementChar);
-      expect(received[0]).toContain('replaced="true"');
-      expect(received[0]).toContain(`<header Name="user-agent" replaced="true">1${replacementChar}2</header>`);
+      expect(received[0]).toContain('<SessionId>1</SessionId>');
+      expect(received[0]).toContain('<Sequence>2</Sequence>');
       done();
     }, 2000);
   });
 });
 
 /**
- * Check that long values are truncated correctly.
+ * Sends one request carrying the user-agent given through a usage sharing
+ * element and passes the XML that was received to the check.
+ *
+ * @param {string} userAgent the value of the header.user-agent evidence
+ * @param {Function} check called with the XML text received
+ * @param {Function} done the test's callback
  */
-test('share usage - truncated value', done => {
+function sendAndCheck (userAgent, check, done) {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/'
   });
-
-  const ua = 'X'.repeat(1000);
   const pipeline = new PipelineBuilder()
     .add(usageEngine)
     .build();
 
   const flowData = pipeline.createFlowData();
-  flowData.evidence.add('header.user-agent', ua);
+  flowData.evidence.add('header.user-agent', userAgent);
 
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).toContain('truncated="true"');
-      expect(received[0]).not.toContain(ua);
-      expect(received[0]).toContain(`<header Name="user-agent" truncated="true">${'X'.repeat(512)}</header>`);
+      check(received[0]);
       done();
     }, 2000);
   });
+}
+
+/**
+ * A character XML 1.0 does not allow is written as \x and its code as four
+ * lower case hexadecimal digits, and the element is marked escaped.
+ */
+test.each([
+  ['a control character', '1\u00012', '1\\x00012'],
+  ['the unit separator', '1\u001f2', '1\\x001f2'],
+  ['U+FFFE', '1\ufffe2', '1\\xfffe2'],
+  ['a lone high surrogate', '1\ud8002', '1\\xd8002'],
+  ['a lone low surrogate', '1\udc002', '1\\xdc002']
+])('share usage - %s is written as \\x and four hex digits', (name, value, written) => {
+  return new Promise(resolve => {
+    sendAndCheck(value, xml => {
+      expect(xml).toContain(
+        `<header Name="user-agent" escaped="true">${written}</header>`);
+    }, resolve);
+  });
+});
+
+/**
+ * Characters XML 1.0 allows are written as they are, with no attribute.
+ */
+test('share usage - allowed characters are written as they are', done => {
+  const value = 'a\tb\nc\rd\u018ce\u00e9f\ud83d\ude00g';
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      `<header Name="user-agent">${value}</header>`);
+  }, done);
+});
+
+/**
+ * Values are cut at 10,000 characters and marked truncated.
+ */
+test('share usage - a value of 10,001 characters is truncated', done => {
+  sendAndCheck('X'.repeat(10001), xml => {
+    expect(xml).toContain(
+      `<header Name="user-agent" truncated="true">${'X'.repeat(10000)}</header>`);
+  }, done);
+});
+
+test('share usage - a value of 10,000 characters is not truncated', done => {
+  sendAndCheck('X'.repeat(10000), xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(
+      `<header Name="user-agent">${'X'.repeat(10000)}</header>`);
+  }, done);
+});
+
+/**
+ * The limit counts Unicode code points, so a character made of two UTF-16
+ * code units counts once and is never cut in two.
+ */
+test('share usage - an emoji at the limit is kept whole', done => {
+  const emoji = '\ud83d\ude00';
+  sendAndCheck('X'.repeat(9999) + emoji + 'Y', xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      '<header Name="user-agent" truncated="true">' +
+      `${'X'.repeat(9999)}${emoji}</header>`);
+  }, done);
+});
+
+test('share usage - a second emoji over the limit is cut whole', done => {
+  const emoji = '\ud83d\ude00';
+  sendAndCheck('X'.repeat(9999) + emoji + emoji, xml => {
+    expect(xml).not.toContain('escaped=');
+    expect(xml).toContain(
+      '<header Name="user-agent" truncated="true">' +
+      `${'X'.repeat(9999)}${emoji}</header>`);
+  }, done);
+});
+
+test('share usage - 10,000 code points of emoji are not truncated', done => {
+  const value = '\ud83d\ude00'.repeat(10000);
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(`<header Name="user-agent">${value}</header>`);
+  }, done);
+});
+
+/**
+ * The limit counts the value as it was supplied, before any character is
+ * replaced, so the escapes do not count towards it.
+ */
+test('share usage - escapes do not count towards the limit', done => {
+  const value = '1\u00012' + 'X'.repeat(9997);
+  sendAndCheck(value, xml => {
+    expect(xml).not.toContain('truncated=');
+    expect(xml).toContain(
+      '<header Name="user-agent" escaped="true">' +
+      `1\\x00012${'X'.repeat(9997)}</header>`);
+  }, done);
+});
+
+/**
+ * A value with a character that is not allowed that is also too long is
+ * marked both escaped and truncated. The cut is made on the original value.
+ */
+test('share usage - escaped and truncated value', done => {
+  sendAndCheck('1\u00012' + 'X'.repeat(10000), xml => {
+    expect(xml).toContain(
+      '<header Name="user-agent" escaped="true" truncated="true">' +
+      `1\\x00012${'X'.repeat(9997)}</header>`);
+  }, done);
 });
 
 /**
@@ -475,6 +598,121 @@ test('share usage - XML characters', done => {
       done();
     }, 2000);
   });
+});
+
+/**
+ * Evidence that is not a string is shared as its text, as .NET writes it.
+ */
+test.each([
+  ['a number', 5, '5'],
+  ['zero', 0, '0'],
+  ['false', false, 'false']
+])('share usage - %s is shared as its text', (name, value, written) => {
+  return new Promise(resolve => {
+    sendAndCheck(value, xml => {
+      expect(xml).toContain(`<header Name="user-agent">${written}</header>`);
+    }, resolve);
+  });
+});
+
+/**
+ * Sends one request carrying the evidence given through a usage sharing
+ * element and passes the XML that was received to the check.
+ *
+ * @param {object} evidence the evidence keys and values
+ * @param {Function} check called with the XML text received
+ * @param {Function} done the test's callback
+ */
+function sendEvidenceAndCheck (evidence, check, done) {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  for (const [key, value] of Object.entries(evidence)) {
+    flowData.evidence.add(key, value);
+  }
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      check(received[0]);
+      done();
+    }, 2000);
+  });
+}
+
+/**
+ * The session id and the client IP come from the request, so the XML
+ * characters in them are escaped, as they are in evidence values.
+ */
+test('share usage - XML characters in the session id and client IP',
+  done => {
+    sendEvidenceAndCheck({
+      'query.session-id': 'a<b&c"d',
+      'server.client-ip': '1.2.3.4<>'
+    }, xml => {
+      expect(xml).toContain('<SessionId>a&lt;b&amp;c&quot;d</SessionId>');
+      expect(xml).toContain('<ClientIP>1.2.3.4&lt;&gt;</ClientIP>');
+    }, done);
+  });
+
+/**
+ * The name of an evidence entry is written in an attribute, so the XML
+ * characters in it are escaped.
+ */
+test('share usage - XML characters in an evidence name', done => {
+  sendEvidenceAndCheck({ 'header.x"y&z<': 'v' }, xml => {
+    expect(xml).toContain('<header Name="x&quot;y&amp;z&lt;">v</header>');
+  }, done);
+});
+
+/**
+ * The record always has a ClientIP element, so a request with no client IP
+ * has an empty one.
+ */
+test('share usage - no client IP gives an empty ClientIP', done => {
+  sendEvidenceAndCheck({ 'header.user-agent': 'a' }, xml => {
+    expect(xml).toContain('<ClientIP></ClientIP>');
+    expect(xml).not.toContain('undefined');
+  }, done);
+});
+
+/**
+ * The record has a ServerIP element, being the first address of this server
+ * that is not a loopback address, IPv4 before IPv6, or empty when there is
+ * none.
+ */
+test.each([
+  ['an IPv4 address before an IPv6 one', {
+    lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true }],
+    eth0: [
+      { address: 'fe80::1', family: 'IPv6', internal: false },
+      { address: '10.1.2.3', family: 'IPv4', internal: false }
+    ]
+  }, '10.1.2.3'],
+  ['an IPv6 address where there is no IPv4 one', {
+    lo: [{ address: '::1', family: 'IPv6', internal: true }],
+    eth0: [{ address: '2001:db8::5', family: 'IPv6', internal: false }]
+  }, '2001:db8::5'],
+  ['nothing where there are only loopback addresses', {
+    lo: [
+      { address: '127.0.0.1', family: 'IPv4', internal: true },
+      { address: '::1', family: 'IPv6', internal: true }
+    ]
+  }, '']
+])('share usage - ServerIP is %s', (name, interfaces, written) => {
+  const networkInterfaces = jest.spyOn(os, 'networkInterfaces')
+    .mockReturnValue(interfaces);
+  return new Promise(resolve => {
+    sendEvidenceAndCheck({ 'header.user-agent': 'a' }, xml => {
+      expect(xml).toContain(`<ServerIP>${written}</ServerIP>`);
+    }, resolve);
+  }).finally(() => networkInterfaces.mockRestore());
 });
 
 /**

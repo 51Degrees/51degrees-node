@@ -47,11 +47,13 @@ describe('Examples', () => {
     const outputFile = path.join(os.tmpdir(), 'compare-output.csv');
     const output = fs.createWriteStream(outputFile);
     try {
+      // CI holds the whole file in memory, and LowMemory is about 3x slower.
       await example.run(
         getTestDataFile(),
         getEvidenceFilePath(),
         output,
-        process.stdout);
+        process.stdout,
+        'MaxPerformance');
     } finally {
       output.end();
       fs.rmSync(outputFile, { force: true });

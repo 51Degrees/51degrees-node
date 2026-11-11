@@ -51,7 +51,7 @@ const ExampleUtils: {
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
+// a small number of Properties.
 // Find out about the Enterprise data file on our pricing page:
 // https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=lite_v_4_1_hash
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';

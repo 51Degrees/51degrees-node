@@ -97,7 +97,10 @@ const listValue = (data, key) => {
  */
 const run = async function (dataFile, output, evidence) {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
-    performanceProfile: 'Balanced',
+    // This example needs the Enterprise data file, which is about 6 GB, so
+    // it uses the low memory profile, which reads the file as it goes. Max
+    // performance would hold all of the file in memory.
+    performanceProfile: 'LowMemory',
     dataFile,
     shareUsage: false,
     autoUpdate: false,

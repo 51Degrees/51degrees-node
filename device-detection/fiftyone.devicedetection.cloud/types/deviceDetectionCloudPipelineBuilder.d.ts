@@ -18,6 +18,9 @@ declare class DeviceDetectionCloudPipelineBuilder extends DeviceDetectionCloudPi
      * an empty string, but this will cause automatic updates
      * to be disabled.
      * @param {string} options.resourceKey resourceKey
+     * @param {Array<string>|string} options.requestedProperties the fully
+     * qualified names of the properties to ask the cloud service for, such
+     * as device.ismobile. Required with a license key and no resource key.
      * @param {number} options.cacheSize size of the default cache
      * (includes cache if set).
      * @param {string} options.cloudEndPoint Choose a non default endpoint
@@ -31,9 +34,10 @@ declare class DeviceDetectionCloudPipelineBuilder extends DeviceDetectionCloudPi
      * normally. Recommended true for web apps so a device-detection failure
      * degrades gracefully instead of failing the request.
      */
-    constructor({ licenceKeys, resourceKey, cacheSize, cloudEndPoint, cloudRequestOrigin }: {
+    constructor({ licenceKeys, resourceKey, requestedProperties, cacheSize, cloudEndPoint, cloudRequestOrigin }: {
         licenceKeys: string;
         resourceKey: string;
+        requestedProperties: Array<string> | string;
         cacheSize: number;
         cloudEndPoint: string;
         cloudRequestOrigin: string;
