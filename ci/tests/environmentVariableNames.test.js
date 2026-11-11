@@ -177,9 +177,11 @@ describe('environment variable names', () => {
     expect(subject('$env:RESOURCE_KEY = $TestResourceKey'))
       .toEqual(['RESOURCE_KEY']);
 
-    // PowerShell's braced form is the same read.
-    expect(subject('${env:LICENSE_KEY} = $key')).toEqual(['LICENSE_KEY']);
-    expect(subject('${env:_51DEGREES_LICENSE_KEY} = $key')).toEqual([]);
+    // PowerShell's braced form is the same read. The dollar sign is kept
+    // apart so the text is not read as a template string.
+    const braced = (name) => '$' + '{env:' + name + '} = $key';
+    expect(subject(braced('LICENSE_KEY'))).toEqual(['LICENSE_KEY']);
+    expect(subject(braced('_51DEGREES_LICENSE_KEY'))).toEqual([]);
 
     // Including a read behind the name in use.
     expect(subject('process.env._51DEGREES_RESOURCE_KEY || ' +
