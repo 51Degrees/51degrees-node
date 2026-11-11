@@ -1,0 +1,16 @@
+name: Temporary red run tmp/node-62-red
+on:
+  push:
+    branches:
+      - 'tmp/node-62-red'
+jobs:
+  Test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: git log --oneline -2
+      - run: node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit ip-intelligence/fiftyone.ipintelligence.onpremise/tests/swigDataDecimalPlaces.test.js
