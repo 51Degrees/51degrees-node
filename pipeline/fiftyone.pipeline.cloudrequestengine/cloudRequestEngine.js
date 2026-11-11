@@ -620,8 +620,15 @@ class CloudRequestEngine extends Engine {
         continue;
       }
 
+      // Evidence keys ignore letter case, so a name already added in other
+      // letters is the same name, and the later, higher precedence value
+      // replaces it under its own spelling.
+      const lowerSuffix = suffix.toLowerCase();
+      const existing = Object.keys(queryData)
+        .find(name => name.toLowerCase() === lowerSuffix);
+
       // Check and add the evidence to the query parameters.
-      if (hasOwn(queryData, suffix) === false) {
+      if (existing === undefined) {
         queryData[suffix] = evidenceValue;
       } else {
         // If the queryParameter exists already.
@@ -632,7 +639,8 @@ class CloudRequestEngine extends Engine {
         if (prefix.toLowerCase() !== 'query') {
           const conflicts = {};
           for (const [key, value] of Object.entries(allEvidence)) {
-            if (key !== evidenceKey && key.includes(suffix)) {
+            if (key.toLowerCase() !== evidenceKey.toLowerCase() &&
+              key.toLowerCase().includes(lowerSuffix)) {
               conflicts[key] = value;
             }
           }
@@ -652,7 +660,9 @@ class CloudRequestEngine extends Engine {
             conflictStr);
           flowData.pipeline.log('warn', warningMessage);
         }
-        // Overwrite the existing queryParameter value.
+        // Replace the existing field, name and value, so the name sent is
+        // the winning key's.
+        delete queryData[existing];
         queryData[suffix] = evidenceValue;
       }
     }
