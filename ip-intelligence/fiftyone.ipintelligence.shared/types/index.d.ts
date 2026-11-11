@@ -17,8 +17,6 @@ export let errorMessages: {
 export let testConstants: {
     envVars: {
         superResourceKeyEnvVar: string;
-        ipiResourceKeyEnvVar: string;
-        licenseKeyEnvVar: string;
     };
     ipAddresses: {
         switzerlandIpv4: string;

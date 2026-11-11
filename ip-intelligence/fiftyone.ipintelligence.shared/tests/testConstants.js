@@ -23,9 +23,7 @@
 module.exports = {
   // Environment variables name for testing
   envVars: {
-    superResourceKeyEnvVar: 'TEST_SUPER_RESOURCE_KEY',
-    ipiResourceKeyEnvVar: 'TEST_IPI_RESOURCE_KEY',
-    licenseKeyEnvVar: 'TEST_LICENSE_KEY'
+    superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER'
   },
   // IP addresses for testing
   ipAddresses: {

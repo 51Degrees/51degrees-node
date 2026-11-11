@@ -202,11 +202,11 @@ You will also need to install any required packages for the examples in the **Ex
 Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
 
 There are other environment variables that you will also need to set in your test environment before running all tests:
-- `TEST_SUPER_RESOURCE_KEY`: This key contains all `SetHeader*` properties.
-- `TEST_PLATFORM_RESOURCE_KEY`: This key contains only the `SetHeaderPlatform*` property but no other `SetHeader` properties.
-- `TEST_HARDWARE_RESOURCE_KEY`: This key contains only the `SetHeaderHardware*` property but no other `SetHeader` properties.
-- `TEST_BROWSER_RESOURCE_KEY`: This key contains only the `SetHeaderBrowser*` property but no other `SetHeader` properties.
-- `TEST_NO_SETHEADER_RESOURCE_KEY`: This key contains no `SetHeader` properties.
+- `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.
+- `_51DEGREES_RESOURCE_KEY_PLATFORM`: This key contains only the `SetHeaderPlatform*` property but no other `SetHeader` properties.
+- `_51DEGREES_RESOURCE_KEY_HARDWARE`: This key contains only the `SetHeaderHardware*` property but no other `SetHeader` properties.
+- `_51DEGREES_RESOURCE_KEY_BROWSER`: This key contains only the `SetHeaderBrowser*` property but no other `SetHeader` properties.
+- `_51DEGREES_RESOURCE_KEY_NO_SETHEADER`: This key contains no `SetHeader` properties.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
 

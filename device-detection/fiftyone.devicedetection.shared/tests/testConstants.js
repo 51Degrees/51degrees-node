@@ -32,8 +32,7 @@ module.exports = {
     platformResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_PLATFORM',
     hardwareResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_HARDWARE',
     browserResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_BROWSER',
-    noSetHeaderResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_NO_SETHEADER',
-    licenseKeyEnvVar: 'TEST_LICENSE_KEY'
+    noSetHeaderResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_NO_SETHEADER'
   },
   // User-Agent string for testing
   userAgents: {

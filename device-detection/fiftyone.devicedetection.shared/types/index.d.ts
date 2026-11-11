@@ -22,7 +22,6 @@ export let testConstants: {
         hardwareResourceKeyEnvVar: string;
         browserResourceKeyEnvVar: string;
         noSetHeaderResourceKeyEnvVar: string;
-        licenseKeyEnvVar: string;
     };
     userAgents: {
         chromeUA: string;

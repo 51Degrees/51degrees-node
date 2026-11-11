@@ -26,10 +26,6 @@ $env:_51DEGREES_RESOURCE_KEY_HARDWARE = $Options.Keys.TestHardwareResourceKey
 $env:_51DEGREES_RESOURCE_KEY_BROWSER = $Options.Keys.TestBrowserResourceKey
 $env:_51DEGREES_RESOURCE_KEY_NO_SETHEADER = $Options.Keys.TestNoSetHeaderResourceKey
 
-$env:TEST_IPI_RESOURCE_KEY = $Options.Keys.TestIpiResourceKey
-
-$env:TEST_LICENSE_KEY = $Options.Keys.TestLicenseKey
-
 ./node/setup-environment.ps1 -RepoName $RepoName
 
 if ($LASTEXITCODE -ne 0) {

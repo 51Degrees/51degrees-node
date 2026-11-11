@@ -5,7 +5,6 @@ export namespace envVars {
     let hardwareResourceKeyEnvVar: string;
     let browserResourceKeyEnvVar: string;
     let noSetHeaderResourceKeyEnvVar: string;
-    let licenseKeyEnvVar: string;
 }
 export namespace userAgents {
     let chromeUA: string;
