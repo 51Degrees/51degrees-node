@@ -42,7 +42,15 @@ const autoUpdateStatus = {
   // The new data file can't be renamed to replace the previous one.
   AUTO_UPDATE_NEW_FILE_CANT_RENAME: 'Cannot Rename New File',
   // Refreshing the engine with the new data caused an error to occur.
-  AUTO_UPDATE_REFRESH_FAILED: 'Refresh Failed'
+  AUTO_UPDATE_REFRESH_FAILED: 'Refresh Failed',
+  // The data file has no temporary file path configured.
+  AUTO_UPDATE_TEMP_PATH_NOT_SET: 'Temp Path Not Set',
+  // A watched file could not be opened for reading in time.
+  AUTO_UPDATE_TIMEOUT: 'Timeout',
+  // The engine has no configuration for the data file asked about.
+  AUTO_UPDATE_NO_CONFIGURATION: 'No Configuration',
+  // An error with no status of its own.
+  AUTO_UPDATE_UNKNOWN_ERROR: 'Unknown Error'
 };
 
 Object.freeze(autoUpdateStatus);
