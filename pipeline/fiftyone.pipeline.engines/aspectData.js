@@ -91,9 +91,13 @@ class AspectData extends ElementData {
     const restricted = this.flowElement.restrictedProperties;
     if (restricted) {
       // Property names are compared ignoring case. An engine holds its
-      // restricted names in lower case already.
-      const keys = this.flowElement.restrictedPropertyKeys ||
-        new Set(restricted.map((name) => name.toLowerCase()));
+      // restricted names in lower case already, and any other element is
+      // given them on its first read.
+      let keys = this.flowElement.restrictedPropertyKeys;
+      if (keys === undefined) {
+        keys = new Set(restricted.map((name) => name.toLowerCase()));
+        this.flowElement.restrictedPropertyKeys = keys;
+      }
       if (!keys.has(key) && !keys.has(key.toLowerCase())) {
         throw util.format(errorMessages.propertyExcluded, key);
       }
