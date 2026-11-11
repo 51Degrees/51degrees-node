@@ -66,8 +66,8 @@ const errorDetail = function (error) {
 };
 
 /**
- * The message logged when an update complete callback throws. The wording
- * is the one every language uses for this error.
+ * The message logged when an update complete callback throws, in the words
+ * Python uses for the same error.
  *
  * @param {DataFile} dataFile the data file the update was for
  * @param {*} error the error the callback threw
