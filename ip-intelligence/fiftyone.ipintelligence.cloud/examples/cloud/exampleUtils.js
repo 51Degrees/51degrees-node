@@ -24,22 +24,13 @@ const fs = require('fs');
 
 const path = require('path');
 
-// The default environment variable used to get the resource key
-// to use when running examples. This aligned name is checked first,
-// before the legacy variable name.
-const RESOURCE_KEY_ENV_VAR = '51DEGREES_RESOURCE_KEY';
+// The environment variable used to get the resource key to use when
+// running examples.
+const RESOURCE_KEY_ENV_VAR = '_51DEGREES_RESOURCE_KEY';
 
-// The legacy environment variable used to get the resource key
-// to use when running examples. Retained for backwards compatibility
-// and checked when RESOURCE_KEY_ENV_VAR is not set.
-const LEGACY_RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
-
-// Get the resource key from the environment. The aligned
-// '51DEGREES_RESOURCE_KEY' variable is checked first, followed by the
-// legacy 'RESOURCE_KEY' variable.
+// Get the resource key from the environment, under the one name it has.
 const getResourceKeyFromEnv = function () {
-  return process.env[RESOURCE_KEY_ENV_VAR] ||
-    process.env[LEGACY_RESOURCE_KEY_ENV_VAR];
+  return process.env[RESOURCE_KEY_ENV_VAR];
 };
 
 // The common message shown when a resource key leaves one or more of
@@ -100,7 +91,6 @@ const serveStaticAsset = (req, res, publicDir) => {
 
 module.exports = {
   RESOURCE_KEY_ENV_VAR,
-  LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,
   getResourceKeyFromEnv,
   serveStaticAsset

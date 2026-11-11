@@ -258,7 +258,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
   // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
+  // find one in priority order. The _51DEGREES_DD_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let deviceDataFile = args.length > 0 ? args[0] : undefined;
   if (deviceDataFile === undefined) {
@@ -269,7 +269,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   }
 
   // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
+  // find one in priority order. The _51DEGREES_IPI_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let ipDataFile = args.length > 1 ? args[1] : undefined;
   if (ipDataFile === undefined) {

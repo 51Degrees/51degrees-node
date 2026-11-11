@@ -51,14 +51,15 @@ const run = async (pipeline, evidence = {}) => {
   return flowData;
 };
 
-const noSequenceMessage = /Sequence Element/;
+const noSequenceMessage = 'The JSON Builder needs a sequence number. ' +
+  'Place a Sequence Element before the JSON Builder in the Pipeline.';
 
 describe('JSON Builder with no sequence number', () => {
   test('fails with an error and sets no JSON', async () => {
     const flowData = await run(build(userElement()));
     expect(flowData.errors.jsonbundler).toBeDefined();
     expect(String(flowData.errors.jsonbundler.message ||
-      flowData.errors.jsonbundler)).toMatch(noSequenceMessage);
+      flowData.errors.jsonbundler)).toBe(noSequenceMessage);
     expect(() => flowData.get('jsonbundler')).toThrow();
   });
 

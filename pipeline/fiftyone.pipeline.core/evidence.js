@@ -136,6 +136,7 @@ class Evidence {
     // other letters replaces the value and keeps the letters it was first
     // added with.
     this.keys = Object.create(null);
+    this.unacceptedStore = {};
     /**
      * The web request as server.http-request holds it, being every value
      * addFromRequest read from the request, under its evidence key and
@@ -168,7 +169,12 @@ class Evidence {
       key = this.keys[folded];
     }
 
-    // Filter out any evidence that isn't needed in the pipeline
+    // Keep the evidence no element in the pipeline accepts apart from the
+    // rest, so an element that needs it can still reach it through
+    // getUnaccepted. getAll stays the accepted evidence alone, which is
+    // what an engine's cache key and usage sharing read. Both stores are
+    // keyed through the same table, so two spellings of one key are one
+    // entry in either.
 
     let keep;
 
@@ -186,12 +192,17 @@ class Evidence {
       this.flowData.pipeline.log('debug', key + ' added to evidence');
 
       this.keys[folded] = key;
+      delete this.unacceptedStore[key];
       this.evidenceStore[key] = value;
     } else {
       this.flowData.pipeline.log(
         'debug',
-        key + ' filtered out of evidence. Not added.'
+        key + ' not accepted by any element. Set aside.'
       );
+
+      this.keys[folded] = key;
+      delete this.evidenceStore[key];
+      this.unacceptedStore[key] = value;
     }
   }
 
@@ -376,8 +387,11 @@ class Evidence {
     if (folded === Constants.evidenceHttpRequest) {
       return this.httpRequest;
     }
-    return Object.prototype.hasOwnProperty.call(this.keys, folded)
-      ? this.evidenceStore[this.keys[folded]]
+    // The table also holds the set aside keys, which get does not read.
+    const stored = this.keys[folded];
+    return stored !== undefined &&
+      Object.prototype.hasOwnProperty.call(this.evidenceStore, stored)
+      ? this.evidenceStore[stored]
       : undefined;
   }
 
@@ -389,6 +403,19 @@ class Evidence {
    */
   getAll () {
     return this.evidenceStore;
+  }
+
+  /**
+   * Get the evidence no element in the pipeline accepts, which add set
+   * aside rather than throwing away. The Cloud Request Engine sends it
+   * along with the accepted evidence, because what the cloud service uses
+   * changes over time.
+   *
+   * @returns {object} the evidence set aside, empty where every key was
+   * accepted
+   */
+  getUnaccepted () {
+    return this.unacceptedStore;
   }
 }
 

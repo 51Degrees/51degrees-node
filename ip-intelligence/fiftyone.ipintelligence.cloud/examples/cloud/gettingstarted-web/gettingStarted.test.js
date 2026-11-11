@@ -47,8 +47,7 @@ const CloudRequestEngine =
 
 const resourceKeyNames = keyUtils.resourceKeyNames(
   tc.envVars.superResourceKeyEnvVar,
-  ExampleUtils.RESOURCE_KEY_ENV_VAR,
-  ExampleUtils.LEGACY_RESOURCE_KEY_ENV_VAR);
+  ExampleUtils.RESOURCE_KEY_ENV_VAR);
 
 describe('Examples', () => {
   test('cloud getting started web', async () => {

@@ -67,12 +67,12 @@ const DATA_FILE_AGE_WARNING = 30;
 // Environment variable that can be set to supply an explicit path to
 // the IP intelligence data file. Checked before the folder hierarchy
 // is searched.
-const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
+const IPI_DATA_FILE_ENV_VAR = '_51DEGREES_IPI_PATH';
 
 // Environment variable that can be set to supply an explicit path to
 // the device detection data file used by the mixed examples. Checked
 // before the folder hierarchy is searched.
-const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
+const DD_DATA_FILE_ENV_VAR = '_51DEGREES_DD_PATH';
 
 // Content types for the small set of static assets served by the web
 // examples. The shared pattern-library CSS and JS live under each

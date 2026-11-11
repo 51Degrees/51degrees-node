@@ -33,8 +33,7 @@ const IpIntelligenceCloudPipelineBuilder =
   require51('fiftyone.ipintelligence.cloud').IpIntelligenceCloudPipelineBuilder;
 const keyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  '51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY');
+const resourceKeyNames = keyUtils.resourceKeyNames();
 
 describe('ipIntelligenceCloud', () => {
   // Check that the cloud engine sets its data key correctly so

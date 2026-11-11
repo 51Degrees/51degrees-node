@@ -157,10 +157,35 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * If there are evidence keys other than 'query.' that conflict then
      * this is unexpected so a warning will be logged.
      *
+     * The engine sends every Evidence value in the Flow Data, including the
+     * values no element in the pipeline accepts, because what the cloud
+     * service uses changes over time and knowing about the other Evidence is
+     * important to continued optimization. The reserved names and the web
+     * request view are left out.
+     *
      * @param {FlowData} flowData FlowData to get evidence from
      * @returns {object} Evidence Dictionary
      */
     getContent(flowData: FlowData): object;
+    /**
+     * The evidence the engine sends, being every value in the Flow Data,
+     * whether an element accepted it or not, apart from the web request
+     * view. addQueryData then leaves out the reserved names. The accepted
+     * values come first, so where the two would give the same name the
+     * accepted one is sent.
+     *
+     * @param {Evidence} evidence the Flow Data's evidence
+     * @returns {object} the evidence keys and values to send
+     */
+    sendableEvidence(evidence: Evidence): object;
+    /**
+     * Whether an evidence key is sent to the cloud service. The reserved
+     * names are left out later, by addQueryData.
+     *
+     * @param {string} key the evidence key
+     * @returns {boolean} false for the web request view, in any letter case
+     */
+    isSent(key: string): boolean;
     /**
      * Add query data to the evidence.
      *

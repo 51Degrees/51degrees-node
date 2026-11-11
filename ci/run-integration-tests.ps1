@@ -5,9 +5,8 @@ param (
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-# The pipeline and location tests read the key from these.
+# The pipeline and location tests read the key from this.
 $env:_51DEGREES_RESOURCE_KEY = $TestResourceKey
-$env:RESOURCE_KEY = $TestResourceKey
 
 ./node/run-integration-tests.ps1 -RepoName $RepoName
 
@@ -112,7 +111,7 @@ if (Test-Path $tacDataFile) {
         -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web" `
         -Port 8097 `
         -Environment @{
-            '51DEGREES_DD_PATH' = (Resolve-Path $tacDataFile).Path
+            '_51DEGREES_DD_PATH' = (Resolve-Path $tacDataFile).Path
         }
     } catch { $failed += 'on-premise' }
 } else {

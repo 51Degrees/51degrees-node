@@ -27,8 +27,7 @@ const GeoLocation = require(path.resolve(__dirname, '..'));
 // when no resource key is set. The names are tried in this order.
 const resourceKeyNames = [
   '_51DEGREES_RESOURCE_KEY',
-  '_51DEGREES_RESOURCE_KEY_BESPOKE',
-  'RESOURCE_KEY'
+  '_51DEGREES_RESOURCE_KEY_BESPOKE'
 ];
 const myResourceKey = resourceKeyNames
   .map((name) => process.env[name])
