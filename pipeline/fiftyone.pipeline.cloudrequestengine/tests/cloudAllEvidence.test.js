@@ -187,3 +187,17 @@ test('the accepted evidence comes before the set aside evidence', () => {
     ['header.accepted', 'header.both', 'header.aside']);
   expect(sendable['header.both']).toBe('accepted');
 });
+
+// A name that is also a member of every object is sent like any other.
+test('a key named like an object member is still sent', async () => {
+  const content = await sendEvidence({
+    constructor: 'a constructor',
+    'query.toString': 'a string',
+    valueOf: 'a value'
+  });
+
+  const own = (name) => Object.prototype.hasOwnProperty.call(content, name);
+  expect(own('constructor') && content.constructor).toBe('a constructor');
+  expect(own('toString') && content.toString).toBe('a string');
+  expect(own('valueOf') && content.valueOf).toBe('a value');
+});
