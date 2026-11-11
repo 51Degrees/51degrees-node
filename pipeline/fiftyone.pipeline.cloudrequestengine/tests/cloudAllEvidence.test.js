@@ -37,15 +37,22 @@ class RecordingClient extends MockRequestClient {
   }
 
   post (url, content, origin) {
+    // A license key asks for the accessible properties by post.
+    if (url.toLowerCase().includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(this.properties));
+    }
     this.posts.push({ url, content });
     return super.post(url, content, origin);
   }
 }
 
 /**
- * Builds a cloud-only pipeline over a recording client, waits for the engine
- * to be ready, adds the evidence given, processes it and gives back the
- * body of the one post the engine made.
+ * Builds a pipeline holding the engine alone over a recording client, waits
+ * for the engine to be ready, adds the evidence given, processes it and gives
+ * back the body of the one post the engine made. The Set Headers Element
+ * accepts every key and the JavaScript Builder every query and header key,
+ * so both are left out, and the engine's own filter, being the cloud's
+ * evidencekeys answer, is the only one that decides what Evidence keeps.
  *
  * @param {object} evidence the evidence keys and values to add
  * @param {object} [settings] extra engine settings
@@ -57,7 +64,10 @@ const sendEvidence = async function (evidence, settings = {}) {
     resourceKey: testResourceKey,
     requestClient: client
   }, settings));
-  const pipeline = new PipelineBuilder().add(engine).build();
+  const pipeline = new PipelineBuilder({
+    addJavaScriptBuilder: false,
+    useSetHeaderProperties: false
+  }).add(engine).build();
   // Wait for the cloud's evidencekeys answer, so the engine's filter is
   // the one a running service has when the evidence is added.
   await engine.ready();
