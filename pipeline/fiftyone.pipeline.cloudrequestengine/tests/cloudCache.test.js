@@ -33,18 +33,25 @@ const baseJson = {
   javascriptProperties: []
 };
 
-// Answers each request with the next body, and counts the requests.
+// Answers each request with the next body, and counts the requests. Under a
+// resource key the evidence keys and accessible properties are both gets.
 class CountingClient extends MockRequestClient {
   constructor (bodies) {
     super({ json: bodies[0] });
     this.bodies = bodies;
     this.posts = 0;
+    this.gets = 0;
   }
 
   post (url, headers, data) {
     this.json = this.bodies[Math.min(this.posts, this.bodies.length - 1)];
     this.posts++;
     return super.post(url, headers, data);
+  }
+
+  get (url, origin) {
+    this.gets++;
+    return super.get(url, origin);
   }
 }
 
@@ -109,6 +116,26 @@ describe('cloud request engine cache', () => {
         sessions.push(flowData.evidence.get('query.session-id'));
       }
       expect(sessions[0]).not.toBe(sessions[1]);
+      expect(client.posts).toBe(1);
+    });
+
+  test('fetches the evidence keys and properties once for many requests',
+    async () => {
+      const client = new CountingClient([baseJson]);
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      for (let i = 0; i < 3; i++) {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.User-Agent', 'iPhone');
+        await flowData.process();
+      }
+      await engine.ready();
+      // One get for the evidence keys and one for the accessible properties.
+      expect(client.gets).toBe(2);
       expect(client.posts).toBe(1);
     });
 
