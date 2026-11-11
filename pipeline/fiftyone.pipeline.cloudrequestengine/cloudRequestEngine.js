@@ -137,10 +137,11 @@ class CloudRequestEngine extends Engine {
     // on premise web server, or (b) use a privately hosted version of the
     // 51Degrees cloud for performance reasons. This is the private hosting
     // option of the 51Degrees cloud service. Both run the same service, so
-    // everything built on this engine works unchanged once FOD_CLOUD_API_URL
-    // names the other host's API base including the /api/v4/ segment.
+    // everything built on this engine works unchanged once
+    // _51DEGREES_CLOUD_ENDPOINT names the other host's API base including the
+    // /api/v4/ segment.
     if (!baseURL) {
-      baseURL = process.env.FOD_CLOUD_API_URL;
+      baseURL = process.env._51DEGREES_CLOUD_ENDPOINT;
       if (!baseURL) {
         baseURL = sharedValues.baseURLDefault;
       }

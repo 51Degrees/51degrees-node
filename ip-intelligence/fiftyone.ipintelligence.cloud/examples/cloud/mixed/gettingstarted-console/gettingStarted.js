@@ -43,7 +43,7 @@
  * but it is not yet available for IP intelligence. For now, you can run
  * the onpremise/mixed/gettingstarted-api example to simulate a custom
  * hosted cloud service, and point this example to it by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can then be used for the resource key.
  *
  * Required npm Dependencies:

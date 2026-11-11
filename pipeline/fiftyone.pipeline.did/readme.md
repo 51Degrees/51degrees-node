@@ -451,7 +451,7 @@ const { FodId, DidClient } = require('fiftyone.pipeline.did');
 const client = new DidClient({
   resourceKey: process.env._51DEGREES_RESOURCE_KEY,
   licenceKey: process.env._51DEGREES_LICENSE_KEY   // optional, see below
-  // endpoint: defaults to FOD_CLOUD_API_URL, then the public cloud
+  // endpoint: defaults to _51DEGREES_CLOUD_ENDPOINT, then the public cloud
 });
 ```
 
@@ -459,7 +459,7 @@ const client = new DidClient({
 | --- | --- |
 | `resourceKey` | Required for the public cloud. The page's resource key, public by nature. It travels in the route of the key and verify requests and in the form body of the redeem request. A private cloud serves those routes with no resource key, so a client for one is built without it |
 | `licenceKey` | Optional. A licence key of the same account, server side only. Needed to redeem where the account holds licence keys. Sent only in the body of the redeem request, never in a URL |
-| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `FOD_CLOUD_API_URL` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
+| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `_51DEGREES_CLOUD_ENDPOINT` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
 | `fetch` | Optional. The HTTP transport, defaulting to the global `fetch`, on Node and in a browser alike. Tests inject one |
 
 On Node every request carries a `User-Agent` naming this package and its
@@ -839,7 +839,7 @@ build and is refreshed by common-ci's `update-example-assets` step.
 | --- | --- |
 | `_51DEGREES_RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
 | `_51DEGREES_LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
-| `FOD_CLOUD_API_URL` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
+| `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
 | `PORT` | Web demo only. Defaults to `5100` |
 
 ### What a run costs
