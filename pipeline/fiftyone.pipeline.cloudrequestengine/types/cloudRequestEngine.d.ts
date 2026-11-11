@@ -73,6 +73,7 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @param {FlowData} flowData flowData to process
      * @returns {Promise} data from cloud service
      */
+    processInternal(flowData: FlowData): Promise<any>;
     /**
      * Fetches the evidence keys and properties before the first process,
      * whatever else is in the pipeline, because the cache key is built from
@@ -84,7 +85,6 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     process(flowData: FlowData): Promise<any>;
     discovery: Promise<any>;
-    processInternal(flowData: FlowData): Promise<any>;
     /**
      * A response with a top level `fodid` member, in any case, holds a 51Did
      * created for the one request, so it is neither stored in the cache nor

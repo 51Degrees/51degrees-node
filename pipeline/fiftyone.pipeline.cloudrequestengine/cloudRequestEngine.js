@@ -224,6 +224,11 @@ class CloudRequestEngine extends Engine {
    * @param {FlowData} flowData flowData to process
    * @returns {Promise} data from cloud service
    */
+  processInternal (flowData) {
+    const engine = this;
+    return engine.getData(flowData);
+  }
+
   /**
    * Fetches the evidence keys and properties before the first process,
    * whatever else is in the pipeline, because the cache key is built from
@@ -244,11 +249,6 @@ class CloudRequestEngine extends Engine {
       });
     }
     return this.discovery.then(() => super.process(flowData));
-  }
-
-  processInternal (flowData) {
-    const engine = this;
-    return engine.getData(flowData);
   }
 
   /**
