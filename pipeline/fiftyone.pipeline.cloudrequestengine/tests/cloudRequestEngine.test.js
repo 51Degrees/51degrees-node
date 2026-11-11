@@ -307,6 +307,8 @@ test('evidence never supplies resource, license or values', async () => {
   data.evidence.add('query.other', 'query_other');
   data.evidence.add('header.other', 'header_other');
   data.evidence.add('cookie.cookie-only', 'cookie_only');
+  // A key with no prefix is its own name.
+  data.evidence.add('Licence', 'evidence_bare_licence');
 
   await data.process();
 
