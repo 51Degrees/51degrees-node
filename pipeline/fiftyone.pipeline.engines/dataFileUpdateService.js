@@ -81,6 +81,21 @@ const withCause = function (text, error) {
 };
 
 /**
+ * The message for an error that has a row of its own in the specification's
+ * table. .NET logs it as 'Error during check for data update' with the error
+ * attached, the error carrying the row's text and then its cause, so those
+ * follow the text in that order.
+ *
+ * @param {string} rowText the row's message
+ * @param {*} [cause] the error that caused it, where there is one
+ * @returns {string} the message to log
+ */
+const checkErrorText = function (rowText, cause) {
+  const text = withCause('Error during check for data update', rowText);
+  return cause === undefined ? text : withCause(text, cause);
+};
+
+/**
  * The message for an error with no message of its own, such as one an
  * update complete callback throws. .NET logs it as an unhandled error, in
  * these words, with the exception attached, so the cause follows the text.
@@ -310,9 +325,9 @@ class DataFileUpdateService {
     try {
       dataFile.refresh();
     } catch (e) {
-      this.log('error', withCause('An error occurred when applying a ' +
+      this.log('error', checkErrorText('An error occurred when applying a ' +
         "data update to engine '" + engineName(dataFile) + "'" +
-        (fromFile ? ' after ' + RefreshTries + ' tries.' : ''), e));
+        (fromFile ? ' after ' + RefreshTries + ' tries.' : '.'), e));
       return false;
     }
     return true;
@@ -367,7 +382,7 @@ class DataFileUpdateService {
     try {
       urlParts = new url.URL(dataFile.updateUrl);
     } catch (e) {
-      this.log('error', withCause(this.accessError(dataFile), e));
+      this.log('error', checkErrorText(this.accessError(dataFile), e));
       this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       return false;
     }
@@ -415,7 +430,7 @@ class DataFileUpdateService {
       }
       dataFileUpdateService.log(
         'error',
-        withCause(dataFileUpdateService.accessError(dataFile), err));
+        checkErrorText(dataFileUpdateService.accessError(dataFile), err));
 
       dataFileUpdateService.fail(
         dataFile,
@@ -428,7 +443,7 @@ class DataFileUpdateService {
         response.resume();
 
         const downloadFailed = function (message, status) {
-          dataFileUpdateService.log('error', message);
+          dataFileUpdateService.log('error', checkErrorText(message));
           dataFileUpdateService.fail(dataFile, status);
         };
 
@@ -470,10 +485,9 @@ class DataFileUpdateService {
 
       if (!dataFile.tempDataDirectory) {
         response.resume();
-        dataFileUpdateService.log(
-          'error',
+        dataFileUpdateService.log('error', checkErrorText(
           "The data file '" + dataFile.identifier + "' is checking for " +
-          'updates but does not have a temporary file path configured.');
+          'updates but does not have a temporary file path configured.'));
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET);
@@ -510,10 +524,9 @@ class DataFileUpdateService {
         written = false;
         output.destroy();
         fs.unlink(filename, function () {});
-        dataFileUpdateService.log(
-          'error',
+        dataFileUpdateService.log('error', checkErrorText(
           "No response from data update service at '" + dataFile.updateUrl +
-          "' for engine '" + engineName(dataFile) + "'");
+          "' for engine '" + engineName(dataFile) + "'"));
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
@@ -612,11 +625,10 @@ class DataFileUpdateService {
    * @param {string} downloadHash the hash of the data that arrived
    */
   integrityFailed (dataFile, serverHash, downloadHash) {
-    this.log(
-      'error',
+    this.log('error', checkErrorText(
       "Integrity check failed. MD5 hash in HTTP response '" + serverHash +
       "' for '" + engineName(dataFile) + "'data update does not match " +
-      "calculated hash for the downloaded file '" + downloadHash + "'.");
+      "calculated hash for the downloaded file '" + downloadHash + "'."));
   }
 
   /**
@@ -653,7 +665,7 @@ class DataFileUpdateService {
         if (err) {
           // A locked file and any other write failure are the same row,
           // so the message names the copy rather than the cause.
-          dataFileUpdateService.log('error', withCause(
+          dataFileUpdateService.log('error', checkErrorText(
             'An error occurred when copying a data file to replace the ' +
             "existing one at '" + dataFile.path + "'.", err));
           removeDownload(function () {
