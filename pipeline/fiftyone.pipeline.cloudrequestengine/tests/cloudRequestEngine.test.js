@@ -304,3 +304,62 @@ test('evidence set before the keys arrive is kept', () => {
       .toBeFalsy();
   });
 });
+
+/**
+ * Test that Evidence never supplies resource, license, licence or values,
+ * under any prefix and in any letter case, as the Processing section of
+ * cloud-request-engine.md says, and that the engine's own keys are sent.
+ * Other Evidence is sent with the usual precedence.
+ */
+test('evidence never supplies resource, license or values', async () => {
+  const posts = [];
+  const client = new MockRequestClient({
+    keys: [
+      'query.resource', 'query.license', 'query.licence', 'query.values',
+      'header.resource', 'cookie.license', 'query.other',
+      'header.other', 'cookie.cookie-only'
+    ]
+  });
+  client.post = (url, content) => {
+    posts.push({ url, content });
+    return Promise.resolve(JSON.stringify({}));
+  };
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    licenseKey: 'LICENSEKEY',
+    requestClient: client
+  });
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('query.Resource', 'evidence_resource');
+  data.evidence.add('query.LICENSE', 'evidence_license');
+  data.evidence.add('query.Licence', 'evidence_licence');
+  data.evidence.add('query.Values', 'evidence_values');
+  data.evidence.add('header.resource', 'header_resource');
+  data.evidence.add('cookie.License', 'cookie_license');
+  data.evidence.add('query.other', 'query_other');
+  data.evidence.add('header.other', 'header_other');
+  data.evidence.add('cookie.cookie-only', 'cookie_only');
+  // A key with no prefix is its own name.
+  data.evidence.add('Licence', 'evidence_bare_licence');
+
+  await data.process();
+
+  expect(posts).toHaveLength(1);
+  const { url, content } = posts[0];
+  expect(url).toContain(testResourceKey + '.json');
+  expect(url).not.toContain('license=');
+  expect(url).not.toContain('evidence_');
+  // The engine's own keys are the only reserved fields in the body.
+  expect(Object.keys(content).filter(
+    name => ['resource', 'license', 'licence', 'values']
+      .includes(name.toLowerCase())
+  )).toStrictEqual(['resource', 'license']);
+  expect(content.resource).toBe(testResourceKey);
+  expect(content.license).toBe('LICENSEKEY');
+  expect(JSON.stringify(content)).not.toContain('evidence_');
+  expect(JSON.stringify(content)).not.toContain('header_resource');
+  expect(JSON.stringify(content)).not.toContain('cookie_license');
+  expect(content.other).toBe('query_other');
+  expect(content['cookie-only']).toBe('cookie_only');
+});

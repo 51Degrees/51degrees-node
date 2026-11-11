@@ -45,8 +45,25 @@ declare class ShareUsage extends ShareUsage_base {
      * is shared again when it comes from a new session. False by default. It
      * needs cookie to be set, and has no effect when shareAll is true,
      * because every cookie is then shared and used to find repeats.
+     * @param {number} options.maximumQueueSize The most entries held while
+     * waiting to be sent. When the queue is full, new entries are dropped. The
+     * default is 1000, or ten times requestedPackageSize if that is larger.
+     * @param {number} options.requestTimeout The time in milliseconds to wait
+     * for the service to answer before the send counts as failed. 60000 by
+     * default.
+     * @param {number} options.failuresToEnterRecovery The number of failed
+     * sends within failuresWindowSeconds that pauses sending, from 1 to 100.
+     * Usage data is still queued while sending is paused. 10 by default.
+     * @param {number} options.failuresWindowSeconds The time in seconds over
+     * which failed sends are counted. 100 by default.
+     * @param {number} options.initialRecoveryDelaySeconds The length in
+     * seconds of the first pause after failed sends. 2 by default.
+     * @param {number} options.maxRecoveryDelaySeconds The longest a pause can
+     * be, in seconds. 300 by default.
+     * @param {number} options.recoveryMultiplier What the pause is multiplied
+     * by each time the send tried when a pause ends fails. 2 by default.
      */
-    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll, trackSession }?: {
+    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll, trackSession, maximumQueueSize, requestTimeout, failuresToEnterRecovery, failuresWindowSeconds, initialRecoveryDelaySeconds, maxRecoveryDelaySeconds, recoveryMultiplier }?: {
         interval: number;
         requestedPackageSize: number;
         cookie: string;
@@ -56,6 +73,13 @@ declare class ShareUsage extends ShareUsage_base {
         endpoint: string;
         shareAll: boolean;
         trackSession: boolean;
+        maximumQueueSize: number;
+        requestTimeout: number;
+        failuresToEnterRecovery: number;
+        failuresWindowSeconds: number;
+        initialRecoveryDelaySeconds: number;
+        maxRecoveryDelaySeconds: number;
+        recoveryMultiplier: number;
     }, ...args: any[]);
     trackingCookie: string;
     shareAll: boolean;
@@ -68,6 +92,12 @@ declare class ShareUsage extends ShareUsage_base {
     requestedPackageSize: number;
     sharePercentage: number;
     shareData: any[];
+    dropped: number;
+    maximumQueueSize: number;
+    requestTimeout: number;
+    backOff: ShareUsageBackOff;
+    sending: boolean;
+    resumeTimer: any;
     endpoint: url.URL;
     http: typeof import("http") | typeof import("https");
     /**
@@ -107,9 +137,33 @@ declare class ShareUsage extends ShareUsage_base {
      */
     addToShareUsage(data: object): void;
     /**
-     * Internal method to send the share usage bundle to the 51Degrees servers
+     * Internal method to start sending the share usage bundle to the 51Degrees
+     * servers. Nothing starts if a message is already being sent, if fewer
+     * than requestedPackageSize entries are queued, or while sending is paused
+     * after failed sends, in which case a timer starts sending when the pause
+     * ends.
      */
     sendShareUsage(): void;
+    /**
+     * Start sending when the pause ends.
+     *
+     * @param {number} pause the milliseconds until the pause ends
+     */
+    scheduleResume(pause: number): void;
+    /**
+     * Send one message of at most twice requestedPackageSize entries, then the
+     * next until fewer than requestedPackageSize are queued or a failed send
+     * pauses sending.
+     */
+    sendNext(): void;
+    /**
+     * Post one message to the 51Degrees servers.
+     *
+     * @param {string} data the XML to send
+     * @param {Function} done called once with true if the service accepted the
+     * message, or false if the send failed
+     */
+    post(data: string, done: Function): void;
     /**
      * Return a list of FlowElements in the pipeline.
      * If the list is null then populate from the pipeline.
@@ -129,6 +183,7 @@ declare namespace ShareUsage {
 import ShareUsageEvidenceKeyFilter = require("./shareUsageEvidenceKeyFilter");
 import ShareUsageTrackerEvidenceKeyFilter = require("./shareUsageTrackerEvidenceKeyFilter");
 import ShareUsageTracker = require("./shareUsageTracker");
+import ShareUsageBackOff = require("./shareUsageBackOff");
 import url = require("url");
 /**
  * Internal class that is used to store details of data in memory

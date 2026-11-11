@@ -143,6 +143,27 @@ function expectWorkingObject (script, name) {
   expect(obj.device.ismobile).toBe(true);
 }
 
+// The names the specification refuses that are not reserved words of the
+// language, being eval, arguments, and the properties of the browser's
+// Window object that a top level var cannot replace or that navigate the
+// page away.
+const refusedNames = [
+  'eval', 'arguments', 'window', 'document', 'top', 'name', 'status',
+  'history', 'navigator', 'closed', 'location', 'frameElement',
+  'isSecureContext', 'crossOriginIsolated', 'trustedTypes', 'crypto',
+  'indexedDB', 'localStorage', 'sessionStorage', 'caches', 'cookieStore',
+  'speechSynthesis', 'styleMedia', 'crashReport', 'credentialless',
+  'customElements', 'documentPictureInPicture', 'fence', 'launchQueue',
+  'originAgentCluster'
+];
+
+// Window properties that a top level var can replace, so the names stay
+// allowed, and near misses of refused names.
+const allowedNames = [
+  'self', 'frames', 'parent', 'opener', 'length', 'windows', 'Window',
+  'cachesX'
+];
+
 describe('JavaScript builder object name', () => {
   test('a name set in the options is used throughout the script',
     async () => {
@@ -213,5 +234,35 @@ describe('JavaScript builder object name', () => {
   ])('a configured name with %s is refused', (description, name) => {
     expect(() => new core.JavascriptBuilder({ objName: name }))
       .toThrow('objName is invalid');
+  });
+
+  test.each(refusedNames)(
+    'the name %s in evidence is ignored with a warning',
+    async (name) => {
+      const { script, warnings } = await render({}, {
+        [objectNameKey]: name
+      });
+      expectWorkingObject(script, 'fod');
+      expect(script).not.toMatch(new RegExp('var ' + name +
+        ' = new fiftyoneDegreesManager\\(\\);'));
+      expect(script.match(/new fiftyoneDegreesManager\(\)/g).length)
+        .toBe(1);
+      expect(warnings.length).toBe(1);
+      expect(warnings[0]).toContain('not a valid JavaScript identifier');
+    });
+
+  test.each(refusedNames)('the configured name %s is refused', (name) => {
+    expect(() => new core.JavascriptBuilder({ objName: name }))
+      .toThrow('objName is invalid');
+  });
+
+  test.each(allowedNames)('the name %s is allowed', async (name) => {
+    const { script, warnings } = await render({}, {
+      [objectNameKey]: name
+    });
+    expectWorkingObject(script, name);
+    expect(warnings).toEqual([]);
+    expect(() => new core.JavascriptBuilder({ objName: name }))
+      .not.toThrow();
   });
 });
