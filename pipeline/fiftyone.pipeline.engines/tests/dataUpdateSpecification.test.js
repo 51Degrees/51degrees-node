@@ -1131,6 +1131,28 @@ describe('every check is reported', () => {
 // An unexpected error anywhere in a check is logged in the words .NET uses
 // and reported as the unknown error status, rather than being lost.
 describe('an error with no row of its own', () => {
+  // An error while the next check is scheduled is any other error, so it is
+  // logged with the last row's message and its cause.
+  test('is logged with its cause when the next check cannot be scheduled',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        autoUpdate: true,
+        pollingInterval: 30,
+        updateTimeMaximumRandomisation: 10,
+        getNextUpdate: () => {
+          throw new Error('The data file has no next update date.');
+        }
+      });
+      service.checkNextUpdate(dataFile);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: The data file has no next " +
+        'update date.'
+      ]);
+    });
+
   // A protocol no client handles throws out of the get call, which has no
   // row of its own.
   test('is the unhandled error message and status', async () => {
