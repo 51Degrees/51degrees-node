@@ -38,8 +38,7 @@ module.exports = {
   // in turn, so it comes first.
   RESOURCE_KEY_NAMES: [
     '_51DEGREES_RESOURCE_KEY',
-    '_51DEGREES_RESOURCE_KEY_BESPOKE',
-    'RESOURCE_KEY'
+    '_51DEGREES_RESOURCE_KEY_BESPOKE'
   ],
 
   /**

@@ -17,8 +17,6 @@ export let errorMessages: {
 export let testConstants: {
     envVars: {
         superResourceKeyEnvVar: string;
-        ipiResourceKeyEnvVar: string;
-        licenseKeyEnvVar: string;
     };
     ipAddresses: {
         switzerlandIpv4: string;
@@ -30,7 +28,7 @@ export let testConstants: {
     };
 };
 export let keyUtils: {
-    resourceKeyNames: (...legacyNames: string[]) => Array<string>;
+    resourceKeyNames: (...extraNames: string[]) => Array<string>;
     getResourceKey: (names: Array<string>) => string;
     missingResourceKeyMessage: (names: Array<string>, products: string | Array<string>, asksFor: string, plural?: boolean) => string;
     missingFromAnswerMessage: (thing: string, reason: string, product: string) => string;

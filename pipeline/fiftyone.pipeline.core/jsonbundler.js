@@ -70,8 +70,8 @@ class JSONBundlerElement extends FlowElement {
       sequence = flowData.evidence.get('query.sequence');
     }
     if (!Number.isInteger(sequence)) {
-      throw new Error('There is no sequence number. A Sequence Element ' +
-        'needs to be placed before the JSON Builder Element in the Pipeline.');
+      throw new Error('The JSON Builder needs a sequence number. Place a ' +
+        'Sequence Element before the JSON Builder in the Pipeline.');
     }
     return sequence;
   }
