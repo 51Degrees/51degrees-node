@@ -118,3 +118,21 @@ test('other prefixes rank by the prefix alone', () => {
 
   expect(result.n).toBe('ab');
 });
+
+test('one name in two letter cases is sent once, from the higher prefix', () => {
+  // Evidence keys ignore letter case, so header.User-Agent and
+  // query.user-agent name the same value. The name is sent once, spelled
+  // as the winning key spells it.
+  const result = content([
+    ['header.User-Agent', 'from the header'],
+    ['query.user-agent', 'from the query'],
+    ['server.X-Thing', 'from the server'],
+    ['fiftyone.x-thing', 'from fiftyone']
+  ]);
+
+  const names = Object.keys(result).filter(name =>
+    ['user-agent', 'x-thing'].includes(name.toLowerCase()));
+  expect(names.sort()).toStrictEqual(['X-Thing', 'user-agent']);
+  expect(result['user-agent']).toBe('from the query');
+  expect(result['X-Thing']).toBe('from the server');
+});
