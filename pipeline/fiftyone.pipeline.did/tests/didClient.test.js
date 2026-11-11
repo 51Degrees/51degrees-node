@@ -1360,7 +1360,7 @@ describe('DidClient redeem', () => {
         platformname: 'verified',
         platformversion: 'mismatch',
         browsername: 'verified',
-        browserversion: null
+        browserversion: 'notrecorded'
       },
       verifiedAt: '2026-08-07T09:15:32Z',
       secondsSinceVerified: 2
@@ -1443,6 +1443,103 @@ describe('DidClient redeem', () => {
       expect(result.toJSON().factors).toEqual(body.factors);
     });
 
+  test('a factor word the package does not know is a mismatch',
+    async () => {
+      const body = {
+        signature: 'verified',
+        context: 'mismatch',
+        factors: {
+          transport: 'verified',
+          device: 'somethingnew',
+          browserip: 'VERIFIED',
+          connectionip: '',
+          asn: 7,
+          platformname: { value: 'verified' },
+          platformversion: 'notrecorded',
+          browsername: 'misconfigured',
+          browserversion: 'futureword'
+        }
+      };
+      const { client } = redeemClient(200, body);
+      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      expect(result.factors[Factor.TRANSPORT]).toBe(FactorResult.VERIFIED);
+      expect(result.factors[Factor.DEVICE]).toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.BROWSER_IP]).toBe(FactorResult.VERIFIED);
+      expect(result.factors[Factor.CONNECTION_IP])
+        .toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.ASN]).toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.PLATFORM_NAME])
+        .toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.PLATFORM_VERSION])
+        .toBe(FactorResult.NOT_RECORDED);
+      expect(result.factors[Factor.BROWSER_NAME])
+        .toBe(FactorResult.MISCONFIGURED);
+      expect(result.factors[Factor.BROWSER_VERSION])
+        .toBe(FactorResult.MISMATCH);
+      expect(Object.isFrozen(result.factors)).toBe(true);
+    });
+
+  test('a factor name the package does not list is kept, and an unknown ' +
+    'word for it is a mismatch', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { newfactor: 'newword', device: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors.newfactor).toBe(FactorResult.MISMATCH);
+    expect(result.factors.device).toBe(FactorResult.VERIFIED);
+  });
+
+  // The specification says the comparison ignores case, as .NET does.
+  test('a factor word in another case is read as that word', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: {
+        transport: 'Verified',
+        device: 'MISMATCH',
+        browserip: 'MisConfigured',
+        connectionip: 'NotRecorded'
+      }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors).toEqual({
+      transport: FactorResult.VERIFIED,
+      device: FactorResult.MISMATCH,
+      browserip: FactorResult.MISCONFIGURED,
+      connectionip: FactorResult.NOT_RECORDED
+    });
+  });
+
+  // An unexpected value must never read as one that could not be compared,
+  // so null is a mismatch, as in .NET and Java.
+  test('a null factor is a mismatch', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { device: null, transport: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors.device).toBe(FactorResult.MISMATCH);
+    expect(result.factors.transport).toBe(FactorResult.VERIFIED);
+  });
+
+  test('the factor words as sent are in the raw body', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { device: 'somethingnew', transport: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(JSON.parse(result.raw).factors).toEqual(body.factors);
+    expect(result).not.toHaveProperty('factorsRaw');
+  });
+
   test('the factor outcomes are the words the cloud writes', () => {
     expect(Object.isFrozen(FactorResult)).toBe(true);
     expect(Object.keys(FactorResult)).toEqual([
@@ -1453,7 +1550,7 @@ describe('DidClient redeem', () => {
     ]);
   });
 
-  test('a factor value this package does not list is passed through',
+  test('a factor value this package does not list is a mismatch',
     async () => {
       const body = {
         context: 'mismatch',
@@ -1461,8 +1558,8 @@ describe('DidClient redeem', () => {
       };
       const { client } = redeemClient(200, body);
       const result = await client.redeem(fod, RESULT, CHALLENGE);
-      expect(result.factors.transport).toBe('somethingnewer');
-      expect(result.toJSON().factors).toEqual(body.factors);
+      expect(result.factors.transport).toBe(FactorResult.MISMATCH);
+      expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
     });
 
   test('the factor names are the nine the cloud lists, in its order', () => {
@@ -1663,6 +1760,26 @@ describe('DidClient redeem', () => {
     const fetch = fakeFetch(() => { throw new TypeError('fetch failed'); });
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
     await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toThrow('fetch failed');
+  });
+
+  // The cloud refuses a licence key with an error that names it. Only the
+  // key's last 4 characters may reach an error's message or body.
+  test.each([
+    [401, '{ "status":"401", "errors": ["Invalid license key(s) supplied: ' +
+      '\\u0027' + LICENCE + '\\u0027"] }', 'DidClientError'],
+    [400, { errors: ['Invalid license key(s) supplied: \'' + LICENCE + '\''] },
+      'DidArgumentError'],
+    [404, 'Nothing here for ' + LICENCE, 'DidNotSupportedError']
+  ])('a licence key named in a %s answer is masked', async (status, body, name) => {
+    const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
+    const { client } = redeemClient(status, body);
+    const error = await client.redeem(fod, RESULT, CHALLENGE)
+      .then(() => undefined, (e) => e);
+    expect(error).toHaveProperty('name', name);
+    expect(error.message).toContain(masked);
+    expect(error.body).toContain(masked);
+    expect(require('util').inspect(error, { showHidden: true }))
+      .not.toContain(LICENCE);
   });
 });
 

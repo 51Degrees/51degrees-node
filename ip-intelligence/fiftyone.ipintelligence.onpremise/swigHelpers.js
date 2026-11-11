@@ -64,19 +64,22 @@ module.exports = {
   },
 
   /**
-   * Helper to convert a Swig date to a JavaScript one
+   * Helper to convert a Swig date to a JavaScript one, at midnight UTC
    *
    * @param {object} swigDate date
    * @returns {Date} converted date object
    */
   swigDateToDate: function (swigDate) {
-    const date = new Date();
-
-    date.setFullYear(swigDate.getYear());
-    // Minus one as Jan starts at 0
+    // The engine reports whole days, so the date is midnight UTC on that
+    // day and does not depend on when it is converted. Months start at 1.
+    const date = new Date(0);
     const month = swigDate.getMonth();
-    date.setMonth(month > 0 ? month - 1 : month);
-    date.setDate(swigDate.getDay());
+    const day = swigDate.getDay();
+
+    date.setUTCFullYear(
+      swigDate.getYear(),
+      month > 0 ? month - 1 : 0,
+      day > 0 ? day : 1);
 
     return date;
   }
