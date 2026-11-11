@@ -56,7 +56,7 @@ const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpInt
 
 // The resource key is read from the _51DEGREES_RESOURCE_KEY environment
 // variable.
-const myResourceKey = process.env['_51DEGREES_RESOURCE_KEY'] ||
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
   '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
