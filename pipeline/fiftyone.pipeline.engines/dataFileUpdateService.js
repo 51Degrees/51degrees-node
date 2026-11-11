@@ -836,8 +836,9 @@ class DataFileUpdateService {
           Math.min(interval, MaximumTimerMilliseconds));
       }
     } catch (e) {
-      // Catch any extra errors with datafile updates
-      this.log('error', e);
+      // An error here has no row of its own, so it is logged as the
+      // unhandled one, with its cause.
+      this.log('error', unhandledErrorText(dataFile, e));
     }
   }
 
