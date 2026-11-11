@@ -922,6 +922,13 @@ describe('every update reports one status', () => {
   test('a download the MD5 check cannot read is reported once and ' +
     'removed', async () => {
     const remote = await serve(200, 'version 2');
+    // The check is made only where the response carries a hash.
+    remote.server.removeAllListeners('request');
+    remote.server.on('request', (request, response) => {
+      response.setHeader('Content-MD5', 'a-hash-the-check-never-reaches');
+      response.statusCode = 200;
+      response.end('version 2');
+    });
     const createReadStream = fs.createReadStream;
     const failing = jest.spyOn(fs, 'createReadStream').mockImplementation(
       (name, ...rest) => {
