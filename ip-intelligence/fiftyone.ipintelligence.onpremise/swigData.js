@@ -68,7 +68,13 @@ class SwigData extends AspectData {
    * @returns {AspectPropertyValue} value property value
    */
   getInternal (key) {
-    const property = this.flowElement.properties[key];
+    // Property names are compared ignoring case. The engine keys its
+    // properties in lower case, so a key not found as given is tried in
+    // lower case.
+    const property = this.flowElement.properties[key] ||
+      (typeof key === 'string'
+        ? this.flowElement.properties[key.toLowerCase()]
+        : undefined);
 
     if (property) {
       let value;

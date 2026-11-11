@@ -51,13 +51,26 @@ class ElementDataDictionary extends ElementData {
   }
 
   /**
-   * Return value from elementData dictionary
+   * Return value from elementData dictionary. Property names are compared
+   * ignoring case, so a key that is not in the dictionary as given is looked
+   * for in any letter case. The contents can change after the data is made,
+   * so they are searched on that miss rather than indexed once.
    *
    * @param {string} key the property key to retrieve
-   * @returns {number} integer value
+   * @returns {*} the value, or undefined if there is none
    */
   getInternal (key) {
-    return this.contents[key];
+    const value = this.contents[key];
+    if (value !== undefined || typeof key !== 'string') {
+      return value;
+    }
+    const lowerKey = key.toLowerCase();
+    for (const name of Object.keys(this.contents)) {
+      if (name.toLowerCase() === lowerKey) {
+        return this.contents[name];
+      }
+    }
+    return undefined;
   }
 }
 

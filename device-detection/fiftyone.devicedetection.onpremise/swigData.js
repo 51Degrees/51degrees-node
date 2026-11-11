@@ -56,12 +56,34 @@ class SwigData extends AspectData {
 
   /**
    * Retrieves elementData via the swigWrapper but also casts it to the
-   * correct type via a check of the engine's property list metadata
+   * correct type via a check of the engine's property list metadata.
+   * Property names are compared ignoring case, so a key that finds nothing
+   * as given is tried again as the engine's own key for that name.
    *
    * @param {string} key the property key to retrieve
    * @returns {AspectPropertyValue} value property value
    */
   getInternal (key) {
+    const value = this.getByKey(key);
+    if (value !== undefined || typeof key !== 'string') {
+      return value;
+    }
+    const keys = this.flowElement.propertyKeys;
+    const engineKey = keys === undefined
+      ? undefined
+      : keys[key.toLowerCase()];
+    return engineKey === undefined || engineKey === key
+      ? undefined
+      : this.getByKey(engineKey);
+  }
+
+  /**
+   * Retrieves elementData for a key exactly as the engine keys it.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {AspectPropertyValue} value property value
+   */
+  getByKey (key) {
     // Start with special properties
 
     const result = new AspectPropertyValue();

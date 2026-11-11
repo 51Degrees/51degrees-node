@@ -20,12 +20,15 @@ declare class ElementDataDictionary extends ElementData {
     }, ...args: any[]);
     contents: object;
     /**
-     * Return value from elementData dictionary
+     * Return value from elementData dictionary. Property names are compared
+     * ignoring case, so a key that is not in the dictionary as given is looked
+     * for in any letter case. The contents can change after the data is made,
+     * so they are searched on that miss rather than indexed once.
      *
      * @param {string} key the property key to retrieve
-     * @returns {number} integer value
+     * @returns {*} the value, or undefined if there is none
      */
-    getInternal(key: string): number;
+    getInternal(key: string): any;
     [Symbol.iterator](): Generator<string, void, unknown>;
 }
 declare namespace ElementDataDictionary {

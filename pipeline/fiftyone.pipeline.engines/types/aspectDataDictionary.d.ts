@@ -26,7 +26,9 @@ declare class AspectDataDictionary extends AspectData {
     }, ...args: any[]);
     contents: object;
     /**
-     * getInternal retrieves a value from the dictionary
+     * getInternal retrieves a value from the dictionary. A key that is not in
+     * the dictionary as given is looked for ignoring letter case, as the core
+     * dictionary does.
      *
      * @param {string} key property key
      * @returns {*} property value
