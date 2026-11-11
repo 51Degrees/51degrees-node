@@ -32,6 +32,7 @@ const errorMessages = require('fiftyone.devicedetection.shared').errorMessages;
 const os = require('os');
 const path = require('path');
 const EvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
@@ -438,6 +439,13 @@ class DeviceDetectionOnPremise extends Engine {
     super(...arguments);
 
     this.dataKey = 'device';
+
+    // The data file's keys are read when the engine is initialised,
+    // which waits for the download when updateOnStart is set and there
+    // is no file yet. Until then every key is kept, so evidence set
+    // before then is not lost, and initEngine replaces this with the
+    // keys the file lists.
+    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
 
     const current = this;
 
