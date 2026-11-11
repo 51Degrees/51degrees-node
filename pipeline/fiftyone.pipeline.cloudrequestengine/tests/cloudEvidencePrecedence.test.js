@@ -136,3 +136,34 @@ test('one name in two letter cases is sent once, from the higher prefix', () => 
   expect(result['user-agent']).toBe('from the query');
   expect(result['X-Thing']).toBe('from the server');
 });
+
+test('the names already added are read once, not once for each value', () => {
+  // Each value is looked up among the names already added, in any letter
+  // case. Reading every name again for each value makes the work grow with
+  // the square of the number of values.
+  const engine = new CloudRequestEngine({
+    resourceKey: 'AAAAAAAAAAAA',
+    requestClient: new MockRequestClient()
+  });
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const data = pipeline.createFlowData();
+  let reads = 0;
+  const queryData = new Proxy({}, {
+    ownKeys (target) {
+      reads++;
+      return Reflect.ownKeys(target);
+    }
+  });
+  const evidence = {};
+  for (let i = 0; i < 40; i++) {
+    evidence[`header.name-${i}`] = String(i);
+  }
+  evidence['query.NAME-0'] = 'from the query';
+
+  engine.addQueryData(data, queryData, evidence, evidence);
+
+  const counted = reads;
+  expect(counted).toBeLessThanOrEqual(1);
+  expect(Object.keys(queryData)).toHaveLength(40);
+  expect(queryData['NAME-0']).toBe('from the query');
+});
