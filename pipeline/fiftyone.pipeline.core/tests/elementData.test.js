@@ -81,3 +81,17 @@ test('missing property', done => {
     done();
   });
 });
+
+// Property names are compared ignoring case, so a key finds its value in any
+// letter case, including a key stored in mixed case.
+test('a dictionary finds a key whatever its letter case', () => {
+  const data = new ElementDataDictionary({
+    flowElement: { dataKey: 'caseTest' },
+    contents: { one: 1, noCache: true }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('One')).toBe(1);
+  expect(data.get('ONE')).toBe(1);
+  expect(data.get('noCache')).toBe(true);
+  expect(data.get('nocache')).toBe(true);
+});

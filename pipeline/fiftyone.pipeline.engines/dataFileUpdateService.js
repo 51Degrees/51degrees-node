@@ -29,18 +29,16 @@ const url = require('url');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
+const { LicenseKeys } = require('fiftyone.pipeline.core');
 
 const minToMs = (min) => min * 60000;
 
 // The longest delay setTimeout accepts. A longer one fires straight away.
 const MaximumTimerMilliseconds = 2147483647;
 
-const RetryText = ' Update will be attempted again later.';
-
-// The text the specification gives for a data file that is locked.
-const LockedFileText = 'Unable to update data file. This is probably ' +
-  'because the Engine was built with the ‘use temp file’ option ' +
-  'disabled.';
+// The number of times a refresh is tried before it is reported as failed.
+// The .NET service names the count in the message it writes.
+const RefreshTries = 1;
 
 /**
  * The name of the engine a data file belongs to, for log messages.
@@ -66,6 +64,49 @@ const engineName = function (dataFile) {
  */
 const errorDetail = function (error) {
   return error && error.message ? error.message : String(error);
+};
+
+/**
+ * A message in the words .NET uses, followed by the cause. .NET logs these
+ * events with the exception attached, so the log says why the update
+ * failed, and this puts the cause after the text in the same way.
+ *
+ * @param {string} text the message .NET writes
+ * @param {*} error the error, or whatever was thrown
+ * @returns {string} the message to log
+ */
+const withCause = function (text, error) {
+  return text + (text.endsWith('.') ? ' ' : '. ') + 'Error detail: ' +
+    errorDetail(error);
+};
+
+/**
+ * The message for an error that has a row of its own in the specification's
+ * table. .NET logs it as 'Error during check for data update' with the error
+ * attached, the error carrying the row's text and then its cause, so those
+ * follow the text in that order.
+ *
+ * @param {string} rowText the row's message
+ * @param {*} [cause] the error that caused it, where there is one
+ * @returns {string} the message to log
+ */
+const checkErrorText = function (rowText, cause) {
+  const text = withCause('Error during check for data update', rowText);
+  return cause === undefined ? text : withCause(text, cause);
+};
+
+/**
+ * The message for an error with no message of its own, such as one an
+ * update complete callback throws. .NET logs it as an unhandled error, in
+ * these words, with the exception attached, so the cause follows the text.
+ *
+ * @param {DataFile} dataFile the data file the update was for
+ * @param {*} error the error, or whatever was thrown
+ * @returns {string} the message to log
+ */
+const unhandledErrorText = function (dataFile, error) {
+  return withCause('An unhandled error occurred while checking for ' +
+    "automatic updates for engine '" + engineName(dataFile) + "'", error);
 };
 
 /**
@@ -217,6 +258,8 @@ class DataFileUpdateService {
 
   /**
    * Writes a message to the log of the pipeline the service is attached to.
+   * With no pipeline, an error is written to the console, as a pipeline
+   * with no error listener does, so that it is not lost.
    *
    * @param {string} level the log level
    * @param {*} message the message
@@ -224,36 +267,47 @@ class DataFileUpdateService {
   log (level, message) {
     if (this.pipeline) {
       this.pipeline.log(level, message);
+    } else if (level === 'error') {
+      console.error(LicenseKeys.mask(message));
     }
   }
 
   /**
    * Reports how an update ended, to the listeners of 'updateComplete' and
-   * to the data file's own onUpdateComplete function, if it has one.
+   * to the data file's own onUpdateComplete function, if it has one. An
+   * error thrown by any of them is logged, goes no further, and the
+   * callbacks after it are not called.
    *
    * @param {DataFile} dataFile the data file the update was for
    * @param {string} status one of the AutoUpdateStatus values
    */
   complete (dataFile, status) {
-    this.eventEmitter.emit('updateComplete', status, dataFile);
-    if (typeof dataFile.onUpdateComplete === 'function') {
-      try {
-        dataFile.onUpdateComplete(status);
-      } catch (e) {
-        this.log('error', e);
+    // The status is reported from timer, request and file system watcher
+    // callbacks, so a callback that throws is logged rather than left
+    // uncaught, which would end the process. The callbacks after it are not
+    // called, as the specification and .NET have it. The raw listeners are
+    // called so that a 'once' listener is removed as emit would remove it.
+    try {
+      for (const listener of this.eventEmitter.rawListeners('updateComplete')) {
+        listener.call(this.eventEmitter, status, dataFile);
       }
+      if (typeof dataFile.onUpdateComplete === 'function') {
+        dataFile.onUpdateComplete(status);
+      }
+    } catch (e) {
+      this.log('error', unhandledErrorText(dataFile, e));
     }
   }
 
   /**
-   * The sentence that tells the reader another update will be tried, where
-   * one will be.
+   * The message for a data update service that could not be reached.
    *
    * @param {DataFile} dataFile the data file being updated
-   * @returns {string} the sentence, with a space before it, or nothing
+   * @returns {string} the message to log
    */
-  retryText (dataFile) {
-    return dataFile.automaticUpdate && dataFile.autoUpdate ? RetryText : '';
+  accessError (dataFile) {
+    return "Error accessing data update service at '" + dataFile.updateUrl +
+      "' for engine '" + engineName(dataFile) + "'";
   }
 
   /**
@@ -261,17 +315,19 @@ class DataFileUpdateService {
    * logs a failure. The caller reports the outcome.
    *
    * @param {DataFile} dataFile the data file to refresh
+   * @param {boolean} [fromFile] true where the data came from a file that
+   * was written, which is the case the message names a try count for
    * @returns {boolean} true if the refresh worked
    */
-  refreshDataFile (dataFile) {
+  refreshDataFile (dataFile, fromFile = true) {
     this.log('info', "Attempting to refresh Engine '" +
       engineName(dataFile) + "' with new data");
     try {
       dataFile.refresh();
     } catch (e) {
-      this.log('error', 'An error occurred while applying a data file ' +
-        'update to ' + engineName(dataFile) + '. Error detail: ' +
-        errorDetail(e));
+      this.log('error', checkErrorText('An error occurred when applying a ' +
+        "data update to engine '" + engineName(dataFile) + "'" +
+        (fromFile ? ' after ' + RefreshTries + ' tries.' : '.'), e));
       return false;
     }
     return true;
@@ -304,6 +360,9 @@ class DataFileUpdateService {
     dataFile.attemptedDownload = true;
 
     if (dataFile.updating) {
+      // Another check for the same data file is still running, so this one
+      // has nothing left to do and is reported as in progress.
+      this.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
       return false;
     } else {
       dataFile.updating = true;
@@ -312,38 +371,48 @@ class DataFileUpdateService {
 
     this.log('info', 'Checking for update');
 
+    // A check with no update URL has nowhere to look, so there is nothing
+    // to do and the check is reported as not needed.
+    if (!dataFile.updateUrl) {
+      this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
+      return false;
+    }
+
     let urlParts;
     try {
       urlParts = new url.URL(dataFile.updateUrl);
     } catch (e) {
-      this.log(
-        'warn',
-        'An error occurred when connecting to ' + dataFile.updateUrl +
-        ' in order to check for data file updates for ' +
-        engineName(dataFile) + '.' + this.retryText(dataFile) +
-        ' Error detail: ' + errorDetail(e));
+      this.log('error', checkErrorText(this.accessError(dataFile), e));
       this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       return false;
     }
 
     const requestOptions = urlParts;
 
-    const modifiedSince = dataFile.verifyIfModifiedSince
-      ? ifModifiedSince(dataFile)
-      : undefined;
-    if (modifiedSince) {
-      requestOptions.headers = { 'If-Modified-Since': modifiedSince };
-    }
-
-    this.log('info', "Checking for update from '" + dataFile.updateUrl +
-      "' for Engine '" + engineName(dataFile) + "'");
-
     let request;
+    let modifiedSince;
+    try {
+      modifiedSince = dataFile.verifyIfModifiedSince
+        ? ifModifiedSince(dataFile)
+        : undefined;
+      if (modifiedSince) {
+        requestOptions.headers = { 'If-Modified-Since': modifiedSince };
+      }
 
-    if (urlParts.protocol === 'https:') {
-      request = https.get(requestOptions);
-    } else {
-      request = http.get(requestOptions);
+      this.log('info', "Checking for update from '" + dataFile.updateUrl +
+        "' for Engine '" + engineName(dataFile) + "'");
+
+      if (urlParts.protocol === 'https:') {
+        request = https.get(requestOptions);
+      } else {
+        request = http.get(requestOptions);
+      }
+    } catch (e) {
+      // An error here has no row of its own, so it is reported as the
+      // unhandled one rather than being lost.
+      this.unhandled(dataFile, e);
+      this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
+      return false;
     }
 
     // Each update reports one status. Once the response has arrived its
@@ -360,13 +429,8 @@ class DataFileUpdateService {
         return;
       }
       dataFileUpdateService.log(
-        'warn',
-        'An error occurred when connecting to ' +
-        dataFile.updateUrl +
-        ' in order to check for data file updates for ' +
-        engineName(dataFile) + '.' +
-        dataFileUpdateService.retryText(dataFile) +
-        ' Error detail: ' + errorDetail(err));
+        'error',
+        checkErrorText(dataFileUpdateService.accessError(dataFile), err));
 
       dataFileUpdateService.fail(
         dataFile,
@@ -378,20 +442,17 @@ class DataFileUpdateService {
       if (response.statusCode !== 200) {
         response.resume();
 
-        const downloadFailed = function (status) {
-          dataFileUpdateService.log(
-            'warn',
-            'An error occurred while downloading a data file update for ' +
-            engineName(dataFile) + ' from ' + dataFile.updateUrl + '.' +
-            dataFileUpdateService.retryText(dataFile) +
-            ' Error detail: HTTP status code ' + response.statusCode +
-            (response.statusMessage ? ' (' + response.statusMessage + ')' : ''));
+        const downloadFailed = function (message, status) {
+          dataFileUpdateService.log('error', checkErrorText(message));
           dataFileUpdateService.fail(dataFile, status);
         };
+
+        const forEngine = "' for engine '" + engineName(dataFile) + "'";
 
         switch (response.statusCode) {
           case (429):
             downloadFailed(
+              "Too many requests to '" + dataFile.updateUrl + forEngine,
               AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS);
             break;
           case (304):
@@ -405,10 +466,17 @@ class DataFileUpdateService {
               AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
             break;
           case (403):
-            downloadFailed(AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
+            downloadFailed(
+              "Access denied to data update service at '" +
+              dataFile.updateUrl + forEngine,
+              AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
             break;
           default:
-            downloadFailed(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+            downloadFailed(
+              "HTTP status code '" + response.statusCode +
+              "' from data update service at '" + dataFile.updateUrl +
+              forEngine,
+              AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
             break;
         }
 
@@ -417,13 +485,12 @@ class DataFileUpdateService {
 
       if (!dataFile.tempDataDirectory) {
         response.resume();
-        dataFileUpdateService.log(
-          'error',
+        dataFileUpdateService.log('error', checkErrorText(
           "The data file '" + dataFile.identifier + "' is checking for " +
-          'updates but does not have a temporary file path configured.');
+          'updates but does not have a temporary file path configured.'));
         dataFileUpdateService.fail(
           dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+          AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET);
         return false;
       }
 
@@ -440,7 +507,7 @@ class DataFileUpdateService {
           return;
         }
         written = false;
-        dataFileUpdateService.writeFailed(dataFile, filename, err);
+        dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
@@ -457,13 +524,9 @@ class DataFileUpdateService {
         written = false;
         output.destroy();
         fs.unlink(filename, function () {});
-        dataFileUpdateService.log(
-          'warn',
-          'An error occurred while downloading a data file update for ' +
-          engineName(dataFile) + ' from ' + dataFile.updateUrl + '.' +
-          dataFileUpdateService.retryText(dataFile) +
-          ' Error detail: The connection closed before the whole file ' +
-          'was received.');
+        dataFileUpdateService.log('error', checkErrorText(
+          "No response from data update service at '" + dataFile.updateUrl +
+          "' for engine '" + engineName(dataFile) + "'"));
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
@@ -483,6 +546,18 @@ class DataFileUpdateService {
         if (dataFile.verifyMD5) {
           const headerMD5 = response.headers['content-md5'];
 
+          // A response that carries no hash cannot be checked, which is a
+          // warning rather than a failure, and the update goes on.
+          if (!headerMD5) {
+            dataFileUpdateService.log(
+              'warn',
+              'No MD5 hash included in data update response for ' +
+              "'" + dataFile.updateUrl + "'. Unable to verify data " +
+              'integrity');
+            dataFileUpdateService.processFile(dataFile, filename);
+            return;
+          }
+
           const fd = fs.createReadStream(filename);
 
           const hash = crypto.createHash('md5');
@@ -495,11 +570,11 @@ class DataFileUpdateService {
               return;
             }
             checked = true;
-            dataFileUpdateService.writeFailed(dataFile, filename, err);
+            dataFileUpdateService.unhandled(dataFile, err);
             fs.unlink(filename, function () {
               dataFileUpdateService.fail(
                 dataFile,
-                AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+                AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
             });
           });
 
@@ -509,11 +584,10 @@ class DataFileUpdateService {
             }
             checked = true;
             hash.end();
-            if (hash.read() !== headerMD5) {
+            const downloadHash = hash.read();
+            if (downloadHash !== headerMD5) {
               dataFileUpdateService.integrityFailed(
-                dataFile,
-                'The MD5 hash of the download does not match the ' +
-                'content-md5 header.');
+                dataFile, headerMD5, downloadHash);
               fs.unlink(filename, function () {
                 dataFileUpdateService.fail(
                   dataFile,
@@ -533,31 +607,28 @@ class DataFileUpdateService {
   }
 
   /**
-   * Logs a failure to write a file the update uses.
+   * Logs an error that has no message of its own, with its cause.
    *
    * @param {DataFile} dataFile the data file being updated
-   * @param {string} filename the file that could not be written
-   * @param {Error} err the error
+   * @param {*} error the error, or whatever was thrown
    */
-  writeFailed (dataFile, filename, err) {
-    this.log(
-      'error',
-      'An error occurred when writing to ' + filename +
-      '. Error detail: ' + errorDetail(err));
+  unhandled (dataFile, error) {
+    this.log('error', unhandledErrorText(dataFile, error));
   }
 
   /**
-   * Logs a download that did not pass the checks on its content.
+   * Logs a download whose MD5 hash does not match the one the response
+   * carried.
    *
    * @param {DataFile} dataFile the data file being updated
-   * @param {string} detail what the check found
+   * @param {string} serverHash the hash the response carried
+   * @param {string} downloadHash the hash of the data that arrived
    */
-  integrityFailed (dataFile, detail) {
-    this.log(
-      'warn',
-      'An error occurred during the integrity check of new data file for ' +
-      engineName(dataFile) + '.' + this.retryText(dataFile) +
-      ' Error detail: ' + detail);
+  integrityFailed (dataFile, serverHash, downloadHash) {
+    this.log('error', checkErrorText(
+      "Integrity check failed. MD5 hash in HTTP response '" + serverHash +
+      "' for '" + engineName(dataFile) + "'data update does not match " +
+      "calculated hash for the downloaded file '" + downloadHash + "'."));
   }
 
   /**
@@ -575,7 +646,7 @@ class DataFileUpdateService {
     const removeDownload = function (done) {
       fs.unlink(filename, function (err) {
         if (err) {
-          dataFileUpdateService.writeFailed(dataFile, filename, err);
+          dataFileUpdateService.unhandled(dataFile, err);
         }
         done();
       });
@@ -583,7 +654,7 @@ class DataFileUpdateService {
 
     fs.readFile(filename, function (err, data) {
       if (err) {
-        dataFileUpdateService.writeFailed(dataFile, filename, err);
+        dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME);
@@ -592,14 +663,11 @@ class DataFileUpdateService {
 
       fs.writeFile(dataFile.path, data, function (err) {
         if (err) {
-          if (err.code === 'EBUSY') {
-            dataFileUpdateService.log('error', LockedFileText);
-          } else {
-            dataFileUpdateService.log(
-              'error',
-              'An error occurred when copying a data file to replace the ' +
-              "existing one at '" + dataFile.path + "'.");
-          }
+          // A locked file and any other write failure are the same row,
+          // so the message names the copy rather than the cause.
+          dataFileUpdateService.log('error', checkErrorText(
+            'An error occurred when copying a data file to replace the ' +
+            "existing one at '" + dataFile.path + "'.", err));
           removeDownload(function () {
             dataFileUpdateService.fail(
               dataFile,
@@ -643,7 +711,7 @@ class DataFileUpdateService {
     if (dataFile.decompress) {
       fs.readFile(filename, function (err, buffer) {
         if (err) {
-          dataFileUpdateService.writeFailed(dataFile, filename, err);
+          dataFileUpdateService.unhandled(dataFile, err);
           dataFileUpdateService.fail(
             dataFile,
             AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
@@ -652,11 +720,12 @@ class DataFileUpdateService {
 
         zlib.gunzip(buffer, function (err, data) {
           if (err) {
-            dataFileUpdateService.integrityFailed(dataFile, errorDetail(err));
+            // Data that will not decompress has no row of its own.
+            dataFileUpdateService.unhandled(dataFile, err);
             fs.unlink(filename, function () {
               dataFileUpdateService.fail(
                 dataFile,
-                AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+                AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
             });
             return;
           }
@@ -665,7 +734,7 @@ class DataFileUpdateService {
 
           fs.writeFile(doneFileName, data, function (err) {
             if (err) {
-              dataFileUpdateService.writeFailed(dataFile, doneFileName, err);
+              dataFileUpdateService.unhandled(dataFile, err);
               dataFileUpdateService.fail(
                 dataFile,
                 AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
@@ -674,7 +743,7 @@ class DataFileUpdateService {
             dataFileUpdateService.fileReady(dataFile, doneFileName);
             fs.unlink(filename, function (err) {
               if (err) {
-                dataFileUpdateService.writeFailed(dataFile, filename, err);
+                dataFileUpdateService.unhandled(dataFile, err);
               }
             });
           });
@@ -714,7 +783,9 @@ class DataFileUpdateService {
     const previous = dataFile.data;
     dataFile.data = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
-    const refreshed = this.refreshDataFile(dataFile);
+    // The data came from memory, not a file that was written, so the
+    // message carries no try count.
+    const refreshed = this.refreshDataFile(dataFile, false);
     if (!refreshed) {
       dataFile.data = previous;
     }
@@ -765,8 +836,9 @@ class DataFileUpdateService {
           Math.min(interval, MaximumTimerMilliseconds));
       }
     } catch (e) {
-      // Catch any extra errors with datafile updates
-      this.log('error', e);
+      // An error here has no row of its own, so it is logged as the
+      // unhandled one, with its cause.
+      this.log('error', unhandledErrorText(dataFile, e));
     }
   }
 

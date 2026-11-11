@@ -63,7 +63,7 @@ const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUt
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities. On a free data file the example ends
+// a small number of Properties. On a free data file the example ends
 // by saying what the Enterprise data file adds, with a link to ask for a
 // copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';

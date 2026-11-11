@@ -96,6 +96,37 @@ test('restricted properties', done => {
   });
 });
 
+test('restricted properties are compared ignoring case', async () => {
+  // An engine restricted to a name in the data set's own spelling still
+  // gives that property under its lower case key, and still refuses one it
+  // was not given.
+  expect.assertions(2);
+  const engine = new Engine(
+    {
+      dataKey: 'caseEngine',
+      restrictedProperties: ['One'],
+      evidenceKeyFilter: new BasicListEvidenceKeyFilter(['header.user-agent']),
+      properties: {
+        one: { meta: { type: 'int' } },
+        two: { meta: { type: 'int' } }
+      },
+      processInternal: function (flowData) {
+        flowData.setElementData(new AspectDataDictionary(
+          { flowElement: this, contents: { one: 1, two: 2 } }));
+      }
+    }
+  );
+  const caseFlowData = new PipelineBuilder().add(engine).build()
+    .createFlowData();
+  await caseFlowData.process();
+  expect(caseFlowData.get('caseEngine').get('one')).toBe(1);
+  try {
+    caseFlowData.get('caseEngine').get('two');
+  } catch (e) {
+    expect(e).toBe(util.format(errorMessages.propertyExcluded, 'two'));
+  }
+});
+
 test('missing property service', done => {
   flowData.process().then(function () {
     try {
@@ -117,4 +148,82 @@ test('cache', done => {
 
     done();
   });
+});
+
+// Property names are compared ignoring case, so a key finds its value in any
+// letter case, including a key stored in mixed case.
+test('a dictionary of aspect data finds a key whatever its letter case', () => {
+  const data = new AspectDataDictionary({
+    flowElement: { dataKey: 'caseTest' },
+    contents: { one: 1, noCache: false }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('One')).toBe(1);
+  expect(data.get('ONE')).toBe(1);
+  expect(data.get('noCache')).toBe(false);
+  expect(data.get('nocache')).toBe(false);
+});
+
+// An element given restricted names without an engine's constructor makes
+// its lower case set on the first read and keeps it for later reads.
+test('an element restricted without an engine keeps its lower case names',
+  () => {
+    const flowElement = { dataKey: 'plain', restrictedProperties: ['One'] };
+    const data = new AspectDataDictionary(
+      { flowElement, contents: { one: 1 } });
+    expect(data.get('one')).toBe(1);
+    const keys = flowElement.restrictedPropertyKeys;
+    expect(keys).toEqual(new Set(['one']));
+    expect(data.get('one')).toBe(1);
+    expect(flowElement.restrictedPropertyKeys).toBe(keys);
+  });
+
+// Finds nothing for a key not found as given, as the dictionary did before
+// letter case was ignored, so the read before and after can be timed in the
+// same job.
+class ReadByKeyOnly extends AspectDataDictionary {
+  getInternalIgnoringCase (key) {
+    return undefined;
+  }
+}
+
+test('a dictionary read is no slower than it was', () => {
+  // Reads timed in each round, and rounds of each, taking the fastest and
+  // changing which goes first, so a pause in one round or the order does not
+  // decide it.
+  const timedReads = 200000;
+  const rounds = 10;
+  const timeOf = (data, key) => {
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    const start = process.hrtime.bigint();
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    return Number(process.hrtime.bigint() - start) / timedReads;
+  };
+  const flowElement = { dataKey: 'timing' };
+  const contents = { one: 1, two: 2, noCache: false };
+  const before = new ReadByKeyOnly({ flowElement, contents });
+  const after = new AspectDataDictionary({ flowElement, contents });
+  let beforeTime = Infinity;
+  let afterTime = Infinity;
+  for (let round = 0; round < rounds; round++) {
+    if (round % 2 === 0) {
+      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+      afterTime = Math.min(afterTime, timeOf(after, 'one'));
+    } else {
+      afterTime = Math.min(afterTime, timeOf(after, 'one'));
+      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+    }
+  }
+  const mixedCaseTime = timeOf(after, 'One');
+  console.log(
+    `Dictionary read of one, fastest of ${rounds} rounds of ${timedReads}, ` +
+    `before ${beforeTime.toFixed(1)} ns, after ${afterTime.toFixed(1)} ns. ` +
+    'A read of One, which found nothing before, ' +
+    `${mixedCaseTime.toFixed(1)} ns.`);
+  // A tenth is allowed for timing noise.
+  expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
 });

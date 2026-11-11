@@ -170,6 +170,21 @@ const initMatchMetrics = function () {
   this.components.metrics = metricComponent;
 };
 
+// Private method to map each property key in lower case to the key itself,
+// so a read can find a property whatever the letter case of the key it is
+// given. The match metric keys are not all in lower case. This should only be
+// called by the call() method, after the properties are made.
+const initPropertyKeys = function () {
+  const keys = Object.create(null);
+  for (const key of Object.keys(this.properties)) {
+    const lowerKey = key.toLowerCase();
+    if (keys[lowerKey] === undefined) {
+      keys[lowerKey] = key;
+    }
+  }
+  this.propertyKeys = keys;
+};
+
 /**
  * On premise version of the 51Degrees Device Detection Engine
  * Uses a data file to process evidence in FlowData and create results
@@ -473,6 +488,7 @@ class DeviceDetectionOnPremise extends Engine {
       initProperties.call(current, metadata);
       initComponents.call(current, metadata);
       initMatchMetrics.call(current);
+      initPropertyKeys.call(current);
     };
 
     // Disable features that require a license key if one was
@@ -590,7 +606,12 @@ class DeviceDetectionOnPremise extends Engine {
 
       const evidence = new dd.swigWrapper.EvidenceDeviceDetectionSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = dd.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 

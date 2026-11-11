@@ -214,9 +214,10 @@ test('file watcher keeps watching after a failed refresh', async () => {
     await failed;
     expect(dataFile.data).toBe('version 1');
     const error = logs.find((log) => log.level === 'error');
-    expect(error.message).toBe('An error occurred while applying a data ' +
-      'file update to testEngine. Error detail: The data file cannot be ' +
-      'used.');
+    expect(error.message).toBe('Error during check for data update. Error detail: ' +
+      'An error occurred when applying a data ' +
+      "update to engine 'testEngine' after 1 tries. Error detail: The data " +
+      'file cannot be used.');
     // The test resumes before the watcher has finished with the first
     // change, and on macOS a change made then is never reported.
     await sleep(500);
@@ -312,16 +313,17 @@ test('file watcher with an error listener reports a failed refresh to it',
   });
 
 /**
- * A download the server refuses is reported as a warning, as the data update
- * page of the specification says, and nothing is thrown.
+ * A download the server refuses is logged as an error, in the words the
+ * Errors table of the data update page of the specification gives, and
+ * nothing is thrown.
  */
-test('update route reports a refused download as a warning', async () => {
+test('update route reports a refused download as an error', async () => {
   const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
   const { folder, file } = newDataFile('update-');
   const server = await serve(403, 'refused');
   const pipeline = new Pipeline([]);
-  const warnings = [];
-  pipeline.on('warn', (message) => warnings.push(message));
+  const errors = [];
+  pipeline.on('error', (message) => errors.push(message));
   const updateService = new DataFileUpdateService(pipeline);
   const dataFile = downloadFrom(standInDataFile(file), server, folder);
 
@@ -330,9 +332,9 @@ test('update route reports a refused download as a warning', async () => {
       AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
     updateService.updateDataFile(dataFile);
     await refused;
-    expect(warnings.some((message) => message.includes(
-      'An error occurred while downloading a data file update for testEngine ' +
-      'from ' + dataFile.updateUrl))).toBe(true);
+    expect(errors.some((message) => message.includes(
+      "Access denied to data update service at '" + dataFile.updateUrl +
+      "' for engine 'testEngine'"))).toBe(true);
     expect(consoleError).not.toHaveBeenCalled();
     expect(dataFile.updating).toBe(false);
   } finally {

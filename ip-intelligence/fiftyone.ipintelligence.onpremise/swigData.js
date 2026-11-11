@@ -155,6 +155,21 @@ class SwigData extends AspectData {
       return result;
     }
   }
+
+  /**
+   * Looks for a key again in lower case, which is how the engine keys its
+   * properties, so a key in any letter case finds its property.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {AspectPropertyValue} value property value
+   */
+  getInternalIgnoringCase (key) {
+    if (typeof key !== 'string') {
+      return undefined;
+    }
+    const lowerKey = key.toLowerCase();
+    return lowerKey === key ? undefined : this.getInternal(lowerKey);
+  }
 }
 
 module.exports = SwigData;
