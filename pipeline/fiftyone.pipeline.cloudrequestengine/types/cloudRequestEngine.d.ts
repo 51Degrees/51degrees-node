@@ -43,12 +43,14 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     requestClient: RequestClient;
     baseURL: string;
     evidenceKeys: any[];
+    evidenceKeysFetched: boolean;
     flowElementProperties: {};
     /**
      * Check if the keys and properties have been fetched.
      *
-     * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-     * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+     * True once the cloud service's evidence keys have arrived and its
+     * properties have been read, so they are fetched once rather than for
+     * every request.
      *
      * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
      */
