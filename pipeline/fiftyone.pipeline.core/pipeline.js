@@ -20,6 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
 const EventEmitter = require('events');
 
@@ -218,6 +219,7 @@ class Pipeline {
    * @param {*} message message to store in the log
    */
   log (type, message) {
+    message = LicenseKeys.mask(message);
     // Node throws an 'error' event that nothing listens for, so such an
     // error is written to the console instead.
     if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {

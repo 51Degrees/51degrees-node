@@ -29,6 +29,8 @@ module.exports = {
     '\'server.client-ip\' or \'query.client-ip\'.',
   dataFilePathRequired: 'dataFilePath is required',
   fileNotFound: 'There is no file at \'%s\'',
+  fileNotFoundNotDownloaded: 'There is no file at \'%s\' and the ' +
+    'download of a new one ended with the status \'%s\'',
   moduleDirNotFound: 'There is no directory at \'%s\'. This is ' +
     'expected to contain the native modules for the IP intelligence ' +
     'engine. For example, %s',
