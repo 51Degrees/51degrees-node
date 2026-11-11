@@ -129,9 +129,12 @@ const accepts = (pipeline, key) => Object.values(pipeline.flowElements)
  * @param {object} pipeline the pipeline
  * @param {object} headers the request headers
  * @param {object} [session] the session object of the request, if it has one
+ * @param {string} [target] the request target, a page with a query string
+ * unless one is given
  * @returns {Promise<object>} the processed flow data
  */
-const processRequest = (pipeline, headers, session) => {
+const processRequest = (pipeline, headers, session,
+  target = '/page?51D_x=1&other=2') => {
   return new Promise((resolve, reject) => {
     let flowData;
     const server = http.createServer(async (req, res) => {
@@ -148,7 +151,7 @@ const processRequest = (pipeline, headers, session) => {
         res.end();
       }
     });
-    request(server).get('/page?51D_x=1&other=2').set(headers)
+    request(server).get(target).set(headers)
       .then(() => resolve(flowData), reject);
   });
 };
@@ -193,7 +196,22 @@ describe('usage sharing accepts no evidence', () => {
     expect(view['header.protocol']).toBe('http');
     expect(view['server.request-method']).toBe('GET');
     expect(view['server.request-path']).toBe('/page');
+    // All three request line values are on every view, undecoded, so that
+    // an absent key says the request line was not supplied.
+    expect(view['server.request-query']).toBe('51D_x=1&other=2');
     expect(Object.keys(view)).not.toContain('header.cookie');
+  });
+
+  test('the request line is on the view with an empty query where there ' +
+    'is none', async () => {
+    const flowData = await processRequest(usagePipeline(),
+      { 'User-Agent': 'agent' }, undefined, '/plain');
+
+    const view = flowData.evidence.get('server.http-request');
+    expect(view['server.request-method']).toBe('GET');
+    expect(view['server.request-path']).toBe('/plain');
+    expect(view['server.request-query']).toBe('');
+    expect(Object.keys(view)).toContain('server.request-query');
   });
 
   test('the method is shared, and the path and Cookie header are not, ' +
@@ -209,6 +227,10 @@ describe('usage sharing accepts no evidence', () => {
     expect(received[0]).toContain('request-method');
     expect(received[0]).toContain('session one');
     expect(received[0]).not.toContain('/page');
+    // request-path and request-query are both never shared, whatever the
+    // settings, so neither name reaches the service.
+    expect(received[0]).not.toContain('request-path');
+    expect(received[0]).not.toContain('request-query');
     expect(received[0]).not.toMatch(/header Name="cookie"/i);
   });
 
@@ -253,6 +275,26 @@ describe('usage sharing accepts no evidence', () => {
     expect(received[0]).not.toContain('request agent');
     expect(received[0]).not.toContain('http-request');
   });
+
+  test('a key in both places whose letters differ is shared once',
+    async () => {
+      const pipeline = usagePipeline();
+      const flowData = pipeline.createFlowData();
+      // Added before the request, so the evidence keeps this spelling and
+      // the view carries the other one.
+      flowData.evidence.add('HEADER.User-Agent', 'evidence agent');
+      flowData.evidence.add('server.http-request', {
+        'header.user-agent': 'request agent'
+      });
+
+      await flowData.process();
+      await receivedCount(1);
+
+      const names = received[0].match(/<header Name="[^"]*user-agent"/gi);
+      expect(names).toHaveLength(1);
+      expect(received[0]).toContain('evidence agent');
+      expect(received[0]).not.toContain('request agent');
+    });
 
   test('evidence added by hand is shared as before', async () => {
     const pipeline = usagePipeline();
