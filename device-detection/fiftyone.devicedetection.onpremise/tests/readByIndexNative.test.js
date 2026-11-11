@@ -252,13 +252,13 @@ describe('reading by index with the native engine', () => {
           Error.stackTraceLimit = frames;
           deep(60, () => rows.push(
             `DIAG stackTraceLimit ${frames}: ` +
-            `getValueAsBool('IsMobile') ` +
+            'getValueAsBool(IsMobile) ' +
             `${time(() => results.getValueAsBool('IsMobile'))} ns, ` +
             `getValueAsBool(${index}) ` +
             `${time(() => results.getValueAsBool(index))} ns, ` +
             `getPropertyName(${index}) one overload ` +
             `${time(() => results.getPropertyName(index))} ns, ` +
-            `containsProperty('IsMobile') one overload ` +
+            'containsProperty(IsMobile) one overload ' +
             `${time(() => results.containsProperty('IsMobile'))} ns, ` +
             `new Error(message) ${time(() => new Error(message))} ns`));
         }
