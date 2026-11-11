@@ -156,8 +156,8 @@ test('checks the port by its value', () => {
   }
 });
 
-// Each character rule 8 lists, after the host and in the endpoint, and a '%' without two hexadecimal digits after it, even
-// at the end.
+// Each character rule 8 lists, after the host and in the endpoint, and a '%'
+// without two hexadecimal digits after it, even at the end.
 test('encodes the characters rule 8 lists', () => {
   expect(callbackUrl('https', 'example.com/"^`{|}', '/j"^`{|}'))
     .toStrictEqual(valid(
