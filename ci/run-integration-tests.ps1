@@ -85,7 +85,7 @@ if ($TestResourceKey) {
         -Port 8096 `
         -Environment @{
             '_51DEGREES_RESOURCE_KEY' = $TestResourceKey
-            'FOD_CLOUD_API_URL' = 'https://cloud.51degrees.com/api/v4/'
+            '_51DEGREES_CLOUD_ENDPOINT' = 'https://cloud.51degrees.com/api/v4/'
         }
     } catch { $failed += 'cloud' }
 } else {

@@ -47,6 +47,12 @@ const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
 const FALLBACK_NAME =
   /(?:process\.env\.|process\.env\[\s*['"]|\$env:|\$\{env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
 
+// The cloud endpoint is _51DEGREES_CLOUD_ENDPOINT, as in every other
+// 51Degrees language, and nothing stands behind it, so the name it had
+// before must not appear anywhere, whether read, set or described. Only the
+// whole name is matched, so a longer name holding it is left alone.
+const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
+
 // Reading a binary file as text yields no useful name and wastes time, so
 // files that never carry one are skipped by extension.
 const SKIPPED_EXTENSIONS = new Set([
@@ -132,6 +138,10 @@ describe('environment variable names', () => {
     expect(namesInRepository(FALLBACK_NAME)).toEqual([]);
   });
 
+  it('names no old cloud endpoint variable', () => {
+    expect(namesInRepository(OLD_NAME)).toEqual([]);
+  });
+
   it('matches only a name that starts with the digit', () => {
     const subject = (text) =>
       [...text.matchAll(DIGIT_INITIAL_NAME)].map((match) => match[2]);
@@ -152,6 +162,30 @@ describe('environment variable names', () => {
 
     // In any letter case.
     expect(subject('51degrees_dd_path')).toEqual(['51degrees_dd_path']);
+  });
+
+  it('matches only the whole old cloud endpoint name', () => {
+    const subject = (text) =>
+      [...text.matchAll(OLD_NAME)].map((match) => match[2]);
+
+    // The name in use is not a match.
+    expect(subject('process.env._51DEGREES_CLOUD_ENDPOINT')).toEqual([]);
+
+    // Neither is a longer name holding the old one.
+    expect(subject('process.env.FOD_CLOUD_API_URL_V2')).toEqual([]);
+    expect(subject('MY_FOD_CLOUD_API_URL=x')).toEqual([]);
+
+    // The old name is a match, read, set or in prose.
+    expect(subject('process.env.FOD_CLOUD_API_URL'))
+      .toEqual(['FOD_CLOUD_API_URL']);
+    expect(subject("'FOD_CLOUD_API_URL' = 'https://cloud.example/'"))
+      .toEqual(['FOD_CLOUD_API_URL']);
+    expect(subject('FOD_CLOUD_API_URL=https://cloud.example/ node x.js'))
+      .toEqual(['FOD_CLOUD_API_URL']);
+
+    // In any letter case.
+    expect(subject('process.env.fod_cloud_api_url'))
+      .toEqual(['fod_cloud_api_url']);
   });
 
   it('matches only a read of the bare name', () => {
