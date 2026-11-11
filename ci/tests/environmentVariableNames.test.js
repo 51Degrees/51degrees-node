@@ -39,13 +39,13 @@ const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
 
 // Each variable has one name and nothing stands behind it, so a bare
 // RESOURCE_KEY or LICENSE_KEY must never be read from the environment.
-// Only a read is matched, being the two forms Node offers and the
-// PowerShell form, so the same text in a placeholder such as
+// Only a read is matched, being the two forms Node offers and the two
+// PowerShell forms, so the same text in a placeholder such as
 // '!!YOUR_RESOURCE_KEY!!' or in a longer name such as
 // TEST_SUPER_RESOURCE_KEY is left alone. A read is what restores a
 // fallback, whereas prose naming the old name cannot.
 const FALLBACK_NAME =
-  /(?:process\.env\.|process\.env\[\s*['"]|\$env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
+  /(?:process\.env\.|process\.env\[\s*['"]|\$env:|\$\{env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
 
 // Reading a binary file as text yields no useful name and wastes time, so
 // files that never carry one are skipped by extension.
