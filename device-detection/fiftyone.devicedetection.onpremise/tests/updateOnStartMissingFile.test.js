@@ -137,6 +137,21 @@ describe('update on start-up with no data file', () => {
       .toBe(true);
   });
 
+  // The engine reads the keys it accepts from the data file, which has not
+  // arrived yet, so until it does every key is kept and evidence added in
+  // the meantime is not lost.
+  test('keeps every key until the data file arrives', async () => {
+    server = await serve(500);
+    const pipeline = builderFor(server, folder, true).build();
+    const engine = pipeline.getElement('device');
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBe(true);
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('header.user-agent', MobileUserAgent);
+    expect(flowData.evidence.get('header.user-agent'))
+      .toBe(MobileUserAgent);
+  });
+
   test('still fails to build where the engine does not update on ' +
     'start-up', async () => {
     server = await serve(200);

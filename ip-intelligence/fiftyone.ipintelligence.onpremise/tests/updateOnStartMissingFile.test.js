@@ -134,6 +134,20 @@ describe('update on start-up with no data file', () => {
       .toBe(true);
   });
 
+  // The engine reads the keys it accepts from the data file, which has not
+  // arrived yet, so until it does every key is kept and evidence added in
+  // the meantime is not lost.
+  test('keeps every key until the data file arrives', async () => {
+    server = await serve(500);
+    const pipeline = builderFor(server, folder, true).build();
+    const engine = pipeline.getElement('ip');
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('query.client-ip'))
+      .toBe(true);
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('query.client-ip', IpAddress);
+    expect(flowData.evidence.get('query.client-ip')).toBe(IpAddress);
+  });
+
   test('still fails to build where the engine does not update on ' +
     'start-up', async () => {
     server = await serve(200);
