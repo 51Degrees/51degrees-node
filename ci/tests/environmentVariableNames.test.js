@@ -146,6 +146,9 @@ describe('environment variable names', () => {
       .toEqual(['51DEGREES_IPI_PATH']);
     expect(subject('51DEGREES_DD_PATH and 51DEGREES_IPI_PATH'))
       .toEqual(['51DEGREES_DD_PATH', '51DEGREES_IPI_PATH']);
+
+    // In any letter case.
+    expect(subject('51degrees_dd_path')).toEqual(['51degrees_dd_path']);
   });
 
   it('matches only a read of the bare name', () => {
@@ -171,8 +174,11 @@ describe('environment variable names', () => {
     expect(subject('$env:RESOURCE_KEY = $TestResourceKey'))
       .toEqual(['RESOURCE_KEY']);
 
-    // Including the fallback shape this change removed.
+    // Including a read behind the name in use.
     expect(subject('process.env._51DEGREES_RESOURCE_KEY || ' +
       'process.env.RESOURCE_KEY')).toEqual(['RESOURCE_KEY']);
+
+    // In any letter case.
+    expect(subject('process.env.resource_key')).toEqual(['resource_key']);
   });
 });
