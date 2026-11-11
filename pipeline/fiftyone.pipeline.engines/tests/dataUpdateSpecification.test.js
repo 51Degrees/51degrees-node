@@ -259,6 +259,73 @@ describe('update from memory', () => {
     expect(dataFile.updating).toBe(false);
   });
 
+  // The status is reported from timer, request and file system watcher
+  // callbacks, where an error thrown by an application's listener would be
+  // uncaught and end the process.
+  test('a listener that throws is logged and the others still hear',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = memoryDataFile('version 1');
+      const heard = [];
+      service.on('updateComplete', () => {
+        throw new Error('The listener failed.');
+      });
+      service.once('updateComplete', (status) => heard.push(status));
+      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+        .toBe(true);
+      expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: The listener failed."
+      ]);
+      service.updateFromMemory(dataFile, Buffer.from('version 3'));
+      expect(heard).toHaveLength(1);
+    });
+
+  // The data file's own onUpdateComplete is the other update complete
+  // callback, so an error it throws is reported in the same words.
+  test('an error from the data file callback is logged in the same words',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = memoryDataFile('version 1');
+      dataFile.onUpdateComplete = () => {
+        throw new Error('The data file callback failed.');
+      };
+      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+        .toBe(true);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: The data file callback " +
+        'failed.'
+      ]);
+    });
+
+  // A service is made with no pipeline until one is attached, and an error
+  // from a callback then has no log to go to, so it is written to the
+  // console rather than lost.
+  test('a callback error with no pipeline is written to the console',
+    () => {
+      const consoleError = jest.spyOn(console, 'error')
+        .mockImplementation(() => {});
+      try {
+        const service = new DataFileUpdateService();
+        const dataFile = memoryDataFile('version 1');
+        dataFile.onUpdateComplete = () => {
+          throw new Error('The data file callback failed.');
+        };
+        expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+          .toBe(true);
+        expect(consoleError).toHaveBeenCalledWith(
+          'An unhandled error occurred while checking for automatic ' +
+          "updates for engine 'TestEngine'. Error detail: The data file " +
+          'callback failed.');
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
   test('keeps the data it has when the refresh fails', async () => {
     const { service, logs } = loggingService();
     const dataFile = memoryDataFile('version 1');

@@ -29,6 +29,7 @@ const url = require('url');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
+const { LicenseKeys } = require('fiftyone.pipeline.core');
 
 const minToMs = (min) => min * 60000;
 
@@ -66,6 +67,21 @@ const engineName = function (dataFile) {
  */
 const errorDetail = function (error) {
   return error && error.message ? error.message : String(error);
+};
+
+/**
+ * The message logged when an update complete callback throws. .NET logs it
+ * as an unhandled error, in these words, with the exception attached, so
+ * the cause follows the text.
+ *
+ * @param {DataFile} dataFile the data file the update was for
+ * @param {*} error the error the callback threw
+ * @returns {string} the message to log
+ */
+const callbackErrorText = function (dataFile, error) {
+  return 'An unhandled error occurred while checking for automatic ' +
+    "updates for engine '" + engineName(dataFile) + "'. Error detail: " +
+    errorDetail(error);
 };
 
 /**
@@ -217,6 +233,8 @@ class DataFileUpdateService {
 
   /**
    * Writes a message to the log of the pipeline the service is attached to.
+   * With no pipeline, an error is written to the console, as a pipeline
+   * with no error listener does, so that it is not lost.
    *
    * @param {string} level the log level
    * @param {*} message the message
@@ -224,23 +242,37 @@ class DataFileUpdateService {
   log (level, message) {
     if (this.pipeline) {
       this.pipeline.log(level, message);
+    } else if (level === 'error') {
+      console.error(LicenseKeys.mask(message));
     }
   }
 
   /**
    * Reports how an update ended, to the listeners of 'updateComplete' and
-   * to the data file's own onUpdateComplete function, if it has one.
+   * to the data file's own onUpdateComplete function, if it has one. An
+   * error thrown by either is logged and goes no further.
    *
    * @param {DataFile} dataFile the data file the update was for
    * @param {string} status one of the AutoUpdateStatus values
    */
   complete (dataFile, status) {
-    this.eventEmitter.emit('updateComplete', status, dataFile);
+    // The status is reported from timer, request and file system watcher
+    // callbacks, so a listener that throws is logged rather than left
+    // uncaught, which would end the process, and the others are still
+    // called. The raw listeners are called so that a 'once' listener is
+    // removed as emit would remove it.
+    for (const listener of this.eventEmitter.rawListeners('updateComplete')) {
+      try {
+        listener.call(this.eventEmitter, status, dataFile);
+      } catch (e) {
+        this.log('error', callbackErrorText(dataFile, e));
+      }
+    }
     if (typeof dataFile.onUpdateComplete === 'function') {
       try {
         dataFile.onUpdateComplete(status);
       } catch (e) {
-        this.log('error', e);
+        this.log('error', callbackErrorText(dataFile, e));
       }
     }
   }
