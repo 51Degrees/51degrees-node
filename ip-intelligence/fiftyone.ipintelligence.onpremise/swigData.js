@@ -82,71 +82,59 @@ class SwigData extends AspectData {
         type = 'weightedstring';
       }
 
-      // A property's index is its place in the list of names the engine was
-      // built with, so the same index names the same property after any
-      // reload. A name the engine was not built with has no index, and is
-      // read by name so the native code gives its own no value message.
-      const indexes = this.flowElement.propertyIndexes;
-      const index = indexes === undefined
-        ? undefined
-        : indexes[property.name.toLowerCase()];
-      const target = index === undefined ? property.name : index;
-
       switch (type) {
         case 'bool':
-          value = this.swigResults.getValueAsBool(target);
+          value = this.swigResults.getValueAsBool(property.name);
           break;
         case 'string':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'javascript':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'int':
-          value = this.swigResults.getValueAsInteger(target);
+          value = this.swigResults.getValueAsInteger(property.name);
           break;
         case 'single':
         case 'double':
-          value = this.swigResults.getValueAsDouble(target);
+          value = this.swigResults.getValueAsDouble(property.name);
           break;
         case 'ipaddress':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'wkb':
         case 'wkbr':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'string[]':
-          value = this.swigResults.getValues(target);
+          value = this.swigResults.getValues(property.name);
           break;
         case 'weightedbool':
-          value = this.swigResults.getValuesAsWeightedBoolList(target);
+          value = this.swigResults.getValuesAsWeightedBoolList(property.name);
           isWeighted = true;
           break;
         case 'weightedint':
-          value = this.swigResults.getValuesAsWeightedIntegerList(target);
+          value = this.swigResults.getValuesAsWeightedIntegerList(property.name);
           isWeighted = true;
           break;
         case 'weightedsingle':
         case 'weighteddouble':
-          value = this.swigResults.getValuesAsWeightedDoubleList(target);
+          value = this.swigResults.getValuesAsWeightedDoubleList(property.name);
           isWeighted = true;
           break;
         case 'weightedstring':
         case 'weightedipaddress':
-          value = this.swigResults.getValuesAsWeightedStringList(target);
+          value = this.swigResults.getValuesAsWeightedStringList(property.name);
           isWeighted = true;
           break;
         case 'weightedwkb':
         case 'weightedwkbr':
-          // The native method takes the index or the name first and the
-          // number of decimal places second.
           value = this.swigResults.getValuesAsWeightedWKTStringList(
-            target, defaultWktDecimalPlaces);
+            property.name, defaultWktDecimalPlaces);
           isWeighted = true;
           break;
         default:
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
       }
 

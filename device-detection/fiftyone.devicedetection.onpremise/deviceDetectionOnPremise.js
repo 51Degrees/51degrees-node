@@ -39,7 +39,6 @@ const metricCategory = 'Device metrics';
 const Component = require('./component');
 const Property = require('./property');
 const Profile = require('./profile');
-const propertyIndexes = require('./propertyIndexes');
 
 /**
  * @typedef {import('fiftyone.pipeline.engines').DataKeyedCache} DataKeyedCache
@@ -358,14 +357,9 @@ class DeviceDetectionOnPremise extends Engine {
     // Create vector for restricted properties
     const propertiesList = new swigWrapper.VectorStringSwig();
 
-    // The property names the engine is built with. A property's index is its
-    // place in this list, which does not change when the data file reloads.
-    const buildPropertyNames = [];
-
     if (restrictedProperties) {
       restrictedProperties.forEach(function (property) {
         propertiesList.add(property);
-        buildPropertyNames.push(property);
       });
     }
 
@@ -444,24 +438,6 @@ class DeviceDetectionOnPremise extends Engine {
     super(...arguments);
 
     this.dataKey = 'device';
-
-    /**
-     * The property names the engine was built with, in the order given. A
-     * property's index is its place in this list.
-     *
-     * @type {Array<string>}
-     */
-    this.buildPropertyNames = buildPropertyNames;
-
-    /**
-     * The index of each build-time property name, keyed by the name in lower
-     * case. Made once here and never from the data set, so every read goes
-     * by index. An engine built with no names has an empty table and reads
-     * by name.
-     *
-     * @type {object}
-     */
-    this.propertyIndexes = propertyIndexes.fromNames(buildPropertyNames);
 
     const current = this;
 

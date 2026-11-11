@@ -28,7 +28,7 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * will be restricted to
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
+     * 51Degrees website: https://51degrees.com/pricing.
      * If you do not wish to use a key then you can specify
      * an empty string, but this will cause automatic updates to
      * be disabled.
@@ -51,8 +51,7 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation. If there is no file at dataFilePath it
-     * is downloaded, and processing fails if the download does not work.
+     * the datafile on initialisation
      */
     constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
@@ -74,22 +73,6 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
         tempDataDir: string;
         updateOnStart: boolean;
     }, ...args: any[]);
-    /**
-     * The property names the engine was built with, in the order given. A
-     * property's index is its place in this list.
-     *
-     * @type {Array<string>}
-     */
-    buildPropertyNames: Array<string>;
-    /**
-     * The index of each build-time property name, keyed by the name in lower
-     * case. Made once here and never from the data set, so every read goes
-     * by index. An engine built with no names has an empty table and reads
-     * by name.
-     *
-     * @type {object}
-     */
-    propertyIndexes: object;
     /**
      * Function for initialising the engine, wrapped like this so
      * that an engine can be initialised once the datafile is

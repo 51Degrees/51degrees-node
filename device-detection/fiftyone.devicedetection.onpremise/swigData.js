@@ -137,34 +137,24 @@ class SwigData extends AspectData {
     if (property) {
       let value;
 
-      // A property's index is its place in the list of names the engine was
-      // built with, so the same index names the same property after any
-      // reload. A name the engine was not built with has no index, and is
-      // read by name so the native code gives its own no value message.
-      const indexes = this.flowElement.propertyIndexes;
-      const index = indexes === undefined
-        ? undefined
-        : indexes[property.name.toLowerCase()];
-      const target = index === undefined ? property.name : index;
-
       switch (property.type) {
         case 'bool':
-          value = this.swigResults.getValueAsBool(target);
+          value = this.swigResults.getValueAsBool(property.name);
           break;
         case 'string':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'javascript':
-          value = this.swigResults.getValueAsString(target);
+          value = this.swigResults.getValueAsString(property.name);
           break;
         case 'int':
-          value = this.swigResults.getValueAsInteger(target);
+          value = this.swigResults.getValueAsInteger(property.name);
           break;
         case 'double':
-          value = this.swigResults.getValueAsDouble(target);
+          value = this.swigResults.getValueAsDouble(property.name);
           break;
         case 'string[]':
-          value = this.swigResults.getValues(target);
+          value = this.swigResults.getValues(property.name);
           break;
       }
 
