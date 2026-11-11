@@ -552,8 +552,8 @@ class CloudRequestEngine extends Engine {
   /**
    * The evidence the engine sends, being every value in the Flow Data,
    * whether an element accepted it or not, apart from the reserved names
-   * and the web request view. An accepted value wins over a set aside one
-   * of the same key.
+   * and the web request view. The accepted values come first, so where
+   * the two would give the same name the accepted one is sent.
    *
    * @param {Evidence} evidence the Flow Data's evidence
    * @returns {object} the evidence keys and values to send
@@ -565,9 +565,9 @@ class CloudRequestEngine extends Engine {
       ? evidence.getUnaccepted()
       : {};
 
-    for (const source of [unaccepted, evidence.getAll()]) {
+    for (const source of [evidence.getAll(), unaccepted]) {
       for (const [key, value] of Object.entries(source)) {
-        if (this.isSent(key)) {
+        if (this.isSent(key) && (key in sendable) === false) {
           sendable[key] = value;
         }
       }
