@@ -112,7 +112,8 @@ try {
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 if (typeof localResourceKey === 'undefined' ||
   localResourceKey.substr(0, 2) === '!!') {
-  localResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+  localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+    '!!YOUR_RESOURCE_KEY!!';
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {

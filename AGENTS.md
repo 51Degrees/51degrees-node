@@ -150,9 +150,9 @@ cd ../../../../..
 ```
 
 To use another data file, give its path as the first argument, or set
-`51DEGREES_DD_PATH` for Device Detection or `51DEGREES_IPI_PATH` for IP
-Intelligence. The names start with a digit, so in a Linux shell set them with
-`env`, for example `env 51DEGREES_IPI_PATH=/path/to/file.ipi node gettingStarted.js`.
+`_51DEGREES_DD_PATH` for Device Detection or `_51DEGREES_IPI_PATH` for IP
+Intelligence, for example
+`export _51DEGREES_IPI_PATH=/path/to/file.ipi` before running the example.
 
 ### Correct output
 
@@ -213,7 +213,7 @@ has only the free properties, the platform and browser lines read
 `Unknown (...)`, and the example ends by saying that some properties are not
 available with a free resource key. The IP Intelligence cloud example, in
 `ip-intelligence/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-console`,
-reads its key from `51DEGREES_RESOURCE_KEY` instead.
+reads its key from `_51DEGREES_RESOURCE_KEY` instead.
 
 ### Pitfalls
 

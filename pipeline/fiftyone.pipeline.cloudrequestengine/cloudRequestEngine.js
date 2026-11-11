@@ -32,13 +32,26 @@ const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 
+// Names the cloud service reads its credentials and property list from,
+// which Evidence must not supply under any prefix or in any letter case.
+const reservedFields = ['resource', 'license', 'licence', 'values'];
+
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
  */
 
+// Whether an object has a member of its own by that name, so that a name
+// such as constructor is not found on the prototype.
+const hasOwn = (object, name) =>
+  Object.prototype.hasOwnProperty.call(object, name);
+
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
+
+// The key a web integration gives the web request itself. It is a view of
+// the whole request and not a value to send, so it is left out.
+const webRequestKey = 'server.http-request';
 
 /**
  * Whether the response in an element data has a top level member named
@@ -535,13 +548,19 @@ class CloudRequestEngine extends Engine {
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
    *
+   * The engine sends every Evidence value in the Flow Data, including the
+   * values no element in the pipeline accepts, because what the cloud
+   * service uses changes over time and knowing about the other Evidence is
+   * important to continued optimization. The reserved names and the web
+   * request view are left out.
+   *
    * @param {FlowData} flowData FlowData to get evidence from
    * @returns {object} Evidence Dictionary
    */
   getContent (flowData) {
     const queryData = {};
 
-    const evidence = flowData.evidence.getAll();
+    const evidence = this.sendableEvidence(flowData.evidence);
 
     // Add evidence in reverse alphabetical order, excluding special keys.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'other'));
@@ -553,6 +572,45 @@ class CloudRequestEngine extends Engine {
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'query'));
 
     return queryData;
+  }
+
+  /**
+   * The evidence the engine sends, being every value in the Flow Data,
+   * whether an element accepted it or not, apart from the web request
+   * view. addQueryData then leaves out the reserved names. The accepted
+   * values come first, so where the two would give the same name the
+   * accepted one is sent.
+   *
+   * @param {Evidence} evidence the Flow Data's evidence
+   * @returns {object} the evidence keys and values to send
+   */
+  sendableEvidence (evidence) {
+    const sendable = {};
+    // An older fiftyone.pipeline.core throws unaccepted evidence away.
+    const unaccepted = typeof evidence.getUnaccepted === 'function'
+      ? evidence.getUnaccepted()
+      : {};
+
+    for (const source of [evidence.getAll(), unaccepted]) {
+      for (const [key, value] of Object.entries(source)) {
+        if (this.isSent(key) && hasOwn(sendable, key) === false) {
+          sendable[key] = value;
+        }
+      }
+    }
+
+    return sendable;
+  }
+
+  /**
+   * Whether an evidence key is sent to the cloud service. The reserved
+   * names are left out later, by addQueryData.
+   *
+   * @param {string} key the evidence key
+   * @returns {boolean} false for the web request view, in any letter case
+   */
+  isSent (key) {
+    return String(key).toLowerCase() !== webRequestKey;
   }
 
   /**
@@ -577,8 +635,13 @@ class CloudRequestEngine extends Engine {
         ? evidenceKey.substring(separatorIndex + 1)
         : evidenceKey;
 
+      // Evidence never supplies the request's own fields.
+      if (reservedFields.includes(suffix.toLowerCase())) {
+        continue;
+      }
+
       // Check and add the evidence to the query parameters.
-      if ((suffix in queryData) === false) {
+      if (hasOwn(queryData, suffix) === false) {
         queryData[suffix] = evidenceValue;
       } else {
         // If the queryParameter exists already.

@@ -14,6 +14,8 @@ declare class Evidence {
     constructor(flowData: FlowData);
     flowData: import("./flowData");
     evidenceStore: {};
+    keys: {};
+    unacceptedStore: {};
     /**
      * Every value addFromRequest read from the request, under its evidence
      * key and before any is filtered out, or undefined when evidence was
@@ -23,7 +25,9 @@ declare class Evidence {
      */
     requestEvidence: Readonly<object> | undefined;
     /**
-     * Add a piece of evidence to flowData
+     * Add a piece of evidence to flowData. Keys ignore letter case, so a key
+     * that differs from one already added only in its letters replaces that
+     * value under the letters it was first added with.
      *
      * @param {string} key evidence key to add
      * @param {*} value value of evidence key
@@ -76,10 +80,10 @@ declare class Evidence {
      */
     addFromRequestAsync(request: object, maxFormBytes?: number): Promise<Evidence>;
     /**
-     * Get a piece of evidence
+     * Get a piece of evidence by key, in any letter case
      *
      * @param {string} key evidence key to retreive
-     * @returns {*} the evidence value
+     * @returns {*} the evidence value, or undefined where there is none
      */
     get(key: string): any;
     /**
@@ -88,6 +92,16 @@ declare class Evidence {
      * @returns {object} all evidence
      */
     getAll(): object;
+    /**
+     * Get the evidence no element in the pipeline accepts, which add set
+     * aside rather than throwing away. The Cloud Request Engine sends it
+     * along with the accepted evidence, because what the cloud service uses
+     * changes over time.
+     *
+     * @returns {object} the evidence set aside, empty where every key was
+     * accepted
+     */
+    getUnaccepted(): object;
 }
 declare namespace Evidence {
     export { FlowData };

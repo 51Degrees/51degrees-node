@@ -55,14 +55,15 @@ const missingFromAnswerMessage = function (thing, reason, product) {
 module.exports = {
   /**
    * The environment variable names a cloud test reads its resource key
-   * from, in order. The two shared names come first, then the names the
-   * test read before them.
+   * from, in order. The two shared names come first, then any name the
+   * test takes its own key from. Every one of them is a name in its own
+   * right rather than an older name standing behind another.
    *
-   * @param {...string} legacyNames the older names, in the order to try
+   * @param {...string} extraNames further names, in the order to try
    * @returns {Array<string>} the names to try, in order
    */
-  resourceKeyNames: function (...legacyNames) {
-    return SHARED_RESOURCE_KEY_NAMES.concat(legacyNames)
+  resourceKeyNames: function (...extraNames) {
+    return SHARED_RESOURCE_KEY_NAMES.concat(extraNames)
       .filter((name, index, names) => names.indexOf(name) === index);
   },
 

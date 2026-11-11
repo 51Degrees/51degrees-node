@@ -68,11 +68,7 @@ const DATA_FILE_AGE_WARNING = 30;
 // path to the device detection data file. This is checked before
 // searching the folder hierarchy for the file. The name is the one
 // the 51Degrees APIs share.
-const DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
-
-// The name these examples used before the one above was agreed. It is
-// still read, after the agreed name, so existing set ups keep working.
-const LEGACY_DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
+const DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
 
 /**
  * Get the command that downloads one of the data submodule's files.
@@ -152,13 +148,11 @@ class ExampleUtils {
       path.normalize(process.cwd()));
   }
 
-  // Get the explicit data file path from the environment. The variable
-  // named by DATA_FILE_PATH_ENV_VAR is read first, then the one named by
-  // LEGACY_DATA_FILE_PATH_ENV_VAR. Returns undefined if neither is set.
+  // Get the explicit data file path from the environment, read from the
+  // variable named by DATA_FILE_PATH_ENV_VAR. Returns undefined when it
+  // is not set.
   static getDataFilePathFromEnv () {
-    return process.env[DATA_FILE_PATH_ENV_VAR] ||
-      process.env[LEGACY_DATA_FILE_PATH_ENV_VAR] ||
-      undefined;
+    return process.env[DATA_FILE_PATH_ENV_VAR] || undefined;
   }
 
   // Get the path to a device detection data file. The environment is
@@ -305,6 +299,5 @@ module.exports = {
   ExampleUtils,
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR
+  DATA_FILE_PATH_ENV_VAR
 };

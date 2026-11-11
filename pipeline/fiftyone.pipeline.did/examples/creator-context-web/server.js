@@ -65,8 +65,8 @@
  * signature check.
  *
  * Environment variables:
- *   _51DEGREES_RESOURCE_KEY, or RESOURCE_KEY. Required.
- *   _51DEGREES_LICENSE_KEY, or LICENSE_KEY. Optional, see below.
+ *   _51DEGREES_RESOURCE_KEY. Required.
+ *   _51DEGREES_LICENSE_KEY. Optional, see below.
  *   FOD_CLOUD_API_URL. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
@@ -222,13 +222,11 @@ function main () {
   // unchanged.
   const base = (process.env.FOD_CLOUD_API_URL ||
     'https://cloud.51degrees.com/api/v4/').replace(/\/*$/, '/');
-  const resource = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY;
-  const licence = process.env._51DEGREES_LICENSE_KEY ||
-    process.env.LICENSE_KEY || '';
+  const resource = process.env._51DEGREES_RESOURCE_KEY;
+  const licence = process.env._51DEGREES_LICENSE_KEY || '';
   const port = Number(process.env.PORT || 5100);
   if (!resource) {
-    console.error('Set _51DEGREES_RESOURCE_KEY (or RESOURCE_KEY) to the ' +
+    console.error('Set _51DEGREES_RESOURCE_KEY to the ' +
       'resource key of the page.');
     process.exit(1);
   }

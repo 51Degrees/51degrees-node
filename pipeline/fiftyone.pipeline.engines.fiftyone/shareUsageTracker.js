@@ -56,7 +56,7 @@ class ShareUsageTracker extends Tracker {
   match (key, value) {
     const difference = Date.now() - value;
 
-    if (difference > this.interval) {
+    if (difference >= this.interval) {
       this.put(key, value);
 
       return true;

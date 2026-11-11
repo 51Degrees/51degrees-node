@@ -30,6 +30,13 @@ declare class Engine extends Engine_base {
     cache: import("./dataKeyedCache");
     restrictedProperties: any[];
     /**
+     * The restricted property names in lower case, because property
+     * names are compared ignoring case.
+     *
+     * @type {Set<string>}
+     */
+    restrictedPropertyKeys: Set<string>;
+    /**
      * Checks cache and returns cached result if found.
      *
      * @param {FlowData} flowData checks if a FlowData's evidence

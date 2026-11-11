@@ -50,10 +50,10 @@ const TIMEOUT_MS = 300000;
 // The settings that name a data file or a licence key. A fresh clone has
 // none of them.
 const SETTINGS = [
-  '51DEGREES_IPI_PATH',
-  '51DEGREES_DD_PATH',
-  'LICENSEKEY',
-  'LICENSE_KEY'
+  '_51DEGREES_IPI_PATH',
+  '_51DEGREES_DD_PATH',
+  '_51DEGREES_LICENSE_KEY',
+  'LICENSEKEY'
 ];
 
 // The free Lite data file, downloaded if it is missing.
