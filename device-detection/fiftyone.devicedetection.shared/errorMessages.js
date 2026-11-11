@@ -29,6 +29,8 @@ module.exports = {
     '\'header.user-agent\'.',
   dataFilePathRequired: 'dataFilePath is required',
   fileNotFound: 'There is no file at \'%s\'',
+  fileNotFoundNotDownloaded: 'There is no file at \'%s\' and the ' +
+    'download of a new one ended with the status \'%s\'',
   moduleDirNotFound: 'There is no directory at \'%s\'. This is ' +
     'expected to contain the native modules for the hash engine.' +
     ' For example, %s',

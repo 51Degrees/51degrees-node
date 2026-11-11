@@ -73,8 +73,8 @@ const DataExtension = require51('fiftyone.devicedetection.shared').dataExtension
 // In this example, by default, the 51degrees "Lite" file needs to be somewhere in the
 // project space, or you may specify another file as a command line parameter.
 //
-// Note that the Lite data file is only used for illustration, and has limited accuracy
-// and capabilities. Each property the example asks for that only the Enterprise data
+// Note that the Lite data file is only used for illustration, and has a small number
+// of Properties. Each property the example asks for that only the Enterprise data
 // file has is written as needing it, with a link to ask for a copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
 
