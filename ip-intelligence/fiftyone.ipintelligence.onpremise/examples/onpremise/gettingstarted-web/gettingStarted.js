@@ -92,7 +92,7 @@ const setPipeline = (options) => {
   }
 
   if (!fs.existsSync(dataFilePath)) {
-    // Check the 51DEGREES_IPI_PATH environment variable for an explicit
+    // Check the _51DEGREES_IPI_PATH environment variable for an explicit
     // path, then search the folder hierarchy for the file name.
     const newDataFilePath =
       ExampleUtils.findDataFile(path.basename(dataFilePath));

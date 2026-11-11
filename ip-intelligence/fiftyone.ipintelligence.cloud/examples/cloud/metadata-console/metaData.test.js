@@ -42,8 +42,7 @@ const CloudRequestEngine =
 
 const resourceKeyNames = keyUtils.resourceKeyNames(
   tc.envVars.superResourceKeyEnvVar,
-  ExampleUtils.RESOURCE_KEY_ENV_VAR,
-  ExampleUtils.LEGACY_RESOURCE_KEY_ENV_VAR);
+  ExampleUtils.RESOURCE_KEY_ENV_VAR);
 
 // The cloud service can drop a connection, which is not what these tests check.
 jest.retryTimes(2);

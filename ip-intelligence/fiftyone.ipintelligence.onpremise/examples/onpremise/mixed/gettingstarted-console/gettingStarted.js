@@ -223,13 +223,13 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
   // Use the supplied path for the device detection data file, the path in
-  // the 51DEGREES_DD_PATH environment variable, or the Lite file.
+  // the _51DEGREES_DD_PATH environment variable, or the Lite file.
   const deviceDataFile = args.length > 0
     ? args[0]
     : ExampleUtils.findDeviceDataFile(LITE_V_4_1_HASH);
 
   // Use the supplied path for the IP intelligence data file, the path in
-  // the 51DEGREES_IPI_PATH environment variable, or the Lite file.
+  // the _51DEGREES_IPI_PATH environment variable, or the Lite file.
   const ipDataFile = args.length > 1
     ? args[1]
     : ExampleUtils.findDataFile(LITE_V_4_1_IPI);

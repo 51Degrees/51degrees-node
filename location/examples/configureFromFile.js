@@ -80,7 +80,7 @@ if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
   // If not, check the resource key environment variable.
   if (typeof myResourceKey === 'undefined' ||
     myResourceKey.startsWith('!!')) {
-    myResourceKey = process.env.RESOURCE_KEY;
+    myResourceKey = process.env._51DEGREES_RESOURCE_KEY;
   }
 
   if (myResourceKey) {

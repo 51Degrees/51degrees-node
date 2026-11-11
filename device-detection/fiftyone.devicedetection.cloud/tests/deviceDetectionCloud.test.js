@@ -49,10 +49,10 @@ const MobileUserAgent =
   'AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile' +
   '/11D167 Safari/9537.53';
 
-// The aligned '_51DEGREES_RESOURCE_KEY' environment variable is checked
-// first, followed by the legacy 'RESOURCE_KEY' variable.
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// environment variable.
 const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+  '!!YOUR_RESOURCE_KEY!!';
 
 describe('deviceDetectionCloud', () => {
   beforeAll(() => {
