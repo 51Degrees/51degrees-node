@@ -65,6 +65,32 @@ const build = (client) => new PipelineBuilder({ addSequenceElement: false })
   })).build();
 
 describe('cloud request engine cache', () => {
+  // A default pipeline, with the Sequence Element giving each request a
+  // new session id. Once the engine has its evidence keys, as it does when
+  // a cloud engine is added, the cache key is built from those keys alone,
+  // so the session id does not stop a repeated request being served.
+  test('serves a repeated request from the cache in a default pipeline',
+    async () => {
+      const client = new CountingClient([baseJson]);
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder().add(engine).build();
+      await engine.ready();
+      const sessions = [];
+      for (let i = 0; i < 2; i++) {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.User-Agent', 'iPhone');
+        await flowData.process();
+        sessions.push(flowData.evidence.get('query.session-id'));
+      }
+      expect(typeof sessions[0]).toBe('string');
+      expect(sessions[0]).not.toBe(sessions[1]);
+      expect(client.posts).toBe(1);
+    });
+
   test('serves a response with no 51Did from the cache', async () => {
     const client = new CountingClient([baseJson]);
     const pipeline = build(client);
