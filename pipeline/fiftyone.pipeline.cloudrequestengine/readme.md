@@ -18,6 +18,22 @@ It is used by the cloud versions of the following 51Degrees engines:
 - [**fiftyone.devicedetection**](https://github.com/51Degrees/51degrees-node/tree/main/device-detection#readme) - A device detection engine
 - [**fiftyone.geolocation**](https://github.com/51Degrees/51degrees-node/tree/main/location#readme) - A geolocation lookup engine
 
+## Credentials
+
+The `Cloud Request Engine` takes a `resourceKey`, a `licenseKey`, or both.
+
+- A `resourceKey` on its own gives the properties the key carries.
+- A `licenseKey` may be given beside a `resourceKey`, or on its own.
+- `requestedProperties` names the properties wanted, as fully qualified
+  names such as `device.ismobile`, in a list or one comma separated string.
+  It is required with a `licenseKey` on its own. Beside a `resourceKey` the
+  cloud service adds them to the properties the resource key carries.
+
+The engine refuses to build with no key at all, or with a `licenseKey` and
+no `resourceKey` or `requestedProperties`, because the cloud service refuses
+every request made that way. A license key is sent in the body of each
+request and never in a URL.
+
 ## Installation
 
 ```

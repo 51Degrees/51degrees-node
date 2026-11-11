@@ -48,16 +48,11 @@ const ChromeUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 describe('deviceDetectionOnPremise', () => {
-  beforeAll(() => {
-    // Copy data file to test directory if one does not exist.
-    try {
-      if (!fs.existsSync(DataFile)) {
-        fs.copyFile(LiteDataFile, DataFile, (err) => {
-          if (err) throw err;
-        });
-      }
-    } catch (err) {
-      console.error(err);
+  beforeAll(async () => {
+    // Copy the Lite data file to the name the tests read if that file does
+    // not exist, waiting for the copy because the first test opens it.
+    if (!fs.existsSync(DataFile)) {
+      await fs.promises.copyFile(LiteDataFile, DataFile);
     }
   });
 
@@ -226,7 +221,8 @@ describe('deviceDetectionOnPremise', () => {
       matchedUa.split(/[_{}]/g).forEach(substring => {
         expect(MobileUserAgent.includes(substring)).toBeTruthy();
         const index = matchedUa.indexOf(substring);
-        const original = MobileUserAgent.substring(index, substring.length);
+        const original = MobileUserAgent.substring(
+          index, index + substring.length);
         expect(substring).toEqual(original);
       });
     });

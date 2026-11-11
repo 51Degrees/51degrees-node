@@ -22,6 +22,7 @@
 
 const FodId = require('./fodId');
 const layout = require('./internal/layout');
+const { trimWhiteSpace } = require('./internal/base64');
 const IdType = require('./idType');
 const PublicKeys = require('./publicKeys');
 const packageVersion = require('./package.json').version;
@@ -123,8 +124,7 @@ const SignatureResult = Object.freeze({
 });
 
 /**
- * The outcome of one factor in a mismatch. The cloud reports `null` for a
- * factor that was not compared, which is passed through unchanged.
+ * The outcome of one factor in a mismatch.
  */
 const FactorResult = Object.freeze({
   VERIFIED: 'verified',
@@ -143,6 +143,21 @@ const FactorResult = Object.freeze({
    */
   NOT_RECORDED: 'notrecorded'
 });
+
+const KNOWN_FACTOR_RESULTS = new Set(Object.values(FactorResult));
+
+/**
+ * Reads a factor word from the cloud, ignoring case. Verified,
+ * misconfigured and not recorded are each read only from their own word,
+ * and any other value, null included, is a mismatch.
+ *
+ * @param {*} word the value the cloud sent for a factor
+ * @returns {string} one of {@link FactorResult}
+ */
+function factorResult (word) {
+  const lower = typeof word === 'string' ? word.toLowerCase() : null;
+  return KNOWN_FACTOR_RESULTS.has(lower) ? lower : FactorResult.MISMATCH;
+}
 
 /**
  * The names of the creator context factors, as the cloud writes them as
@@ -273,18 +288,25 @@ class RedeemResult {
       : parsed.signature === SignatureResult.INVALID
         ? SignatureResult.INVALID
         : SignatureResult.UNKNOWN;
+    const factors = parsed.factors && typeof parsed.factors === 'object'
+      ? parsed.factors
+      : undefined;
     /**
      * @type {object | undefined} {@link Factor} name to
-     * {@link FactorResult} value (or null where nothing was compared),
-     * present only when the cloud sent `factors`, which it does where there
-     * is something to diagnose, being a mismatch or a misconfigured result
-     * that still compared some factors. Every name is kept exactly as the
-     * cloud sent it, including one this package does not list in
-     * {@link Factor}, so a factor the cloud adds later reaches the caller
-     * without a new release of this package.
+     * {@link FactorResult} value, present only when the cloud sent
+     * `factors`, which it does where there is something to diagnose, being
+     * a mismatch or a misconfigured result that still compared some
+     * factors. Every name is kept as the cloud sent it, including one this
+     * package does not list in {@link Factor}. Each word is read ignoring
+     * case, and a value this package does not know, null included, is a
+     * mismatch, so an unexpected value never reads as a factor that matched
+     * or one that could not be compared. {@link RedeemResult#raw} has the
+     * words as sent.
      */
-    this.factors = parsed.factors && typeof parsed.factors === 'object'
-      ? Object.freeze(Object.assign({}, parsed.factors))
+    this.factors = factors
+      ? Object.freeze(Object.fromEntries(
+        Object.entries(factors).map(
+          ([name, word]) => [name, factorResult(word)])))
       : undefined;
     const verifiedAt = typeof parsed.verifiedAt === 'string'
       ? new Date(parsed.verifiedAt)
@@ -633,7 +655,8 @@ class DidClient {
    * A 200 and a 503 both produce a result, the 503 being the `unconfirmed`
    * outcome the caller may retry. Every cryptographic failure comes back as
    * the one word `unreadable` by design, so the client does not try to
-   * tell them apart either.
+   * tell them apart either. The licence key is shown only by its last 4
+   * characters in the message and body of each error.
    * @param {FodId | string} fodId the identifier the caller knows
    * independently, or its base64 in either alphabet
    * @param {string} result the sealed result exactly as the verify endpoint
@@ -672,21 +695,26 @@ class DidClient {
     if (response.status === 200 || response.status === 503) {
       return RedeemResult.fromResponse(response.status, body);
     }
+    // The cloud's answer can name the licence key the request sent, for
+    // example when it refuses the key, so the key is masked in the message
+    // and the body of each error made from the answer.
+    const licence = this._licenceKey;
+    const shown = maskLicence(body, licence);
     if (response.status === 400) {
       const parsed = tryParseJson(body);
       const message = parsed && Array.isArray(parsed.errors)
-        ? parsed.errors.join(' ')
-        : body;
-      throw new DidArgumentError(message, response.status, body);
+        ? maskLicence(parsed.errors.join(' '), licence)
+        : shown;
+      throw new DidArgumentError(message, response.status, shown);
     }
     if (response.status === 404) {
       throw new DidNotSupportedError(
-        'The host does not offer the creator context: ' + body,
-        response.status, body);
+        'The host does not offer the creator context: ' + shown,
+        response.status, shown);
     }
     throw new DidClientError(
-      `Redeem answered HTTP ${response.status}: ${body}`,
-      response.status, body);
+      `Redeem answered HTTP ${response.status}: ${shown}`,
+      response.status, shown);
   }
 
   /**
@@ -900,12 +928,12 @@ function parseOrRefuse (value) {
 
 /**
  * Turns away an encoded value too long to be worth decoding, before any
- * work is done on it. Whitespace at either end is ignored, as the reader
+ * work is done on it. White space at either end is ignored, as the reader
  * ignores it.
  * @param {string} value the encoded identifier as the caller gave it
  */
 function ensureEncodedLength (value) {
-  if (value.trim().length > MAXIMUM_ENCODED_LENGTH) {
+  if (trimWhiteSpace(value).length > MAXIMUM_ENCODED_LENGTH) {
     throw new DidArgumentError(
       'The value is longer than this client will read as a 51Did.');
   }
@@ -1004,6 +1032,30 @@ function requestHeaders (headers) {
 function isNode () {
   return typeof process !== 'undefined' && !!process.versions &&
     typeof process.versions.node === 'string';
+}
+
+/**
+ * The text with the licence key shown only by its last 4 characters, each
+ * character before them replaced by '*', or replaced in full when it has 4
+ * characters or fewer. Every 51Degrees package writes a licence key this
+ * way in an error message. This package depends on nothing in the Pipeline,
+ * so it does not use the Pipeline's mask.
+ * @param {string} text the text
+ * @param {string|null} licence the licence key, or null when none was sent
+ * @returns {string} the text with the key masked
+ */
+function maskLicence (text, licence) {
+  if (typeof text !== 'string' || licence === null) {
+    return text;
+  }
+  const hidden = licence.length > 4 ? licence.length - 4 : licence.length;
+  const masked = '*'.repeat(hidden) + licence.slice(hidden);
+  let result = text.split(licence).join(masked);
+  const encoded = encodeURIComponent(licence);
+  if (encoded !== licence) {
+    result = result.split(encoded).join(encodeURIComponent(masked));
+  }
+  return result;
 }
 
 /**

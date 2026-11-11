@@ -53,7 +53,8 @@ const core = require51('fiftyone.pipeline.core');
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const { ExampleUtils } = require(path.join(__dirname, '/../exampleUtils'));
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../exampleUtils'));
 
 const fs = require('fs');
 const pug = require('pug');
@@ -116,6 +117,10 @@ if (datafile === undefined) {
 
 // Helper function to read property values from flowData
 const getValueHelper = (flowData, propertyKey) => {
+  // A property the data file does not have needs the Enterprise data file.
+  if (!ExampleUtils.hasProperty(pipeline.getElement('device'), propertyKey)) {
+    return NEEDS_ENTERPRISE;
+  }
   const device = flowData.device;
   try {
     const property = device[propertyKey];

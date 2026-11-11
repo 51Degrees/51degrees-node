@@ -72,6 +72,10 @@ test('jsonbuilder contents', done => {
     expect(json).toBe(
       JSON.stringify({
         javascriptProperties: ['testengine.three'],
+        sequence: {
+          'session-id': flowData.evidence.get('query.session-id'),
+          sequence: 1
+        },
         testengine: {
           one: 1,
           two: 2,
@@ -468,6 +472,48 @@ test('a refused URL is logged on one line', async () => {
   expect(errors[0]).not.toMatch(/[\n\r\u2028]/);
   expect(errors[0]).toContain('a\\nb.com\\r\\u2028');
 });
+
+// The log never holds what comes before the last '@' of the host value,
+// whether the host is configured or comes from the request. Each host has an
+// element of its own because a refusal is logged once per element.
+test.each([
+  ['user:secret@example.com', 'https://***@example.com/json'],
+  ['a@b@example.com', 'https://***@example.com/json'],
+  ['u@[::1]:80x', 'https://***@[::1]:80x/json'],
+  ['user:pa/ss@example.com', 'https://***@example.com/json'],
+  ['user:pa?ss@example.com', 'https://***@example.com/json'],
+  ['exa mple.com/a@b', 'https://***@b/json']
+])('a refused host %j is logged without its user information',
+  async (host, logged) => {
+    const { scripts, errors } = await renderScripts([host]);
+    expect(requestUrls(scripts[0])).toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"' + logged + '"');
+    expect(errors[0]).not.toContain('secret');
+    expect(errors[0]).not.toMatch(/\bpa\b/);
+  });
+
+// A host from the configuration is refused and logged the same way.
+test('a configured host is logged without its user information',
+  async () => {
+    const configured = new core.PipelineBuilder({
+      javascriptBuilderSettings: {
+        host: 'user:secret@example.com',
+        endPoint: '/json'
+      }
+    })
+      .add(testEngine)
+      .build();
+    const errors = [];
+    configured.on('error', message => errors.push(message));
+    const configuredData = configured.createFlowData();
+    await configuredData.process();
+    expect(requestUrls(configuredData.javascriptbuilder.javascript))
+      .toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"https://***@example.com/json"');
+    expect(errors[0]).not.toContain('secret');
+  });
 
 // A host made only of whitespace is not set, so the script has no callback
 // and nothing is logged.

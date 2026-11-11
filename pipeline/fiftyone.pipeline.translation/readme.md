@@ -14,6 +14,25 @@ Translations are supplied as YAML files, where the file name defines the locale 
 
 This package is used by [`fiftyone.ipintelligence.translation`](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence) to turn weighted country code lists into localized country names.
 
+## Options
+
+The options use the names the [Translation Engine specification](https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/translation-engine.md) gives them.
+
+```js
+const { TranslationEngine, MissingTranslationBehavior } =
+  require('fiftyone.pipeline.translation');
+
+const engine = new TranslationEngine({
+  sourceElementDataKey: 'ip',
+  translations: [{ source: 'country', destination: 'countrytranslated' }],
+  sources: { 'countries.fr_FR.yml': 'Germany: Allemagne\n' },
+  fixedLanguage: 'fr_FR',
+  missingTranslationBehavior: MissingTranslationBehavior.Original
+});
+```
+
+`missingTranslationBehavior` takes the `MissingTranslationBehavior` enum or text naming one of its values in any case, being `Original` (the default), `EmptyString` or `FlowError`, so a configuration file can give it as text. Any other value is refused when the engine is built. The older names `sourceDataKey` and `behavior` still work but are deprecated, and where both names are given the specification's name wins.
+
 ## Installation
 
 ```

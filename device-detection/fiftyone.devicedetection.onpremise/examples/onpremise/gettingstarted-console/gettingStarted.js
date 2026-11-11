@@ -44,7 +44,8 @@ const require51 = (requestedPackage) => {
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../exampleUtils'));
 const DataExtension = require51('fiftyone.devicedetection.shared').dataExtension;
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
@@ -53,10 +54,14 @@ const exampleConstants = require51('fiftyone.devicedetection.shared').exampleCon
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=lite_v_4_1_hash
+// a small number of Properties. Each property the example asks for
+// that only the Enterprise data file has is shown as needing it, with a
+// link to ask for a copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
 
 const outputValue = function (name, value) {
   // Individual result values have a wrapper called
@@ -110,8 +115,15 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Platform Version', DataExtension.getValueHelper(device, 'platformversion'));
   message += outputValue('Browser Name', DataExtension.getValueHelper(device, 'browsername'));
   message += outputValue('Browser Version', DataExtension.getValueHelper(device, 'browserversion'));
+  // These properties are only in the Enterprise data file, so with the free
+  // Lite data file each is shown as needing it.
+  const engine = pipeline.getElement('device');
+  message += outputValue('Hardware Vendor', ExampleUtils.getEnterpriseValue(engine, device, 'HardwareVendor'));
+  message += outputValue('Hardware Name', ExampleUtils.getEnterpriseValue(engine, device, 'HardwareName'));
+  message += outputValue('Device Type', ExampleUtils.getEnterpriseValue(engine, device, 'DeviceType'));
   message += '\n\n';
   output.write(message);
+  return message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (dataFile, output) {
@@ -138,8 +150,12 @@ const run = async function (dataFile, output) {
   }).build();
 
   // carry out some sample detections
+  let needsEnterprise = false;
   for (const values of exampleConstants.defaultEvidenceValues) {
-    await analyse(values, pipeline, output);
+    needsEnterprise = await analyse(values, pipeline, output) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    output.write(`${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
   }
 
   ExampleUtils.checkDataFile(pipeline, dataFile);
