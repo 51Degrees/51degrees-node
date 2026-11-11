@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const crypto = require('crypto');
+const Constants = require('./constants');
 
 /**
  * @typedef {import('./flowData')} FlowData
@@ -37,7 +38,10 @@ const CACHE_CONTROL_AFTER_ERRORS = 'private, no-cache';
 // Request headers that say how to answer rather than what to answer, being
 // the preconditions of RFC 9110 section 13.1 and the cache directives of
 // RFC 9111 sections 5.2.1 and 5.4. They take no part in the ETag, or a
-// revalidation, which sends If-None-Match, would never match.
+// revalidation, which sends If-None-Match, would never match. They are named
+// here because an element can accept every key, as the JavaScript builder
+// does for the query string and the cloud request engine does until the
+// cloud service's keys arrive.
 const NOT_IN_ETAG = [
   'header.if-match',
   'header.if-none-match',
@@ -50,21 +54,23 @@ const NOT_IN_ETAG = [
 
 /**
  * The ETag for the evidence a request carries, the same in every process.
- * It is built from what addFromRequest read from the request, rather than
- * the flow data's evidence, because processing adds evidence of its own,
- * such as the new session id the sequence element makes for each request
- * without one, which would give every response a different ETag. Evidence
- * added by hand has no such record, so its ETag is built from the flow
- * data's evidence. Only the evidence an element accepts is hashed. It is
- * weak, because the response can change for the same evidence, for example
- * when a data file is updated, and RFC 9110 section 8.8.3 asks for such a
- * validator to be marked weak.
+ * It is built from what addFromRequest read from the request, which it
+ * keeps as server.http-request, rather than the flow data's evidence,
+ * because processing adds evidence of its own, such as the new session id
+ * the sequence element makes for each request without one, which would give
+ * every response a different ETag. Evidence added by hand has no such
+ * record, so its ETag is built from the flow data's evidence. Only the
+ * evidence an element accepts is hashed, so evidence kept for an element
+ * that does not accept it, such as the usage sharing element, takes no
+ * part. It is weak, because the response can change for the same evidence,
+ * for example when a data file is updated, and RFC 9110 section 8.8.3 asks
+ * for such a validator to be marked weak.
  *
  * @param {FlowData} flowData the flow data for the request
  * @returns {string} the ETag
  */
 const clientSideETag = function (flowData) {
-  const evidence = flowData.evidence.requestEvidence ||
+  const evidence = flowData.evidence.get(Constants.evidenceHttpRequest) ||
     flowData.evidence.getAll();
   const elements = Object.values(flowData.pipeline.flowElements);
   const hash = crypto.createHash('sha256');

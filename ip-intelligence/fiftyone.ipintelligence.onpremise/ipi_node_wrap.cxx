@@ -22280,7 +22280,7 @@ static SwigV8ReturnValue _wrap_ConfigIpiSwig_getComponents(const SwigV8Arguments
       SWIG_exception(SWIG_ValueError, e.what());
     }
   }
-  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, SWIG_POINTER_OWN |  0 );
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, 0 |  0 );
   
   
   SWIGV8_RETURN(jsresult);
@@ -22396,7 +22396,7 @@ static SwigV8ReturnValue _wrap_ConfigIpiSwig_getProperties(const SwigV8Arguments
       SWIG_exception(SWIG_ValueError, e.what());
     }
   }
-  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, SWIG_POINTER_OWN |  0 );
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, 0 |  0 );
   
   
   SWIGV8_RETURN(jsresult);
@@ -22454,7 +22454,7 @@ static SwigV8ReturnValue _wrap_ConfigIpiSwig_getValues(const SwigV8Arguments &ar
       SWIG_exception(SWIG_ValueError, e.what());
     }
   }
-  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, SWIG_POINTER_OWN |  0 );
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, 0 |  0 );
   
   
   SWIGV8_RETURN(jsresult);
@@ -22512,7 +22512,7 @@ static SwigV8ReturnValue _wrap_ConfigIpiSwig_getProfiles(const SwigV8Arguments &
       SWIG_exception(SWIG_ValueError, e.what());
     }
   }
-  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, SWIG_POINTER_OWN |  0 );
+  jsresult = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CollectionConfig, 0 |  0 );
   
   
   SWIGV8_RETURN(jsresult);
