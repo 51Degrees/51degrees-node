@@ -32,8 +32,8 @@ const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 
-// Names the engine sends from its own settings, which Evidence must not
-// supply.
+// Names the cloud service reads its credentials and property list from,
+// which Evidence must not supply under any prefix or in any letter case.
 const reservedFields = ['resource', 'license', 'licence', 'values'];
 
 /**
