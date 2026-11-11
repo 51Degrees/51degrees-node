@@ -187,7 +187,8 @@ function quotedForLog (text) {
  */
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    const lower = key.toLowerCase();
+    // Evidence keys ignore letter case.
+    const lower = String(key).toLowerCase();
     return lower.startsWith('query.') ||
       lower === 'header.host' ||
       lower === 'header.protocol';
