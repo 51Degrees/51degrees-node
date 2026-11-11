@@ -182,15 +182,16 @@ function quotedForLog (text) {
  */
 
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
- **/
+ * The script reads the query string, and the host and protocol it calls
+ * back to, so those are the evidence that can change it.
+ */
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
     // Evidence keys ignore letter case.
     const lower = String(key).toLowerCase();
-    return lower.indexOf('query.') !== -1 || lower.indexOf('header.') !== -1;
+    return lower.startsWith('query.') ||
+      lower === 'header.host' ||
+      lower === 'header.protocol';
   }
 }
 
