@@ -260,30 +260,27 @@ class DataFileUpdateService {
   /**
    * Reports how an update ended, to the listeners of 'updateComplete' and
    * to the data file's own onUpdateComplete function, if it has one. An
-   * error thrown by either is logged and goes no further.
+   * error thrown by any of them is logged, goes no further, and the
+   * callbacks after it are not called.
    *
    * @param {DataFile} dataFile the data file the update was for
    * @param {string} status one of the AutoUpdateStatus values
    */
   complete (dataFile, status) {
     // The status is reported from timer, request and file system watcher
-    // callbacks, so a listener that throws is logged rather than left
-    // uncaught, which would end the process, and the others are still
-    // called. The raw listeners are called so that a 'once' listener is
-    // removed as emit would remove it.
-    for (const listener of this.eventEmitter.rawListeners('updateComplete')) {
-      try {
+    // callbacks, so a callback that throws is logged rather than left
+    // uncaught, which would end the process. The callbacks after it are not
+    // called, as the specification and .NET have it. The raw listeners are
+    // called so that a 'once' listener is removed as emit would remove it.
+    try {
+      for (const listener of this.eventEmitter.rawListeners('updateComplete')) {
         listener.call(this.eventEmitter, status, dataFile);
-      } catch (e) {
-        this.log('error', unhandledErrorText(dataFile, e));
       }
-    }
-    if (typeof dataFile.onUpdateComplete === 'function') {
-      try {
+      if (typeof dataFile.onUpdateComplete === 'function') {
         dataFile.onUpdateComplete(status);
-      } catch (e) {
-        this.log('error', unhandledErrorText(dataFile, e));
       }
+    } catch (e) {
+      this.log('error', unhandledErrorText(dataFile, e));
     }
   }
 
