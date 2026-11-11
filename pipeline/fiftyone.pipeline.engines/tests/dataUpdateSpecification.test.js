@@ -449,9 +449,9 @@ describe('log messages', () => {
       return logs.find((log) => log.level === 'error');
     };
     const procedural = await run(false);
-    expect(procedural.message).toBe(
-      "Error accessing data update service at 'http://127.0.0.1:1/datafile' " +
-      "for engine 'TestEngine'");
+    expect(procedural.message).toEqual(expect.stringMatching(new RegExp(
+      "^Error accessing data update service at 'http://127\\.0\\.0\\.1:1/" +
+      "datafile' for engine 'TestEngine'\\. Error detail: .*ECONNREFUSED")));
 
     const { service, logs } = loggingService();
     const dataFile = standInDataFile({
@@ -471,9 +471,7 @@ describe('log messages', () => {
     // The retry sentence is not part of any .NET message, so an automatic
     // update reads exactly as a programmatic one does.
     const automatic = logs.find((log) => log.level === 'error');
-    expect(automatic.message).toBe(
-      "Error accessing data update service at 'http://127.0.0.1:1/datafile' " +
-      "for engine 'TestEngine'");
+    expect(automatic.message).toBe(procedural.message);
   });
 
   test('a URL that cannot be parsed is the same error', async () => {
@@ -487,7 +485,7 @@ describe('log messages', () => {
     expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
     expect(logs.find((log) => log.level === 'error').message).toBe(
       "Error accessing data update service at 'not a url' for engine " +
-      "'TestEngine'");
+      "'TestEngine'. Error detail: Invalid URL");
   });
 
   test('a download cut short is the no response error', async () => {
@@ -528,7 +526,8 @@ describe('log messages', () => {
       await done;
       const error = logs.find((log) => log.level === 'error');
       expect(error.message).toBe('An error occurred when applying a data ' +
-        "update to engine 'TestEngine' after 1 tries.");
+        "update to engine 'TestEngine' after 1 tries. Error detail: The " +
+        'data cannot be used.');
     } finally {
       stop(remote.server);
     }
@@ -681,7 +680,8 @@ describe('log messages', () => {
       await sleep(50);
       expect(logs.find((log) => log.level === 'error').message).toBe(
         'An error occurred when copying a data file to replace the ' +
-        'existing one at \'' + target + '\'.');
+        'existing one at \'' + target + '\'. Error detail: ENOENT: no ' +
+        "such file or directory, open '" + target + "'");
     } finally {
       stop(remote.server);
     }
@@ -843,7 +843,8 @@ describe('every update reports one status', () => {
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([
         'An error occurred when copying a data file to replace the ' +
-        "existing one at '" + file + "'."
+        "existing one at '" + file + "'. Error detail: resource busy or " +
+        'locked'
       ]);
       expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
     } finally {
@@ -885,7 +886,7 @@ describe('every update reports one status', () => {
         expect(errors).toHaveLength(1);
         expect(errors[0].message).toBe(
           'An unhandled error occurred while checking for automatic ' +
-          "updates for engine 'TestEngine'");
+          "updates for engine 'TestEngine'. Error detail: cannot read");
         expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
       } finally {
         failing.mockRestore();
@@ -928,7 +929,7 @@ describe('every update reports one status', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toBe(
         'An unhandled error occurred while checking for automatic updates ' +
-        "for engine 'TestEngine'");
+        "for engine 'TestEngine'. Error detail: cannot read");
       expect(fs.readdirSync(folder)).toEqual(['data.dat']);
       expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
     } finally {
@@ -1097,6 +1098,6 @@ describe('an error with no row of its own', () => {
     expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
     expect(logs.find((log) => log.level === 'error').message).toBe(
       'An unhandled error occurred while checking for automatic updates ' +
-      "for engine 'TestEngine'");
+      "for engine 'TestEngine'. Error detail: The data file is broken.");
   });
 });
