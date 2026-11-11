@@ -77,8 +77,10 @@ test('the default pipeline accepts the evidence its elements read', () => {
     .toEqual(['javascriptbuilder']);
   expect(acceptedBy(pipeline, 'query.fod-js-object-name'))
     .toEqual(['javascriptbuilder']);
-  expect(acceptedBy(pipeline, 'query.session-id').sort())
-    .toEqual(['javascriptbuilder', 'sequence']);
+  expect(acceptedBy(pipeline, 'query.session-id')).toEqual(['sequence']);
+  // A query string parameter no element reads is not accepted, even though
+  // the script carries it into its callback.
+  expect(acceptedBy(pipeline, 'query.a')).toEqual([]);
 });
 
 test('the set headers element accepts no evidence', () => {

@@ -66,16 +66,20 @@ test('an element that declares no evidence widens nothing', () => {
 });
 
 /**
- * The JavaScript builder reads the query string, the host and the protocol,
- * and nothing else.
+ * The JavaScript builder accepts the four keys the specification lists. The
+ * query string the script carries into its callback changes the answer to
+ * that callback rather than the script, so none of it is accepted, the
+ * session id and the sequence included.
  */
 test('the JavaScript builder accepts only what it reads', () => {
   const filter = new JavaScriptBuilderElement({}).evidenceKeyFilter;
-  ['query.a', 'query.session-id', 'query.fod-js-object-name', 'header.host',
-    'header.protocol', 'Header.Host'].forEach((key) => {
+  ['header.host', 'header.protocol', 'query.fod-js-object-name',
+    'query.fod-js-enable-cookies', 'Header.Host',
+    'Query.FOD-JS-Object-Name'].forEach((key) => {
     expect(filter.filterEvidenceKey(key)).toBe(true);
   });
-  ['header.x-test', 'header.x-query', 'header.user-agent', 'cookie.query',
+  ['query.a', 'query.session-id', 'query.sequence', 'header.x-test',
+    'header.x-query', 'header.user-agent', 'cookie.query',
     'server.client-ip', 'header.query.a'].forEach((key) => {
     expect(filter.filterEvidenceKey(key)).toBeFalsy();
   });
