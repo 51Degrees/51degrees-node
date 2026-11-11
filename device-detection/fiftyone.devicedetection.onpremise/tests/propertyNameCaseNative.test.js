@@ -20,9 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// An engine built with names in the data set's own spelling gives each
-// property under its lower case key, because the pipeline compares property
-// names ignoring case. Checked against the native engine and a real data
+// The pipeline compares property names ignoring case, so an engine built
+// with names in the data set's own spelling gives each property under its
+// lower case key, and a read finds a property whatever the letter case of
+// the key it is given. Checked against the native engine and a real data
 // file.
 
 const path = require('path');
@@ -80,4 +81,30 @@ describe('restricted property names with the native engine', () => {
     expect(String(byName.value))
       .toBe(String(data.swigResults.getValueAsBool('IsMobile').getValue()));
   });
+});
+
+describe('property names in any letter case with the native engine', () => {
+  test('a read finds a property whatever the letter case of its key',
+    async () => {
+      const flowData = await processed(
+        build(['IsMobile', 'BrowserName', 'PlatformName']));
+      const data = flowData.device;
+      const expected = shown(data.get('ismobile'));
+      expect(expected).not.toBe('missing');
+      expect(shown(data.get('IsMobile'))).toBe(expected);
+      expect(shown(data.get('ISMOBILE'))).toBe(expected);
+      expect(shown(data.IsMobile)).toBe(expected);
+    });
+
+  test('a read finds a match metric whatever the letter case of its key',
+    async () => {
+      // An engine with no names, so the match metrics are not refused.
+      const data = (await processed(build(undefined))).device;
+      const expected = shown(data.get('deviceID'));
+      expect(expected).not.toBe('missing');
+      expect(shown(data.get('deviceid'))).toBe(expected);
+      expect(shown(data.get('DeviceId'))).toBe(expected);
+      expect(shown(data.get('userAgents')))
+        .toBe(shown(data.get('USERAGENTS')));
+    });
 });

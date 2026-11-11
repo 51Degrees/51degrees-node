@@ -149,3 +149,17 @@ test('cache', done => {
     done();
   });
 });
+
+// Property names are compared ignoring case, so a key finds its value in any
+// letter case, including a key stored in mixed case.
+test('a dictionary of aspect data finds a key whatever its letter case', () => {
+  const data = new AspectDataDictionary({
+    flowElement: { dataKey: 'caseTest' },
+    contents: { one: 1, noCache: false }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('One')).toBe(1);
+  expect(data.get('ONE')).toBe(1);
+  expect(data.get('noCache')).toBe(false);
+  expect(data.get('nocache')).toBe(false);
+});
