@@ -66,6 +66,20 @@ const errorDetail = function (error) {
 };
 
 /**
+ * A message in the words .NET uses, followed by the cause. .NET logs these
+ * events with the exception attached, so the log says why the update
+ * failed, and this puts the cause after the text in the same way.
+ *
+ * @param {string} text the message .NET writes
+ * @param {*} error the error, or whatever was thrown
+ * @returns {string} the message to log
+ */
+const withCause = function (text, error) {
+  return text + (text.endsWith('.') ? ' ' : '. ') + 'Error detail: ' +
+    errorDetail(error);
+};
+
+/**
  * The message logged when an update complete callback throws, in the words
  * Python uses for the same error.
  *
@@ -293,9 +307,9 @@ class DataFileUpdateService {
     try {
       dataFile.refresh();
     } catch (e) {
-      this.log('error', 'An error occurred when applying a data update to ' +
-        "engine '" + engineName(dataFile) + "'" +
-        (fromFile ? ' after ' + RefreshTries + ' tries.' : ''));
+      this.log('error', withCause('An error occurred when applying a ' +
+        "data update to engine '" + engineName(dataFile) + "'" +
+        (fromFile ? ' after ' + RefreshTries + ' tries.' : ''), e));
       return false;
     }
     return true;
@@ -350,7 +364,7 @@ class DataFileUpdateService {
     try {
       urlParts = new url.URL(dataFile.updateUrl);
     } catch (e) {
-      this.log('error', this.accessError(dataFile));
+      this.log('error', withCause(this.accessError(dataFile), e));
       this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       return false;
     }
@@ -378,7 +392,7 @@ class DataFileUpdateService {
     } catch (e) {
       // An error here has no row of its own, so it is reported as the
       // unhandled one rather than being lost.
-      this.unhandled(dataFile);
+      this.unhandled(dataFile, e);
       this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
       return false;
     }
@@ -392,13 +406,13 @@ class DataFileUpdateService {
     // Without an error listener a connection failure (for example a
     // refused or reset connection) emits an unhandled 'error' event,
     // which crashes the whole process.
-    request.on('error', function () {
+    request.on('error', function (err) {
       if (responded) {
         return;
       }
       dataFileUpdateService.log(
         'error',
-        dataFileUpdateService.accessError(dataFile));
+        withCause(dataFileUpdateService.accessError(dataFile), err));
 
       dataFileUpdateService.fail(
         dataFile,
@@ -470,13 +484,13 @@ class DataFileUpdateService {
       const output = fs.createWriteStream(filename);
       // A failed write and a download cut short are each the end of the
       // update, so whichever comes first reports it.
-      output.on('error', function () {
+      output.on('error', function (err) {
         response.resume();
         if (!written) {
           return;
         }
         written = false;
-        dataFileUpdateService.unhandled(dataFile);
+        dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
@@ -535,12 +549,12 @@ class DataFileUpdateService {
 
           // A failed read is reported once, and the check is not made.
           let checked = false;
-          fd.on('error', function () {
+          fd.on('error', function (err) {
             if (checked) {
               return;
             }
             checked = true;
-            dataFileUpdateService.unhandled(dataFile);
+            dataFileUpdateService.unhandled(dataFile, err);
             fs.unlink(filename, function () {
               dataFileUpdateService.fail(
                 dataFile,
@@ -577,15 +591,15 @@ class DataFileUpdateService {
   }
 
   /**
-   * Logs an error that has no message of its own.
+   * Logs an error that has no message of its own, with its cause.
    *
    * @param {DataFile} dataFile the data file being updated
+   * @param {*} error the error, or whatever was thrown
    */
-  unhandled (dataFile) {
-    this.log(
-      'error',
+  unhandled (dataFile, error) {
+    this.log('error', withCause(
       'An unhandled error occurred while checking for automatic updates ' +
-      "for engine '" + engineName(dataFile) + "'");
+      "for engine '" + engineName(dataFile) + "'", error));
   }
 
   /**
@@ -619,7 +633,7 @@ class DataFileUpdateService {
     const removeDownload = function (done) {
       fs.unlink(filename, function (err) {
         if (err) {
-          dataFileUpdateService.unhandled(dataFile);
+          dataFileUpdateService.unhandled(dataFile, err);
         }
         done();
       });
@@ -627,7 +641,7 @@ class DataFileUpdateService {
 
     fs.readFile(filename, function (err, data) {
       if (err) {
-        dataFileUpdateService.unhandled(dataFile);
+        dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
           AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME);
@@ -638,10 +652,9 @@ class DataFileUpdateService {
         if (err) {
           // A locked file and any other write failure are the same row,
           // so the message names the copy rather than the cause.
-          dataFileUpdateService.log(
-            'error',
+          dataFileUpdateService.log('error', withCause(
             'An error occurred when copying a data file to replace the ' +
-            "existing one at '" + dataFile.path + "'.");
+            "existing one at '" + dataFile.path + "'.", err));
           removeDownload(function () {
             dataFileUpdateService.fail(
               dataFile,
@@ -685,7 +698,7 @@ class DataFileUpdateService {
     if (dataFile.decompress) {
       fs.readFile(filename, function (err, buffer) {
         if (err) {
-          dataFileUpdateService.unhandled(dataFile);
+          dataFileUpdateService.unhandled(dataFile, err);
           dataFileUpdateService.fail(
             dataFile,
             AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
@@ -695,7 +708,7 @@ class DataFileUpdateService {
         zlib.gunzip(buffer, function (err, data) {
           if (err) {
             // Data that will not decompress has no row of its own.
-            dataFileUpdateService.unhandled(dataFile);
+            dataFileUpdateService.unhandled(dataFile, err);
             fs.unlink(filename, function () {
               dataFileUpdateService.fail(
                 dataFile,
@@ -708,7 +721,7 @@ class DataFileUpdateService {
 
           fs.writeFile(doneFileName, data, function (err) {
             if (err) {
-              dataFileUpdateService.unhandled(dataFile);
+              dataFileUpdateService.unhandled(dataFile, err);
               dataFileUpdateService.fail(
                 dataFile,
                 AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
@@ -717,7 +730,7 @@ class DataFileUpdateService {
             dataFileUpdateService.fileReady(dataFile, doneFileName);
             fs.unlink(filename, function (err) {
               if (err) {
-                dataFileUpdateService.unhandled(dataFile);
+                dataFileUpdateService.unhandled(dataFile, err);
               }
             });
           });
