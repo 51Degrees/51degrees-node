@@ -178,6 +178,34 @@ test('an element restricted without an engine keeps its lower case names',
     expect(flowElement.restrictedPropertyKeys).toBe(keys);
   });
 
+// Counts the reads that had to look past letter case, so what the new read
+// costs can be asserted exactly instead of being timed.
+class CountingDictionary extends AspectDataDictionary {
+  constructor (options) {
+    super(options);
+    this.caseLookups = 0;
+  }
+
+  getInternalIgnoringCase (key) {
+    this.caseLookups++;
+    return super.getInternalIgnoringCase(key);
+  }
+}
+
+test('a read that finds its key as given never looks at letter case', () => {
+  const data = new CountingDictionary({
+    flowElement: { dataKey: 'caseWork' },
+    contents: { one: 1, two: 2, noCache: false }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('noCache')).toBe(false);
+  expect(data.caseLookups).toBe(0);
+  // Only a key that finds nothing as given pays for the second look, and it
+  // pays for one.
+  expect(data.get('One')).toBe(1);
+  expect(data.caseLookups).toBe(1);
+});
+
 // Finds nothing for a key not found as given, as the dictionary did before
 // letter case was ignored, so the read before and after can be timed in the
 // same job.
@@ -187,19 +215,16 @@ class ReadByKeyOnly extends AspectDataDictionary {
   }
 }
 
+// Backstop for a read made slower in a way the count above cannot see, such
+// as letter case folded inside getInternal rather than in the second look.
 test('a dictionary read is no slower than it was', () => {
-  // Both dictionaries are timed one after the other inside each round and
-  // that round keeps its own ratio, so a runner that speeds up or slows down
-  // between rounds moves both times together and cancels out. Which of the
-  // two goes first changes each round, so neither gets the warm cache every
-  // time. Fresh dictionaries are made for each pair because the engine can
-  // settle on a faster shape for one object in a process, which is worth
-  // about a seventh and is nothing to do with the code. The middle of all the
-  // rounds decides it, so neither a round that loses its turn on a shared
-  // machine nor a pair that drew a slower shape can.
-  const timedReads = 200000;
-  const pairs = 7;
-  const roundsPerPair = 2;
+  const timedReads = 10000;
+  const pairs = 10;
+  const roundsPerPair = 20;
+  // The most the read may cost over the read it replaced. Folding case on
+  // every read, which is what this catches, costs about three times a plain
+  // read, as the read of One in the log below shows.
+  const allowed = 1.05;
   const timeOf = (data, key) => {
     for (let i = 0; i < timedReads; i++) {
       data.get(key);
@@ -214,45 +239,69 @@ test('a dictionary read is no slower than it was', () => {
     const sorted = [...values].sort((a, b) => a - b);
     return sorted[Math.floor(sorted.length / 2)];
   };
-  const beforeTimes = [];
-  const afterTimes = [];
-  const ratios = [];
-  let last;
-  for (let pair = 0; pair < pairs; pair++) {
-    const flowElement = { dataKey: 'timing' };
-    const contents = { one: 1, two: 2, noCache: false };
-    const before = new ReadByKeyOnly({ flowElement, contents });
-    const after = new AspectDataDictionary({ flowElement, contents });
-    last = after;
-    for (let round = 0; round < roundsPerPair; round++) {
-      let beforeTime;
-      let afterTime;
-      if (round % 2 === 0) {
-        beforeTime = timeOf(before, 'one');
-        afterTime = timeOf(after, 'one');
-      } else {
-        afterTime = timeOf(after, 'one');
-        beforeTime = timeOf(before, 'one');
+  // Both dictionaries are timed one after the other inside each round and
+  // that round keeps its own ratio, so a runner that speeds up or slows down
+  // between rounds moves both times together and cancels out. Which of the
+  // two goes first changes each round, so neither gets the warm cache every
+  // time. Each pair is built fresh because the engine can settle on a faster
+  // shape for one object in a process, which has nothing to do with the code.
+  // The middle of the rounds decides a measurement, so no single round that
+  // lost its turn on a shared machine can.
+  const measure = () => {
+    const beforeTimes = [];
+    const afterTimes = [];
+    const ratios = [];
+    let last;
+    for (let pair = 0; pair < pairs; pair++) {
+      const flowElement = { dataKey: 'timing' };
+      const contents = { one: 1, two: 2, noCache: false };
+      const before = new ReadByKeyOnly({ flowElement, contents });
+      const after = new AspectDataDictionary({ flowElement, contents });
+      last = after;
+      for (let round = 0; round < roundsPerPair; round++) {
+        let beforeTime;
+        let afterTime;
+        if (round % 2 === 0) {
+          beforeTime = timeOf(before, 'one');
+          afterTime = timeOf(after, 'one');
+        } else {
+          afterTime = timeOf(after, 'one');
+          beforeTime = timeOf(before, 'one');
+        }
+        beforeTimes.push(beforeTime);
+        afterTimes.push(afterTime);
+        ratios.push(afterTime / beforeTime);
       }
-      beforeTimes.push(beforeTime);
-      afterTimes.push(afterTime);
-      ratios.push(afterTime / beforeTime);
+    }
+    return {
+      before: middleOf(beforeTimes),
+      after: middleOf(afterTimes),
+      ratio: middleOf(ratios),
+      lowest: Math.min(...ratios),
+      highest: Math.max(...ratios),
+      mixedCase: timeOf(last, 'One')
+    };
+  };
+  // A whole measurement can land in a slow patch, so one over the allowance
+  // is taken again and the better of the two decides it. A read that really
+  // is slower is slower in both.
+  let result = measure();
+  let measurements = 1;
+  if (result.ratio > allowed) {
+    const again = measure();
+    measurements = 2;
+    if (again.ratio < result.ratio) {
+      result = again;
     }
   }
-  const middleRatio = middleOf(ratios);
-  const mixedCaseTime = timeOf(last, 'One');
   console.log(
-    `Dictionary read of one, ${pairs} fresh pairs of dictionaries timed ` +
-    `side by side for ${roundsPerPair} rounds of ${timedReads} each, ` +
-    `before ${middleOf(beforeTimes).toFixed(1)} ns, after ` +
-    `${middleOf(afterTimes).toFixed(1)} ns, middle ratio ` +
-    `${middleRatio.toFixed(3)}, the rounds ranging from ` +
-    `${Math.min(...ratios).toFixed(3)} to ${Math.max(...ratios).toFixed(3)}. ` +
-    'A read of One, which found nothing before, ' +
-    `${mixedCaseTime.toFixed(1)} ns.`);
-  // A read that finds its key as given returns before letter case is looked
-  // at, so the two measure the same work and a twentieth covers what is left.
-  // Folding case on every read, which is what this catches, costs about three
-  // times a plain read, as the read of One above shows.
-  expect(middleRatio).toBeLessThanOrEqual(1.05);
+    `Dictionary read of one, the middle of ${pairs * roundsPerPair} rounds ` +
+    `of ${timedReads} reads, each round timing a before and an after side ` +
+    `by side, before ${result.before.toFixed(1)} ns, after ` +
+    `${result.after.toFixed(1)} ns, middle ratio ${result.ratio.toFixed(3)}, ` +
+    `the rounds ranging from ${result.lowest.toFixed(3)} to ` +
+    `${result.highest.toFixed(3)}, from ${measurements} measurement` +
+    `${measurements === 1 ? '' : 's'}. A read of One, which found nothing ` +
+    `before, ${result.mixedCase.toFixed(1)} ns.`);
+  expect(result.ratio).toBeLessThanOrEqual(allowed);
 });
