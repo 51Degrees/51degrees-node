@@ -227,8 +227,10 @@ test('a dictionary read is no slower than it was', () => {
   const pairs = 10;
   const roundsPerPair = 20;
   // The most the read may cost over the read it replaced, as a ratio.
-  // Folding case on every read, which is what this catches, costs about three
-  // times a plain read, as the read of One in the log below shows.
+  // Folding case on every read, which is what this catches, measures about
+  // twice a plain read, so the bound has room either side. The read of One
+  // in the log below is a different path, being a miss and then the second
+  // look, so it is dearer again and is not what this bound is set from.
   const allowedRatio = 1.05;
   const timeOf = (data, key) => {
     for (let i = 0; i < timedReads; i++) {
