@@ -226,8 +226,9 @@ class Pipeline {
   log (type, message) {
     // Node throws an 'error' event that nothing listens for, so such an
     // error is written to the console instead, masked, because the console
-    // is the end of the line. A detection reaches here only when it fails,
-    // and FlowData.setError has masked the message by then.
+    // is the end of the line. A failed detection's message arrives already
+    // masked by FlowData.setError. The cloud engine also logs an error here
+    // for a missing or null element while the detection carries on.
     if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
       console.error(LicenseKeys.mask(message));
       return;
