@@ -291,7 +291,10 @@ paths relative to the file. Each free data file there is a `<file>.link` rather
 than the file. `cxx/data/get-data-files.sh` and `.ps1` download them, and the
 examples run the script for a linked file that is missing.
 `ci/fetch-assets.ps1` links the enterprise files in, some under the Lite names,
-then runs the script for the rest, which keeps a file that is already there.
+and copies or links every other file in from common-ci's assets, which each
+run caches once, so no test job downloads a data file. A file added to the
+data repository needs an entry in common-ci's `steps/fetch-assets.ps1`
+before CI can use it.
 Nothing reads the older `cxx/device-detection-data` and
 `cxx/ip-intelligence-data` submodules.
 
