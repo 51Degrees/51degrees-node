@@ -21,7 +21,7 @@
  * ********************************************************************* */
 
 /**
- * This example is displayed at the end of the [Configurator](https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
+ * This example is displayed at the end of the [configuration page](https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
  * process, which is used to create resource keys for use with the 51Degrees cloud service.
  *
  * It shows how to call the cloud with the newly created key and how to access the values

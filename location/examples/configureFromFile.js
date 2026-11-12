@@ -35,7 +35,7 @@ properties you are interested in as well as any associated license keys
 that entitle you to increased request limits and/or paid-for properties.
 
 You can create a resource key using the 51Degrees
-[Configurator](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=top).
+[configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=top).
 
 Make sure to include the Country property, as it is required to run this
 example.

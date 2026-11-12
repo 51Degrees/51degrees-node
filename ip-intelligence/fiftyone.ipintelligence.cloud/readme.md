@@ -11,7 +11,7 @@ The Pipeline is a generic web request intelligence and data processing solution 
 
 This package uses the 51Degrees cloud service to determine properties of the network, and location associated with an IP address.
 
-A resource key is needed to use the cloud service. You can obtain one covering everything the examples display from the [51Degrees configurator](https://51degrees.com/configure/hYzn3TV3?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud&utm_term=this-package-fiftyone-ipintelligence-cloud) with a paid subscription. A free key from [this configurator link](https://51degrees.com/configure/Wkqxf3Bs?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud&utm_term=this-package-fiftyone-ipintelligence-cloud) populates only the Country, LocationConfidence, Ip and IpV6 properties.
+A resource key is needed to use the cloud service. You can obtain one covering everything the examples display from the [51Degrees configuration page](https://51degrees.com/configure/hYzn3TV3?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud&utm_term=this-package-fiftyone-ipintelligence-cloud) with a paid subscription. A free key from [this link](https://51degrees.com/configure/Wkqxf3Bs?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud&utm_term=this-package-fiftyone-ipintelligence-cloud) populates only the Country, LocationConfidence, Ip and IpV6 properties.
 
 It can be used like this:
 

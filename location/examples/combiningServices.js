@@ -35,7 +35,7 @@ that entitle you to increased request limits and/or paid-for properties.
 You will also need to install the fiftyone.devicedetection package with
 `npm install fiftyone.devicedetection`.
 
-You can create a resource key using the 51Degrees [Configurator](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
+You can create a resource key using the 51Degrees [configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
 
 */
 

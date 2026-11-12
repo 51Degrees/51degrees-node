@@ -50,7 +50,7 @@ npm install jest --global
 
 You will also need to install any required packages for the examples in the **Examples** section.
 
-Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://51degrees.com/configure/?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees configuration page](https://51degrees.com/configure/?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
 
 There are other environment variables that you will also need to set in your test environment before running all tests:
 - `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.
