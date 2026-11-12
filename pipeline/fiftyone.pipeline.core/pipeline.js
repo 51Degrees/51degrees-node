@@ -20,6 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
 const EventEmitter = require('events');
 
@@ -214,19 +215,22 @@ class Pipeline {
   /**
    * Shorthand to trigger a message on the pipeline's eventEmitter.
    *
-   * Every detection goes through here several times, so the message is
-   * passed on as it is. A license key is masked where it can reach a
-   * message, which is the cloud request engine, the data update service and
-   * the 51Did client.
+   * Every detection goes through here several times, so a message that is
+   * emitted is passed on as it is. A license key is masked where it can
+   * reach a message, which is the cloud request engine, the data update
+   * service and the 51Did client.
    *
    * @param {string} type type of message
    * @param {*} message message to store in the log
    */
   log (type, message) {
     // Node throws an 'error' event that nothing listens for, so such an
-    // error is written to the console instead.
+    // error is written to the console instead. The console is the end of
+    // the line, so the message is masked on the way out. No detection
+    // reaches here, because a detection logs 'info' and 'debug', and an
+    // error it does raise is masked by FlowData.setError first.
     if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
-      console.error(message);
+      console.error(LicenseKeys.mask(message));
       return;
     }
     this.eventEmitter.emit(type, message);
