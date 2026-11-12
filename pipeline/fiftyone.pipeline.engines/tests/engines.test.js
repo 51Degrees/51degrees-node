@@ -188,11 +188,18 @@ class ReadByKeyOnly extends AspectDataDictionary {
 }
 
 test('a dictionary read is no slower than it was', () => {
-  // Reads timed in each round, and rounds of each, taking the fastest and
-  // changing which goes first, so a pause in one round or the order does not
-  // decide it.
+  // Both dictionaries are timed one after the other inside each round and
+  // that round keeps its own ratio, so a runner that speeds up or slows down
+  // between rounds moves both times together and cancels out. Which of the
+  // two goes first changes each round, so neither gets the warm cache every
+  // time. Fresh dictionaries are made for each pair because the engine can
+  // settle on a faster shape for one object in a process, which is worth
+  // about a seventh and is nothing to do with the code. The middle of all the
+  // rounds decides it, so neither a round that loses its turn on a shared
+  // machine nor a pair that drew a slower shape can.
   const timedReads = 200000;
-  const rounds = 10;
+  const pairs = 7;
+  const roundsPerPair = 2;
   const timeOf = (data, key) => {
     for (let i = 0; i < timedReads; i++) {
       data.get(key);
@@ -203,27 +210,49 @@ test('a dictionary read is no slower than it was', () => {
     }
     return Number(process.hrtime.bigint() - start) / timedReads;
   };
-  const flowElement = { dataKey: 'timing' };
-  const contents = { one: 1, two: 2, noCache: false };
-  const before = new ReadByKeyOnly({ flowElement, contents });
-  const after = new AspectDataDictionary({ flowElement, contents });
-  let beforeTime = Infinity;
-  let afterTime = Infinity;
-  for (let round = 0; round < rounds; round++) {
-    if (round % 2 === 0) {
-      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
-      afterTime = Math.min(afterTime, timeOf(after, 'one'));
-    } else {
-      afterTime = Math.min(afterTime, timeOf(after, 'one'));
-      beforeTime = Math.min(beforeTime, timeOf(before, 'one'));
+  const middleOf = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  const beforeTimes = [];
+  const afterTimes = [];
+  const ratios = [];
+  let last;
+  for (let pair = 0; pair < pairs; pair++) {
+    const flowElement = { dataKey: 'timing' };
+    const contents = { one: 1, two: 2, noCache: false };
+    const before = new ReadByKeyOnly({ flowElement, contents });
+    const after = new AspectDataDictionary({ flowElement, contents });
+    last = after;
+    for (let round = 0; round < roundsPerPair; round++) {
+      let beforeTime;
+      let afterTime;
+      if (round % 2 === 0) {
+        beforeTime = timeOf(before, 'one');
+        afterTime = timeOf(after, 'one');
+      } else {
+        afterTime = timeOf(after, 'one');
+        beforeTime = timeOf(before, 'one');
+      }
+      beforeTimes.push(beforeTime);
+      afterTimes.push(afterTime);
+      ratios.push(afterTime / beforeTime);
     }
   }
-  const mixedCaseTime = timeOf(after, 'One');
+  const middleRatio = middleOf(ratios);
+  const mixedCaseTime = timeOf(last, 'One');
   console.log(
-    `Dictionary read of one, fastest of ${rounds} rounds of ${timedReads}, ` +
-    `before ${beforeTime.toFixed(1)} ns, after ${afterTime.toFixed(1)} ns. ` +
+    `Dictionary read of one, ${pairs} fresh pairs of dictionaries timed ` +
+    `side by side for ${roundsPerPair} rounds of ${timedReads} each, ` +
+    `before ${middleOf(beforeTimes).toFixed(1)} ns, after ` +
+    `${middleOf(afterTimes).toFixed(1)} ns, middle ratio ` +
+    `${middleRatio.toFixed(3)}, the rounds ranging from ` +
+    `${Math.min(...ratios).toFixed(3)} to ${Math.max(...ratios).toFixed(3)}. ` +
     'A read of One, which found nothing before, ' +
     `${mixedCaseTime.toFixed(1)} ns.`);
-  // A tenth is allowed for timing noise.
-  expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
+  // A read that finds its key as given returns before letter case is looked
+  // at, so the two measure the same work and a twentieth covers what is left.
+  // Folding case on every read, which is what this catches, costs about three
+  // times a plain read, as the read of One above shows.
+  expect(middleRatio).toBeLessThanOrEqual(1.05);
 });
