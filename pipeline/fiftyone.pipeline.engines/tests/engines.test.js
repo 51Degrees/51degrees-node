@@ -215,16 +215,22 @@ class ReadByKeyOnly extends AspectDataDictionary {
   }
 }
 
+// A measurement takes under a second on a quiet runner, but a runner busy
+// enough to need a second measurement is also one that takes longer over
+// both, so the test below gets more than the ten seconds setup.js gives every
+// other test in the package.
+const timingTestTimeoutMilliseconds = 60000;
+
 // Backstop for a read made slower in a way the count above cannot see, such
 // as letter case folded inside getInternal rather than in the second look.
 test('a dictionary read is no slower than it was', () => {
   const timedReads = 10000;
   const pairs = 10;
   const roundsPerPair = 20;
-  // The most the read may cost over the read it replaced. Folding case on
-  // every read, which is what this catches, costs about three times a plain
-  // read, as the read of One in the log below shows.
-  const allowed = 1.05;
+  // The most the read may cost over the read it replaced, as a ratio.
+  // Folding case on every read, which is what this catches, costs about three
+  // times a plain read, as the read of One in the log below shows.
+  const allowedRatio = 1.05;
   const timeOf = (data, key) => {
     for (let i = 0; i < timedReads; i++) {
       data.get(key);
@@ -287,7 +293,7 @@ test('a dictionary read is no slower than it was', () => {
   // is slower is slower in both.
   let result = measure();
   let measurements = 1;
-  if (result.ratio > allowed) {
+  if (result.ratio > allowedRatio) {
     const again = measure();
     measurements = 2;
     if (again.ratio < result.ratio) {
@@ -303,5 +309,5 @@ test('a dictionary read is no slower than it was', () => {
     `${result.highest.toFixed(3)}, from ${measurements} measurement` +
     `${measurements === 1 ? '' : 's'}. A read of One, which found nothing ` +
     `before, ${result.mixedCase.toFixed(1)} ns.`);
-  expect(result.ratio).toBeLessThanOrEqual(allowed);
-});
+  expect(result.ratio).toBeLessThanOrEqual(allowedRatio);
+}, timingTestTimeoutMilliseconds);
