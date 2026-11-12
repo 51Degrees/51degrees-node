@@ -858,9 +858,9 @@ class DataFileUpdateService {
       }
     }
 
-    // check if fileSystemWatcher is enabled and listen for datafile changes
-
-    if (dataFile.autoUpdate && dataFile.fileSystemWatcher) {
+    // The file system watcher runs on its own setting, whatever autoUpdate
+    // is, because watching a file downloads nothing.
+    if (dataFile.fileSystemWatcher) {
       const serviceRef = new WeakRef(this);
       const dataFileRef = new WeakRef(dataFile);
 
