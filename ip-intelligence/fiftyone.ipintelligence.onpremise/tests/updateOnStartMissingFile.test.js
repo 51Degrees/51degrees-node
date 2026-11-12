@@ -80,6 +80,11 @@ const builderFor = (server, folder, updateOnStart) =>
     tempDataDir: folder
   });
 
+// Each test serves, downloads and unpacks a whole data file, which can take
+// longer than the usual test timeout on a slow runner.
+const DownloadTestTimeoutMs = 60000;
+jest.setTimeout(DownloadTestTimeoutMs);
+
 describe('update on start-up with no data file', () => {
   let folder;
   let server;

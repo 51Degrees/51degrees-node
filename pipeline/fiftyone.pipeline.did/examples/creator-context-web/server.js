@@ -67,7 +67,7 @@
  * Environment variables:
  *   _51DEGREES_RESOURCE_KEY. Required.
  *   _51DEGREES_LICENSE_KEY. Optional, see below.
- *   FOD_CLOUD_API_URL. Optional. The cloud API base including the
+ *   _51DEGREES_CLOUD_ENDPOINT. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
  *   PORT. Optional, defaults to 5100.
@@ -220,7 +220,7 @@ function main () {
   // for performance reasons. This is the private hosting option of the
   // 51Degrees cloud service. Both run the same service, so the demo works
   // unchanged.
-  const base = (process.env.FOD_CLOUD_API_URL ||
+  const base = (process.env._51DEGREES_CLOUD_ENDPOINT ||
     'https://cloud.51degrees.com/api/v4/').replace(/\/*$/, '/');
   const resource = process.env._51DEGREES_RESOURCE_KEY;
   const licence = process.env._51DEGREES_LICENSE_KEY || '';

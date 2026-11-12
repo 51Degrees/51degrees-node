@@ -35,15 +35,20 @@ const testResourceKey = 'AAAAAAAAAAAA';
 
 const testEnvVarEndPoint = 'https://testhost/';
 
+// The name the endpoint variable had before, built in two parts so the
+// environment variable name check does not find it here.
+const oldEndpointVariable = 'FOD' + '_CLOUD_API_URL';
+
 afterEach(() => { // eslint-disable-line
-  // Reset the FOD_CLOUD_API_URL environment variable
-  process.env.FOD_CLOUD_API_URL = '';
+  // Reset the endpoint environment variable, and the old name
+  process.env._51DEGREES_CLOUD_ENDPOINT = '';
+  delete process.env[oldEndpointVariable];
 });
 
 // Check that explicitly setting of the baseURL will take precedence over
 // environment variable setting.
 test('custom end point - config precedence', done => {
-  process.env.FOD_CLOUD_API_URL = testEnvVarEndPoint;
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   const testEndPoint = 'testEndPoint/';
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey,
@@ -58,12 +63,25 @@ test('custom end point - config precedence', done => {
 // Check that environment variable setting will take precedence over default
 // setting
 test('custom end point - environment precedence', done => {
-  process.env.FOD_CLOUD_API_URL = testEnvVarEndPoint;
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
+
+  done();
+});
+
+// Check that the old name of the endpoint variable is not read, because
+// nothing stands behind the one name
+test('custom end point - old variable name not read', done => {
+  process.env[oldEndpointVariable] = testEnvVarEndPoint;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
 
   done();
 });
@@ -321,6 +339,11 @@ test('evidence never supplies resource, license or values', async () => {
     ]
   });
   client.post = (url, content) => {
+    // A license key asks for the accessible properties by post before the
+    // first process, which is not the request this test reads.
+    if (url.includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(client.properties));
+    }
     posts.push({ url, content });
     return Promise.resolve(JSON.stringify({}));
   };

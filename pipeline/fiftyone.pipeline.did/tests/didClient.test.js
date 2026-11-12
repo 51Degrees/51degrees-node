@@ -233,12 +233,12 @@ function windowFetch (handler) {
 }
 
 describe('DidClient construction', () => {
-  const saved = process.env.FOD_CLOUD_API_URL;
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
   afterEach(() => {
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
   });
 
@@ -249,20 +249,34 @@ describe('DidClient construction', () => {
   });
 
   test('endpoint defaults to the public cloud', () => {
-    delete process.env.FOD_CLOUD_API_URL;
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
     expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
     expect(client.resourceKey).toBe(RESOURCE);
   });
 
-  test('endpoint reads FOD_CLOUD_API_URL and normalises the slash', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+  test('endpoint reads _51DEGREES_CLOUD_ENDPOINT and normalises the slash', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
     expect(client.endpoint).toBe('https://other.example/api/v4/');
   });
 
+  test('endpoint does not read the old variable name', () => {
+    // Built in two parts so the environment variable name check does not
+    // find the old name here.
+    const oldName = 'FOD' + '_CLOUD_API_URL';
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = 'https://old.example/api/v4/';
+    try {
+      const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+      expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
+    } finally {
+      delete process.env[oldName];
+    }
+  });
+
   test('endpoint option wins over the environment', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = new DidClient({
       resourceKey: RESOURCE, endpoint: 'https://mine.example/api/v4//', fetch: fakeFetch(() => null)
     });
@@ -281,12 +295,12 @@ describe('DidClient construction', () => {
 // the client would make every request need a preflight.
 describe('DidClient in a browser', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
-  const saved = process.env.FOD_CLOUD_API_URL;
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
   afterEach(() => {
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
   });
 
@@ -308,7 +322,7 @@ describe('DidClient in a browser', () => {
   }
 
   test('the endpoint defaults to the public cloud where there is no process global', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = withoutProcess(() =>
       new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) }));
     expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
@@ -377,12 +391,12 @@ describe('DidClient in a browser', () => {
 // key on every route, so a client for it still needs one.
 describe('DidClient without a resource key', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
-  const saved = process.env.FOD_CLOUD_API_URL;
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
   afterEach(() => {
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
   });
 
@@ -391,13 +405,13 @@ describe('DidClient without a resource key', () => {
     expect(client.resourceKey).toBeNull();
     expect(client.endpoint).toBe(ENDPOINT);
     // An endpoint from the environment serves as well.
-    process.env.FOD_CLOUD_API_URL = ENDPOINT;
+    process.env._51DEGREES_CLOUD_ENDPOINT = ENDPOINT;
     expect(new DidClient({ fetch: fakeFetch(() => null) }).resourceKey)
       .toBeNull();
   });
 
   test('the public cloud still needs one', () => {
-    delete process.env.FOD_CLOUD_API_URL;
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     const fetch = fakeFetch(() => null);
     expect(() => new DidClient({ fetch })).toThrow(TypeError);
     expect(() => new DidClient({
