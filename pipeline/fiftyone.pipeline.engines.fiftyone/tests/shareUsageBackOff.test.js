@@ -26,10 +26,11 @@ const ShareUsageBackOff = require('../shareUsageBackOff');
 const http = require('http');
 const zlib = require('zlib');
 
-// A port of its own, so that sends made after a test ends cannot reach the
-// receiver the other usage sharing tests use.
-const PORT = 8081;
-const ENDPOINT = `http://127.0.0.1:${PORT}/`;
+// Where the receiver of the test running now is listening. Each test is
+// given a port of its own, so that a send made after a test ends cannot
+// reach the receiver of the next test, or the one the other usage sharing
+// tests use.
+let endpoint = null;
 
 // The status the receiver answers with. Only data it accepts is received.
 let status = 200;
@@ -109,12 +110,18 @@ beforeEach(done => {
   requests = 0;
   usageEngine = null;
   server = http.createServer(requestListener);
-  server.listen(PORT, done);
+  server.listen(0, () => {
+    endpoint = `http://127.0.0.1:${server.address().port}/`;
+    done();
+  });
 });
 
 afterEach(() => {
   ShareUsageBackOff.now = monotonicNow;
-  if (usageEngine && usageEngine.resumeTimer) {
+  if (usageEngine) {
+    // Leaves the element with nothing to send, as it can outlive the test
+    // that made it.
+    usageEngine.shareData.length = 0;
     clearTimeout(usageEngine.resumeTimer);
   }
   if (server.closeAllConnections) {
@@ -166,7 +173,7 @@ const clientIps = () => received
 const createPipeline = (settings = {}) => {
   usageEngine = new ShareUsage({
     requestedPackageSize: 1,
-    endpoint: ENDPOINT,
+    endpoint,
     ...settings
   });
   return new PipelineBuilder().add(usageEngine).build();
@@ -483,7 +490,7 @@ test('share usage back-off - invalid settings are rejected', () => {
   ].forEach(settings => {
     expect(() => new ShareUsage({
       requestedPackageSize: 1,
-      endpoint: ENDPOINT,
+      endpoint,
       ...settings
     })).toThrow(RangeError);
   });
