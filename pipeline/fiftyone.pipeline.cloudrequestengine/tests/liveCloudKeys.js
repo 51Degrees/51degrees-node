@@ -30,7 +30,7 @@ const ACCESSIBLE_PROPERTIES_URL =
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>';
 
 // Where to create a resource key.
-const CONFIGURE_URL = 'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-tests-livecloudkeys.js&utm_term=resource-key-required';
+const CONFIGURE_URL = 'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-tests-livecloudkeys.js&utm_term=resource-key-required';
 
 module.exports = {
   // The names the resource key is read from, in order.

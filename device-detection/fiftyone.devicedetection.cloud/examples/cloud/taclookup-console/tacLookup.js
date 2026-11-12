@@ -106,7 +106,7 @@ const run = async function (options, output) {
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
       'properties. Once subscribed, a resource key with the properties ' +
       'required by this example can be created at ' +
-      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
+      'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
       'environment variable mentioned at the start of this message with the ' +
       'resource key or pass it as the first argument on the command line.'
     );
