@@ -48,10 +48,24 @@ const FALLBACK_NAME =
   /(?:process\.env\.|process\.env\[\s*['"]|\$env:|\$\{env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
 
 // The cloud endpoint is _51DEGREES_CLOUD_ENDPOINT, as in every other
-// 51Degrees language, and nothing stands behind it, so the name it had
-// before must not appear anywhere, whether read, set or described. Only the
-// whole name is matched, so a longer name holding it is left alone.
+// 51Degrees language. The name it had before is deprecated, and is read
+// only when the new name is not set, so it must not appear outside the
+// files listed below, whether read, set or described. Only the whole name
+// is matched, so a longer name holding it is left alone.
 const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
+
+// The files that read the old cloud endpoint name behind the new one, word
+// the deprecation message or document that the old name is still read.
+const OLD_NAME_FILES = new Set([
+  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
+    'cloudRequestEngine.js'),
+  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
+    'errorMessages.js'),
+  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine', 'readme.md'),
+  path.join('pipeline', 'fiftyone.pipeline.did', 'didClient.js'),
+  path.join('pipeline', 'fiftyone.pipeline.did', 'readme.md'),
+  path.join('pipeline', 'fiftyone.pipeline.did', 'types', 'didClient.d.ts')
+]);
 
 // Reading a binary file as text yields no useful name and wastes time, so
 // files that never carry one are skipped by extension.
@@ -111,13 +125,16 @@ const namesInFile = (file, expression) => {
  * Find every name one expression matches across the whole repository.
  *
  * @param {RegExp} expression the expression, whose last group is the name
+ * @param {Set<string>} allowedFiles files that may carry the name, which
+ * are not searched
  * @returns {string[]} one entry per occurrence, with its file, line and name
  */
-const namesInRepository = (expression) => {
+const namesInRepository = (expression, allowedFiles = new Set()) => {
   const found = [];
 
   for (const file of trackedFiles()) {
-    if (SKIPPED_FILES.has(path.normalize(file))) {
+    if (SKIPPED_FILES.has(path.normalize(file)) ||
+      allowedFiles.has(path.normalize(file))) {
       continue;
     }
     if (SKIPPED_EXTENSIONS.has(path.extname(file).toLowerCase())) {
@@ -138,9 +155,20 @@ describe('environment variable names', () => {
     expect(namesInRepository(FALLBACK_NAME)).toEqual([]);
   });
 
-  it('names no old cloud endpoint variable', () => {
-    expect(namesInRepository(OLD_NAME)).toEqual([]);
-  });
+  it('names the old cloud endpoint variable only where it is still read',
+    () => {
+      expect(namesInRepository(OLD_NAME, OLD_NAME_FILES)).toEqual([]);
+    });
+
+  // A file that no longer names the old variable must leave the list, so
+  // the list does not outlast the deprecated name.
+  it('lists no file that does not name the old cloud endpoint variable',
+    () => {
+      const unused = [...OLD_NAME_FILES].filter(
+        (file) => namesInFile(file, OLD_NAME).length === 0);
+
+      expect(unused).toEqual([]);
+    });
 
   it('matches only a name that starts with the digit', () => {
     const subject = (text) =>

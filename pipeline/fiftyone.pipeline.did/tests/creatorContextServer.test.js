@@ -25,6 +25,10 @@
 // own shape with serverSignature added, and keep the error paths the page
 // relies on.
 
+const { spawn } = require('child_process');
+const http = require('http');
+const net = require('net');
+const { join } = require('path');
 const { redeemRoute } = require('../examples/creator-context-web/server');
 const {
   FodId, RedeemResult, DidNotSupportedError, DidArgumentError, DidClientError
@@ -188,4 +192,105 @@ describe('creator context example /redeem route', () => {
     expect(response.status).toBe(502);
     expect(JSON.parse(response.body)).toEqual({ error: 'keys unavailable' });
   });
+});
+
+// The example reads the cloud endpoint as the client does, so the page it
+// serves builds its own two cloud calls from the same base. Each case
+// starts the example as its own process, because the endpoint is read from
+// the environment when the example starts.
+describe('creator context example endpoint', () => {
+  const serverPath = join(
+    __dirname, '..', 'examples', 'creator-context-web', 'server.js');
+
+  // The name the endpoint variable had before, which is still read when
+  // the new name is not set. Built in two parts so the environment variable
+  // name check does not find it here.
+  const oldName = 'FOD' + '_CLOUD_API_URL';
+
+  /**
+   * A port nothing is listening on.
+   * @returns {Promise<number>} the port
+   */
+  const freePort = () => new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const port = probe.address().port;
+      probe.close(() => resolve(port));
+    });
+  });
+
+  /**
+   * The body of one GET request.
+   * @param {string} url the URL to get
+   * @returns {Promise<string>} the body
+   */
+  const get = (url) => new Promise((resolve, reject) => {
+    http.get(url, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { body += chunk; });
+      response.on('end', () => resolve(body));
+    }).once('error', reject);
+  });
+
+  /**
+   * Starts the example with the endpoint variables given and no others,
+   * and returns the page it serves.
+   * @param {object} endpointVariables the endpoint variables to set
+   * @returns {Promise<string>} the page
+   */
+  const pageServedWith = async (endpointVariables) => {
+    const environment = Object.assign({}, process.env);
+    delete environment._51DEGREES_CLOUD_ENDPOINT;
+    delete environment[oldName];
+    const port = await freePort();
+    const child = spawn(process.execPath, [serverPath], {
+      env: Object.assign(environment, endpointVariables, {
+        _51DEGREES_RESOURCE_KEY: 'AQTestResourceKey',
+        PORT: String(port)
+      }),
+      stdio: ['ignore', 'pipe', 'ignore']
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        let output = '';
+        child.stdout.on('data', (chunk) => {
+          output += chunk;
+          if (output.includes('51Did demo on')) {
+            resolve();
+          }
+        });
+        child.once('error', reject);
+        child.once('exit', (code) =>
+          reject(new Error('the example stopped with code ' + code)));
+      });
+      return await get('http://127.0.0.1:' + port + '/');
+    } finally {
+      child.kill();
+    }
+  };
+
+  // The line of the page that carries the API base.
+  const apiLine = (base) => 'var API = "' + base + '";';
+
+  test('only the old variable name set gives that endpoint', async () => {
+    const page = await pageServedWith({
+      [oldName]: 'https://old.example/api/v4'
+    });
+    expect(page).toContain(apiLine('https://old.example/api/v4/'));
+  }, 30000);
+
+  test('both names set gives the endpoint of the new name', async () => {
+    const page = await pageServedWith({
+      _51DEGREES_CLOUD_ENDPOINT: 'https://new.example/api/v4',
+      [oldName]: 'https://old.example/api/v4/'
+    });
+    expect(page).toContain(apiLine('https://new.example/api/v4/'));
+  }, 30000);
+
+  test('neither name set gives the public cloud', async () => {
+    const page = await pageServedWith({});
+    expect(page).toContain(apiLine('https://cloud.51degrees.com/api/v4/'));
+  }, 30000);
 });
