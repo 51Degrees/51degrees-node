@@ -17,6 +17,16 @@ export let errorMessages: {
 export let testConstants: {
     envVars: {
         superResourceKeyEnvVar: string;
+        /**
+         * @deprecated No test reads a resource key under this name. Use
+         * superResourceKeyEnvVar.
+         */
+        ipiResourceKeyEnvVar: string;
+        /**
+         * @deprecated No test reads a licence key under this name. The licence
+         * key is read from the _51DEGREES_LICENSE_KEY environment variable.
+         */
+        licenseKeyEnvVar: string;
     };
     ipAddresses: {
         switzerlandIpv4: string;

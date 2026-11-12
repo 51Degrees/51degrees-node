@@ -329,7 +329,8 @@ describe('deprecated environment variable names', () => {
     const timer = setTimeout(finish, 20000);
     child.stderr.on('data', (chunk) => {
       output += chunk;
-      if (output.includes('deprecated')) {
+      // The message ends with this word, so the whole of it has arrived.
+      if (output.includes('instead.')) {
         finish();
       }
     });
@@ -337,7 +338,12 @@ describe('deprecated environment variable names', () => {
     child.once('close', finish);
   });
 
-  describe.each(examples)('%s (%#)', (file, name, oldName, others) => {
+  // Each example is named by its path from the repository root.
+  const namedExamples = examples.map((example) => [
+    path.relative(ROOT, example[0]).split(path.sep).join('/'), ...example]);
+
+  describe.each(namedExamples)('%s (%#)', (
+    title, file, name, oldName, others) => {
     const unset = 'reads ' + oldName + ' when ' + name + ' is not set';
 
     it(unset + ', and says that it is deprecated', async () => {

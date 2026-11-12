@@ -23,7 +23,17 @@
 module.exports = {
   // Environment variables name for testing
   envVars: {
-    superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER'
+    superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER',
+    /**
+     * @deprecated No test reads a resource key under this name. Use
+     * superResourceKeyEnvVar.
+     */
+    ipiResourceKeyEnvVar: 'TEST_IPI_RESOURCE_KEY',
+    /**
+     * @deprecated No test reads a licence key under this name. The licence
+     * key is read from the _51DEGREES_LICENSE_KEY environment variable.
+     */
+    licenseKeyEnvVar: 'TEST_LICENSE_KEY'
   },
   // IP addresses for testing
   ipAddresses: {

@@ -20,9 +20,29 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const testConstants = require('./testConstants');
+
 // Placeholder written into example configuration files, which stands for
 // 'no key has been set here'.
 const PLACEHOLDER = '!!YOUR_RESOURCE_KEY!!';
+
+// The old names already said to be deprecated, so each is said once.
+const reportedOldNames = new Set();
+
+/**
+ * Prints, once for each old name, that the name is deprecated and which
+ * name replaces it.
+ *
+ * @param {string} oldName the deprecated environment variable name
+ * @param {string} name the name that replaces it
+ */
+const reportOldName = function (oldName, name) {
+  if (reportedOldNames.has(oldName) === false) {
+    reportedOldNames.add(oldName);
+    console.warn(`The ${oldName} environment variable is deprecated and ` +
+      `${name} replaces it. Set ${name} instead.`);
+  }
+};
 
 /**
  * Helpers to obtain keys from the environment
@@ -44,17 +64,26 @@ module.exports = {
   },
 
   /**
-   * Obtain a resource key from the environment, read under the one name
-   * that variable has.
+   * Obtain a resource key from the environment. The name is read first.
+   * When it is unset or empty, the deprecated name it replaced is read,
+   * as testConstants.legacyEnvVars gives it.
    *
    * @param {string} envVarName One of testConstants.envVars
-   * @returns {string} The key, or undefined when the name is not set
+   * @returns {string} The key, or undefined when neither name is set
    */
   getResourceKey: function (envVarName) {
     const value = process.env[envVarName];
 
     if (value && value !== PLACEHOLDER) {
       return value;
+    }
+
+    const oldName = testConstants.legacyEnvVars[envVarName];
+    const oldValue = oldName ? process.env[oldName] : undefined;
+
+    if (oldValue && oldValue !== PLACEHOLDER) {
+      reportOldName(oldName, envVarName);
+      return oldValue;
     }
 
     return undefined;

@@ -211,8 +211,23 @@ function redeemRoute (client) {
  * Reads the environment, builds the client and starts the server.
  */
 function main () {
-  const resource = process.env._51DEGREES_RESOURCE_KEY;
-  const licence = process.env._51DEGREES_LICENSE_KEY || '';
+  // RESOURCE_KEY and LICENSE_KEY are the deprecated names of the two
+  // variables, each read only when its _51DEGREES_ name is unset or
+  // empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
+  }
+  if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
+    console.warn('The LICENSE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
+      'instead.');
+  }
+  const resource = process.env._51DEGREES_RESOURCE_KEY ||
+    process.env.RESOURCE_KEY;
+  const licence = process.env._51DEGREES_LICENSE_KEY ||
+    process.env.LICENSE_KEY || '';
   const port = Number(process.env.PORT || 5100);
   if (!resource) {
     console.error('Set _51DEGREES_RESOURCE_KEY to the ' +

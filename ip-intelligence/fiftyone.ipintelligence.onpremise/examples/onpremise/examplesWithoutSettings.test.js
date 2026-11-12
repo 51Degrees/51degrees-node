@@ -35,8 +35,12 @@ const os = require('os');
 const path = require('path');
 const request = require('supertest');
 
-const { ExampleUtils, NEEDS_ENTERPRISE } =
-  require(path.join(__dirname, 'exampleUtils'));
+const {
+  ExampleUtils,
+  NEEDS_ENTERPRISE,
+  DEPRECATED_IPI_DATA_FILE_ENV_VAR,
+  DEPRECATED_DD_DATA_FILE_ENV_VAR
+} = require(path.join(__dirname, 'exampleUtils'));
 
 const DATA_DIR =
   path.join(__dirname, '..', '..', '..', '..', 'cxx', 'data', 'ip-intelligence');
@@ -52,7 +56,10 @@ const TIMEOUT_MS = 300000;
 const SETTINGS = [
   '_51DEGREES_IPI_PATH',
   '_51DEGREES_DD_PATH',
+  DEPRECATED_IPI_DATA_FILE_ENV_VAR,
+  DEPRECATED_DD_DATA_FILE_ENV_VAR,
   '_51DEGREES_LICENSE_KEY',
+  'LICENSE_KEY',
   'LICENSEKEY'
 ];
 
