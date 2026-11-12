@@ -44,7 +44,7 @@ const require51 = (requestedPackage) => {
 const optionsExtension =
   require51('fiftyone.devicedetection.shared').optionsExtension;
 
-const { ExampleUtils, NEEDS_ENTERPRISE } =
+const { ExampleUtils, NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
   require(path.join(__dirname, 'exampleUtils'));
 
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
@@ -60,7 +60,9 @@ const TIMEOUT_MS = 300000;
 // none of them.
 const SETTINGS = [
   '_51DEGREES_DD_PATH',
+  DATA_FILE_PATH_ENV_VAR,
   '_51DEGREES_LICENSE_KEY',
+  'LICENSE_KEY',
   'LICENSEKEY'
 ];
 

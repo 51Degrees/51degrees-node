@@ -80,7 +80,15 @@ if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
   // If not, check the resource key environment variable.
   if (typeof myResourceKey === 'undefined' ||
     myResourceKey.startsWith('!!')) {
-    myResourceKey = process.env._51DEGREES_RESOURCE_KEY;
+    // RESOURCE_KEY is the deprecated name of the same variable, read only
+    // when _51DEGREES_RESOURCE_KEY is unset or empty.
+    if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+      console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+        '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+        'instead.');
+    }
+    myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+      process.env.RESOURCE_KEY;
   }
 
   if (myResourceKey) {

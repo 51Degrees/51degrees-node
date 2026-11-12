@@ -233,14 +233,46 @@ function windowFetch (handler) {
 }
 
 describe('DidClient construction', () => {
+  // The name the endpoint variable had before, which is still read when
+  // the new name is not set. Built in two parts so the environment variable
+  // name check does not find it here.
+  const oldName = 'FOD' + '_CLOUD_API_URL';
   const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
+  const savedOld = process.env[oldName];
+  let emitWarning;
+  beforeEach(() => {
+    delete process.env[oldName];
+    // Node's route for a deprecation, replaced so the calls can be counted
+    // and nothing is written to the test output.
+    emitWarning = jest.spyOn(process, 'emitWarning')
+      .mockImplementation(() => {});
+  });
   afterEach(() => {
+    emitWarning.mockRestore();
     if (saved === undefined) {
       delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
       process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
+    if (savedOld === undefined) {
+      delete process.env[oldName];
+    } else {
+      process.env[oldName] = savedOld;
+    }
   });
+
+  /**
+   * The DidClient class of a newly loaded module, which has reported no
+   * deprecated name yet.
+   * @returns {typeof DidClient} the class
+   */
+  const newlyLoadedDidClient = () => {
+    let loaded;
+    jest.isolateModules(() => {
+      loaded = require('../didClient').DidClient;
+    });
+    return loaded;
+  };
 
   test('resourceKey is required', () => {
     expect(() => new DidClient({})).toThrow(TypeError);
@@ -261,18 +293,73 @@ describe('DidClient construction', () => {
     expect(client.endpoint).toBe('https://other.example/api/v4/');
   });
 
-  test('endpoint does not read the old variable name', () => {
-    // Built in two parts so the environment variable name check does not
-    // find the old name here.
-    const oldName = 'FOD' + '_CLOUD_API_URL';
+  test('endpoint reads the old variable name when the new one is not set', () => {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = 'https://old.example/api/v4';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://old.example/api/v4/');
+  });
+
+  test('endpoint reads the old variable name when the new one is empty', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = '';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://old.example/api/v4/');
+  });
+
+  test('the new variable name wins when both are set', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://other.example/api/v4/');
+  });
+
+  test('an empty old variable name counts as not set', () => {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = '';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
+  });
+
+  test('reading the old variable name is reported as deprecated, once', () => {
+    const Fresh = newlyLoadedDidClient();
     delete process.env._51DEGREES_CLOUD_ENDPOINT;
     process.env[oldName] = 'https://old.example/api/v4/';
-    try {
-      const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-      expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
-    } finally {
-      delete process.env[oldName];
-    }
+
+    const first = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    const second = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+
+    expect(first.endpoint).toBe('https://old.example/api/v4/');
+    expect(second.endpoint).toBe('https://old.example/api/v4/');
+    expect(emitWarning).toHaveBeenCalledTimes(1);
+    const [message, type] = emitWarning.mock.calls[0];
+    expect(type).toBe('DeprecationWarning');
+    expect(message).toContain(oldName);
+    expect(message).toContain('deprecated');
+    expect(message).toContain('_51DEGREES_CLOUD_ENDPOINT');
+  });
+
+  test('the old variable name is not reported when it is not used', () => {
+    const Fresh = newlyLoadedDidClient();
+    const build = (options) => new Fresh(Object.assign(
+      { resourceKey: RESOURCE, fetch: fakeFetch(() => null) }, options));
+
+    // Neither name set.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    build();
+
+    // Both set, so the new name is the one read.
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    build();
+
+    // Only the old name set, and the endpoint option given, so the
+    // environment is not read.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    expect(build({ endpoint: 'https://mine.example/api/v4/' }).endpoint)
+      .toBe('https://mine.example/api/v4/');
+
+    expect(emitWarning).not.toHaveBeenCalled();
   });
 
   test('endpoint option wins over the environment', () => {

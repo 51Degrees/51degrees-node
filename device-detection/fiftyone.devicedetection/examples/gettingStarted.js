@@ -60,8 +60,15 @@ const DeviceDetectionPipelineBuilder = require51('fiftyone.devicedetection').Dev
 
 // The resource key is read from the '_51DEGREES_RESOURCE_KEY'
 // environment variable.
+// RESOURCE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_RESOURCE_KEY is unset or empty.
+if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+    'instead.');
+}
 const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-  '!!YOUR_RESOURCE_KEY!!';
+  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +
