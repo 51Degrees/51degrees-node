@@ -37,11 +37,11 @@ const REPOSITORY_ROOT = path.join(__dirname, '..', '..');
 // longer word are both left alone.
 const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
 
-// Each variable has one name and nothing stands behind it, so a bare
-// RESOURCE_KEY or LICENSE_KEY must never be read from the environment.
-// Only a read is matched, being the two forms Node offers and the two
-// PowerShell forms, so the same text in a placeholder such as
-// '!!YOUR_RESOURCE_KEY!!' or in a longer name such as
+// The resource key and the licence key each have one name and nothing
+// stands behind it, so a bare RESOURCE_KEY or LICENSE_KEY must never be
+// read from the environment. Only a read is matched, being the two forms
+// Node offers and the two PowerShell forms, so the same text in a
+// placeholder such as '!!YOUR_RESOURCE_KEY!!' or in a longer name such as
 // TEST_SUPER_RESOURCE_KEY is left alone. A read is what restores a
 // fallback, whereas prose naming the old name cannot.
 const FALLBACK_NAME =
@@ -155,7 +155,7 @@ describe('environment variable names', () => {
     expect(namesInRepository(FALLBACK_NAME)).toEqual([]);
   });
 
-  it('names the old cloud endpoint variable only where it is still read',
+  it('names the old cloud endpoint variable only where read or documented',
     () => {
       expect(namesInRepository(OLD_NAME, OLD_NAME_FILES)).toEqual([]);
     });

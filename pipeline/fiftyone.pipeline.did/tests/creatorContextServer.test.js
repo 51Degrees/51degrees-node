@@ -24,6 +24,10 @@
 // client so no network is touched. The route must answer in the cloud's
 // own shape with serverSignature added, and keep the error paths the page
 // relies on.
+//
+// The example's endpoint is tested last. Those tests start the example as
+// its own process and ask it for its page over the loopback address, and
+// they call no cloud service.
 
 const { spawn } = require('child_process');
 const http = require('http');
