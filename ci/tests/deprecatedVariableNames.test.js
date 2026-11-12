@@ -293,6 +293,38 @@ describe('deprecated environment variable names', () => {
       expect(newlyLoaded(helpers.ddOnPremiseExamples)
         .LEGACY_DATA_FILE_PATH_ENV_VAR).toBe(DD_PATH);
     });
+
+    // A constant that kept its name and had its value changed holds its
+    // old value again, and a new constant holds the name in use.
+    it('hold their old values in the IP Intelligence test constants', () => {
+      const constants = newlyLoaded(helpers.ipiTestConstants);
+
+      expect(constants.envVars.superResourceKeyEnvVar)
+        .toBe('TEST_SUPER_RESOURCE_KEY');
+      expect(constants.envVars.superResourceKeyVariable)
+        .toBe('_51DEGREES_RESOURCE_KEY_SUPER');
+    });
+
+    it('hold their old values in the cloud example helpers', () => {
+      const ipi = newlyLoaded(helpers.ipiCloudExamples);
+      const dd = newlyLoaded(helpers.ddCloudExamples);
+
+      expect(ipi.RESOURCE_KEY_ENV_VAR).toBe(digitName('RESOURCE_KEY'));
+      expect(ipi.RESOURCE_KEY_VARIABLE).toBe(RESOURCE_KEY);
+      expect(dd.RESOURCE_KEY_ENV_VAR).toBe(RESOURCE_KEY);
+    });
+
+    it('hold their old values in the on-premise example helpers', () => {
+      const dd = newlyLoaded(helpers.ddOnPremiseExamples);
+      const ipi = newlyLoaded(helpers.ipiOnPremiseExamples);
+
+      expect(dd.DATA_FILE_PATH_ENV_VAR).toBe(digitName('DD_PATH'));
+      expect(dd.DATA_FILE_PATH_VARIABLE).toBe(DD_PATH);
+      expect(ipi.IPI_DATA_FILE_ENV_VAR).toBe(digitName('IPI_PATH'));
+      expect(ipi.IPI_DATA_FILE_VARIABLE).toBe(IPI_PATH);
+      expect(ipi.DD_DATA_FILE_ENV_VAR).toBe(digitName('DD_PATH'));
+      expect(ipi.DD_DATA_FILE_VARIABLE).toBe(DD_PATH);
+    });
   });
 
   /**
