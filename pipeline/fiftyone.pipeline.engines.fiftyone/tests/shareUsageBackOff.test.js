@@ -233,7 +233,9 @@ test('share usage back-off - pauses then drains the queue', async () => {
   for (let i = 0; i < 5; i++) {
     queued.push(await processUnique(pipeline));
   }
-  // Nothing is sent while the pause lasts, however long the requests take.
+  // Nothing has been sent yet. This runs as soon as the five are processed,
+  // so on its own it shows only that no send had been made by then. The
+  // check after the pause is what catches a pause that was not honoured.
   expect(attempts.length).toBe(10);
 
   status = 200;
@@ -242,6 +244,10 @@ test('share usage back-off - pauses then drains the queue', async () => {
     () => queued.every(ip => clientIps().includes(ip)),
     () => 'The evidence processed during the pause was not all sent once ' +
       `the service answered. Sent: ${clientIps()}`);
+  // The eleventh send came well after sending paused. The element waits the
+  // pause out on a real timer, which it sets from the time the held clock
+  // reports is left, so this still measures a real wait while the clock is
+  // held.
   expect(attempts[10] - pausedAt).toBeGreaterThanOrEqual(1500);
 }, 30000);
 
