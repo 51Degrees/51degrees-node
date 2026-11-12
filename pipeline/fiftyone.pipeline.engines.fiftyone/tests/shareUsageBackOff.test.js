@@ -72,6 +72,34 @@ const requestListener = function (req, res) {
   });
 };
 
+// The clock the back-off reads when no test is holding it.
+const monotonicNow = ShareUsageBackOff.now;
+
+// What the held clock reads.
+let heldTime = 0;
+
+/**
+ * Hold the clock the back-off reads at the time now, so that a pause lasts
+ * until the test moves the clock past the end of it. A test that processes
+ * requests during a pause would otherwise need the runner to process them
+ * faster than the pause the element is waiting out. The element still reads
+ * the real clock for its timers, so it checks whether the pause has ended as
+ * often as it would with the clock running.
+ */
+const holdClock = () => {
+  heldTime = monotonicNow();
+  ShareUsageBackOff.now = () => heldTime;
+};
+
+/**
+ * Move the held clock on, which ends a pause shorter than the time given.
+ *
+ * @param {number} milliseconds how far to move the clock on
+ */
+const moveClock = milliseconds => {
+  heldTime += milliseconds;
+};
+
 beforeEach(done => {
   status = 200;
   hang = false;
@@ -85,6 +113,7 @@ beforeEach(done => {
 });
 
 afterEach(() => {
+  ShareUsageBackOff.now = monotonicNow;
   if (usageEngine && usageEngine.resumeTimer) {
     clearTimeout(usageEngine.resumeTimer);
   }
@@ -172,8 +201,11 @@ const failSends = async (pipeline, count) => {
     await waitFor(
       () => attempts.length === sent,
       () => `Send ${sent} was not made.`);
-    // Lets the element read the answer before the next request.
-    await sleep(50);
+    // The element stops sending once it has read the answer, so this waits
+    // for the failure to be counted before the next request.
+    await waitFor(
+      () => usageEngine.sending === false,
+      () => `The answer to send ${sent} was not read.`);
   }
 };
 
@@ -185,17 +217,20 @@ const failSends = async (pipeline, count) => {
  */
 test('share usage back-off - pauses then drains the queue', async () => {
   const pipeline = createPipeline();
+  holdClock();
   await failSends(pipeline, 10);
   const pausedAt = Date.now();
+  expect(usageEngine.backOff.backingOff).toBe(true);
 
   const queued = [];
   for (let i = 0; i < 5; i++) {
     queued.push(await processUnique(pipeline));
   }
-  await sleep(700);
+  // Nothing is sent while the pause lasts, however long the requests take.
   expect(attempts.length).toBe(10);
 
   status = 200;
+  moveClock(2000);
   await waitFor(
     () => queued.every(ip => clientIps().includes(ip)),
     () => 'The evidence processed during the pause was not all sent once ' +
@@ -239,23 +274,31 @@ test('share usage back-off - full queue drops new evidence', async () => {
     initialRecoveryDelaySeconds: 2,
     maxRecoveryDelaySeconds: 2
   });
+  holdClock();
   await failSends(pipeline, 1);
+  expect(usageEngine.backOff.backingOff).toBe(true);
 
+  // Everything processed is queued until the queue reaches its limit.
   const kept = [];
-  for (let i = 0; i < 4; i++) {
+  while (usageEngine.shareData.length < usageEngine.maximumQueueSize) {
     kept.push(await processUnique(pipeline));
   }
+
+  // The queue is full, so everything processed now is dropped.
   const dropped = [];
   for (let i = 0; i < 6; i++) {
     dropped.push(await processUnique(pipeline));
   }
-  status = 200;
+  expect(usageEngine.dropped).toBe(dropped.length);
+  expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
 
+  status = 200;
+  moveClock(2000);
   await waitFor(
     () => kept.every(ip => clientIps().includes(ip)),
     () => `The evidence queued during the pause was not all sent. Sent: ${clientIps()}`);
-  await sleep(500);
-  expect(dropped.filter(ip => clientIps().includes(ip))).toEqual([]);
+  // The queue held nothing else, so nothing else can be sent.
+  expect(clientIps()).toEqual(kept);
 }, 30000);
 
 /**
@@ -300,12 +343,15 @@ test('share usage back-off - full queue logs without a message per entry', async
     maxRecoveryDelaySeconds: 2
   });
   const logged = recordLog();
+  holdClock();
   await failSends(pipeline, 1);
   logged.length = 0;
 
   for (let i = 0; i < 10; i++) {
     await processUnique(pipeline);
   }
+  // Four fill the queue and the other six are dropped.
+  expect(usageEngine.dropped).toBe(6);
 
   const full = logged.filter(entry => String(entry.message).includes('full'));
   expect(full.length).toBeGreaterThanOrEqual(1);
@@ -361,18 +407,22 @@ test('share usage back-off - message holds up to twice the package size', async 
     initialRecoveryDelaySeconds: 1,
     maxRecoveryDelaySeconds: 1
   });
+  holdClock();
   status = 500;
   await processUnique(pipeline);
   await processUnique(pipeline);
   await waitFor(
     () => attempts.length === 1,
     () => 'The first send was not made.');
-  await sleep(50);
+  await waitFor(
+    () => usageEngine.backOff.backingOff,
+    () => 'Sending did not pause after the first send failed.');
   for (let i = 0; i < 6; i++) {
     await processUnique(pipeline);
   }
 
   status = 200;
+  moveClock(1000);
   await waitFor(
     () => clientIps().length === 6,
     () => `Not all entries were sent: ${clientIps()}`);
