@@ -67,18 +67,28 @@ const DATA_FILE_AGE_WARNING = 30;
 // Environment variable that can be set to supply an explicit path to
 // the IP intelligence data file. Checked before the folder hierarchy
 // is searched.
-const IPI_DATA_FILE_ENV_VAR = '_51DEGREES_IPI_PATH';
+const IPI_DATA_FILE_VARIABLE = '_51DEGREES_IPI_PATH';
 
 // Environment variable that can be set to supply an explicit path to
 // the device detection data file used by the mixed examples. Checked
 // before the folder hierarchy is searched.
-const DD_DATA_FILE_ENV_VAR = '_51DEGREES_DD_PATH';
+const DD_DATA_FILE_VARIABLE = '_51DEGREES_DD_PATH';
 
-// The names the two variables had when they began with the digit. Each is
-// deprecated and read only when the name that replaced it is unset or
-// empty.
-const DEPRECATED_IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
-const DEPRECATED_DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
+/**
+ * The name the IP intelligence variable had when it began with the digit.
+ *
+ * @deprecated Set the variable IPI_DATA_FILE_VARIABLE names. This name is
+ * read only when that variable is unset or empty.
+ */
+const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
+
+/**
+ * The name the device detection variable had when it began with the digit.
+ *
+ * @deprecated Set the variable DD_DATA_FILE_VARIABLE names. This name is
+ * read only when that variable is unset or empty.
+ */
+const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
 
 // The old names already said to be deprecated, so each is said once.
 const reportedOldNames = new Set();
@@ -248,12 +258,11 @@ class ExampleUtils {
   }
 
   // Get the explicit path of the IP intelligence data file from the
-  // environment, read from the variable named by IPI_DATA_FILE_ENV_VAR,
+  // environment, read from the variable named by IPI_DATA_FILE_VARIABLE,
   // then from the deprecated name when that is unset or empty. Returns
   // undefined when neither is set.
   static getDataFilePathFromEnv () {
-    return readVariable(
-      IPI_DATA_FILE_ENV_VAR, DEPRECATED_IPI_DATA_FILE_ENV_VAR);
+    return readVariable(IPI_DATA_FILE_VARIABLE, IPI_DATA_FILE_ENV_VAR);
   }
 
   // Get the path to an IP intelligence data file. The environment is
@@ -264,12 +273,11 @@ class ExampleUtils {
   }
 
   // Get the path to a device detection data file. The environment
-  // variable named by DD_DATA_FILE_ENV_VAR is checked first for an
+  // variable named by DD_DATA_FILE_VARIABLE is checked first for an
   // explicit path, then the deprecated name when that is unset or empty.
   // If neither is set then the file is found with findFile.
   static findDeviceDataFile (fileName) {
-    return readVariable(
-      DD_DATA_FILE_ENV_VAR, DEPRECATED_DD_DATA_FILE_ENV_VAR) ||
+    return readVariable(DD_DATA_FILE_VARIABLE, DD_DATA_FILE_ENV_VAR) ||
       this.findFile(fileName);
   }
 
@@ -469,8 +477,8 @@ module.exports = {
   ExampleUtils,
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
+  IPI_DATA_FILE_VARIABLE,
+  DD_DATA_FILE_VARIABLE,
   IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_ENV_VAR,
-  DEPRECATED_IPI_DATA_FILE_ENV_VAR,
-  DEPRECATED_DD_DATA_FILE_ENV_VAR
+  DD_DATA_FILE_ENV_VAR
 };

@@ -16,10 +16,16 @@ export let errorMessages: {
 };
 export let testConstants: {
     envVars: {
+        superResourceKeyVariable: string;
+        /**
+         * @deprecated The name the variable had before, which is read only
+         * when the variable superResourceKeyVariable names is unset or empty.
+         * Use superResourceKeyVariable.
+         */
         superResourceKeyEnvVar: string;
         /**
          * @deprecated No test reads a resource key under this name. Use
-         * superResourceKeyEnvVar.
+         * superResourceKeyVariable.
          */
         ipiResourceKeyEnvVar: string;
         /**

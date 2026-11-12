@@ -26,17 +26,22 @@ const path = require('path');
 
 // The environment variable used to get the resource key to use when
 // running examples.
-const RESOURCE_KEY_ENV_VAR = '_51DEGREES_RESOURCE_KEY';
-
-// The name RESOURCE_KEY_ENV_VAR held before, which began with the digit.
-// It is deprecated and read only when that variable is unset or empty.
-const DIGIT_RESOURCE_KEY_ENV_VAR = '51DEGREES_RESOURCE_KEY';
+const RESOURCE_KEY_VARIABLE = '_51DEGREES_RESOURCE_KEY';
 
 /**
- * The name the resource key variable had before.
+ * The name the resource key variable had when it began with the digit.
  *
- * @deprecated Set the variable RESOURCE_KEY_ENV_VAR names. This name is
+ * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
  * read only when that variable is unset or empty.
+ */
+const RESOURCE_KEY_ENV_VAR = '51DEGREES_RESOURCE_KEY';
+
+/**
+ * The name the resource key variable had first.
+ *
+ * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
+ * read only when that variable and RESOURCE_KEY_ENV_VAR are unset or
+ * empty.
  */
 const LEGACY_RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
 
@@ -80,10 +85,10 @@ const readVariable = function (name, ...oldNames) {
 };
 
 // Get the resource key from the environment. The two deprecated names are
-// read, in the order they were before, only when RESOURCE_KEY_ENV_VAR is
+// read, in the order they were before, only when RESOURCE_KEY_VARIABLE is
 // unset or empty.
 const getResourceKeyFromEnv = function () {
-  return readVariable(RESOURCE_KEY_ENV_VAR, DIGIT_RESOURCE_KEY_ENV_VAR,
+  return readVariable(RESOURCE_KEY_VARIABLE, RESOURCE_KEY_ENV_VAR,
     LEGACY_RESOURCE_KEY_ENV_VAR);
 };
 
@@ -144,6 +149,7 @@ const serveStaticAsset = (req, res, publicDir) => {
 };
 
 module.exports = {
+  RESOURCE_KEY_VARIABLE,
   RESOURCE_KEY_ENV_VAR,
   LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,

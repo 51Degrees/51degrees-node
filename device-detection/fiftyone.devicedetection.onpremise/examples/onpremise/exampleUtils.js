@@ -68,16 +68,20 @@ const DATA_FILE_AGE_WARNING = 30;
 // path to the device detection data file. This is checked before
 // searching the folder hierarchy for the file. The name is the one
 // the 51Degrees APIs share.
-const DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
+const DATA_FILE_PATH_VARIABLE = '_51DEGREES_DD_PATH';
 
-// The name the variable had when it began with the digit. It is deprecated
-// and read only when DATA_FILE_PATH_ENV_VAR is unset or empty.
-const DEPRECATED_DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
+/**
+ * The name the variable had when it began with the digit.
+ *
+ * @deprecated Set the variable DATA_FILE_PATH_VARIABLE names. This name
+ * is read only when that variable is unset or empty.
+ */
+const DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
 
 /**
  * The second name the data file path was read from.
  *
- * @deprecated Use DATA_FILE_PATH_ENV_VAR, which now holds the same name.
+ * @deprecated Use DATA_FILE_PATH_VARIABLE, which holds the same name.
  */
 const LEGACY_DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
 
@@ -199,12 +203,11 @@ class ExampleUtils {
   }
 
   // Get the explicit data file path from the environment, read from the
-  // variable named by DATA_FILE_PATH_ENV_VAR, then from the deprecated
+  // variable named by DATA_FILE_PATH_VARIABLE, then from the deprecated
   // name when that is unset or empty. Returns undefined when neither is
   // set.
   static getDataFilePathFromEnv () {
-    return readVariable(
-      DATA_FILE_PATH_ENV_VAR, DEPRECATED_DATA_FILE_PATH_ENV_VAR);
+    return readVariable(DATA_FILE_PATH_VARIABLE, DATA_FILE_PATH_ENV_VAR);
   }
 
   // Get the path to a device detection data file. The environment is
@@ -351,7 +354,7 @@ module.exports = {
   ExampleUtils,
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
+  DATA_FILE_PATH_VARIABLE,
   DATA_FILE_PATH_ENV_VAR,
-  DEPRECATED_DATA_FILE_PATH_ENV_VAR,
   LEGACY_DATA_FILE_PATH_ENV_VAR
 };

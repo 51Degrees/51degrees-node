@@ -23,10 +23,17 @@
 module.exports = {
   // Environment variables name for testing
   envVars: {
-    superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER',
+    // The variable the examples read their resource key from.
+    superResourceKeyVariable: '_51DEGREES_RESOURCE_KEY_SUPER',
+    /**
+     * @deprecated The name the variable had before, which is read only
+     * when the variable superResourceKeyVariable names is unset or empty.
+     * Use superResourceKeyVariable.
+     */
+    superResourceKeyEnvVar: 'TEST_SUPER_RESOURCE_KEY',
     /**
      * @deprecated No test reads a resource key under this name. Use
-     * superResourceKeyEnvVar.
+     * superResourceKeyVariable.
      */
     ipiResourceKeyEnvVar: 'TEST_IPI_RESOURCE_KEY',
     /**
