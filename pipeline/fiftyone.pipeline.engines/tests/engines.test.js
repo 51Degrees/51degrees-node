@@ -179,31 +179,30 @@ test('an element restricted without an engine keeps its lower case names',
   });
 
 // Counts the reads that had to look past letter case, so what the new read
-// costs can be asserted exactly instead of being timed.
-class CountingDictionary extends AspectDataDictionary {
-  constructor (options) {
-    super(options);
-    this.caseLookups = 0;
-  }
-
-  getInternalIgnoringCase (key) {
-    this.caseLookups++;
-    return super.getInternalIgnoringCase(key);
-  }
-}
-
+// costs can be asserted exactly rather than timed.
 test('a read that finds its key as given never looks at letter case', () => {
-  const data = new CountingDictionary({
+  // The count is held here and not on the dictionary because Element Data
+  // hands back a proxy that answers an unknown field by reading a property of
+  // that name, and a count of zero is falsy, so a field would be unreadable
+  // at the only moment that matters.
+  let caseLookups = 0;
+  class CountsCaseLookups extends AspectDataDictionary {
+    getInternalIgnoringCase (key) {
+      caseLookups++;
+      return super.getInternalIgnoringCase(key);
+    }
+  }
+  const data = new CountsCaseLookups({
     flowElement: { dataKey: 'caseWork' },
     contents: { one: 1, two: 2, noCache: false }
   });
   expect(data.get('one')).toBe(1);
   expect(data.get('noCache')).toBe(false);
-  expect(data.caseLookups).toBe(0);
+  expect(caseLookups).toBe(0);
   // Only a key that finds nothing as given pays for the second look, and it
   // pays for one.
   expect(data.get('One')).toBe(1);
-  expect(data.caseLookups).toBe(1);
+  expect(caseLookups).toBe(1);
 });
 
 // Finds nothing for a key not found as given, as the dictionary did before
