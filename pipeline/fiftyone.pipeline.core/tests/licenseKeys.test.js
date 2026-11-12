@@ -179,7 +179,12 @@ describe('LicenseKeys.mask', () => {
 });
 
 describe('logs and errors', () => {
-  test('a pipeline log entry is masked', () => {
+  // Every detection goes through the pipeline's log, so an emitted message
+  // is passed on as it is. The guarantee is kept where a key can reach a
+  // message, which is the cloud request engine, the data update service and
+  // the 51Did client, each with its own test. The console is still masked,
+  // as the test below shows.
+  test('a pipeline log entry is passed on as it is', () => {
     const pipeline = new core.PipelineBuilder({
       addJavaScriptBuilder: false,
       useSetHeaderProperties: false
@@ -187,7 +192,7 @@ describe('logs and errors', () => {
     const heard = [];
     pipeline.on('warn', (message) => heard.push(message));
     pipeline.log('warn', 'Failed a?LicenseKeys=' + KEY);
-    expect(heard).toEqual(['Failed a?LicenseKeys=' + MASKED]);
+    expect(heard).toEqual(['Failed a?LicenseKeys=' + KEY]);
   });
 
   test('a pipeline error entry with no listener is masked on the console',

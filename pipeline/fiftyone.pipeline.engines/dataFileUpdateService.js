@@ -261,14 +261,19 @@ class DataFileUpdateService {
    * With no pipeline, an error is written to the console, as a pipeline
    * with no error listener does, so that it is not lost.
    *
+   * The service's messages name the update URL, which carries the license
+   * keys, so every one of them is masked here. The pipeline's log does not
+   * mask, because each detection goes through it.
+   *
    * @param {string} level the log level
    * @param {*} message the message
    */
   log (level, message) {
+    message = LicenseKeys.mask(message);
     if (this.pipeline) {
       this.pipeline.log(level, message);
     } else if (level === 'error') {
-      console.error(LicenseKeys.mask(message));
+      console.error(message);
     }
   }
 
