@@ -32,10 +32,9 @@ const parametersLine =
   /var renderedParameters = function\(\) \{ return (.*); \};/g;
 
 async function render (options, evidence) {
-  const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
-    .add(new core.JsonBundler())
-    .add(new core.JavascriptBuilder(options))
-    .build();
+  const pipeline = new core.PipelineBuilder({
+    javascriptBuilderSettings: options
+  }).build();
   const flowData = pipeline.createFlowData();
   for (const key in evidence) {
     flowData.evidence.add(key, evidence[key]);
