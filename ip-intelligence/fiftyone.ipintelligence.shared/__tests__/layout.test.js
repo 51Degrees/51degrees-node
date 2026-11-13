@@ -94,7 +94,7 @@ describe('shared package layout', () => {
     });
 
   test('each old path still resolves to the module in lib', () => {
-        oldPaths.forEach((file) => {
+    oldPaths.forEach((file) => {
       const name = path.basename(file, '.js');
       expect(require(path.join(packageRoot, file)))
         .toBe(require(path.join(packageRoot, 'lib', name)));
