@@ -80,8 +80,8 @@ let pipeline;
 // Check that the data files configured for each element exist, searching
 // the project directories for a file with the same name where they do
 // not. This allows the example to run from different working directories
-// without a copy of the data files in each one. The 51DEGREES_DD_PATH
-// and 51DEGREES_IPI_PATH environment variables are checked for explicit
+// without a copy of the data files in each one. The _51DEGREES_DD_PATH
+// and _51DEGREES_IPI_PATH environment variables are checked for explicit
 // paths before the folder hierarchy is searched.
 const fixDataFilePaths = (options) => {
   for (const element of options.PipelineOptions.Elements) {

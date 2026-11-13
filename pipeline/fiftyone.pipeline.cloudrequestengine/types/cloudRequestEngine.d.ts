@@ -10,7 +10,13 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      *
      * @param {object} options options object
      * @param {string} options.resourceKey resourcekey for cloud service
-     * @param {string} options.licenseKey licensekey for cloud service
+     * @param {string} options.licenseKey licensekey for cloud service, beside
+     * a resourceKey or on its own. On its own, requestedProperties is
+     * required.
+     * @param {Array<string>|string} options.requestedProperties the fully
+     * qualified names of the properties to ask for, such as device.ismobile,
+     * as a list or one comma separated string. Beside a resourceKey the cloud
+     * service adds them to the properties the resource key carries.
      * @param {string} options.baseURL url the cloud service is located at
      * if overriding default
      * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -21,25 +27,30 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
      * @param {RequestClient} options.requestClient Set predefined RequestClient.
      */
-    constructor({ resourceKey, licenseKey, baseURL, cloudRequestOrigin, requestClient }: {
+    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient }: {
         resourceKey: string;
         licenseKey: string;
+        requestedProperties: Array<string> | string;
         baseURL: string;
         cloudRequestOrigin: string;
         requestClient: RequestClient;
     }, ...args: any[]);
     resourceKey: string;
     licenseKey: string;
+    requestedProperties: string[];
+    notCoveredReported: boolean;
     cloudRequestOrigin: string;
     requestClient: RequestClient;
     baseURL: string;
     evidenceKeys: any[];
+    evidenceKeysFetched: boolean;
     flowElementProperties: {};
     /**
      * Check if the keys and properties have been fetched.
      *
-     * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-     * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+     * True once the cloud service's evidence keys have arrived and its
+     * properties have been read, so they are fetched once rather than for
+     * every request.
      *
      * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
      */
@@ -65,6 +76,27 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @returns {Promise} data from cloud service
      */
     processInternal(flowData: FlowData): Promise<any>;
+    /**
+     * Fetches the evidence keys and properties before the first process,
+     * whatever else is in the pipeline, because the cache key is built from
+     * the evidence keys. A fetch that fails is tried again on the next
+     * process, and its error is the process error.
+     *
+     * @param {FlowData} flowData FlowData to process
+     * @returns {Promise} resolved once the FlowData is processed
+     */
+    process(flowData: FlowData): Promise<any>;
+    discovery: Promise<any>;
+    /**
+     * A response with a top level `fodid` member, in any case, holds a 51Did
+     * created for the one request, so it is neither stored in the cache nor
+     * served from it. The answer is worked out once for each element data,
+     * so a cache hit does not parse the response again.
+     *
+     * @param {object} data the element data of a response
+     * @returns {boolean} false if the response has a top level fodid member
+     */
+    isCacheable(data: object): boolean;
     /**
      * Typically, cloud will return errors as JSON.
      * However, transport level errors or other failures can result in
@@ -112,24 +144,62 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getData(flowData: FlowData): Promise<any>;
     /**
+     * Compares the requested properties with an answer and logs, once, the
+     * names the answer left out. The cloud service drops a property the keys
+     * do not cover without naming it, so only the engine can notice. A
+     * property present but null counts as answered, because its nullreason
+     * says why it has no value. The answer cannot change while the keys and
+     * the list stay the same, so one comparison is enough.
+     *
+     * @param {FlowData} flowData the flow data whose pipeline is logged to
+     * @param {string} body the JSON the cloud service answered with
+     */
+    reportPropertiesNotCovered(flowData: FlowData, body: string): void;
+    /**
      * Internal function to get evidenceKeys used by cloud resourcekey
      *
      * @returns {Promise} evidence promise
      */
     getEvidenceKeys(): Promise<any>;
     /**
-     * Generate the Content to send in the POST request. The evidence keys
-     * e.g. 'query.' and 'header.' have an order of precedence. These are
-     * added to the evidence in reverse order, if there is conflict then
-     * the queryData value is overwritten.
-     * 'query.' evidence should take precedence over all other evidence.
+     * Generate the Content to send in the POST request. One name under
+     * several prefixes is sent once, with the value of the prefix that
+     * evidence.md ranks highest, being query, header, cookie, server,
+     * fiftyone and location, then any other prefix alphabetically. The
+     * groups are added lowest precedence first, so a later value replaces
+     * an earlier one.
      * If there are evidence keys other than 'query.' that conflict then
      * this is unexpected so a warning will be logged.
+     *
+     * The engine sends every Evidence value in the Flow Data, including the
+     * values no element in the pipeline accepts, because what the cloud
+     * service uses changes over time and knowing about the other Evidence is
+     * important to continued optimization. The reserved names and the web
+     * request view are left out.
      *
      * @param {FlowData} flowData FlowData to get evidence from
      * @returns {object} Evidence Dictionary
      */
     getContent(flowData: FlowData): object;
+    /**
+     * The evidence the engine sends, being every value in the Flow Data,
+     * whether an element accepted it or not, apart from the web request
+     * view. addQueryData then leaves out the reserved names. The accepted
+     * values come first, so where the two would give the same name the
+     * accepted one is sent.
+     *
+     * @param {Evidence} evidence the Flow Data's evidence
+     * @returns {object} the evidence keys and values to send
+     */
+    sendableEvidence(evidence: Evidence): object;
+    /**
+     * Whether an evidence key is sent to the cloud service. The reserved
+     * names are left out later, by addQueryData.
+     *
+     * @param {string} key the evidence key
+     * @returns {boolean} false for the web request view, in any letter case
+     */
+    isSent(key: string): boolean;
     /**
      * Add query data to the evidence.
      *

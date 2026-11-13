@@ -59,8 +59,8 @@ const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
 // In this example, by default, the 51degrees "Lite" file needs to be somewhere in the
 // project space, or you may specify another file as a command line parameter.
 //
-// Note that the Lite data file is only used for illustration, and has limited accuracy
-// and capabilities. Each property the example asks for that only the Enterprise data
+// Note that the Lite data file is only used for illustration, and has a small number
+// of Properties. Each property the example asks for that only the Enterprise data
 // file has is written as needing it, with a link to ask for a copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
@@ -200,7 +200,7 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the lite
+  // _51DEGREES_IPI_PATH environment variable, or find the lite
   // file that is included in the repository.
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
   // Do the same for the yaml evidence file

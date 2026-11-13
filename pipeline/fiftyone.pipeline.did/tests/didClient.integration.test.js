@@ -25,7 +25,7 @@
 // a test needs. The resource key names are in liveCloudKeys.js. A license
 // key, needed to redeem where the account holds one, is read from
 // _51DEGREES_LICENSE_KEY_51DID first, the name CI passes. The endpoint
-// follows FOD_CLOUD_API_URL as the client does.
+// follows _51DEGREES_CLOUD_ENDPOINT as the client does.
 
 const {
   FodId, DidClient, ContextResult, SignatureResult, DidNotSupportedError,
@@ -34,8 +34,7 @@ const {
 const keys = require('./liveCloudKeys');
 
 const resourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
-const licenceKey = process.env._51DEGREES_LICENSE_KEY_51DID ||
-  process.env._51DEGREES_LICENSE_KEY || process.env.LICENSE_KEY || '';
+const licenceKey = keys.findKey(keys.LICENCE_KEY_NAMES);
 
 const noKey = keys.noKeyMessage(keys.RESOURCE_KEY_NAMES, 'FODid',
   'FODiD.IdProbGlobal and FODiD.IdProbLic for each usage, which for the ' +
@@ -86,8 +85,8 @@ describe('DidClient against the cloud', () => {
   // configuration to report rather than something to pass over.
   const noCreatorContext = () => new Error('The host at ' +
     client.endpoint + ' does not offer the creator context, which the ' +
-    'production cloud service does. Leave FOD_CLOUD_API_URL unset, or set ' +
-    'it to a host that offers the creator context.');
+    'production cloud service does. Leave _51DEGREES_CLOUD_ENDPOINT unset, ' +
+    'or set it to a host that offers the creator context.');
 
   test('parses, verifies offline and verifies through the cloud', async () => {
     requireKey();

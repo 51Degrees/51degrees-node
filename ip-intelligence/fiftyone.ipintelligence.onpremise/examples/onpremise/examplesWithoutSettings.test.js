@@ -35,8 +35,12 @@ const os = require('os');
 const path = require('path');
 const request = require('supertest');
 
-const { ExampleUtils, NEEDS_ENTERPRISE } =
-  require(path.join(__dirname, 'exampleUtils'));
+const {
+  ExampleUtils,
+  NEEDS_ENTERPRISE,
+  IPI_DATA_FILE_ENV_VAR,
+  DD_DATA_FILE_ENV_VAR
+} = require(path.join(__dirname, 'exampleUtils'));
 
 const DATA_DIR =
   path.join(__dirname, '..', '..', '..', '..', 'cxx', 'data', 'ip-intelligence');
@@ -50,10 +54,13 @@ const TIMEOUT_MS = 300000;
 // The settings that name a data file or a licence key. A fresh clone has
 // none of them.
 const SETTINGS = [
-  '51DEGREES_IPI_PATH',
-  '51DEGREES_DD_PATH',
-  'LICENSEKEY',
-  'LICENSE_KEY'
+  '_51DEGREES_IPI_PATH',
+  '_51DEGREES_DD_PATH',
+  IPI_DATA_FILE_ENV_VAR,
+  DD_DATA_FILE_ENV_VAR,
+  '_51DEGREES_LICENSE_KEY',
+  'LICENSE_KEY',
+  'LICENSEKEY'
 ];
 
 // The free Lite data file, downloaded if it is missing.

@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "Data rewards the curious") **Node IP Intelligence**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node IP Intelligence**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/51degrees-node/tree/main/pipeline).
@@ -23,7 +23,6 @@ Both options use the same evidence values and expose (almost all) the same prope
 
 ### Dependencies
 
-For runtime dependencies, see our [dependencies](https://51degrees.com/documentation/_info__dependencies.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page.
 The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=dependencies) page shows
 the Node versions that we currently test against. The software may run fine against other
 versions, but additional caution should be applied.
@@ -54,8 +53,7 @@ properties, covering everything the examples display, can be created at
 See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud to get a paid subscription with more properties.
 
 When running the cloud examples, the resource key can be supplied in the
-`51DEGREES_RESOURCE_KEY` environment variable. The legacy `RESOURCE_KEY`
-name is still supported and is checked second.
+`_51DEGREES_RESOURCE_KEY` environment variable.
 
 #### On-Premise
 
@@ -67,9 +65,9 @@ properties see the [51Degrees website](https://51degrees.com/pricing?utm_source=
 
 The on-premise examples locate the IP intelligence data file in the following order:
 
-1. The `51DEGREES_IPI_PATH` environment variable, which can be set to an explicit path to
+1. The `_51DEGREES_IPI_PATH` environment variable, which can be set to an explicit path to
    the data file. The mixed examples also need a device detection data file, for which the
-   `51DEGREES_DD_PATH` environment variable can be set in the same way.
+   `_51DEGREES_DD_PATH` environment variable can be set in the same way.
 2. For a file the 'cxx/data' submodule links to, such as the free 'Lite' data file, the
    'cxx/data/ip-intelligence' or 'cxx/data/device-detection' folder of this repository. When
    the file is missing there, the example downloads it with the submodule's
@@ -202,7 +200,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees Cloud Configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `51DEGREES_RESOURCE_KEY` in your test environment. The legacy `RESOURCE_KEY` name is still supported and is checked second.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees Cloud Configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
 
 The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
 

@@ -26,6 +26,15 @@ declare class ElementDataDictionary extends ElementData {
      * @returns {number} integer value
      */
     getInternal(key: string): number;
+    /**
+     * Looks for a key in the dictionary ignoring its letter case. The contents
+     * can change after the data is made, so they are searched each time
+     * rather than indexed once.
+     *
+     * @param {string} key the property key to retrieve
+     * @returns {*} the value, or undefined if there is none
+     */
+    getInternalIgnoringCase(key: string): any;
     [Symbol.iterator](): Generator<string, void, unknown>;
 }
 declare namespace ElementDataDictionary {
