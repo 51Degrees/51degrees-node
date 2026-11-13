@@ -358,6 +358,13 @@ package with no tag of its own stops the publish, unless `ci/packages.json`
 gives it a `FirstVersion`. The plain tags such as `4.5.102` are the releases
 from when every package had one version.
 
+`ci/publish-package.ps1` publishes, tags and releases each planned package in
+turn, after the packages it requires, so a publish that stops part way leaves
+the packages before the failure complete. A version npm already has is tagged
+and released without publishing it again, so running Publish again finishes
+the release. `ci/publish-package.Tests.ps1` tests this with Pester, with
+`COMMON_CI` set to a checkout of common-ci.
+
 ## Tests that fail on timing
 
 A test that fails on a time limit, a performance threshold or a timeout is
