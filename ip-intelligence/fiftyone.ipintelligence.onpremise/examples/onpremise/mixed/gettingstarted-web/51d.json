@@ -11,7 +11,7 @@
         }
       },
       {
-        "elementName": "../../../../ipIntelligenceOnPremise",
+        "elementName": "fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise",
         "elementParameters": {
           "performanceProfile": "MaxPerformance",
           "dataFilePath": "../../../../../../cxx/data/ip-intelligence/51Degrees-LiteV41.ipi",
