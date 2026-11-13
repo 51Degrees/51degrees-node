@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=top "Data rewards the curious") **Node IP Intelligence On-Premise**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node IP Intelligence On-Premise**
 
-[Developer Documentation](https://51degrees.com/ip-intelligence-node/index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees IP Intelligence engines that can be used with the [Pipeline API](https://github.com/51Degrees/51degrees-node/tree/main/pipeline).
@@ -68,10 +68,30 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 swig -c++ -javascript -node ipi_node.i
 ```
 
+### Examples
+
+For details of how to run the examples, please refer to [run examples](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/run_examples.md).
+The examples need no settings. They run on the free data files, which they download when they are missing, and show each property they ask for that only the Enterprise data file has as needing it, with a link to [contact us](https://51degrees.com/contact-us?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=examples) for a copy.
+
+| Example | Description |
+|---------|-------------|
+| [gettingstarted-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-console) | How to look up the IP intelligence properties of an IP address |
+| [gettingstarted-web](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/gettingstarted-web) | How to look up the requesting IP address in a web page |
+| [metadata-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/metadata-console) | How to read the components, properties and evidence keys of the data file |
+| [offlineprocessing-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/offlineprocessing-console) | How to process a file of IP addresses for later viewing |
+| [performance-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console) | How fast lookups are, on the free ASN data file by default |
+| [compare-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/compare-console) | How the locations returned compare with known locations. Needs the Enterprise data file |
+| [country-translation-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/country-translation-console) | How to list the countries most probable first, with translated names. Needs the Enterprise data file |
+| [metrics-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/metrics-console) | How large the areas returned are. Needs the Enterprise data file |
+| [suspicious-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/suspicious-console) | How to tell whether an IP address is likely to be suspicious. Needs the Enterprise data file |
+| [updatedatafile-console](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/updatedatafile-console) | How to update the data file. Needs a licence key |
+| [automaticupdates](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/automaticupdates) | How to configure automatic updates of the data file. Needs a licence key |
+| [mixed](https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed) | How to use device detection and IP intelligence in one pipeline |
+
 ## Find out more
 
 - [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-ip-intelligence)
-- [IP Intelligence documentation](https://51degrees.com/documentation/_ip_intelligence__index.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-documentation)
+- [IP Intelligence documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-documentation)
 - [Getting started](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-getting-started)
 - [Pricing](https://51degrees.com/pricing?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise&utm_term=find-out-more-pricing)
 - https://github.com/51Degrees/51degrees-node

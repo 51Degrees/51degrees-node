@@ -80,10 +80,15 @@ parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-performance-console-performance.js&utm_term=lite_v_4_1_hash
+// a small number of Properties. On a free data file the example ends
+// by saying what the Enterprise data file adds, with a link to ask for a
+// copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-performance-console-performance.js&utm_term=enterprise-data-file';
+
 const UA_CSV = '20000 User Agents.csv';
 
 const args = parser.parse_args();
@@ -138,6 +143,10 @@ eventEmitter.on('FinishProcessing', () => {
   console.log(`ismobile = true : ${isMobileTrue}`);
   console.log(`ismobile = false : ${isMobileFalse}`);
   console.log(`ismobile = unknown : ${isMobileUnknown}`);
+
+  if (ExampleUtils.isLiteDataFile(pipeline.getElement('device'))) {
+    console.log(ExampleUtils.getEnterpriseOffer(CONTACT_US));
+  }
 
   if (jsonoutput) {
     fs.writeFileSync(jsonoutput, JSON.stringify({

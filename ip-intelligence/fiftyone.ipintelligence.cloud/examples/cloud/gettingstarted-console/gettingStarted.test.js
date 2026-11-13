@@ -35,21 +35,43 @@ const example = require(path.join(__dirname, '/gettingStarted.js'));
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
-// Test constants
-const tc = require51('fiftyone.ipintelligence.shared').testConstants;
+const shared = require51('fiftyone.ipintelligence.shared');
+const tc = shared.testConstants;
+const keyUtils = shared.keyUtils;
+const ExampleOutput = shared.exampleOutput.ExampleOutput;
+const OptionsExtension = shared.optionsExtension;
+const CloudRequestEngine =
+  require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const OptionsExtension =
-  require51('fiftyone.ipintelligence.shared').optionsExtension;
+const resourceKeyNames = keyUtils.resourceKeyNames(
+  tc.envVars.superResourceKeyVariable,
+  ExampleUtils.RESOURCE_KEY_VARIABLE);
 
 describe('Examples', () => {
   test('cloud getting started', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        'ip', 'the IP Intelligence properties of five addresses'));
+    }
+    await keyUtils.requireProduct(
+      new CloudRequestEngine({ resourceKey }), 'ip');
+
     // Load the configuration from a config file to a JSON object.
     const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')), 'utf8');
     OptionsExtension.updateElementPath(options, __dirname);
-    OptionsExtension.setResourceKey(
-      options, process.env[tc.envVars.superResourceKeyEnvVar] ||
-        ExampleUtils.getResourceKeyFromEnv());
-    await example.run(options, process.stdout);
-    expect(true);
+    OptionsExtension.setResourceKey(options, resourceKey);
+
+    const output = new ExampleOutput();
+
+    await example.run(options, output);
+
+    // The first three addresses are allocated in Switzerland, Belgium and
+    // Austria.
+    const lines = output.lines().map((line) => line.trim());
+    expect(lines).toContain('Registered Country: CH');
+    expect(lines).toContain('Registered Country: BE');
+    expect(lines).toContain('Registered Country: AT');
+    expect(output.faults()).toEqual([]);
   });
 });

@@ -142,8 +142,7 @@ const dataExtension =
 
 const {
   DATA_FILE_AGE_WARNING,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR,
+  DATA_FILE_PATH_VARIABLE,
   ExampleUtils
 } = require(path.join(__dirname, '/../exampleUtils'));
 
@@ -151,9 +150,9 @@ const {
 let pipeline;
 
 const setPipeline = (options) => {
-  // An explicit data file path supplied in the '51DEGREES_DD_PATH'
-  // environment variable (or the older '_51DEGREES_DD_PATH') takes
-  // precedence over the value in the configuration file.
+  // An explicit data file path supplied in the '_51DEGREES_DD_PATH'
+  // environment variable takes precedence over the value in the
+  // configuration file.
   const envDataFilePath = ExampleUtils.getDataFilePathFromEnv();
   if (envDataFilePath) {
     optionsExtension.setDataFilePath(options, envDataFilePath);
@@ -161,8 +160,7 @@ const setPipeline = (options) => {
   const dataFilePath = optionsExtension.getDataFilePath(options);
   if (!dataFilePath) {
     throw 'A data file must be specified in the 51d.json file or the ' +
-      `'${DATA_FILE_PATH_ENV_VAR}' environment variable (the older ` +
-      `'${LEGACY_DATA_FILE_PATH_ENV_VAR}' is also read).`;
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable.`;
   }
 
   if (!fs.existsSync(dataFilePath)) {
@@ -231,10 +229,9 @@ const server = http.createServer(async (req, res) => {
   // Handle report from client side separately
   if (req.url.startsWith('/json')) {
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
   } else if (req.url.split('?')[0] === coreJsPath) {
     // Serve the client-side script built by the JavaScriptBuilder as a separate
@@ -245,10 +242,9 @@ const server = http.createServer(async (req, res) => {
     // evidence like any other and are already in the flow data via
     // addFromRequest.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/x-javascript');
-
-      res.end(flowData.javascriptbuilder.javascript);
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
   } else {
     flowData.process().then(function () {
@@ -264,9 +260,8 @@ const server = http.createServer(async (req, res) => {
 
       // Obtain all used evidence
       const allEvidence = flowData.evidence.getAll();
-      const evidences =
-        pipeline.getElement('device').evidenceKeyFilter.filterEvidence(
-          allEvidence);
+      const device = pipeline.getElement('device');
+      const evidences = device.evidenceKeyFilter.filterEvidence(allEvidence);
 
       // Compile a response
       res.end(compiledFunction(
@@ -278,17 +273,17 @@ const server = http.createServer(async (req, res) => {
           allEvidence,
           dataSourceTier: ExampleUtils.getDataTier(pipeline),
           coreJsPath,
-          hardwareVendor: dataExtension.getValueHelper(flowData.device, 'hardwarevendor'),
-          hardwareName: dataExtension.getValueHelper(flowData.device, 'hardwarename'),
-          deviceType: dataExtension.getValueHelper(flowData.device, 'devicetype'),
-          platformVendor: dataExtension.getValueHelper(flowData.device, 'platformvendor'),
-          platformName: dataExtension.getValueHelper(flowData.device, 'platformname'),
-          platformVersion: dataExtension.getValueHelper(flowData.device, 'platformversion'),
-          browserVendor: dataExtension.getValueHelper(flowData.device, 'browservendor'),
-          browserName: dataExtension.getValueHelper(flowData.device, 'browsername'),
-          browserVersion: dataExtension.getValueHelper(flowData.device, 'browserversion'),
-          screenWidth: dataExtension.getValueHelper(flowData.device, 'screenpixelswidth'),
-          screenHeight: dataExtension.getValueHelper(flowData.device, 'screenpixelsheight'),
+          hardwareVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'hardwarevendor'),
+          hardwareName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'hardwarename'),
+          deviceType: ExampleUtils.getEnterpriseValue(device, flowData.device, 'devicetype'),
+          platformVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformvendor'),
+          platformName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformname'),
+          platformVersion: ExampleUtils.getEnterpriseValue(device, flowData.device, 'platformversion'),
+          browserVendor: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browservendor'),
+          browserName: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browsername'),
+          browserVersion: ExampleUtils.getEnterpriseValue(device, flowData.device, 'browserversion'),
+          screenWidth: ExampleUtils.getEnterpriseValue(device, flowData.device, 'screenpixelswidth'),
+          screenHeight: ExampleUtils.getEnterpriseValue(device, flowData.device, 'screenpixelsheight'),
           // The device id combines the profile ids of the hardware, platform,
           // browser and crawler components that were matched.
           deviceId: dataExtension.getValueHelper(flowData.device, 'deviceid')

@@ -1,5 +1,7 @@
 # fiftyone.pipeline.did
 
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious")
+
 Strongly typed Node.js reader for the 51Did (51Degrees Identifier) returned by
 the 51Degrees Cloud service, and a client for everything a server does with a
 51Did against the cloud. Mirrors the .NET `FiftyOne.Did` package.
@@ -214,9 +216,9 @@ OWID library's status, so a specific reason is never reduced to a general one.
 | Status | Reported by | Meaning |
 | --- | --- | --- |
 | `PARSED` | both | The input is a structurally valid 51Did. Says nothing about the signature |
-| `MISSING_INPUT` | OWID | Nothing was supplied, being `null`, `undefined`, an empty or whitespace-only string, or a buffer of no bytes |
+| `MISSING_INPUT` | OWID | Nothing was supplied, being `null`, `undefined`, a string that is empty or only white space, or a buffer of no bytes |
 | `INVALID_INPUT_TYPE` | OWID | The input was not a string (`tryParse`) or not a byte array (`tryFromByteArray`) |
-| `INVALID_BASE64` | OWID | The string is not base64 in either alphabet, so there are no bytes to read |
+| `INVALID_BASE64` | both | The string is not base64 in one alphabet, so there are no bytes to read. This package reports it for white space inside the string and for characters from both alphabets, and the OWID library for any other character outside the alphabet |
 | `UNSUPPORTED_VERSION` | OWID | The first byte names an envelope version the OWID library does not know |
 | `ABSENT_NODE` | OWID | The bytes are the OWID absent node marker, which stands for no identifier |
 | `UNEXPECTED_END` | OWID | The data stopped part way through a field |
@@ -367,7 +369,9 @@ npm test
 const { FodId, IdType, Usage } = require('fiftyone.pipeline.did');
 
 // Either base64 alphabet is accepted, the standard one the cloud issues and
-// the URL-safe one a page puts in a link, with or without padding.
+// the URL-safe one a page puts in a link, with or without padding. White
+// space around the value is ignored. A value with white space inside it, or
+// with characters from both alphabets, is refused.
 const fodId = FodId.fromBase64(base64FromCloudService);
 
 const usage = fodId.usage;        // Usage.NON_MARKETING / STANDARD / PERSONALIZED
@@ -447,7 +451,7 @@ const { FodId, DidClient } = require('fiftyone.pipeline.did');
 const client = new DidClient({
   resourceKey: process.env._51DEGREES_RESOURCE_KEY,
   licenceKey: process.env._51DEGREES_LICENSE_KEY   // optional, see below
-  // endpoint: defaults to FOD_CLOUD_API_URL, then the public cloud
+  // endpoint: defaults to _51DEGREES_CLOUD_ENDPOINT, then the public cloud
 });
 ```
 
@@ -455,8 +459,14 @@ const client = new DidClient({
 | --- | --- |
 | `resourceKey` | Required for the public cloud. The page's resource key, public by nature. It travels in the route of the key and verify requests and in the form body of the redeem request. A private cloud serves those routes with no resource key, so a client for one is built without it |
 | `licenceKey` | Optional. A licence key of the same account, server side only. Needed to redeem where the account holds licence keys. Sent only in the body of the redeem request, never in a URL |
-| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `FOD_CLOUD_API_URL` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
+| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `_51DEGREES_CLOUD_ENDPOINT` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `FOD_CLOUD_API_URL`, the deprecated name of that variable, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
 | `fetch` | Optional. The HTTP transport, defaulting to the global `fetch`, on Node and in a browser alike. Tests inject one |
+
+`FOD_CLOUD_API_URL` is read only when `_51DEGREES_CLOUD_ENDPOINT` is unset or
+empty. The first client that takes its endpoint from the old name raises one
+Node `DeprecationWarning` for the process, which Node writes to standard error
+and passes to any `process.on('warning')` listener. Set
+`_51DEGREES_CLOUD_ENDPOINT` instead.
 
 On Node every request carries a `User-Agent` naming this package and its
 version. A browser sends its own, as
@@ -610,8 +620,8 @@ redeemed.factors      // on a mismatch, on a misconfigured result where the
                       //   { transport, device, browserip, connectionip,
                       //   asn, platformname, platformversion,
                       //   browsername, browserversion } each 'verified',
-                      //   'mismatch', 'misconfigured', 'notrecorded', or
-                      //   null where nothing was compared
+                      //   'mismatch', 'misconfigured' or 'notrecorded'.
+                      //   Any other value, null included, is 'mismatch'.
 redeemed.verifiedAt   // Date, on the redeemed and expired outcomes
 redeemed.secondsSinceVerified
 redeemed.statusCode   // 200, or 503 for 'unconfirmed', which may be retried
@@ -627,9 +637,12 @@ different operating system or browser. `factors` keeps every name exactly as
 the cloud sent it, including a name that is not in `Factor`, so a factor the
 cloud adds later reaches the caller without a new release of this package,
 and an older service's `browser` key stays under its own name rather than
-filling any of the four. Neither `misconfigured` nor `notrecorded` is a
-mismatch, and neither must ever be read as one, but they say different
-things, because `misconfigured` means the checking service could not
+filling any of the four. Each word is read ignoring case, and a word this
+package does not know is `mismatch`, so an outcome added later is never read
+as a pass. `raw` keeps the words as the cloud sent them. Neither
+`misconfigured` nor `notrecorded` is a mismatch, and neither must ever be
+read as one, but they say different things, because `misconfigured` means
+the checking service could not
 determine the factor whilst `notrecorded` means the creating service
 recorded no value for it, so the identifier says nothing about it. A
 `notrecorded` factor is left out of the overall result, so `verified` can
@@ -830,9 +843,9 @@ build and is refreshed by common-ci's `update-example-assets` step.
 
 | Variable | Meaning |
 | --- | --- |
-| `_51DEGREES_RESOURCE_KEY`, then `RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
-| `_51DEGREES_LICENSE_KEY`, then `LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
-| `FOD_CLOUD_API_URL` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
+| `_51DEGREES_RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
+| `_51DEGREES_LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
+| `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged. `FOD_CLOUD_API_URL`, the deprecated name of this variable, is still read when this one is unset or empty |
 | `PORT` | Web demo only. Defaults to `5100` |
 
 ### What a run costs
@@ -850,8 +863,12 @@ or past it, or fails its signature check.
 
 `npm test` runs the unit tests, which use an injected transport and touch no
 network. `tests/didClient.integration.test.js` runs against the live cloud
-only when `_51DEGREES_RESOURCE_KEY` (or `RESOURCE_KEY`) is set, and is skipped
-otherwise.
+with the first of `_51DEGREES_RESOURCE_KEY` and
+`_51DEGREES_RESOURCE_KEY_BESPOKE` that is set, and fails when none is. The
+key has to carry
+the FODid product, and the CloudV5FODiD product for the marketing usages.
+`tests/tierEntitlement.integration.test.js` checks what a Basic tier key is
+given, with the key in `_51DEGREES_RESOURCE_KEY_BASIC`.
 
 ## Find out more
 

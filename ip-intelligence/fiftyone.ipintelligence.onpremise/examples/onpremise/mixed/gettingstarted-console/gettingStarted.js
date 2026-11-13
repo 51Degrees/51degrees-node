@@ -65,21 +65,16 @@ const DeviceDetectionOnPremise =
 const IpIntelligenceOnPremise =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremise;
 
-const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils')).ExampleUtils;
-const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../../exampleUtils'));
 
-// Device detection data file names in priority order.
-const HASH_FILE_NAMES = [
-  'TAC-HashV41.hash',
-  '51Degrees-EnterpriseV4.1.hash',
-  '51Degrees-LiteV4.1.hash'
-];
+// The free Lite data files, which are downloaded if they are missing.
+const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
-// IP intelligence data file names in priority order.
-const IPI_FILE_NAMES = [
-  '51Degrees-EnterpriseIpiV41.ipi',
-  '51Degrees-LiteV41.ipi'
-];
+// Where to ask for a copy of the Enterprise data files, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
 
 // Evidence that includes both a User-Agent (for device detection) and an
 // IP address (for IP intelligence).
@@ -106,9 +101,11 @@ const combinedEvidence = [
   ])
 ];
 
+// A property that the data file does not have is shown as needing the
+// Enterprise data file.
 const outputValue = function (name, elementData, propertyName) {
-  return `\n\t${name}: ` +
-    DataExtension.getValueHelper(elementData, propertyName);
+  return `\n\t${name}: ` + ExampleUtils.getEnterpriseValue(
+    elementData.flowElement, elementData, propertyName);
 };
 
 const analyse = async function (evidence, pipeline, output) {
@@ -146,6 +143,7 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Screen Width', device, 'screenpixelswidth');
   message += outputValue('Screen Height', device, 'screenpixelsheight');
   output.write(message + '\n');
+  const needsEnterprise = message.includes(NEEDS_ENTERPRISE);
 
   // Get the IP intelligence results.
   message = '\nIP Intelligence Results:';
@@ -166,6 +164,7 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Accuracy Radius', ip, 'accuracyradiusmin');
   message += outputValue('Time Zone Offset', ip, 'timezoneoffset');
   output.write(message + '\n\n');
+  return needsEnterprise || message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (deviceDataFile, ipDataFile, output) {
@@ -207,8 +206,12 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 
   // Process the combined evidence (User-Agent for device detection,
   // IP address for IP intelligence).
+  let needsEnterprise = false;
   for (const evidence of combinedEvidence) {
-    await analyse(evidence, pipeline, output);
+    needsEnterprise = await analyse(evidence, pipeline, output) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    output.write(`${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
   }
 
   // Check the IP intelligence data file.
@@ -219,27 +222,17 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
-  // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let deviceDataFile = args.length > 0 ? args[0] : undefined;
-  if (deviceDataFile === undefined) {
-    for (const fileName of HASH_FILE_NAMES) {
-      deviceDataFile = ExampleUtils.findDeviceDataFile(fileName);
-      if (deviceDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the device detection data file, the path in
+  // the _51DEGREES_DD_PATH environment variable, or the Lite file.
+  const deviceDataFile = args.length > 0
+    ? args[0]
+    : ExampleUtils.findDeviceDataFile(LITE_V_4_1_HASH);
 
-  // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let ipDataFile = args.length > 1 ? args[1] : undefined;
-  if (ipDataFile === undefined) {
-    for (const fileName of IPI_FILE_NAMES) {
-      ipDataFile = ExampleUtils.findDataFile(fileName);
-      if (ipDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the IP intelligence data file, the path in
+  // the _51DEGREES_IPI_PATH environment variable, or the Lite file.
+  const ipDataFile = args.length > 1
+    ? args[1]
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (deviceDataFile !== undefined && ipDataFile !== undefined) {
     console.log(`Device detection data file: ${deviceDataFile}`);

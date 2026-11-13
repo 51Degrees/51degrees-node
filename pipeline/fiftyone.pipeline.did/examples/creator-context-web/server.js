@@ -65,9 +65,9 @@
  * signature check.
  *
  * Environment variables:
- *   _51DEGREES_RESOURCE_KEY, or RESOURCE_KEY. Required.
- *   _51DEGREES_LICENSE_KEY, or LICENSE_KEY. Optional, see below.
- *   FOD_CLOUD_API_URL. Optional. The cloud API base including the
+ *   _51DEGREES_RESOURCE_KEY. Required.
+ *   _51DEGREES_LICENSE_KEY. Optional, see below.
+ *   _51DEGREES_CLOUD_ENDPOINT. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
  *   PORT. Optional, defaults to 5100.
@@ -211,24 +211,26 @@ function redeemRoute (client) {
  * Reads the environment, builds the client and starts the server.
  */
 function main () {
-  // The cloud API base, normalised to end in exactly one slash so every
-  // URL is base plus a relative path, exactly as the cloud request engine
-  // and the DidClient treat the same variable. The page builds its own two
-  // cloud calls from the same base once it is substituted in. A host other
-  // than cloud.51degrees.com would be used to (a) use an on premise web
-  // server, or (b) use a privately hosted version of the 51Degrees cloud
-  // for performance reasons. This is the private hosting option of the
-  // 51Degrees cloud service. Both run the same service, so the demo works
-  // unchanged.
-  const base = (process.env.FOD_CLOUD_API_URL ||
-    'https://cloud.51degrees.com/api/v4/').replace(/\/*$/, '/');
+  // RESOURCE_KEY and LICENSE_KEY are the deprecated names of the two
+  // variables, each read only when its _51DEGREES_ name is unset or
+  // empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
+  }
+  if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
+    console.warn('The LICENSE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
+      'instead.');
+  }
   const resource = process.env._51DEGREES_RESOURCE_KEY ||
     process.env.RESOURCE_KEY;
   const licence = process.env._51DEGREES_LICENSE_KEY ||
     process.env.LICENSE_KEY || '';
   const port = Number(process.env.PORT || 5100);
   if (!resource) {
-    console.error('Set _51DEGREES_RESOURCE_KEY (or RESOURCE_KEY) to the ' +
+    console.error('Set _51DEGREES_RESOURCE_KEY to the ' +
       'resource key of the page.');
     process.exit(1);
   }
@@ -246,12 +248,23 @@ function main () {
   }
 
   // One client for the whole server. It caches the public key list, and
-  // it holds the licence key so no route handles the key itself.
+  // it holds the licence key so no route handles the key itself. No
+  // endpoint is given, so the client reads the cloud API base from the
+  // environment, as it does for any caller.
   const client = new DidClient({
     resourceKey: resource,
-    licenceKey: licence,
-    endpoint: base
+    licenceKey: licence
   });
+
+  // The cloud API base the client settled on, which ends in exactly one
+  // slash so every URL is base plus a relative path. The page builds its
+  // own two cloud calls from the same base once it is substituted in. A
+  // host other than cloud.51degrees.com would be used to (a) use an on
+  // premise web server, or (b) use a privately hosted version of the
+  // 51Degrees cloud for performance reasons. This is the private hosting
+  // option of the 51Degrees cloud service. Both run the same service, so
+  // the demo works unchanged.
+  const base = client.endpoint;
   const redeem = redeemRoute(client);
 
   createServer(async (request, response) => {

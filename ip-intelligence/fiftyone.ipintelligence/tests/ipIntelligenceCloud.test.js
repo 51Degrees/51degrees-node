@@ -30,31 +30,30 @@ const require51 = (requestedPackage) => {
 };
 
 const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpIntelligencePipelineBuilder;
-// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
-// first, followed by the legacy RESOURCE_KEY name.
-const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
-  process.env.RESOURCE_KEY;
+const keyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
+
+const resourceKeyNames = keyUtils.resourceKeyNames();
 
 describe('ipIntelligenceCloud', () => {
-  // Process an IP address using the cloud service and check that
-  // a value is returned for the country property.
-  // This test requires a resource key with the country property
-  // to be provided via the 51DEGREES_RESOURCE_KEY environment
-  // variable, or the legacy RESOURCE_KEY name.
-  const testFunc = myResourceKey ? test : test.skip;
-  testFunc('process IP address', done => {
+  // Process an IP address using the live cloud service and check that
+  // the country property has a value. The test fails rather than skips
+  // when no resource key is set.
+  test('process IP address', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        'ip', 'the country of 8.8.8.8'));
+    }
     const pipeline = new IpIntelligencePipelineBuilder({
-      resourceKey: myResourceKey
+      resourceKey
     }).build();
     pipeline.on('error', console.error);
+    await keyUtils.requireProduct(pipeline.getElement('cloud'), 'ip');
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('query.client-ip', '8.8.8.8');
 
-    flowData.process().then(function () {
-      const country = flowData.ip.country;
-      expect(country).toBeDefined();
+    await flowData.process();
 
-      done();
-    });
+    expect(flowData.ip.country.hasValue).toBe(true);
   });
 });

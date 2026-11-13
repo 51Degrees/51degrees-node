@@ -23,6 +23,7 @@
 const FlowElement = require('../flowElement');
 const ElementDataDictionary = require('../elementDataDictionary');
 const BasicListEvidenceKeyFilter = require('../basicListEvidenceKeyFilter');
+const EvidenceKeyFilter = require('../evidenceKeyFilter');
 const AspectPropertyValue = require('../aspectPropertyValue');
 
 module.exports = {
@@ -56,6 +57,8 @@ module.exports = {
 
   async: new FlowElement({
     dataKey: 'async',
+    // Accepts every key, so the evidence tests can read back what they add.
+    evidenceKeyFilter: new EvidenceKeyFilter(),
     processInternal: function (flowData) {
       const flowElement = this;
 

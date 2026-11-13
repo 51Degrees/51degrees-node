@@ -54,10 +54,23 @@ const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpInt
 // replacing !!YOUR_RESOURCE_KEY!! below. The link selects the free
 // properties, which include the country property used by this example.
 
-// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
-// first, followed by the legacy RESOURCE_KEY name.
-const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
-  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// The resource key is read from the _51DEGREES_RESOURCE_KEY environment
+// variable.
+// 51DEGREES_RESOURCE_KEY and RESOURCE_KEY are the deprecated names of the
+// same variable, read in that order only when _51DEGREES_RESOURCE_KEY is
+// unset or empty.
+const oldResourceKeyName = process.env['51DEGREES_RESOURCE_KEY']
+  ? '51DEGREES_RESOURCE_KEY'
+  : 'RESOURCE_KEY';
+const oldResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
+  process.env.RESOURCE_KEY;
+if (!process.env._51DEGREES_RESOURCE_KEY && oldResourceKey) {
+  console.warn(`The ${oldResourceKeyName} environment variable is ` +
+    'deprecated and _51DEGREES_RESOURCE_KEY replaces it. Set ' +
+    '_51DEGREES_RESOURCE_KEY instead.');
+}
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+  oldResourceKey || '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +

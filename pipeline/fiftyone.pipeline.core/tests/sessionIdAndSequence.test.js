@@ -62,7 +62,19 @@ async function render (sequenceElement, evidence) {
   if (sequenceElement) {
     pipeline = new core.PipelineBuilder().build();
   } else {
+    // The JSON bundler needs a sequence number, which this stand-in gives
+    // without touching the evidence, so the builder reads what was given.
+    const standIn = new core.FlowElement({
+      dataKey: 'sequence',
+      processInternal: function (flowData) {
+        flowData.setElementData(new core.ElementDataDictionary({
+          flowElement: this,
+          contents: { 'session-id': '', sequence: 1 }
+        }));
+      }
+    });
     pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
+      .add(standIn)
       .add(new core.JsonBundler())
       .add(new core.JavascriptBuilder({}))
       .build();

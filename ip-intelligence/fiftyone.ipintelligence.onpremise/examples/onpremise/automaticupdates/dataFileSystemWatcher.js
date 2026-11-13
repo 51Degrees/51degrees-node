@@ -46,26 +46,35 @@ const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUt
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=lite_v_4_1_ipi
+// a small number of Properties.
+// Contact us for a copy of the Enterprise data file at
+// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=lite_v_4_1_ipi
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
 // Load in a datafile
 const args = process.argv.slice(2);
 // Use the supplied path for the data file, the path in the
-// 51DEGREES_IPI_PATH environment variable, or find the lite
+// _51DEGREES_IPI_PATH environment variable, or find the lite
 // file that is included in the repository.
 const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
-// Set your license key, if you don't have a license key already you can
-// obtain one by subscribing to a 51Degrees bundle: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=mylicensekey
+// Set your licence key in the _51DEGREES_LICENSE_KEY environment
+// variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=mylicensekey
 
-const myLicenseKey = process.env.LICENSE_KEY || '!!YOUR_LICENSE_KEY!!';
+// LICENSE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_LICENSE_KEY is unset or empty.
+if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
+  console.warn('The LICENSE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
+    'instead.');
+}
+const myLicenseKey = process.env._51DEGREES_LICENSE_KEY ||
+  process.env.LICENSE_KEY || '!!YOUR_LICENSE_KEY!!';
 
 if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
-  console.log("You need a license key to run this example, if you don't have one already " +
-  'you can obtain one by subscribing to a 51Degrees bundle: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=license-key-required');
+  console.log('This example updates the data file automatically, which needs ' +
+    'a licence key. Set it in the _51DEGREES_LICENSE_KEY environment ' +
+    'variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=license-key-required');
 } else {
   // Check if datafile exists
 
@@ -84,8 +93,12 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     // Path to your data file
     dataFile: datafile,
+    // With a licence key the update replaces the file with the Enterprise
+    // data file, which is about 6 GB, so the low memory profile reads the
+    // file as it goes rather than holding all of it in memory.
+    performanceProfile: 'LowMemory',
     // For automatic updates to work you will need to provide a license key.
-    // A license key can be obtained with a subscription from https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=licencekeys
+    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=licencekeys
     licenceKeys: myLicenseKey,
     // Enable automatic updates.
     autoUpdate: true,

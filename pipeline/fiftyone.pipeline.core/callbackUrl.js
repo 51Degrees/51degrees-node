@@ -23,10 +23,10 @@
 // The callback URL the client script posts to for updated JSON. The protocol
 // and host usually come from the request, and the script holds the URL in a
 // single-quoted string, so the URL is checked before it is written into the
-// script. A URL that is not valid is refused. In the user information, in
-// anything after the host and port, and in the endpoint, the characters a
-// URL cannot hold or that could end the string or the script are
-// percent-encoded. See
+// script. A URL that is not valid, including one whose protocol is not http
+// or https, is refused. In anything after the authority, and in the
+// endpoint, the characters a URL cannot hold or that could end the string or
+// the script are percent-encoded. See
 // https://github.com/51Degrees/specifications/blob/main/pipeline-specification/pipeline-elements/javascript-builder.md#callback-url
 
 // The largest port number.
@@ -45,19 +45,19 @@ const encodedCharacters = '"\'<>\\^`{|}';
 const blankPattern =
   /^[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$/;
 
-// A scheme as RFC 3986 section 3.1 defines one, being a letter followed by
-// letters, digits, '+', '-' and '.'.
-const schemePattern = /^[A-Za-z][A-Za-z0-9+.-]*$/;
+// The schemes the script can send its request with. It uses the URL only
+// with fetch and XMLHttpRequest, which reach a server with no other scheme.
+const schemes = ['http', 'https'];
 
 // A label of a host name, being ASCII letters, digits, '-' and '_'.
 const labelPattern = /^[A-Za-z0-9_-]+$/;
 
-// An IPv6 zone identifier, being unreserved characters as RFC 3986 section
-// 2.3 defines them.
-const zonePattern = /^[A-Za-z0-9._~-]+$/;
+// A last label that makes the host a number, being only digits, or 0x or 0X
+// and any number of hexadecimal digits.
+const numberLabelPattern = /^([0-9]+|0[xX][0-9A-Fa-f]*)$/;
 
-// A port as it follows the host, being ':' and any number of digits.
-const portPattern = /^:[0-9]*$/;
+// A port as it follows the host, being ':' and at least one digit.
+const portPattern = /^:[0-9]+$/;
 
 // One group of an IPv6 address.
 const hexGroupPattern = /^[0-9A-Fa-f]{1,4}$/;
@@ -79,14 +79,38 @@ function isBlank (text) {
 }
 
 /**
- * Where the authority ends, which is at the first '/', '?' or '#' of the
- * host, or at its end.
+ * The text with the ASCII letters A to Z in lower case and every other
+ * character as it is, so that no letter outside ASCII can stand in for an
+ * ASCII one.
+ *
+ * @param {string} text the text
+ * @returns {string} the text with A to Z in lower case
+ */
+function asciiLowerCase (text) {
+  return text.replace(/[A-Z]/g,
+    letter => String.fromCharCode(letter.charCodeAt(0) + 32));
+}
+
+/**
+ * Whether the protocol is http or https, ignoring the case of its ASCII
+ * letters only.
+ *
+ * @param {string} protocol the protocol
+ * @returns {boolean} true if the protocol is http or https
+ */
+function isScheme (protocol) {
+  return schemes.includes(asciiLowerCase(protocol));
+}
+
+/**
+ * Where the authority ends, which is at the first '/' of the host, or at its
+ * end.
  *
  * @param {string} host the host
  * @returns {number} the index the authority ends at
  */
 function authorityEnd (host) {
-  const end = host.search(/[/?#]/);
+  const end = host.indexOf('/');
   return end === -1 ? host.length : end;
 }
 
@@ -183,7 +207,7 @@ function isIpv6 (text) {
 
 /**
  * Whether the text is ':' followed by digits whose value is no more than
- * 65535, or by nothing.
+ * 65535.
  *
  * @param {string} text the port, with its ':'
  * @returns {boolean} true if the text is a port
@@ -199,9 +223,10 @@ function isPort (text) {
 
 /**
  * The host and optional port in lower case, or null when they are not
- * valid. The host is an IPv6 address in brackets with an optional zone
- * identifier, or a name of labels separated by dots with a dot allowed at
- * the end. The port is ':' followed by digits up to 65535, or by nothing.
+ * valid. The host is an IPv6 address in brackets, or a name of labels
+ * separated by dots with a dot allowed at the end, which is an IPv4 address
+ * when its last label is a number. The port is ':' followed by digits up to
+ * 65535.
  *
  * @param {string} hostPort the host and port
  * @returns {string|null} the host and port, or null
@@ -214,15 +239,7 @@ function checkedHostPort (hostPort) {
     if (close === -1) {
       return null;
     }
-    let address = hostPort.substring(1, close);
-    const zone = address.indexOf('%25');
-    if (zone !== -1) {
-      if (!zonePattern.test(address.substring(zone + 3))) {
-        return null;
-      }
-      address = address.substring(0, zone);
-    }
-    if (!isIpv6(address)) {
+    if (!isIpv6(hostPort.substring(1, close))) {
       return null;
     }
     host = hostPort.substring(0, close + 1);
@@ -233,7 +250,12 @@ function checkedHostPort (hostPort) {
     host = hostPort.substring(0, end);
     port = hostPort.substring(end);
     const name = host.endsWith('.') ? host.slice(0, -1) : host;
-    if (!name.split('.').every(label => labelPattern.test(label))) {
+    const labels = name.split('.');
+    if (!labels.every(label => labelPattern.test(label))) {
+      return null;
+    }
+    if (numberLabelPattern.test(labels[labels.length - 1]) &&
+      !ipv4Pattern.test(host)) {
       return null;
     }
   }
@@ -244,38 +266,20 @@ function checkedHostPort (hostPort) {
 }
 
 /**
- * The user information, host and port as they are written into the URL, or
- * null when they are not valid. The user information ends at the first
- * '@', so a second '@' is part of the host and refused.
- *
- * @param {string} authority the authority
- * @returns {string|null} the authority, or null
- */
-function checkedAuthority (authority) {
-  const at = authority.indexOf('@');
-  if (at === -1) {
-    return checkedHostPort(authority);
-  }
-  const hostPort = checkedHostPort(authority.substring(at + 1));
-  return hostPort === null
-    ? null
-    : encoded(authority.substring(0, at)) + '@' + hostPort;
-}
-
-/**
  * Builds the callback URL from its parts and checks it. One slash separates
  * the host and the endpoint, being added when neither has one and removed
  * when both do. The protocol and the host are written in lower case and the
- * rest as given, apart from the percent-encoding.
+ * rest as given, apart from the percent-encoding. The host value holds no
+ * '?', '#' or '@'.
  *
- * @param {*} protocol the protocol, such as https
- * @param {*} host the host, which can start with user information and end
- * with a port, a path, a query or a fragment
+ * @param {*} protocol the protocol, http or https in any case
+ * @param {*} host the host, which can end with a port and a path
  * @param {*} endPoint the endpoint
  * @returns {{valid: boolean, url: string}|null} null when the protocol,
  * host or endpoint is not set. Otherwise whether the URL is valid, and the
  * URL to write into the script when it is, or the URL as it was built, for
- * the log, when it is not.
+ * the log, when it is not. The logged URL shows '***' in place of everything
+ * in the host before its last '@'.
  */
 function callbackUrl (protocol, host, endPoint) {
   if (isBlank(protocol) || isBlank(host) || isBlank(endPoint)) {
@@ -288,20 +292,24 @@ function callbackUrl (protocol, host, endPoint) {
   } else if (hostHasSlash && endPointHasSlash) {
     endPoint = endPoint.substring(1);
   }
-  const built = protocol + '://' + host + endPoint;
-  if (!schemePattern.test(protocol)) {
+  const at = host.lastIndexOf('@');
+  const built = protocol + '://' +
+    (at === -1 ? host : '***' + host.substring(at)) + endPoint;
+  if (!isScheme(protocol) || /[?#@]/.test(host)) {
     return { valid: false, url: built };
   }
   const end = authorityEnd(host);
-  const authority = checkedAuthority(host.substring(0, end));
+  const authority = checkedHostPort(host.substring(0, end));
   if (authority === null) {
     return { valid: false, url: built };
   }
   return {
     valid: true,
-    url: protocol.toLowerCase() + '://' + authority +
+    url: asciiLowerCase(protocol) + '://' + authority +
       encoded(host.substring(end)) + encoded(endPoint)
   };
 }
+
+callbackUrl.isScheme = isScheme;
 
 module.exports = callbackUrl;

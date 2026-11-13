@@ -10,6 +10,7 @@ export = SetHeadersElement;
  */
 declare class SetHeadersElement extends FlowElement {
     constructor(...args: any[]);
+    evidenceKeyFilter: BasicListEvidenceKeyFilter;
     properties: {
         responseheadersdictionary: {
             name: string;
@@ -70,5 +71,6 @@ declare namespace SetHeadersElement {
     export { Pipeline, FlowData };
 }
 import FlowElement = require("./flowElement.js");
+import BasicListEvidenceKeyFilter = require("./basicListEvidenceKeyFilter");
 type Pipeline = import("./pipeline");
 type FlowData = import("./flowData");

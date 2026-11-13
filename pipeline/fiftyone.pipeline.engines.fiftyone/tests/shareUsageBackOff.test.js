@@ -1,0 +1,578 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const ShareUsage = require('../shareUsage');
+const ShareUsageBackOff = require('../shareUsageBackOff');
+const http = require('http');
+const zlib = require('zlib');
+
+// Where the receiver of the test running now is listening. Each test is
+// given a port of its own, so that a send made after a test ends cannot
+// reach the receiver of the next test, or the one the other usage sharing
+// tests use.
+let endpoint = null;
+
+// The status the receiver answers with. Only data it accepts is received.
+let status = 200;
+// When true the receiver never answers.
+let hang = false;
+// The content the receiver answers with.
+let body = '';
+// The usage data the receiver accepted.
+let received = [];
+// When each request arrived, whatever the answer.
+let attempts = [];
+let server = null;
+// The element under test, stopped when the test ends.
+let usageEngine = null;
+let requests = 0;
+
+/**
+ * Local server that answers usage data with the status the test sets.
+ *
+ * @param {http.IncomingMessage} req the request
+ * @param {http.ServerResponse} res the response
+ */
+const requestListener = function (req, res) {
+  attempts.push(Date.now());
+  if (hang) {
+    return;
+  }
+  let data = '';
+  const gunzip = zlib.createGunzip();
+  req.pipe(gunzip);
+  gunzip.on('data', chunk => {
+    data += chunk;
+  });
+  gunzip.on('end', () => {
+    if (status === 200) {
+      received.push(data);
+    }
+    res.writeHead(status);
+    res.end(body);
+  });
+};
+
+// The clock the back-off reads when no test is holding it.
+const monotonicNow = ShareUsageBackOff.now;
+
+// What the held clock reads.
+let heldTime = 0;
+
+/**
+ * Hold the clock the back-off reads at the time now, so that a pause lasts
+ * until the test moves the clock past the end of it. A test that processes
+ * requests during a pause would otherwise need the runner to process them
+ * faster than the pause the element is waiting out. The element still reads
+ * the real clock for its timers, so it checks whether the pause has ended as
+ * often as it would with the clock running.
+ */
+const holdClock = () => {
+  heldTime = monotonicNow();
+  ShareUsageBackOff.now = () => heldTime;
+};
+
+/**
+ * Move the held clock on, which ends a pause shorter than the time given.
+ *
+ * @param {number} milliseconds how far to move the clock on
+ */
+const moveClock = milliseconds => {
+  heldTime += milliseconds;
+};
+
+beforeEach(done => {
+  status = 200;
+  hang = false;
+  body = '';
+  received = [];
+  attempts = [];
+  requests = 0;
+  usageEngine = null;
+  server = http.createServer(requestListener);
+  server.listen(0, () => {
+    endpoint = `http://127.0.0.1:${server.address().port}/`;
+    done();
+  });
+});
+
+afterEach(() => {
+  ShareUsageBackOff.now = monotonicNow;
+  if (usageEngine) {
+    // Leaves the element with nothing to send, as it can outlive the test
+    // that made it.
+    usageEngine.shareData.length = 0;
+    clearTimeout(usageEngine.resumeTimer);
+  }
+  if (server.closeAllConnections) {
+    server.closeAllConnections();
+  }
+  server.close();
+});
+
+/**
+ * Wait for the given time.
+ *
+ * @param {number} milliseconds how long to wait
+ * @returns {Promise} resolved after the time
+ */
+const sleep = milliseconds =>
+  new Promise(resolve => setTimeout(resolve, milliseconds));
+
+/**
+ * Wait for a condition, failing if it is not met within 30 seconds.
+ *
+ * @param {Function} condition returns true when the wait is over
+ * @param {Function} message returns the reason for the failure
+ */
+const waitFor = async (condition, message) => {
+  const end = Date.now() + 30000;
+  while (!condition()) {
+    if (Date.now() > end) {
+      throw new Error(message());
+    }
+    await sleep(20);
+  }
+};
+
+/**
+ * The client IPs in the usage data received.
+ *
+ * @returns {Array<string>} the client IPs
+ */
+const clientIps = () => received
+  .flatMap(data => [...data.matchAll(/<ClientIP>([^<]*)<\/ClientIP>/g)])
+  .map(match => match[1]);
+
+/**
+ * A pipeline whose usage sharing element sends each entry on its own.
+ *
+ * @param {object} settings more settings for the element
+ * @returns {object} the pipeline
+ */
+const createPipeline = (settings = {}) => {
+  usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint,
+    ...settings
+  });
+  return new PipelineBuilder().add(usageEngine).build();
+};
+
+/**
+ * Process a request whose evidence no other request has.
+ *
+ * @param {object} pipeline the pipeline to process it with
+ * @returns {string} its client IP
+ */
+const processUnique = async pipeline => {
+  const ip = `10.0.${Math.floor(requests / 250)}.${requests % 250 + 1}`;
+  requests++;
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('server.client-ip', ip);
+  await flowData.process();
+  return ip;
+};
+
+/**
+ * Process requests one at a time, waiting for each to be sent, so each is a
+ * separate failed send.
+ *
+ * @param {object} pipeline the pipeline to process them with
+ * @param {number} count how many sends to fail
+ */
+const failSends = async (pipeline, count) => {
+  status = 500;
+  for (let sent = 1; sent <= count; sent++) {
+    await processUnique(pipeline);
+    await waitFor(
+      () => attempts.length === sent,
+      () => `Send ${sent} was not made.`);
+    // The element stops sending once it has read the answer, so this waits
+    // for the failure to be counted before the next request.
+    await waitFor(
+      () => usageEngine.sending === false,
+      () => `The answer to send ${sent} was not read.`);
+  }
+};
+
+/**
+ * Ten failed sends pause sending for two seconds, the defaults. Nothing is
+ * sent during the pause, the evidence processed during it is queued, and all
+ * of it is sent once the pause ends and the service answers, with no more
+ * requests processed.
+ */
+test('share usage back-off - pauses then drains the queue', async () => {
+  const pipeline = createPipeline();
+  holdClock();
+  await failSends(pipeline, 10);
+  const pausedAt = Date.now();
+  expect(usageEngine.backOff.backingOff).toBe(true);
+
+  const queued = [];
+  for (let i = 0; i < 5; i++) {
+    queued.push(await processUnique(pipeline));
+  }
+  // Nothing has been sent yet. This runs as soon as the five are processed,
+  // so on its own it shows only that no send had been made by then. The
+  // check after the pause is what catches a pause that was not honoured.
+  expect(attempts.length).toBe(10);
+
+  status = 200;
+  moveClock(2000);
+  await waitFor(
+    () => queued.every(ip => clientIps().includes(ip)),
+    () => 'The evidence processed during the pause was not all sent once ' +
+      `the service answered. Sent: ${clientIps()}`);
+  // The eleventh send came well after sending paused. The element waits the
+  // pause out on a real timer, which it sets from the time the held clock
+  // reports is left, so this still measures a real wait while the clock is
+  // held.
+  expect(attempts[10] - pausedAt).toBeGreaterThanOrEqual(1500);
+}, 30000);
+
+/**
+ * Each failed send after a pause multiplies the delay, and the delay stops
+ * growing at the maximum.
+ */
+test('share usage back-off - delay grows to the maximum', async () => {
+  const pipeline = createPipeline({
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 0.5,
+    maxRecoveryDelaySeconds: 1
+  });
+  status = 500;
+  for (let i = 0; i < 40; i++) {
+    await processUnique(pipeline);
+  }
+
+  await waitFor(
+    () => attempts.length >= 4,
+    () => 'Fewer than four sends were made.');
+  const gaps = [1, 2, 3].map(i => attempts[i] - attempts[i - 1]);
+  expect(gaps[0]).toBeGreaterThanOrEqual(400);
+  expect(gaps[1]).toBeGreaterThanOrEqual(900);
+  expect(gaps[2]).toBeGreaterThanOrEqual(900);
+  expect(gaps[2]).toBeLessThan(1900);
+}, 30000);
+
+/**
+ * When the queue fills during a pause, new evidence is dropped and what was
+ * queued first is sent once sending resumes.
+ */
+test('share usage back-off - full queue drops new evidence', async () => {
+  const pipeline = createPipeline({
+    maximumQueueSize: 4,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 2,
+    maxRecoveryDelaySeconds: 2
+  });
+  holdClock();
+  await failSends(pipeline, 1);
+  expect(usageEngine.backOff.backingOff).toBe(true);
+
+  // Everything processed is queued until the queue reaches its limit.
+  const kept = [];
+  while (usageEngine.shareData.length < usageEngine.maximumQueueSize) {
+    kept.push(await processUnique(pipeline));
+  }
+
+  // The queue is full, so everything processed now is dropped.
+  const dropped = [];
+  for (let i = 0; i < 6; i++) {
+    dropped.push(await processUnique(pipeline));
+  }
+  expect(usageEngine.dropped).toBe(dropped.length);
+  expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
+
+  status = 200;
+  moveClock(2000);
+  await waitFor(
+    () => kept.every(ip => clientIps().includes(ip)),
+    () => `The evidence queued during the pause was not all sent. Sent: ${clientIps()}`);
+  // The queue held nothing else, so nothing else can be sent.
+  expect(clientIps()).toEqual(kept);
+}, 30000);
+
+/**
+ * A request that is never answered counts as a failed send once the request
+ * timeout passes, so it cannot stop the element sending.
+ */
+test('share usage back-off - request with no answer does not stop sending', async () => {
+  const pipeline = createPipeline({ requestTimeout: 300 });
+  hang = true;
+  await processUnique(pipeline);
+  await waitFor(
+    () => attempts.length === 1,
+    () => 'The first send was not made.');
+  hang = false;
+  const next = await processUnique(pipeline);
+
+  await waitFor(
+    () => clientIps().includes(next),
+    () => 'Nothing more was sent after a request with no answer.');
+}, 30000);
+
+/**
+ * Replaces the element's log with one that records what is logged.
+ *
+ * @returns {Array<object>} the messages logged, which the log adds to
+ */
+const recordLog = () => {
+  const logged = [];
+  usageEngine._log = (level, message) => logged.push({ level, message });
+  return logged;
+};
+
+/**
+ * Entries discarded because the queue is full are logged, but not with a
+ * message for each entry discarded.
+ */
+test('share usage back-off - full queue logs without a message per entry', async () => {
+  const pipeline = createPipeline({
+    maximumQueueSize: 4,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 2,
+    maxRecoveryDelaySeconds: 2
+  });
+  const logged = recordLog();
+  holdClock();
+  await failSends(pipeline, 1);
+  logged.length = 0;
+
+  for (let i = 0; i < 10; i++) {
+    await processUnique(pipeline);
+  }
+  // Four fill the queue and the other six are dropped.
+  expect(usageEngine.dropped).toBe(6);
+
+  const full = logged.filter(entry => String(entry.message).includes('full'));
+  expect(full.length).toBeGreaterThanOrEqual(1);
+  expect(full.length).toBeLessThan(6);
+  expect(full[0].level).toBe('warning');
+}, 30000);
+
+/**
+ * A send answered with anything other than 200 logs the status code and the
+ * content of the answer.
+ */
+test('share usage back-off - failed answer logs the status and content', async () => {
+  const pipeline = createPipeline();
+  const logged = recordLog();
+  body = 'the service says no';
+
+  await failSends(pipeline, 1);
+
+  await waitFor(
+    () => logged.some(entry => entry.level === 'warning' &&
+      String(entry.message).includes('500')),
+    () => `The status code was not logged. Logged: ${JSON.stringify(logged)}`);
+  const failed = logged.find(entry => entry.level === 'warning' &&
+    String(entry.message).includes('500'));
+  expect(failed.message).toContain('the service says no');
+}, 30000);
+
+/**
+ * The entries in a message are not separated by anything, as the XML has
+ * only Device elements inside Devices.
+ */
+test('share usage back-off - message has no text between devices', async () => {
+  const pipeline = createPipeline({ requestedPackageSize: 2 });
+  await processUnique(pipeline);
+  await processUnique(pipeline);
+
+  await waitFor(
+    () => received.length === 1,
+    () => 'The message was not sent.');
+  expect(received[0]).toContain('</Device><Device>');
+  expect(received[0]).not.toContain('</Device>,<Device>');
+}, 30000);
+
+/**
+ * A message holds the requested package size or more entries, up to twice
+ * the package size, so a queue that filled during a pause drains in fewer
+ * messages.
+ */
+test('share usage back-off - message holds up to twice the package size', async () => {
+  const pipeline = createPipeline({
+    requestedPackageSize: 2,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 1,
+    maxRecoveryDelaySeconds: 1
+  });
+  holdClock();
+  status = 500;
+  await processUnique(pipeline);
+  await processUnique(pipeline);
+  await waitFor(
+    () => attempts.length === 1,
+    () => 'The first send was not made.');
+  await waitFor(
+    () => usageEngine.backOff.backingOff,
+    () => 'Sending did not pause after the first send failed.');
+  for (let i = 0; i < 6; i++) {
+    await processUnique(pipeline);
+  }
+
+  status = 200;
+  moveClock(1000);
+  await waitFor(
+    () => clientIps().length === 6,
+    () => `Not all entries were sent: ${clientIps()}`);
+
+  expect(received.map(data => (data.match(/<Device>/g) || []).length))
+    .toEqual([4, 2]);
+}, 30000);
+
+/**
+ * A send that cannot be started counts as a failed send and is logged,
+ * rather than ending the process.
+ */
+test('share usage back-off - request that throws counts as failed', async () => {
+  const pipeline = createPipeline();
+  const logged = recordLog();
+  usageEngine.http = {
+    request: () => {
+      throw new Error('could not start the request');
+    }
+  };
+
+  await processUnique(pipeline);
+
+  await waitFor(
+    () => logged.some(entry =>
+      String(entry.message).includes('could not start the request')),
+    () => `The failed send was not logged. Logged: ${JSON.stringify(logged)}`);
+  expect(usageEngine.sending).toBe(false);
+}, 30000);
+
+/**
+ * The time the back-off is given comes from a clock that a change to the
+ * system time does not move.
+ */
+test('share usage back-off - now follows the monotonic clock', () => {
+  const { performance } = require('perf_hooks');
+  const before = performance.now();
+  const now = ShareUsageBackOff.now();
+  const after = performance.now();
+
+  expect(now).toBeGreaterThanOrEqual(before);
+  expect(now).toBeLessThanOrEqual(after);
+});
+
+/**
+ * Settings the pause cannot work with are rejected.
+ */
+test('share usage back-off - invalid settings are rejected', () => {
+  [
+    { failuresToEnterRecovery: 0 },
+    { failuresToEnterRecovery: 101 },
+    { failuresToEnterRecovery: 2.5 },
+    { failuresWindowSeconds: 0 },
+    { initialRecoveryDelaySeconds: 0 },
+    { maxRecoveryDelaySeconds: -1 },
+    { recoveryMultiplier: 0.5 },
+    { maximumQueueSize: 0 }
+  ].forEach(settings => {
+    expect(() => new ShareUsage({
+      requestedPackageSize: 1,
+      endpoint,
+      ...settings
+    })).toThrow(RangeError);
+  });
+});
+
+/**
+ * The rules that decide when usage sharing may send after failed sends, with
+ * each test setting the time in milliseconds. Three failures within a ten
+ * second window start a two second pause, rising by two each time up to
+ * five.
+ */
+describe('share usage back-off rules', () => {
+  const create = ({ failures = 3, initial = 2, maximum = 5 } = {}) =>
+    new ShareUsageBackOff({
+      failuresToEnterRecovery: failures,
+      failuresWindowSeconds: 10,
+      initialRecoveryDelaySeconds: initial,
+      maxRecoveryDelaySeconds: maximum,
+      recoveryMultiplier: 2
+    });
+
+  test('pauses after failures within the window', () => {
+    const backOff = create();
+    expect(backOff.failed(0)).toBe(0);
+    expect(backOff.failed(1000)).toBe(0);
+    expect(backOff.remaining(1000)).toBe(0);
+    expect(backOff.backingOff).toBe(false);
+
+    expect(backOff.failed(2000)).toBe(2000);
+    expect(backOff.backingOff).toBe(true);
+    expect(backOff.remaining(3000)).toBe(1000);
+    expect(backOff.remaining(4000)).toBe(0);
+  });
+
+  test('failures outside the window do not count', () => {
+    const backOff = create();
+    backOff.failed(0);
+    backOff.failed(1000);
+    expect(backOff.failed(11500)).toBe(0);
+    expect(backOff.backingOff).toBe(false);
+  });
+
+  test('successes between failures do not reset the count', () => {
+    const backOff = create();
+    backOff.failed(0);
+    expect(backOff.succeeded()).toBe(false);
+    backOff.failed(1000);
+    expect(backOff.succeeded()).toBe(false);
+    expect(backOff.failed(2000)).toBe(2000);
+  });
+
+  test('a failed send after a pause multiplies the delay', () => {
+    const backOff = create({ failures: 1 });
+    expect(backOff.failed(0)).toBe(2000);
+    expect(backOff.failed(2000)).toBe(4000);
+    expect(backOff.failed(6000)).toBe(5000);
+    expect(backOff.failed(11000)).toBe(5000);
+    expect(backOff.remaining(11000)).toBe(5000);
+  });
+
+  test('a success ends the back-off', () => {
+    const backOff = create({ failures: 2 });
+    backOff.failed(0);
+    backOff.failed(1000);
+    backOff.failed(3000);
+    expect(backOff.succeeded()).toBe(true);
+    expect(backOff.backingOff).toBe(false);
+    expect(backOff.remaining(4000)).toBe(0);
+    // The next pause needs the full number of failures again, and starts
+    // from the initial delay.
+    expect(backOff.failed(8000)).toBe(0);
+    expect(backOff.failed(9000)).toBe(2000);
+  });
+
+  test('a maximum below the initial delay limits the first pause', () => {
+    const backOff = create({ failures: 1, initial: 10, maximum: 3 });
+    expect(backOff.failed(0)).toBe(3000);
+  });
+});

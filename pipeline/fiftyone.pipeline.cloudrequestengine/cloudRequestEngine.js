@@ -26,15 +26,74 @@ const AspectDataDictionary = require('fiftyone.pipeline.engines')
   .AspectDataDictionary;
 const BasicListEvidenceKeyFilter = require('fiftyone.pipeline.core')
   .BasicListEvidenceKeyFilter;
+const EvidenceKeyFilter = require('fiftyone.pipeline.core')
+  .EvidenceKeyFilter;
+const LicenseKeys = require('fiftyone.pipeline.core').LicenseKeys;
 const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 
+// Names the cloud service reads its credentials and property list from,
+// which Evidence must not supply under any prefix or in any letter case.
+const reservedFields = ['resource', 'license', 'licence', 'values'];
+
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
  * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
  */
+
+// Whether an object has a member of its own by that name, so that a name
+// such as constructor is not found on the prototype.
+const hasOwn = (object, name) =>
+  Object.prototype.hasOwnProperty.call(object, name);
+
+// Whether each element data the engine has made may be cached.
+const cacheableData = new WeakMap();
+
+// The engines that read their endpoint from the deprecated variable name
+// and have not yet logged that they did.
+const oldEndpointVariableUnreported = new WeakSet();
+
+/**
+ * Logs, once for an engine, that its endpoint came from the deprecated
+ * variable name. An engine has no Pipeline to log to when it is built, so
+ * the first FlowData it processes carries the message.
+ *
+ * @param {CloudRequestEngine} engine the engine processing
+ * @param {FlowData} flowData the flow data whose pipeline is logged to
+ */
+function reportOldEndpointVariable (engine, flowData) {
+  if (oldEndpointVariableUnreported.delete(engine)) {
+    flowData.pipeline.log('warn', errorMessages.oldEndpointVariable);
+  }
+}
+
+// The key a web integration gives the web request itself. It is a view of
+// the whole request and not a value to send, so it is left out.
+const webRequestKey = 'server.http-request';
+
+/**
+ * Whether the response in an element data has a top level member named
+ * fodid, in any case. A response that cannot be read is cached as before.
+ *
+ * @param {object} data the element data of a response
+ * @returns {boolean} true if the response has a top level fodid member
+ */
+function holdsFodId (data) {
+  try {
+    const text = data.get('cloud');
+    if (typeof text !== 'string' || !/fodid/i.test(text)) {
+      return false;
+    }
+    const response = JSON.parse(text);
+    return response !== null &&
+      typeof response === 'object' &&
+      Object.keys(response).some((name) => name.toLowerCase() === 'fodid');
+  } catch (e) {
+    return false;
+  }
+}
 
 // Engine that makes a call to the 51Degrees cloud service
 // Returns raw JSON as a "cloud" property under "cloud" dataKey
@@ -44,7 +103,13 @@ class CloudRequestEngine extends Engine {
    *
    * @param {object} options options object
    * @param {string} options.resourceKey resourcekey for cloud service
-   * @param {string} options.licenseKey licensekey for cloud service
+   * @param {string} options.licenseKey licensekey for cloud service, beside
+   * a resourceKey or on its own. On its own, requestedProperties is
+   * required.
+   * @param {Array<string>|string} options.requestedProperties the fully
+   * qualified names of the properties to ask for, such as device.ismobile,
+   * as a list or one comma separated string. Beside a resourceKey the cloud
+   * service adds them to the properties the resource key carries.
    * @param {string} options.baseURL url the cloud service is located at
    * if overriding default
    * @param {string} options.cloudRequestOrigin The value to set for the Origin
@@ -59,6 +124,7 @@ class CloudRequestEngine extends Engine {
     {
       resourceKey,
       licenseKey,
+      requestedProperties,
       baseURL,
       cloudRequestOrigin,
       requestClient
@@ -67,12 +133,16 @@ class CloudRequestEngine extends Engine {
 
     this.dataKey = 'cloud';
 
-    if (!resourceKey) {
-      throw 'Cloud engine needs a resourceKey';
-    }
+    // A key that is empty or only whitespace counts as absent. Any other
+    // key is sent as it is given.
+    this.resourceKey = keyText(resourceKey);
+    this.licenseKey = keyText(licenseKey);
+    this.requestedProperties = propertyNames(requestedProperties);
+    refuseInvalidCredentials(this);
 
-    this.resourceKey = resourceKey;
-    this.licenseKey = licenseKey;
+    // Set once the requested properties have been compared with an answer.
+    this.notCoveredReported = false;
+
     this.cloudRequestOrigin = cloudRequestOrigin;
     if (requestClient !== undefined) {
       this.requestClient = requestClient;
@@ -87,10 +157,21 @@ class CloudRequestEngine extends Engine {
     // on premise web server, or (b) use a privately hosted version of the
     // 51Degrees cloud for performance reasons. This is the private hosting
     // option of the 51Degrees cloud service. Both run the same service, so
-    // everything built on this engine works unchanged once FOD_CLOUD_API_URL
-    // names the other host's API base including the /api/v4/ segment.
+    // everything built on this engine works unchanged once
+    // _51DEGREES_CLOUD_ENDPOINT names the other host's API base including the
+    // /api/v4/ segment.
+    //
+    // FOD_CLOUD_API_URL is the deprecated name of the same variable. It is
+    // read only when _51DEGREES_CLOUD_ENDPOINT is unset or empty, and the
+    // first process logs that it was.
     if (!baseURL) {
-      baseURL = process.env.FOD_CLOUD_API_URL;
+      baseURL = process.env._51DEGREES_CLOUD_ENDPOINT;
+      if (!baseURL) {
+        baseURL = process.env.FOD_CLOUD_API_URL;
+        if (baseURL) {
+          oldEndpointVariableUnreported.add(this);
+        }
+      }
       if (!baseURL) {
         baseURL = sharedValues.baseURLDefault;
       }
@@ -103,6 +184,14 @@ class CloudRequestEngine extends Engine {
     this.baseURL = baseURL;
     this.evidenceKeys = [];
 
+    // The cloud service's keys are fetched when the Pipeline first processes.
+    // Until then every key is kept, so evidence set before then is not lost,
+    // and getEvidenceKeys replaces this with the keys the service lists.
+    this.evidenceKeyFilter = new EvidenceKeyFilter();
+
+    // Set once the cloud service's evidence keys have arrived.
+    this.evidenceKeysFetched = false;
+
     // Properties of connected FlowElements
     this.flowElementProperties = {};
   }
@@ -110,13 +199,15 @@ class CloudRequestEngine extends Engine {
   /**
    * Check if the keys and properties have been fetched.
    *
-   * This computed property determines whether the keys of a 'flowElementProperties' object and the 'evidenceKeyFilter'
-   * array both have elements, indicating that the necessary data has been fetched and is ready for use.
+   * True once the cloud service's evidence keys have arrived and its
+   * properties have been read, so they are fetched once rather than for
+   * every request.
    *
    * @returns {boolean} True if the keys and properties are fetched and ready; otherwise, false.
    */
   get keysAndPropertiesFetched () {
-    return Object.keys(this.flowElementProperties).length > 0 && this.evidenceKeyFilter.length > 0;
+    return Object.keys(this.flowElementProperties).length > 0 &&
+      this.evidenceKeysFetched;
   }
 
   /**
@@ -180,6 +271,50 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * Fetches the evidence keys and properties before the first process,
+   * whatever else is in the pipeline, because the cache key is built from
+   * the evidence keys. A fetch that fails is tried again on the next
+   * process, and its error is the process error.
+   *
+   * @param {FlowData} flowData FlowData to process
+   * @returns {Promise} resolved once the FlowData is processed
+   */
+  process (flowData) {
+    reportOldEndpointVariable(this, flowData);
+    if (this.keysAndPropertiesFetched) {
+      return super.process(flowData);
+    }
+    // One fetch at a time, shared by the requests that wait on it.
+    if (this.discovery === undefined) {
+      this.discovery = this.ready().finally(() => {
+        this.discovery = undefined;
+      });
+    }
+    return this.discovery.then(() => super.process(flowData));
+  }
+
+  /**
+   * A response with a top level `fodid` member, in any case, holds a 51Did
+   * created for the one request, so it is neither stored in the cache nor
+   * served from it. The answer is worked out once for each element data,
+   * so a cache hit does not parse the response again.
+   *
+   * @param {object} data the element data of a response
+   * @returns {boolean} false if the response has a top level fodid member
+   */
+  isCacheable (data) {
+    if (data === null || typeof data !== 'object') {
+      return true;
+    }
+    let cacheable = cacheableData.get(data);
+    if (cacheable === undefined) {
+      cacheable = !holdsFodId(data);
+      cacheableData.set(data, cacheable);
+    }
+    return cacheable;
+  }
+
+  /**
    * Typically, cloud will return errors as JSON.
    * However, transport level errors or other failures can result in
    * responses that are plain text. This function handles these cases.
@@ -212,11 +347,14 @@ class CloudRequestEngine extends Engine {
       content = response.content;
     }
 
+    // The cloud's errors can name the license key it was sent, so the key
+    // is masked before the text goes into an error.
+    const licenseKey = this.licenseKey;
     const errors = this.getErrorMessages(content);
     const cloudErrors = [];
     errors.forEach(function (errorText) {
       cloudErrors.push(new CloudRequestError(
-        errorText,
+        LicenseKeys.mask(errorText, licenseKey),
         response.headers,
         response.statusCode));
     });
@@ -226,7 +364,7 @@ class CloudRequestEngine extends Engine {
       const message = 'Cloud service returned status code ' +
         response.statusCode + ' with content ' + content + '.';
       cloudErrors.push(new CloudRequestError(
-        message,
+        LicenseKeys.mask(message, licenseKey),
         response.headers,
         response.statusCode));
     }
@@ -243,17 +381,28 @@ class CloudRequestEngine extends Engine {
     const engine = this;
 
     return new Promise(function (resolve, reject) {
-      let url = engine
-        .baseURL +
-        'accessibleproperties?resource=' +
-        engine.resourceKey;
-
-      // licenseKey is optional
-      if (engine.licenseKey) {
-        url += '&license=' + engine.licenseKey;
+      // A license key goes in the body of a POST rather than in the URL, so
+      // it stays out of anything that logs the URL. A resource key on its
+      // own goes in the query string.
+      const url = engine.baseURL + 'accessibleproperties';
+      let request;
+      if (engine.licenseKey === '') {
+        request = engine.requestClient.get(
+          url + '?resource=' + engine.resourceKey,
+          engine.cloudRequestOrigin);
+      } else {
+        const credentials = {};
+        if (engine.resourceKey !== '') {
+          credentials.resource = engine.resourceKey;
+        }
+        credentials.license = engine.licenseKey;
+        request = engine.requestClient.post(
+          url,
+          credentials,
+          engine.cloudRequestOrigin);
       }
 
-      engine.requestClient.get(url, engine.cloudRequestOrigin)
+      request
         .then(function (properties) {
           const propertiesOutput = {};
 
@@ -326,20 +475,31 @@ class CloudRequestEngine extends Engine {
   getData (flowData) {
     const engine = this;
 
-    let url = this.baseURL +
-      this.resourceKey + '.json';
-
-    // licensekey is optional
-    if (this.licenseKey) {
-      url += '?license=' + this.licenseKey;
-    }
+    // A resource key names the route. A license key on its own has no
+    // resource key to put there, so it uses the route that takes none.
+    const url = this.resourceKey !== ''
+      ? this.baseURL + this.resourceKey + '.json'
+      : this.baseURL + sharedValues.licenseDataPath;
 
     const self = this;
 
     return new Promise(function (resolve, reject) {
+      // The keys go in the body, the license key never in the URL. They and
+      // the list are set after the evidence, so evidence cannot replace them.
+      const content = engine.getContent(flowData);
+      if (engine.resourceKey !== '') {
+        content.resource = engine.resourceKey;
+      }
+      if (engine.licenseKey !== '') {
+        content.license = engine.licenseKey;
+      }
+      if (engine.requestedProperties.length > 0) {
+        content.values = engine.requestedProperties.join(',');
+      }
+
       engine.requestClient.post(
         url,
-        engine.getContent(flowData),
+        content,
         engine.cloudRequestOrigin)
         .then(function (body) {
           const data = new AspectDataDictionary({
@@ -351,6 +511,7 @@ class CloudRequestEngine extends Engine {
           });
 
           flowData.setElementData(data);
+          engine.reportPropertiesNotCovered(flowData, body);
 
           resolve();
         }).catch(function (response) {
@@ -358,6 +519,44 @@ class CloudRequestEngine extends Engine {
           reject(self.errors);
         });
     });
+  }
+
+  /**
+   * Compares the requested properties with an answer and logs, once, the
+   * names the answer left out. The cloud service drops a property the keys
+   * do not cover without naming it, so only the engine can notice. A
+   * property present but null counts as answered, because its nullreason
+   * says why it has no value. The answer cannot change while the keys and
+   * the list stay the same, so one comparison is enough.
+   *
+   * @param {FlowData} flowData the flow data whose pipeline is logged to
+   * @param {string} body the JSON the cloud service answered with
+   */
+  reportPropertiesNotCovered (flowData, body) {
+    if (this.notCoveredReported || this.requestedProperties.length === 0) {
+      return;
+    }
+    let answer;
+    try {
+      answer = JSON.parse(body);
+    } catch (e) {
+      return;
+    }
+    if (answer === null || typeof answer !== 'object') {
+      return;
+    }
+    this.notCoveredReported = true;
+    const notCovered = this.requestedProperties.filter(
+      (name) => answerHolds(answer, name) === false);
+    if (notCovered.length > 0) {
+      // With no license key, the resource key's licence answers a property
+      // it does not grant as null, so a name left out is not a property.
+      const message = this.licenseKey === ''
+        ? errorMessages.propertiesNotProperties
+        : errorMessages.propertiesNotCovered;
+      flowData.pipeline.log('warn', util.format(
+        message, notCovered.join(', ')));
+    }
   }
 
   /**
@@ -374,6 +573,7 @@ class CloudRequestEngine extends Engine {
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
+          engine.evidenceKeysFetched = true;
 
           resolve();
         }).catch(function (response) {
@@ -383,13 +583,20 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Generate the Content to send in the POST request. The evidence keys
-   * e.g. 'query.' and 'header.' have an order of precedence. These are
-   * added to the evidence in reverse order, if there is conflict then
-   * the queryData value is overwritten.
-   * 'query.' evidence should take precedence over all other evidence.
+   * Generate the Content to send in the POST request. One name under
+   * several prefixes is sent once, with the value of the prefix that
+   * evidence.md ranks highest, being query, header, cookie, server,
+   * fiftyone and location, then any other prefix alphabetically. The
+   * groups are added lowest precedence first, so a later value replaces
+   * an earlier one.
    * If there are evidence keys other than 'query.' that conflict then
    * this is unexpected so a warning will be logged.
+   *
+   * The engine sends every Evidence value in the Flow Data, including the
+   * values no element in the pipeline accepts, because what the cloud
+   * service uses changes over time and knowing about the other Evidence is
+   * important to continued optimization. The reserved names and the web
+   * request view are left out.
    *
    * @param {FlowData} flowData FlowData to get evidence from
    * @returns {object} Evidence Dictionary
@@ -397,9 +604,9 @@ class CloudRequestEngine extends Engine {
   getContent (flowData) {
     const queryData = {};
 
-    const evidence = flowData.evidence.getAll();
+    const evidence = this.sendableEvidence(flowData.evidence);
 
-    // Add evidence in reverse alphabetical order, excluding special keys.
+    // Add the other evidence lowest precedence first.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'other'));
     // Add cookie evidence.
     this.addQueryData(flowData, queryData, evidence, this.getSelectedEvidence(evidence, 'cookie'));
@@ -412,6 +619,45 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * The evidence the engine sends, being every value in the Flow Data,
+   * whether an element accepted it or not, apart from the web request
+   * view. addQueryData then leaves out the reserved names. The accepted
+   * values come first, so where the two would give the same name the
+   * accepted one is sent.
+   *
+   * @param {Evidence} evidence the Flow Data's evidence
+   * @returns {object} the evidence keys and values to send
+   */
+  sendableEvidence (evidence) {
+    const sendable = {};
+    // An older fiftyone.pipeline.core throws unaccepted evidence away.
+    const unaccepted = typeof evidence.getUnaccepted === 'function'
+      ? evidence.getUnaccepted()
+      : {};
+
+    for (const source of [evidence.getAll(), unaccepted]) {
+      for (const [key, value] of Object.entries(source)) {
+        if (this.isSent(key) && hasOwn(sendable, key) === false) {
+          sendable[key] = value;
+        }
+      }
+    }
+
+    return sendable;
+  }
+
+  /**
+   * Whether an evidence key is sent to the cloud service. The reserved
+   * names are left out later, by addQueryData.
+   *
+   * @param {string} key the evidence key
+   * @returns {boolean} false for the web request view, in any letter case
+   */
+  isSent (key) {
+    return String(key).toLowerCase() !== webRequestKey;
+  }
+
+  /**
    * Add query data to the evidence.
    *
    * @param {FlowData} flowData FlowData for logging
@@ -421,6 +667,13 @@ class CloudRequestEngine extends Engine {
    * @param {object} evidence Evidence to add to the query Data.
    */
   addQueryData (flowData, queryData, allEvidence, evidence) {
+    // The names already added, by their lower case form, so a name in other
+    // letters is found with one read.
+    const added = new Map();
+    for (const name of Object.keys(queryData)) {
+      added.set(name.toLowerCase(), name);
+    }
+
     for (const [evidenceKey, evidenceValue] of Object.entries(evidence)) {
       // Split the key at its first dot only. The prefix is the part before
       // it and the name sent to the cloud is everything after it, so a name
@@ -433,8 +686,19 @@ class CloudRequestEngine extends Engine {
         ? evidenceKey.substring(separatorIndex + 1)
         : evidenceKey;
 
+      // Evidence never supplies the request's own fields.
+      if (reservedFields.includes(suffix.toLowerCase())) {
+        continue;
+      }
+
+      // Evidence keys ignore letter case, so a name already added in other
+      // letters is the same name, and the later, higher precedence value
+      // replaces it under its own spelling.
+      const lowerSuffix = suffix.toLowerCase();
+      const existing = added.get(lowerSuffix);
+
       // Check and add the evidence to the query parameters.
-      if ((suffix in queryData) === false) {
+      if (existing === undefined) {
         queryData[suffix] = evidenceValue;
       } else {
         // If the queryParameter exists already.
@@ -442,10 +706,11 @@ class CloudRequestEngine extends Engine {
         // warning, if the evidence prefix is not query. Otherwise a
         // warning is not needed as query evidence is expected
         // to overwrite any existing evidence with the same suffix.
-        if (prefix !== 'query') {
+        if (prefix.toLowerCase() !== 'query') {
           const conflicts = {};
           for (const [key, value] of Object.entries(allEvidence)) {
-            if (key !== evidenceKey && key.includes(suffix)) {
+            if (key.toLowerCase() !== evidenceKey.toLowerCase() &&
+              key.toLowerCase().includes(lowerSuffix)) {
               conflicts[key] = value;
             }
           }
@@ -465,9 +730,12 @@ class CloudRequestEngine extends Engine {
             conflictStr);
           flowData.pipeline.log('warn', warningMessage);
         }
-        // Overwrite the existing queryParameter value.
+        // Replace the existing field, name and value, so the name sent is
+        // the winning key's.
+        delete queryData[existing];
         queryData[suffix] = evidenceValue;
       }
+      added.set(lowerSuffix, suffix);
     }
   }
 
@@ -489,13 +757,13 @@ class CloudRequestEngine extends Engine {
           selectedEvidence[key] = value;
         }
       }
-      selectedEvidence = Object.keys(selectedEvidence).sort().reverse().reduce(
-        (obj, key) => {
+      // Lowest precedence first, so the value added last wins.
+      selectedEvidence = Object.keys(selectedEvidence)
+        .sort((a, b) => compareOtherKeys(b, a))
+        .reduce((obj, key) => {
           obj[key] = selectedEvidence[key];
           return obj;
-        },
-        {}
-      );
+        }, {});
     } else {
       for (const [key, value] of Object.entries(evidence)) {
         if (this.hasKeyPrefix(key, type)) {
@@ -507,15 +775,144 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Check that the key of a KeyValuePair has the given prefix.
+   * Check that the key of a KeyValuePair has the given prefix, ignoring
+   * letter case as evidence keys do.
    *
    * @param {string} itemKey Key to check
    * @param {string} prefix The prefix to check for.
    * @returns {boolean} True if the key has the prefix.
    */
   hasKeyPrefix (itemKey, prefix) {
-    return itemKey.startsWith(prefix + '.');
+    return itemKey.toLowerCase().startsWith(prefix.toLowerCase() + '.');
   }
+}
+
+/**
+ * Reads a key setting.
+ *
+ * @param {*} value a key setting
+ * @returns {string} the key as given, or an empty string where it is
+ * absent, empty or only whitespace
+ */
+function keyText (value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const text = String(value);
+  return text.trim() === '' ? '' : text;
+}
+
+/**
+ * Reads the requested properties setting.
+ *
+ * @param {Array<string>|string|undefined} value property names as a list
+ * or one comma separated string
+ * @returns {Array<string>} the names, trimmed, leaving out empty ones
+ */
+function propertyNames (value) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  const names = typeof value === 'string' ? value.split(',') : value;
+  return names
+    .map((name) => String(name).trim())
+    .filter((name) => name !== '');
+}
+
+/**
+ * Finds a key of an object, ignoring case, because the cloud service
+ * lower-cases the names in its answer.
+ *
+ * @param {object} object the object to search
+ * @param {string} name the name wanted
+ * @returns {string|undefined} the key as the object spells it
+ */
+function findKey (object, name) {
+  const lower = name.toLowerCase();
+  return Object.keys(object).find((key) => key.toLowerCase() === lower);
+}
+
+/**
+ * Whether an answer holds a property.
+ *
+ * @param {object} answer the parsed answer from the cloud service
+ * @param {string} name a fully qualified name such as device.ismobile
+ * @returns {boolean} true when the property is present, even as null
+ */
+function answerHolds (answer, name) {
+  const separator = name.indexOf('.');
+  if (separator < 0) {
+    return false;
+  }
+  const sectionKey = findKey(answer, name.substring(0, separator));
+  if (sectionKey === undefined) {
+    return false;
+  }
+  const section = answer[sectionKey];
+  return section !== null && typeof section === 'object' &&
+    findKey(section, name.substring(separator + 1)) !== undefined;
+}
+
+/**
+ * Refuses the two combinations the cloud service refuses on every request,
+ * so a deployment sees one error when the engine is built rather than a
+ * failure on each request.
+ *
+ * @param {CloudRequestEngine} engine the engine being built
+ */
+function refuseInvalidCredentials (engine) {
+  if (engine.resourceKey === '' && engine.licenseKey === '') {
+    throw new Error(errorMessages.noCredential);
+  }
+  if (engine.resourceKey === '' && engine.requestedProperties.length === 0) {
+    throw new Error(errorMessages.licenseKeyNeedsProperties);
+  }
+}
+
+// The prefixes after query, header and cookie, highest precedence first, as
+// evidence.md lists them. Any other prefix ranks after these, alphabetically.
+const OTHER_PREFIX_PRECEDENCE = ['server', 'fiftyone', 'location'];
+
+/**
+ * The prefix of an evidence key in lower case, being the text before the
+ * first dot, or the whole key where there is no dot.
+ *
+ * @param {string} key the evidence key
+ * @returns {string} the prefix
+ */
+function keyPrefix (key) {
+  const separatorIndex = key.indexOf('.');
+  return (separatorIndex >= 0 ? key.substring(0, separatorIndex) : key)
+    .toLowerCase();
+}
+
+/**
+ * Compares two evidence keys that are not query, header or cookie evidence
+ * by precedence. server, fiftyone and location come first, in the order
+ * evidence.md lists them, then any other prefix alphabetically, all
+ * ignoring letter case.
+ *
+ * @param {string} a the first evidence key
+ * @param {string} b the second evidence key
+ * @returns {number} negative where a has the higher precedence
+ */
+function compareOtherKeys (a, b) {
+  const prefixA = keyPrefix(a);
+  const prefixB = keyPrefix(b);
+  const rank = prefix => {
+    const index = OTHER_PREFIX_PRECEDENCE.indexOf(prefix);
+    return index >= 0 ? index : OTHER_PREFIX_PRECEDENCE.length;
+  };
+  const byRank = rank(prefixA) - rank(prefixB);
+  if (byRank !== 0) {
+    return byRank;
+  }
+  if (prefixA !== prefixB) {
+    return prefixA < prefixB ? -1 : 1;
+  }
+  const lowerA = a.toLowerCase();
+  const lowerB = b.toLowerCase();
+  return lowerA < lowerB ? -1 : (lowerA > lowerB ? 1 : 0);
 }
 
 module.exports = CloudRequestEngine;
