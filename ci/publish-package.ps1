@@ -69,7 +69,9 @@ function Test-Published([string]$Name, [string]$Version) {
 # list the commits that touched the package's folders since its last release.
 $packages = @(Get-NodePackages $RepoName)
 foreach ($release in $plan) {
-    $tarball = $tarballs[$release.Name]
+    # The full path, because npm reads a relative one such as
+    # 'package/name.tgz' as a GitHub repository.
+    $tarball = (Resolve-Path $tarballs[$release.Name]).Path
     $tag = "$($release.Name)/$($release.Version)"
 
     if (Test-Published $release.Name $release.Version) {
