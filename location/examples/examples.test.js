@@ -81,17 +81,15 @@ const expectLines = (file, lines) => {
   });
 };
 
-describe('location examples', () => {
-  test('getting started', () => {
-    expectLines('gettingStarted.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
-  }, TIMEOUT_MS * 2);
+test('getting started', () => {
+  expectLines('gettingStarted.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);
 
-  test('combining services', () => {
-    expectLines('combiningServices.js',
-      hasKey ? [COUNTRY, MOBILE] : [NEEDS_KEY, NEEDS_ISMOBILE]);
-  }, TIMEOUT_MS * 2);
+test('combining services', () => {
+  expectLines('combiningServices.js',
+    hasKey ? [COUNTRY, MOBILE] : [NEEDS_KEY, NEEDS_ISMOBILE]);
+}, TIMEOUT_MS * 2);
 
-  test('configure from file', () => {
-    expectLines('configureFromFile.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
-  }, TIMEOUT_MS * 2);
-});
+test('configure from file', () => {
+  expectLines('configureFromFile.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);

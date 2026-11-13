@@ -56,8 +56,10 @@ Which country is the location [51.458048,-0.9822207999999999] in? United Kingdom
 const PipelineBuilder = require('fiftyone.pipeline.core').PipelineBuilder;
 
 const fs = require('fs');
+const path = require('path');
 
-const configFile = fs.readFileSync(__dirname + '/51d.json');
+const configPath = path.join(__dirname, '51d.json');
+const configFile = fs.readFileSync(configPath);
 
 const config = JSON.parse(configFile);
 let resourceKeySet = true;
@@ -97,7 +99,7 @@ if (resourceKeySet) {
   if (resourceKeySetFromFile) {
     // Create a new pipeline from the supplied config file.
     pipeline = new PipelineBuilder()
-      .buildFromConfigurationFile(__dirname + '/51d.json');
+      .buildFromConfigurationFile(configPath);
   } else {
     // Create a new pipeline from the config object.
     pipeline = new PipelineBuilder().buildFromConfiguration(config);
