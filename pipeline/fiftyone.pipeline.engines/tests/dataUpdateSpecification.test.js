@@ -97,14 +97,18 @@ const stop = (server) => {
   server.close();
 };
 
-// Answers each request with the start of a file that never arrives in full.
+// Answers each request with the start of a file that never arrives in full,
+// and keeps the server's end of each connection.
 const serveCutShort = () => new Promise((resolve) => {
+  const sockets = [];
   const server = http.createServer((request, response) => {
+    sockets.push(request.socket);
     response.writeHead(200, { 'content-length': '1000' });
     response.write('version');
   });
   server.listen(0, '127.0.0.1', () => resolve({
     server,
+    sockets,
     url: 'http://127.0.0.1:' + server.address().port + '/datafile'
   }));
 });
@@ -579,6 +583,9 @@ describe('log messages', () => {
       expect(cut).toBe(true);
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([accessError(remote.url)]);
+      // The cut comes before the service opens its part file, and the part
+      // file is gone by the time the update is reported.
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
       responded.mockRestore();
       stop(remote.server);
@@ -938,35 +945,39 @@ describe('every update reports one status', () => {
   // and schedule the next check.
   test('a connection reset part way through the download is reported ' +
     'once and schedules one check', async () => {
-    const server = http.createServer((request, response) => {
-      response.writeHead(200, { 'content-length': '1000' });
-      response.write('version');
-      setTimeout(() => request.socket.resetAndDestroy(), 50);
+    const remote = await serveCutShort();
+    let closed;
+    const responded = whenResponded((response) => {
+      closed = new Promise((resolve) => response.once('close', resolve));
+      remote.sockets[0].resetAndDestroy();
     });
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     try {
       const { service, logs } = loggingService();
       const dataFile = standInDataFile({
-        updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+        updateUrl: remote.url,
         tempDataDirectory: folder,
         path: file
       });
       const checks = jest.spyOn(service, 'checkNextUpdate');
       const seen = record(service, dataFile);
+      const done = completed(service);
       service.updateDataFile(dataFile);
-      await sleep(500);
+      await done;
+      // The update is reported after the request has failed and the
+      // response has closed, so no handler is left that could report it
+      // again.
+      expect(closed).toBeDefined();
+      await closed;
       expect(seen).toEqual([
         { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
       ]);
       expect(checks).toHaveBeenCalledTimes(1);
-      // A reset that comes before the response arrives fails the request
-      // instead, which is the same error, so the test does not depend on
-      // which comes first.
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
       expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
-      stop(server);
+      responded.mockRestore();
+      stop(remote.server);
     }
   });
 
