@@ -1,0 +1,92 @@
+name: Derived properties check (throwaway)
+
+on:
+  push:
+    branches:
+      - 'tmp/ipnp-80-**'
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 22 }
+          - { os: ubuntu-latest, node: 24 }
+          - { os: windows-latest, node: 24 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the submodules the pipeline tests read
+        shell: bash
+        run: git submodule update --init --depth 1 pipeline/fiftyone.pipeline.derivedproperty/derived-properties pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Lint the package
+        run: npx eslint pipeline/fiftyone.pipeline.derivedproperty --ext .js
+      - name: Test the package
+        run: node node_modules/jest/bin/jest.js --ci --verbose pipeline/fiftyone.pipeline.derivedproperty
+
+  package:
+    name: Pack and install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the derived-properties submodule
+        run: git submodule update --init --depth 1 pipeline/fiftyone.pipeline.derivedproperty/derived-properties
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Pack the package as it would be published
+        working-directory: pipeline/fiftyone.pipeline.derivedproperty
+        run: |
+          cp remote_package.json package.json
+          npm pack --pack-destination "$RUNNER_TEMP"
+          tar -tzf "$RUNNER_TEMP"/fiftyone.pipeline.derivedproperty-*.tgz | sort
+      - name: Install the packed package into an empty project and run it
+        run: |
+          mkdir "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/fiftyone.pipeline.derivedproperty-*.tgz
+          npm ls
+          cat > check.js <<'EOF'
+          const core = require('fiftyone.pipeline.core');
+          const {
+            DerivedPropertyElementBuilder,
+            builtInScriptNames
+          } = require('fiftyone.pipeline.derivedproperty');
+          console.log('Built in scripts: ' + builtInScriptNames().join(', '));
+          const every = new DerivedPropertyElementBuilder();
+          for (const name of builtInScriptNames()) every.addBuiltInScript(name);
+          for (const script of every.build().scripts) {
+            console.log(`${script.name} ${script.version} from ${script.source}`);
+          }
+          class Country extends core.FlowElement {
+            constructor () {
+              super({ dataKey: 'ip' });
+              this.properties = { CountryCode: { name: 'CountryCode' } };
+            }
+            processInternal (flowData) {
+              flowData.setElementData(new core.ElementDataDictionary({
+                flowElement: this,
+                contents: { CountryCode: new core.AspectPropertyValue(null, 'FR') }
+              }));
+            }
+          }
+          const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
+            .add(new Country())
+            .add(new DerivedPropertyElementBuilder().addBuiltInScript('IsGdpr').build())
+            .build();
+          const flowData = pipeline.createFlowData();
+          flowData.process().then(() => {
+            const value = flowData.get('derived').get('IsGdpr').value;
+            console.log('IsGdpr for FR: ' + value);
+            if (value !== true) process.exit(1);
+          });
+          EOF
+          node check.js
