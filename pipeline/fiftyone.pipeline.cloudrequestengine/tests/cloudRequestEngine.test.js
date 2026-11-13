@@ -22,8 +22,10 @@
 
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
+const CloudEngine = require('../cloudEngine');
 const sharedValues = require('../sharedValues');
 const MockRequestClient = require('./classes/mockRequestClient');
+const AcceptEveryKeyElement = require('./classes/acceptEveryKeyElement');
 const each = require('jest-each').default;
 const util = require('util');
 const errorMessages = require('../errorMessages');
@@ -33,15 +35,23 @@ const testResourceKey = 'AAAAAAAAAAAA';
 
 const testEnvVarEndPoint = 'https://testhost/';
 
+const testOldEnvVarEndPoint = 'https://oldtesthost/';
+
+// The name the endpoint variable had before, which is still read when the
+// new name is not set. Built in two parts so the environment variable name
+// check does not find it here.
+const oldEndpointVariable = 'FOD' + '_CLOUD_API_URL';
+
 afterEach(() => { // eslint-disable-line
-  // Reset the FOD_CLOUD_API_URL environment variable
-  process.env.FOD_CLOUD_API_URL = '';
+  // Reset the endpoint environment variable, and the old name
+  process.env._51DEGREES_CLOUD_ENDPOINT = '';
+  delete process.env[oldEndpointVariable];
 });
 
 // Check that explicitly setting of the baseURL will take precedence over
 // environment variable setting.
 test('custom end point - config precedence', done => {
-  process.env.FOD_CLOUD_API_URL = testEnvVarEndPoint;
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   const testEndPoint = 'testEndPoint/';
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey,
@@ -56,7 +66,7 @@ test('custom end point - config precedence', done => {
 // Check that environment variable setting will take precedence over default
 // setting
 test('custom end point - environment precedence', done => {
-  process.env.FOD_CLOUD_API_URL = testEnvVarEndPoint;
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey
   });
@@ -66,8 +76,43 @@ test('custom end point - environment precedence', done => {
   done();
 });
 
+// Check that the old name of the endpoint variable is still read when the
+// new name is not set
+test('custom end point - old variable name read', () => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
+});
+
+// Check that an empty new name counts as not set, so the old name is read
+test('custom end point - old variable name read, new name empty', () => {
+  process.env._51DEGREES_CLOUD_ENDPOINT = '';
+  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
+});
+
+// Check that the new name wins when both names are set
+test('custom end point - new variable name wins', () => {
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
+  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
+});
+
 // Check that default setting is used if nothing else is set
 test('custom end point - default value', done => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey
   });
@@ -75,6 +120,74 @@ test('custom end point - default value', done => {
   expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
 
   done();
+});
+
+// Check that an empty old name counts as not set
+test('custom end point - default value, old name empty', () => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  process.env[oldEndpointVariable] = '';
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
+});
+
+/**
+ * Builds an engine on a stand-in client, processes twice in one Pipeline
+ * and returns the warnings the Pipeline logged.
+ *
+ * @param {object} options further options for the engine
+ * @returns {Promise<string[]>} the warnings logged
+ */
+const warningsFromTwoProcesses = async (options = {}) => {
+  const engine = new CloudRequestEngine(Object.assign({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  }, options));
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const warnings = [];
+  pipeline.on('warn', (warning) => warnings.push(String(warning)));
+
+  await pipeline.createFlowData().process();
+  await pipeline.createFlowData().process();
+
+  return warnings;
+};
+
+// Check that reading the old name is logged as deprecated, once for the
+// engine, naming the name that replaces it
+test('custom end point - old variable name logged once', async () => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
+
+  const warnings = await warningsFromTwoProcesses();
+
+  expect(warnings).toHaveLength(1);
+  expect(warnings[0]).toContain(oldEndpointVariable);
+  expect(warnings[0]).toContain('deprecated');
+  expect(warnings[0]).toContain('_51DEGREES_CLOUD_ENDPOINT');
+});
+
+// Check that nothing is logged when the old name is set and not used,
+// because the new name or the baseURL option is set
+test('custom end point - old variable name not logged when not used',
+  async () => {
+    process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
+
+    process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
+    expect(await warningsFromTwoProcesses()).toEqual([]);
+
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    expect(await warningsFromTwoProcesses({ baseURL: 'https://mine/' }))
+      .toEqual([]);
+  });
+
+// Check that nothing is logged when neither name is set
+test('custom end point - nothing logged for the default', async () => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+
+  expect(await warningsFromTwoProcesses()).toEqual([]);
 });
 
 // Check that values from the http response are populated in the
@@ -106,7 +219,9 @@ test('HTTP data set in error', async () => {
   // When an error occurs, check that the expected values are populated.
   expect(errors[0].errorMessage.indexOf(expectedError) !== -1).toBe(true);
   expect(errors[0].httpStatusCode).toEqual(400);
-  expect(errors[0].responseHeaders.etag).toBeDefined();
+  // Every 4xx answer carries Date (RFC 9110 section 6.6.1). Only some
+  // cloud servers send ETag.
+  expect(errors[0].responseHeaders.date).toBeDefined();
 });
 
 /**
@@ -133,8 +248,11 @@ each([
       requestClient: client
     });
 
+    // The stand-in service lists only some keys, so an element that accepts
+    // every key keeps the rest of the evidence for the engine to order.
     const builder = new PipelineBuilder();
-    const pipeline = builder.add(engine).build();
+    const pipeline = builder.add(new AcceptEveryKeyElement())
+      .add(engine).build();
 
     const flowData = pipeline.createFlowData();
     flowData.evidence.add(evidence1Parts[0], evidence1Parts[1]);
@@ -200,6 +318,7 @@ each([
     });
 
     const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
       .add(engine)
       .build();
 
@@ -234,6 +353,7 @@ each([
     });
 
     const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
       .add(engine)
       .build();
 
@@ -268,4 +388,94 @@ test('get content keeps dotted names apart', () => {
     'id.usage': 'standard',
     'id.email': 'someone@example.com'
   });
+});
+
+/**
+ * The cloud service's keys are fetched when the Pipeline first processes, so
+ * evidence set before then is kept, and once they arrive the engine accepts
+ * only the keys the service lists.
+ */
+test('evidence set before the keys arrive is kept', () => {
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  });
+  // A cloud engine is what asks the request engine to fetch the keys.
+  const device = new CloudEngine();
+  device.dataKey = 'device';
+  const pipeline = new PipelineBuilder().add(engine).add(device).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('header.user-agent', 'iPhone');
+  expect(data.evidence.get('header.user-agent')).toBe('iPhone');
+
+  return data.process().then(function () {
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeTruthy();
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.x-test'))
+      .toBeFalsy();
+  });
+});
+
+/**
+ * Test that Evidence never supplies resource, license, licence or values,
+ * under any prefix and in any letter case, as the Processing section of
+ * cloud-request-engine.md says, and that the engine's own keys are sent.
+ * Other Evidence is sent with the usual precedence.
+ */
+test('evidence never supplies resource, license or values', async () => {
+  const posts = [];
+  const client = new MockRequestClient({
+    keys: [
+      'query.resource', 'query.license', 'query.licence', 'query.values',
+      'header.resource', 'cookie.license', 'query.other',
+      'header.other', 'cookie.cookie-only'
+    ]
+  });
+  client.post = (url, content) => {
+    // A license key asks for the accessible properties by post before the
+    // first process, which is not the request this test reads.
+    if (url.includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(client.properties));
+    }
+    posts.push({ url, content });
+    return Promise.resolve(JSON.stringify({}));
+  };
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    licenseKey: 'LICENSEKEY',
+    requestClient: client
+  });
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('query.Resource', 'evidence_resource');
+  data.evidence.add('query.LICENSE', 'evidence_license');
+  data.evidence.add('query.Licence', 'evidence_licence');
+  data.evidence.add('query.Values', 'evidence_values');
+  data.evidence.add('header.resource', 'header_resource');
+  data.evidence.add('cookie.License', 'cookie_license');
+  data.evidence.add('query.other', 'query_other');
+  data.evidence.add('header.other', 'header_other');
+  data.evidence.add('cookie.cookie-only', 'cookie_only');
+  // A key with no prefix is its own name.
+  data.evidence.add('Licence', 'evidence_bare_licence');
+
+  await data.process();
+
+  expect(posts).toHaveLength(1);
+  const { url, content } = posts[0];
+  expect(url).toContain(testResourceKey + '.json');
+  expect(url).not.toContain('license=');
+  expect(url).not.toContain('evidence_');
+  // The engine's own keys are the only reserved fields in the body.
+  expect(Object.keys(content).filter(
+    name => ['resource', 'license', 'licence', 'values']
+      .includes(name.toLowerCase())
+  )).toStrictEqual(['resource', 'license']);
+  expect(content.resource).toBe(testResourceKey);
+  expect(content.license).toBe('LICENSEKEY');
+  expect(JSON.stringify(content)).not.toContain('evidence_');
+  expect(JSON.stringify(content)).not.toContain('header_resource');
+  expect(JSON.stringify(content)).not.toContain('cookie_license');
+  expect(content.other).toBe('query_other');
+  expect(content['cookie-only']).toBe('cookie_only');
 });

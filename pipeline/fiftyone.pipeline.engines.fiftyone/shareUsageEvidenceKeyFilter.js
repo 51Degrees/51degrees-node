@@ -20,36 +20,68 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const EvidenceKeyFilter = require('fiftyone.pipeline.core').EvidenceKeyFilter;
+const core = require('fiftyone.pipeline.core');
+
+const EvidenceKeyFilter = core.EvidenceKeyFilter;
+
+// The key of the web request the web integration adds to the evidence.
+const HTTP_REQUEST_KEY = core.Constants.evidenceHttpRequest;
+
+// Cookies, session values and query string parameters whose names start with
+// this are the ones 51Degrees sets, and are shared.
+const FIFTYONE_PREFIX = '51d_';
+
+// Evidence that is never shared, whatever the settings, matched as the whole
+// key or after a '.'. 'id.email' and 'id.salt' are a raw email address and the
+// salt used to make hashed email identifiers. 'request-query' is the whole
+// query string, which would undo the rules for its parameters. 'request-path'
+// would make each page a visitor opens look like a new session to the tracker.
+// 'header.cookie' is the Cookie header, which carries every cookie, and the
+// cookies that are shared are shared as their own 'cookie.' evidence.
+const NEVER_SHARED_KEYS = [
+  'id.email', 'id.salt', 'request-query', 'request-path', 'header.cookie'
+];
 
 /**
- * The ShareUsageEvidenceKeyFilter filters out all evidence
- * not needed by the 51Degrees ShareUsage service.
- * It allows for a specific whitelist of query strings,
- * a blacklist of headers and a specific cookie used for session information
+ * The ShareUsageEvidenceKeyFilter decides which evidence the 51Degrees
+ * ShareUsage service is sent. Headers are shared unless they are blocked,
+ * cookies and session values only when their names start with 51D_, and
+ * query string and form parameters only when their names start with 51D_ or
+ * are on the list to share. Any other evidence is shared.
  */
 class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
   /**
    * Constructor for ShareUsageEvidenceKeyFilter
    *
    * @param {object} options options for filter
-   * @param {string} options.cookie cookie used for session data
-   * @param {Array} options.queryWhitelist whitelist of query string data
-   * @param {Array} options.headerBlacklist blacklist of headers to remove
+   * @param {string} options.cookie the name of the cookie that identifies
+   * the session
+   * @param {Array<string>|null} options.queryWhitelist query string and
+   * form parameters to share as well as those starting 51D_, or null to
+   * share every parameter
+   * @param {Array<string>} options.headerBlacklist headers not to share
+   * @param {boolean} options.includeSession whether the session cookie is
+   * included
+   * @param {boolean} options.shareAll whether all evidence is shared, apart
+   * from the evidence that is never shared
    */
-  constructor ({ cookie, queryWhitelist = [], headerBlacklist = [] }) {
+  constructor ({
+    cookie,
+    queryWhitelist = [],
+    headerBlacklist = [],
+    includeSession = false,
+    shareAll = false
+  } = {}) {
     super(...arguments);
 
-    this.includedQueryStringParams = queryWhitelist;
-    this.blockedHttpHeaders = headerBlacklist;
-    this.cookie = cookie;
-    if (!cookie &&
-      (!queryWhitelist || queryWhitelist.length === 0) &&
-      (!headerBlacklist || headerBlacklist.length === 0)) {
-      this.shareAll = true;
-    } else {
-      this.shareAll = false;
-    }
+    this.includedQueryStringParams = queryWhitelist === null
+      ? null
+      : queryWhitelist.map(parameter => parameter.toLowerCase());
+    this.blockedHttpHeaders = (headerBlacklist || [])
+      .map(header => header.toLowerCase());
+    this.cookie = cookie ? cookie.toLowerCase() : undefined;
+    this.includeSession = includeSession;
+    this.shareAll = shareAll;
   }
 
   /**
@@ -59,42 +91,58 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
    * @returns {boolean} whether to keep the evidence
    **/
   filterEvidenceKey (key) {
-    const prefix = key.toLowerCase().split('.')[0];
-    const suffix = key.toLowerCase().split('.')[1];
+    const lowerKey = key.toLowerCase();
 
-    let result = this.shareAll;
-
-    if (!this.shareAll) {
-      if (prefix === 'header') {
-        // Add the header to the list if the header name does not
-        // appear in the list of blocked headers.
-        result = this.blockedHttpHeaders
-          .includes(suffix) === false;
-      } else if (prefix === 'cookie') {
-        // Only add cookies that start with the 51Degrees cookie
-        // prefix.
-        result = suffix.indexOf('51d_') === 0 ||
-          (this.includeSession && suffix === this.cookie);
-      } else if (prefix === 'session') {
-        // Only add session values that start with the 51Degrees
-        // cookie prefix.
-        result = suffix.indexOf('51d_') === 0;
-      } else if (prefix === 'query') {
-        // If no query string parameter filter was specified
-        // then share all of them.
-        // Otherwise, only include query string parameters that
-        // start with 51d_ or that have been specified in
-        // the constructor.
-        result = this.includedQueryStringParams === null ||
-          suffix.indexOf('51d_') === 0 ||
-            this.includedQueryStringParams.includes(suffix);
-      } else {
-        // Add anything that is not a cookie, header, session
-        // variable or query string parameter.
-        result = true;
-      }
+    if (NEVER_SHARED_KEYS.some(neverShared =>
+      lowerKey === neverShared || lowerKey.endsWith('.' + neverShared))) {
+      return false;
     }
-    return result;
+
+    // The web request is read for its values and never shared itself.
+    if (lowerKey === HTTP_REQUEST_KEY) {
+      return false;
+    }
+
+    if (this.shareAll) {
+      return true;
+    }
+
+    // The prefix is everything before the first dot and the field
+    // everything after it, so a field can itself contain dots.
+    const separator = lowerKey.indexOf('.');
+    if (separator < 0) {
+      return true;
+    }
+    const prefix = lowerKey.substring(0, separator);
+    const field = lowerKey.substring(separator + 1);
+
+    if (prefix === 'header') {
+      // Add the header to the list if the header name does not
+      // appear in the list of blocked headers.
+      return this.blockedHttpHeaders.includes(field) === false;
+    }
+    if (prefix === 'cookie') {
+      // Only add cookies that start with the 51Degrees cookie
+      // prefix.
+      return field.startsWith(FIFTYONE_PREFIX) ||
+        (this.includeSession && field === this.cookie);
+    }
+    if (prefix === 'session') {
+      // Only add session values that start with the 51Degrees
+      // cookie prefix.
+      return field.startsWith(FIFTYONE_PREFIX);
+    }
+    if (prefix === 'query') {
+      // If no query string parameter list was given then share all of
+      // them. Otherwise, only include query string parameters that
+      // start with 51d_ or that are in the list.
+      return this.includedQueryStringParams === null ||
+        field.startsWith(FIFTYONE_PREFIX) ||
+        this.includedQueryStringParams.includes(field);
+    }
+    // Add anything that is not a cookie, header, session
+    // variable or query string parameter.
+    return true;
   }
 }
 

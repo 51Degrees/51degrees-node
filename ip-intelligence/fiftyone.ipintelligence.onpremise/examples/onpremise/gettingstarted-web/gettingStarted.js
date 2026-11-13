@@ -79,7 +79,7 @@ const optionsExtension =
 const dataExtension =
   require51('fiftyone.ipintelligence.shared').dataExtension;
 
-const { DATA_FILE_AGE_WARNING, ExampleUtils } =
+const { DATA_FILE_AGE_WARNING, ExampleUtils, NEEDS_ENTERPRISE } =
   require(path.join(__dirname, '/../exampleUtils'));
 
 // Pipeline variable to be used
@@ -92,7 +92,7 @@ const setPipeline = (options) => {
   }
 
   if (!fs.existsSync(dataFilePath)) {
-    // Check the 51DEGREES_IPI_PATH environment variable for an explicit
+    // Check the _51DEGREES_IPI_PATH environment variable for an explicit
     // path, then search the folder hierarchy for the file name.
     const newDataFilePath =
       ExampleUtils.findDataFile(path.basename(dataFilePath));
@@ -104,9 +104,9 @@ const setPipeline = (options) => {
     } else {
       throw 'Failed to find an IP intelligence data file at ' +
         `'${dataFilePath}'. If using the lite file, then make sure the ` +
-        'ip-intelligence-data submodule has been updated by running ' +
-        '\'git submodule update --recursive\'. Otherwise, ensure that the ' +
-        'filename is correct in 51d.json.';
+        'cxx/data submodule has been fetched by running ' +
+        '\'git submodule update --init --recursive\'. Otherwise, ensure ' +
+        'that the filename is correct in 51d.json.';
     }
   }
 
@@ -199,41 +199,60 @@ const server = http.createServer((req, res) => {
       }
     };
 
+    // A property that the data file does not have is shown as needing the
+    // Enterprise data file. The country lists are built from the country
+    // codes, which only the Enterprise data file has, so without them each
+    // list says so in place of every country in alphabetical order.
+    const ipEngine = pipeline.getElement('ip');
+    const countriesNeedEnterprise =
+      !ExampleUtils.hasProperty(ipEngine, 'CountryCodesGeographical');
+    const countries = (list) =>
+      countriesNeedEnterprise ? [NEEDS_ENTERPRISE] : list;
+    const areas = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'areas');
+    const latitude = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'latitude');
+    const longitude = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'longitude');
+    const located = (value) => value === NEEDS_ENTERPRISE ? '' : value;
+
     // Compile a response
     res.end(compiledFunction(
       {
-        countryCodesGeographical: ipList('countrycodesgeographical'),
-        countryCodesPopulation: ipList('countrycodespopulation'),
-        countryCodesGeographicalAll: allList('countrycodesgeographicalall'),
+        countryCodesGeographical: countries(ipList('countrycodesgeographical')),
+        countryCodesPopulation: countries(ipList('countrycodespopulation')),
+        countryCodesGeographicalAll:
+          countries(allList('countrycodesgeographicalall')),
         countryNamesGeographicalAllTranslated:
-          allList('countrynamesgeographicalalltranslated'),
-        countryCodesPopulationAll: allList('countrycodespopulationall'),
+          countries(allList('countrynamesgeographicalalltranslated')),
+        countryCodesPopulationAll:
+          countries(allList('countrycodespopulationall')),
         countryNamesPopulationAllTranslated:
-          allList('countrynamespopulationalltranslated'),
+          countries(allList('countrynamespopulationalltranslated')),
         dataFilePublishedTime: new Date().getTime(),
         dataFileAgeWarning: DATA_FILE_AGE_WARNING,
         evidenceUsed: evidences,
         allEvidence,
         inputIpAddress,
-        areas: dataExtension.getValueHelper(flowData.ip, 'areas'),
-        dataSourceTier: ExampleUtils.getDataTier(pipeline),
-        registeredName: dataExtension.getValueHelper(flowData.ip, 'registeredname'),
-        registeredOwner: dataExtension.getValueHelper(flowData.ip, 'registeredowner'),
-        registeredCountry: dataExtension.getValueHelper(flowData.ip, 'registeredcountry'),
-        ipRangeStart: dataExtension.getValueHelper(flowData.ip, 'iprangestart'),
-        ipRangeEnd: dataExtension.getValueHelper(flowData.ip, 'iprangeend'),
-        country: dataExtension.getValueHelper(flowData.ip, 'country'),
-        countryCode: dataExtension.getValueHelper(flowData.ip, 'countrycode'),
-        countryCode3: dataExtension.getValueHelper(flowData.ip, 'countrycode3'),
-        region: dataExtension.getValueHelper(flowData.ip, 'region'),
-        state: dataExtension.getValueHelper(flowData.ip, 'state'),
-        town: dataExtension.getValueHelper(flowData.ip, 'town'),
-        latitude: dataExtension.getValueHelper(flowData.ip, 'latitude'),
-        longitude: dataExtension.getValueHelper(flowData.ip, 'longitude'),
+        areas,
+        mapAreas: located(areas),
+        freeDataFile: ExampleUtils.isFreeDataFile(ipEngine),
+        registeredName: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredname'),
+        registeredOwner: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredowner'),
+        registeredCountry: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredcountry'),
+        ipRangeStart: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'iprangestart'),
+        ipRangeEnd: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'iprangeend'),
+        country: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'country'),
+        countryCode: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'countrycode'),
+        countryCode3: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'countrycode3'),
+        region: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'region'),
+        state: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'state'),
+        town: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'town'),
+        latitude,
+        longitude,
+        mapLatitude: located(latitude),
+        mapLongitude: located(longitude),
         accuracyRadius:
-          dataExtension.getValueHelper(flowData.ip, 'accuracyradiusmin'),
+          ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'accuracyradiusmin'),
         timeZoneOffset:
-          dataExtension.getValueHelper(flowData.ip, 'timezoneoffset')
+          ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'timezoneoffset')
       })
     );
   });

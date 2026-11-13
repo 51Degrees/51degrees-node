@@ -36,14 +36,14 @@ const http = require('http');
 const fs = require('fs');
 let server;
 
-const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/ip-intelligence-data/51Degrees-LiteV41.ipi');
+const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/ip-intelligence/51Degrees-LiteV41.ipi');
 
 // A small but valid data file for tests that exercise engine
 // construction rather than data content. The updateOnStart test copies
 // its data file to a temporary location, and in CI the file behind the
 // Lite name is a multi gigabyte enterprise file that does not fit in
 // the disk space left on hosted runners.
-const SmallDataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/ip-intelligence-data/51Degrees-IPIV4AsnIpiV41.ipi');
+const SmallDataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
 
 // A single pipeline shared by the tests that only read engine state.
 // Each engine holds a large amount of native memory for the data file,

@@ -36,7 +36,15 @@ const FiftyOneDegreesLocation = require((process.env.directory || __dirname) + '
 // example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
-const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// RESOURCE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_RESOURCE_KEY is unset or empty.
+if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+    'instead.');
+}
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 // We need 'server' to be defined here so that, when this example
 // is executed as part of a unit test, the server can be closed
 // once the test is complete.
@@ -66,6 +74,7 @@ if (myResourceKey.substring(0, 2) === '!!') {
   pipeline.on('error', console.error);
 
   const http = require('http');
+  const core = require('fiftyone.pipeline.core');
 
   server = http.createServer((req, res) => {
     const flowData = pipeline.createFlowData();
@@ -75,14 +84,13 @@ if (myResourceKey.substring(0, 2) === '!!') {
     flowData.evidence.addFromRequest(req);
 
     flowData.process().then(function () {
-      res.statusCode = 200;
-
       if (req.url.startsWith('/json')) {
-        // Return the json to the client.
-        res.setHeader('Content-Type', 'application/json');
-
-        res.end(JSON.stringify(flowData.jsonbundler.json));
+        // Return the json to the client, with the caching headers, and a
+        // 304 to a matching If-None-Match.
+        core.Helpers.writeClientSideResponse(req, res, flowData,
+          'application/json', JSON.stringify(flowData.jsonbundler.json));
       } else {
+        res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
 
         let output = '';

@@ -39,8 +39,8 @@
  * Processing
  * Average [...] lookups per second.
  * Average [...] ms per IP address.
- * registeredname = known : [...]
- * registeredname = unknown : [...]
+ * asnname = known : [...]
+ * asnname = unknown : [...]
  *
  * ```
  *
@@ -75,20 +75,25 @@ parser.add_argument('-df', '--datafile', { help: 'Datafile file name' });
 parser.add_argument('-e', '--evidence', { help: 'Evidence file name' });
 parser.add_argument('-jo', '--jsonoutput', { help: 'JSON output file name' });
 
-// In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data,
-// directory or you may specify another file as a command line parameter.
+// In this example, by default, the free ASN data file needs to be in the
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter. The example
+// measures how fast lookups are rather than what they return, so it uses
+// the ASN data file, which is far smaller than the Lite data file.
 //
-// Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=lite_v_4_1_ipi
-const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+// On a free data file the example ends by saying what the Enterprise data
+// file adds, with a link to ask for a copy.
+const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=enterprise-data-file';
+
 // This file contains IP addresses to use as evidence.
 const EVIDENCE_CSV = 'evidence.csv';
 
 const args = parser.parse_args();
-const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
+const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findDataFile(ASN_V_4_1_IPI);
 const evidenceFile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(EVIDENCE_CSV);
 const jsonoutput = args.jsonoutput;
 
@@ -96,17 +101,17 @@ const jsonoutput = args.jsonoutput;
 const fs = require('fs');
 if (!fs.existsSync(datafile)) {
   console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No data file at '" + datafile + "'");
 }
 
 if (!fs.existsSync(evidenceFile)) {
   console.error('Failed to find an evidence ' +
-      'file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   throw ("No evidence file at '" + evidenceFile + "'");
 }
 
@@ -135,8 +140,12 @@ eventEmitter.on('FinishProcessing', () => {
     'Average ' +
     `${executionTimeInMilliseconds / ipsCount} ` +
     'ms per IP address.');
-  console.log(`registeredname = known : ${nameKnown}`);
-  console.log(`registeredname = unknown : ${nameUnknown}`);
+  console.log(`${nameProperty} = known : ${nameKnown}`);
+  console.log(`${nameProperty} = unknown : ${nameUnknown}`);
+
+  if (ExampleUtils.isFreeDataFile(pipeline.getElement('ip'))) {
+    console.log(ExampleUtils.getEnterpriseOffer(CONTACT_US));
+  }
 
   if (jsonoutput) {
     fs.writeFileSync(jsonoutput, JSON.stringify({
@@ -162,7 +171,7 @@ eventEmitter.on('WarmupFinished', () => {
 const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
   performanceProfile: 'MaxPerformance',
   dataFile: datafile,
-  restrictedProperties: ['registeredname'],
+  restrictedProperties: ['registeredname', 'asnname'],
   autoUpdate: false,
   shareUsage: false,
   addJavaScriptBuilder: false
@@ -171,6 +180,12 @@ const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
 // To monitor the pipeline we can put in listeners for various log events.
 // Valid types are info, debug, warn, error
 pipeline.on('error', console.error);
+
+// The Lite and Enterprise data files have RegisteredName, and the ASN data
+// file has AsnName in its place.
+const nameProperty = ExampleUtils.hasProperty(pipeline.getElement('ip'), 'RegisteredName')
+  ? 'registeredname'
+  : 'asnname';
 
 // Print out the progress report
 const progressBar = '========================================';
@@ -196,9 +211,9 @@ const processIp = async function (ipAddress, warmup) {
   await flowData.process();
 
   // Construct the output line
-  const registeredName = flowData.ip.registeredname;
+  const name = flowData.ip[nameProperty];
 
-  if (registeredName.hasValue) {
+  if (name.hasValue) {
     nameKnown++;
   } else {
     nameUnknown++;

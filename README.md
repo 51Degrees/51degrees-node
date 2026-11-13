@@ -1,17 +1,36 @@
-# 51Degrees Node.js
+# 51Degrees Device Detection and IP Intelligence for Node.js
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=51degrees-node-js "Data rewards the curious") **Node.js packages for Device Detection, IP Intelligence and Location**
+<img src=".github/images/logo.png" alt="51Degrees" title="Data rewards the curious" width="160">
 
-This repository holds the 51Degrees Node.js packages: the Pipeline API,
-Device Detection, IP Intelligence and Location. Each package is still published
-to npm under its own name.
+**Node.js packages for Device Detection, IP Intelligence and Location**
+
+Our User-Agent parser for Node.js supports Device Detection, browser detection, mobile detection, and crawler detection on-premise or in the cloud. IP Intelligence adds IP geolocation, including IP to country data.
+
+It reads User-Agent and User-Agent Client Hints, HTTP request headers that carry browser and device information. For cloud bot detection, Human Confidence reports confidence that a person is viewing the page.
+
+## Install
+
+Each product is a separate npm package. For Device Detection and IP Intelligence, cloud or on-premise:
+
+```
+npm install fiftyone.devicedetection
+npm install fiftyone.ipintelligence
+```
+
+The product guides below list the cloud-only and on-premise-only packages. To work on the source, see [Getting the code](#getting-the-code).
+
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install).
+
+Created from `pipeline-node`, `device-detection-node`, and `location-node`, this repository continues their work.
+
+The folder table and product guides below show where to find usage examples and how to build and test the source.
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
-| Pipeline API | [pipeline/readme.md](pipeline/readme.md) | [Node.js](https://51degrees.com/documentation/apis/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
-| Device Detection | [device-detection/readme.md](device-detection/readme.md) | [Node.js](https://51degrees.com/documentation/apis/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
-| IP Intelligence | [ip-intelligence/readme.md](ip-intelligence/readme.md) | [Node.js](https://51degrees.com/documentation/apis/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
-| Location | [location/README.md](location/README.md) | [Node.js](https://51degrees.com/documentation/apis/location-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
+| Pipeline API | [pipeline/readme.md](pipeline/readme.md) | [Guide](https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-guide) and [Node.js API](https://51degrees.com/documentation/apis/pipeline-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
+| Device Detection | [device-detection/readme.md](device-detection/readme.md) | [Guide](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-guide) and [Node.js API](https://51degrees.com/documentation/apis/device-detection-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
+| IP Intelligence | [ip-intelligence/readme.md](ip-intelligence/readme.md) | [Guide](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-guide) and [Node.js API](https://51degrees.com/documentation/apis/ip-intelligence-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
+| Location | [location/README.md](location/README.md) | [Guide](https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-guide) and [Node.js API](https://51degrees.com/documentation/apis/location-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
 
 ## What is where
 
@@ -21,7 +40,8 @@ to npm under its own name.
 | `device-detection` | The Device Detection packages, `fiftyone.devicedetection*` |
 | `ip-intelligence` | The IP Intelligence packages, `fiftyone.ipintelligence*` |
 | `location` | The `fiftyone.geolocation` package |
-| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code and the data file submodules |
+| `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code |
+| `cxx/data` | The [data](https://github.com/51Degrees/data) submodule of `cxx`, whose `device-detection` and `ip-intelligence` folders hold the data files the tests and examples use |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
 ## Getting the code
@@ -35,9 +55,31 @@ npm install
 `npm install` links every package to the others in this repository through
 npm workspaces, so a change to one package is seen by the rest straight away.
 
-The free Device Detection Lite data file in `cxx/device-detection-data` is
-stored with [Git LFS](https://git-lfs.github.com/). Run `git lfs pull` in that
-folder to fetch it.
+The data files themselves are not stored in a repository. The `cxx/data`
+submodule holds a `.link` file for each free one, where the file goes, and two
+scripts that download them. From the repository root, run
+
+```
+sh cxx/data/get-data-files.sh
+```
+
+or, in PowerShell,
+
+```
+./cxx/data/get-data-files.ps1
+```
+
+They download the Device Detection Lite file, the 20,000 User-Agents and
+evidence records, and the IP Intelligence Lite and ASN files. A file that is
+already there is kept, unless `-u` (`-Update`) asks for a newer one or `-f`
+(`-Force`) downloads it again. An example whose file is missing runs the script
+for that file itself.
+
+An existing clone fetches the data submodule with
+`git submodule update --init --recursive`. Nothing here reads the older
+`cxx/device-detection-data` and `cxx/ip-intelligence-data` folders. Once cxx no
+longer includes them, delete them from an existing clone, because Git leaves a
+removed submodule's folder on disk.
 
 ## Building the native modules
 
@@ -67,9 +109,13 @@ npm run lint
 npm run tsc
 ```
 
-The tests that use the cloud need a resource key, which is read from the
+The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
 the keys and data files its tests use.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md),
+which decides.
 
 ## Regenerating the SWIG wrappers
 
@@ -86,11 +132,25 @@ swig -c++ -javascript -node ipi_node.i
 
 ## History
 
-The repositories `pipeline-node`, `device-detection-node` and `location-node`,
-and the one the IP Intelligence packages came from, were brought in with
+| Earlier repository | What it held |
+| --- | --- |
+| [pipeline-node](https://github.com/51Degrees/pipeline-node) | The Pipeline API |
+| [device-detection-node](https://github.com/51Degrees/device-detection-node) | Device Detection |
+| [location-node](https://github.com/51Degrees/location-node) | Location |
+
+
+The earlier repositories were brought in with
 `git subtree add`, without `--squash`, so commit SHAs match the originals. Use
 `git log --follow` to trace a file back through the import.
 
-## Licence
+## License
 
 [European Union Public Licence v1.2](LICENSE)
+
+## Find out more
+
+- [Device Detection](https://51degrees.com/device-detection?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [IP Intelligence](https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [Bots and humans](https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- [Documentation](https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=find-out-more)
+- https://github.com/51Degrees/51degrees-cxx

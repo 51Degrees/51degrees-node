@@ -43,7 +43,7 @@
  * but it is not yet available for IP intelligence. For now, you can run
  * the onpremise/mixed/gettingstarted-api example to simulate a custom
  * hosted cloud service, and point this example to it by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can then be used for the resource key.
  *
  * Required npm Dependencies:
@@ -102,10 +102,10 @@ const setPipeline = (options) => {
   if (!resourceKey || resourceKey.startsWith('!!')) {
     throw 'No resource key specified in the configuration file ' +
       '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+      'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
       'A resource key with everything this example displays can be ' +
       'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
       'subscription. A free key created at ' +
@@ -172,10 +172,9 @@ const server = http.createServer(async (req, res) => {
     // Answer the client-side script with the results of processing the
     // evidence it posted.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
     return;
   }
@@ -185,10 +184,9 @@ const server = http.createServer(async (req, res) => {
     // carries the results of this request's detection, so it is built per
     // request rather than cached.
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/x-javascript');
-
-      res.end(flowData.javascriptbuilder.javascript);
+      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
     return;
   }

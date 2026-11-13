@@ -54,19 +54,23 @@ const fs = require('fs');
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const { ExampleUtils, DATA_FILE_PATH_ENV_VAR } =
+const { ExampleUtils, DATA_FILE_PATH_VARIABLE } =
   require(path.join(__dirname, '/../exampleUtils'));
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/device-detection-data,
+// cxx/data/device-detection folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=lite_v_4_1_hash
+// a small number of Properties. On a free data file the example ends
+// by saying what the Enterprise data file adds, with a link to ask for a
+// copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=enterprise-data-file';
 
 // Here we make a function that gets a userAgent as evidence and
 // uses the Device Detection Engine to detect if it is a mobile or not
@@ -161,7 +165,7 @@ const findDataFile = function (dataFile, output) {
   // path, then search the folder hierarchy for the default file name.
   if (dataFile === null) {
     output.write('No filename specified. Checking the ' +
-      `'${DATA_FILE_PATH_ENV_VAR}' environment variable, then searching ` +
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable, then searching ` +
       `for the default '${LITE_V_4_1_HASH}'\n`);
     dataFile = ExampleUtils.findDataFile(LITE_V_4_1_HASH);
   } else if (path.isAbsolute(dataFile) === false) {
@@ -171,8 +175,8 @@ const findDataFile = function (dataFile, output) {
 
   if (dataFile === null || typeof dataFile === 'undefined' || fs.existsSync(dataFile) === false) {
     output.write(`Failed to find a device detection data file. If using the default 'lite'
- data file, make sure that git lfs is installed and that the device-detection-data
- submodule has been updated by running 'git submodule update --recursive'.\n`);
+ data file, make sure that the cxx/data submodule has been fetched by running
+ 'git submodule update --init --recursive'.\n`);
     throw new Error(`Data file '${dataFile}' not found`);
   }
 
@@ -185,7 +189,7 @@ const run = async function (dataFile, output, evidenceList) {
   // In this example, we use the DeviceDetectionOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=pipeline
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile,
     // Prefer low memory profile where all data streamed from disk on-demand.
@@ -202,16 +206,16 @@ const run = async function (dataFile, output, evidenceList) {
     // properties here, we will only see those properties, along with the match metric properties
     // in the output.
     //
-    // If using the full on-premise data file the hardwarename property will be present in the
-    // data file. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=restrictedproperties
+    // The hardwarename property is only in the Enterprise data file, so with the free Lite
+    // data file it is left out. Contact us for a copy at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=restrictedproperties
     //
     // The 'ismobile' and 'hardwarename' properties are both part of the 'hardware' component.
     // The remaining properties are from match metrics.
     // Uncomment 'browsername' to include Browser component as well. This can be seen by looking
     // for the browser profile ID in the device ID value.
     restrictedProperties: ['ismobile', 'hardwarename', 'userAgents', 'deviceID', 'difference', 'method', 'matchedNodes', 'drift', 'iterations'], /* , 'browsername' */
-    // We want to show the matching evidence characters as part of this example, so we have to set
-    // this flag to true.
+    // This example shows the matching evidence characters, which are recorded by default. Set
+    // this to false where the 'userAgents' property is not needed.
     updateMatchedUserAgent: true
   }).build();
 
@@ -224,6 +228,10 @@ const run = async function (dataFile, output, evidenceList) {
   // carry out some sample detections
   for (const evidenceValues of evidenceList) {
     await displayMatchMetrics(pipeline, output, evidenceValues);
+  }
+
+  if (ExampleUtils.isLiteDataFile(pipeline.getElement('device'))) {
+    output.write(`${ExampleUtils.getEnterpriseOffer(CONTACT_US)}\n`);
   }
 };
 

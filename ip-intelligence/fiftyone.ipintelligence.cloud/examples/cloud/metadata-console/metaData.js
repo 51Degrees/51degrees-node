@@ -114,10 +114,10 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(resourceKey, process.stdout);
   } else {
     console.error('No resource key specified on the command line or in the ' +
-    `the environment variable '${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. ` +
+    `the environment variable '${ExampleUtils.RESOURCE_KEY_VARIABLE}'. ` +
     'The 51Degrees cloud service is accessed using a \'ResourceKey\'. ' +
     'For more information ' +
-    'see https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required. ' +
+    'see https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required. ' +
     'A resource key with everything this example displays can be ' +
     'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required with a paid ' +
     'subscription. A free key created at ' +

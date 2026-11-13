@@ -193,9 +193,11 @@ test('file watcher keeps watching after a failed refresh', async () => {
     fs.writeFileSync(file, 'unusable');
     await failed;
     expect(dataFile.data).toBe('version 1');
-    expect(logs.length).toBeGreaterThan(0);
-    expect(logs[0].level).toBe('error');
-    expect(logs[0].message.message).toBe('The data file cannot be used.');
+    const error = logs.find((log) => log.level === 'error');
+    expect(error.message).toBe('Error during check for data update. Error detail: ' +
+      'An error occurred when applying a data ' +
+      "update to engine 'testEngine' after 1 tries. Error detail: The data " +
+      'file cannot be used.');
     // The test resumes before the watcher has finished with the first
     // change, and on macOS a change made then is never reported.
     await sleep(500);
@@ -237,7 +239,7 @@ test('file watcher with no error listener writes a failed refresh to the ' +
     await failed;
     expect(dataFile.data).toBe('version 1');
     expect(consoleError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'The data file cannot be used.' }));
+      expect.stringContaining('Error detail: The data file cannot be used.'));
     // As in the test above.
     await sleep(500);
 
@@ -279,7 +281,8 @@ test('file watcher with an error listener reports a failed refresh to it',
         AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
       fs.writeFileSync(file, 'unusable');
       await failed;
-      expect(heard[0].message).toBe('The data file cannot be used.');
+      expect(heard[0]).toContain(
+        'Error detail: The data file cannot be used.');
       expect(consoleError).not.toHaveBeenCalled();
     } finally {
       // The folder is left in place, as in the tests above.
@@ -290,15 +293,18 @@ test('file watcher with an error listener reports a failed refresh to it',
   });
 
 /**
- * With a pipeline that has no 'error' listener, a download the server refuses
- * is written to the console rather than thrown.
+ * A download the server refuses is logged as an error, in the words the
+ * Errors table of the data update page of the specification gives, and
+ * nothing is thrown.
  */
-test('update route with no error listener writes a refused download to the ' +
-  'console', async () => {
+test('update route reports a refused download as an error', async () => {
   const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
   const { folder, file } = newDataFile('update-');
   const server = await serve(403, 'refused');
-  const updateService = new DataFileUpdateService(new Pipeline([]));
+  const pipeline = new Pipeline([]);
+  const errors = [];
+  pipeline.on('error', (message) => errors.push(message));
+  const updateService = new DataFileUpdateService(pipeline);
   const dataFile = downloadFrom(standInDataFile(file), server, folder);
 
   try {
@@ -306,8 +312,10 @@ test('update route with no error listener writes a refused download to the ' +
       AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
     updateService.updateDataFile(dataFile);
     await refused;
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('Access denied'));
+    expect(errors.some((message) => message.includes(
+      "Access denied to data update service at '" + dataFile.updateUrl +
+      "' for engine 'testEngine'"))).toBe(true);
+    expect(consoleError).not.toHaveBeenCalled();
     expect(dataFile.updating).toBe(false);
   } finally {
     stop(server);
@@ -339,7 +347,7 @@ test('update route with no error listener writes a failed refresh to the ' +
     expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED]);
     expect(dataFile.data).toBe('version 1');
     expect(consoleError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'The data file cannot be used.' }));
+      expect.stringContaining('Error detail: The data file cannot be used.'));
   } finally {
     stop(server);
     fs.rmSync(folder, { recursive: true, force: true });
@@ -371,7 +379,8 @@ test('update route reports a failed refresh with no success after it',
       await failed;
       await downloadRemoved(folder);
       expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED]);
-      expect(heard[0].message).toBe('The data file cannot be used.');
+      expect(heard[0]).toContain(
+        'Error detail: The data file cannot be used.');
       expect(consoleError).not.toHaveBeenCalled();
     } finally {
       stop(server);
@@ -402,3 +411,55 @@ test('update route reports a good file as a success', async () => {
     fs.rmSync(folder, { recursive: true, force: true });
   }
 });
+
+// Registers, with a new update service, a data file that is watched for
+// changes and one that waits about an hour for its next update, and keeps
+// none of them. The wait is on fake timers, so that it never runs and does not
+// keep the process alive.
+const registerAndDrop = (file, registry) => {
+  const updateService = new DataFileUpdateService({ log: function () {} });
+  const watched = Object.assign(standInDataFile(file),
+    { fileSystemWatcher: true });
+  const scheduled = Object.assign(standInDataFile(file), {
+    autoUpdate: true,
+    pollingInterval: 60,
+    updateTimeMaximumRandomisation: 1,
+    getNextUpdate: () => new Date()
+  });
+  jest.useFakeTimers();
+  try {
+    updateService.registerDataFile(watched);
+    updateService.registerDataFile(scheduled);
+  } finally {
+    jest.useRealTimers();
+  }
+  registry.register(watched, 'watched');
+  registry.register(scheduled, 'scheduled');
+};
+
+/**
+ * Neither the file watcher nor the timer for the next update keeps a data file
+ * alive once the application has dropped it and its update service, because
+ * a data file keeps its engine, and so the engine's native memory, alive.
+ * Needs node --expose-gc, which the unit-test script passes.
+ */
+test('watched and scheduled data files can be collected once dropped',
+  async () => {
+    const { file } = newDataFile('collected-');
+    let collected = 0;
+    const registry = new FinalizationRegistry(() => { collected++; });
+
+    registerAndDrop(file, registry);
+    // The count changes in the registry's callback, not in the loop, so it
+    // is checked in the body rather than in the condition.
+    for (let i = 0; i < 20; i++) {
+      if (collected === 2) {
+        break;
+      }
+      global.gc();
+      await sleep(50);
+    }
+
+    // The folder is left in place, as in the watcher tests above.
+    expect(collected).toBe(2);
+  });

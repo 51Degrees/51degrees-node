@@ -67,14 +67,18 @@ const DeviceDetectionOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/device-detection-data,
+// cxx/data/device-detection folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=lite_v_4_1_hash
+// a small number of Properties. On a free data file the example ends
+// by saying what the Enterprise data file adds, with a link to ask for a
+// copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=enterprise-data-file';
 
 const truncateToNl = function (string) {
   const lines = string.split('\n');
@@ -170,15 +174,15 @@ const run = async function (dataFile, output) {
   // In this example, we use the DeviceDetectionOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=pipeline
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=pipeline
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile,
     // We use the low memory profile as its performance is
     // sufficient for this example. See the documentation for
     // more detail on this and other configuration options:
     // https://51degrees.com/documentation/_device_detection__features__performance_options.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=performanceprofile
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=performanceprofile
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=performanceprofile
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=performanceprofile
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=performanceprofile
     performanceProfile: 'LowMemory',
     // inhibit sharing usage for this test, usually this
     // should be set 'true'
@@ -195,12 +199,16 @@ const run = async function (dataFile, output) {
   await outputEvidenceKeyDetails(device, output);
 
   ExampleUtils.checkDataFile(pipeline, dataFile);
+
+  if (ExampleUtils.isLiteDataFile(device)) {
+    output.write(`\n${ExampleUtils.getEnterpriseOffer(CONTACT_US)}\n`);
+  }
 };
 
 // Don't run the server if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
-  // Use the supplied path for the data file, the '51DEGREES_DD_PATH'
+  // Use the supplied path for the data file, the '_51DEGREES_DD_PATH'
   // environment variable, or find the lite file that is included
   // in the repository.
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
@@ -209,9 +217,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(dataFile, process.stdout);
   } else {
     console.error('Failed to find a device detection ' +
-      'data file. Make sure the device-detection-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`. By default, the \'lite\' file ' +
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`. By default, the \'lite\' file ' +
       'included with this code will be used. A different file can be ' +
       'specified by supplying the full path as a command line argument');
   }

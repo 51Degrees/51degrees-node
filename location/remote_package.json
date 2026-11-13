@@ -48,6 +48,7 @@
     "typescript": "^5.4.5"
   },
   "license": "EUPL-1.2",
+  "homepage": "https://51degrees.com/geolocation?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation&utm_term=homepage",
   "bugs": {
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },

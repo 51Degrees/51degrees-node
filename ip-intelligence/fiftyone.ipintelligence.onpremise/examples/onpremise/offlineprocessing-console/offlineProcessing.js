@@ -51,17 +51,23 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../exampleUtils'));
 
 const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
 
 // In this example, by default, the 51degrees "Lite" file needs to be somewhere in the
 // project space, or you may specify another file as a command line parameter.
 //
-// Note that the Lite data file is only used for illustration, and has limited accuracy
-// and capabilities. Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=lite_v_4_1_ipi
+// Note that the Lite data file is only used for illustration, and has a small number
+// of Properties. Each property the example asks for that only the Enterprise data
+// file has is written as needing it, with a link to ask for a copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=enterprise-data-file';
+
 // This file contains evidence records that are relevant to IP intelligence.
 // In this case each record contains an IP address.
 const EVIDENCE = 'evidence.yml';
@@ -70,7 +76,10 @@ const EVIDENCE = 'evidence.yml';
 const fs = require('fs');
 const yaml = require('js-yaml');
 
-const analyzeEvidence = async function (evidence, pipeline, outputFile, outputFunc) {
+// Properties only the Enterprise data file has.
+const ENTERPRISE_PROPERTIES = ['IpRangeStart', 'IpRangeEnd', 'Country'];
+
+const analyzeEvidence = async function (evidence, pipeline, outputFile, outputFunc, missing) {
   // FlowData is a data structure that is used to convey
   // information required for detection and the results of the
   // detection through the pipeline.
@@ -96,8 +105,11 @@ const analyzeEvidence = async function (evidence, pipeline, outputFile, outputFu
   const ip = data.ip;
   document['ip.registeredname'] = DataExtension.getValueHelper(ip, 'registeredname');
   document['ip.registeredcountry'] = DataExtension.getValueHelper(ip, 'registeredcountry');
-  document['ip.iprangestart'] = DataExtension.getValueHelper(ip, 'iprangestart');
-  document['ip.iprangeend'] = DataExtension.getValueHelper(ip, 'iprangeend');
+  for (const name of ENTERPRISE_PROPERTIES) {
+    document[`ip.${name.toLowerCase()}`] = missing.includes(name)
+      ? NEEDS_ENTERPRISE
+      : DataExtension.getValueHelper(ip, name.toLowerCase());
+  }
   outputFunc(outputFile, yaml.dump(document));
 };
 
@@ -105,14 +117,14 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
     // We use the balanced profile as its performance is
     // sufficient for this example. See the documentation for
     // more detail on this and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run
     performanceProfile: 'Balanced',
     //  Inhibit sharing usage for this example.
     // In general, off line processing usage should NOT be shared back to 51Degrees.
@@ -121,7 +133,7 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
     // If you specifically want to share data that is being processed off line
     // in order to help us improve the data, then this additional data will
     // need to be collected and included as evidence to the Pipeline. See
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run#Low_Level_Usage_Sharing
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-offlineprocessing-console-offlineprocessing.js&utm_term=run#Low_Level_Usage_Sharing
     // for more details on this.
     shareUsage: false,
     // inhibit auto-update of the data file for this test
@@ -129,6 +141,15 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
     updateOnStart: false,
     fileSystemWatcher: false
   }).build();
+
+  // Find once which of the Enterprise properties the data file does not
+  // have, rather than for each record, and say so at the top of the output.
+  const engine = pipeline.getElement('ip');
+  const missing = ENTERPRISE_PROPERTIES.filter(
+    (name) => !ExampleUtils.hasProperty(engine, name));
+  if (missing.length > 0) {
+    outputFunc(outputFile, `# ${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
+  }
 
   // Create lines reader for the evidence file
   const liner = new LineReader(evidenceFile);
@@ -151,7 +172,7 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
 
       // Load a yaml document
       evidence = yaml.load(document);
-      await analyzeEvidence(evidence, pipeline, outputFile, outputFunc);
+      await analyzeEvidence(evidence, pipeline, outputFile, outputFunc, missing);
 
       // Stop processing if reach end of file
       if (utf8Line.match(/^\.\.\./)) {
@@ -170,13 +191,16 @@ const run = async function (dataFile, evidenceFile, outputFile, outputFunc) {
   ExampleUtils.checkDataFile(pipeline, dataFile);
 
   console.log(`Processing complete. See results in: '${outputFile}'`);
+  if (missing.length > 0) {
+    console.log(ExampleUtils.getEnterpriseNote(CONTACT_US));
+  }
 };
 
 // Don't run the server if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the lite
+  // _51DEGREES_IPI_PATH environment variable, or find the lite
   // file that is included in the repository.
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
   // Do the same for the yaml evidence file
@@ -197,9 +221,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
       (output, content) => { fs.appendFileSync(output, content); });
   } else {
     console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   }
 };
 

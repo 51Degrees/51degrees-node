@@ -21,8 +21,31 @@
  * ********************************************************************* */
 
 const url = require('url');
+const Constants = require('./constants');
 
 const formContentType = 'application/x-www-form-urlencoded';
+
+/**
+ * The path and the query string of a request line's target, undecoded and
+ * byte for byte as the request line carried them, being what comes before
+ * and after the first question mark and, when the target is a full URL,
+ * after its host. The query is empty where the target carries none.
+ *
+ * @param {*} target the request target, such as /page?a=1
+ * @returns {{path: string, query: string}} the two parts
+ */
+const requestLineParts = function (target) {
+  const text = typeof target === 'string' ? target : '';
+  const withoutScheme = text.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '');
+  const mark = withoutScheme.indexOf('?');
+  if (mark < 0) {
+    return { path: withoutScheme, query: '' };
+  }
+  return {
+    path: withoutScheme.substring(0, mark),
+    query: withoutScheme.substring(mark + 1)
+  };
+};
 
 /**
  * Whether the request is a POST whose body is a form.
@@ -118,23 +141,59 @@ class Evidence {
   constructor (flowData) {
     this.flowData = flowData;
     this.evidenceStore = {};
+    // The key each value is held under in evidenceStore, by that key in
+    // lower case. Evidence keys ignore letter case, so a key added again in
+    // other letters replaces the value and keeps the letters it was first
+    // added with.
+    this.keys = Object.create(null);
+    this.unacceptedStore = {};
+    /**
+     * The web request as server.http-request holds it, being every value
+     * addFromRequest read from the request, under its evidence key and
+     * before any is filtered out, or undefined when evidence was not added
+     * from a request.
+     *
+     * @type {Readonly<object>|undefined}
+     */
+    this.httpRequest = undefined;
   }
 
   /**
-   * Add a piece of evidence to flowData
+   * Add a piece of evidence to flowData. Keys ignore letter case, so a key
+   * that differs from one already added only in its letters replaces that
+   * value under the letters it was first added with. A key is kept when an
+   * element accepts it or keeps it. server.http-request is always kept,
+   * apart from the other evidence, because it is the web request rather
+   * than a value to process.
    *
    * @param {string} key evidence key to add
    * @param {*} value value of evidence key
    */
   add (key, value) {
-    // Filter out any evidence that isn't needed in the pipeline
+    const folded = String(key).toLowerCase();
+    if (folded === Constants.evidenceHttpRequest) {
+      this.httpRequest = value;
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(this.keys, folded)) {
+      key = this.keys[folded];
+    }
+
+    // Keep the evidence no element in the pipeline accepts apart from the
+    // rest, so an element that needs it can still reach it through
+    // getUnaccepted. getAll stays the accepted evidence alone, which is
+    // what an engine's cache key and usage sharing read. Both stores are
+    // keyed through the same table, so two spellings of one key are one
+    // entry in either.
 
     let keep;
 
     for (let flowElement in this.flowData.pipeline.flowElements) {
       flowElement = this.flowData.pipeline.flowElements[flowElement];
 
-      if (flowElement.evidenceKeyFilter.filterEvidenceKey(key)) {
+      if (flowElement.evidenceKeyFilter.filterEvidenceKey(key) ||
+        (flowElement.keptEvidenceKeyFilter &&
+          flowElement.keptEvidenceKeyFilter.filterEvidenceKey(key))) {
         keep = true;
       }
     }
@@ -142,12 +201,18 @@ class Evidence {
     if (keep) {
       this.flowData.pipeline.log('debug', key + ' added to evidence');
 
+      this.keys[folded] = key;
+      delete this.unacceptedStore[key];
       this.evidenceStore[key] = value;
     } else {
       this.flowData.pipeline.log(
         'debug',
-        key + ' filtered out of evidence. Not added.'
+        key + ' not accepted by any element. Set aside.'
       );
+
+      this.keys[folded] = key;
+      delete this.evidenceStore[key];
+      this.unacceptedStore[key] = value;
     }
   }
 
@@ -169,8 +234,8 @@ class Evidence {
   /**
    * Add evidence to flowData from an HTTP request
    * This helper automatically adds evidence:
-   * headers, cookies, protocol, IP, query params and, for a POST with a
-   * form body, the form values.
+   * headers, cookies, session values, protocol, IP, query params and, for a
+   * POST with a form body, the form values.
    *
    * Form values are added as query evidence after the query string, so a
    * form value replaces a query string value of the same name. They are
@@ -180,13 +245,28 @@ class Evidence {
    * The 51Degrees client script sends its values in a form body, so without
    * one or the other they never reach the pipeline.
    *
+   * The web request is also added as server.http-request, whether or not an
+   * element accepts it, as a frozen object holding every value read from
+   * the request under the key it has as evidence, with the request line as
+   * server.request-method, server.request-path and server.request-query.
+   * It is there
+   * for elements that read the request without accepting evidence, such as
+   * the usage sharing element, and so that what the request carried can be
+   * used once processing is done, when the request's socket may have
+   * closed.
+   *
    * @param {object} request an HTTP request object
    * @returns {Evidence} return updated evidence
    */
   addFromRequest (request) {
-    // Process headers
+    // Every value read from the request, in order, so that a later value
+    // for a key replaces an earlier one, as add does.
+    const values = [];
+    const evidence = {
+      add: (key, value) => values.push([key, value])
+    };
 
-    const evidence = this;
+    // Process headers
 
     Object.keys(request.headers).forEach(key => {
       const value = request.headers[key];
@@ -263,6 +343,33 @@ class Evidence {
       }
     }
 
+    // Add the values stored in the session, when the request has one. The
+    // session's own settings, such as an expiry, are not values.
+    if (request.session !== null && typeof request.session === 'object') {
+      for (const [name, value] of Object.entries(request.session)) {
+        if (['string', 'number', 'boolean'].includes(typeof value)) {
+          evidence.add('session.' + name, value);
+        }
+      }
+    }
+
+    const httpRequest = {};
+    for (const [key, value] of values) {
+      this.add(key, value);
+      httpRequest[key] = value;
+    }
+
+    // The request line is part of the request as well, exactly as the
+    // request line has it. All three values are always on the view, with
+    // the query empty where there was none, so an absent key says the
+    // request line was not supplied rather than that it had no query.
+    const requestLine = requestLineParts(request.url);
+    httpRequest['server.request-method'] =
+      typeof request.method === 'string' ? request.method : '';
+    httpRequest['server.request-path'] = requestLine.path;
+    httpRequest['server.request-query'] = requestLine.query;
+    this.add(Constants.evidenceHttpRequest, Object.freeze(httpRequest));
+
     return this;
   }
 
@@ -284,22 +391,45 @@ class Evidence {
   }
 
   /**
-   * Get a piece of evidence
+   * Get a piece of evidence by key, in any letter case
    *
    * @param {string} key evidence key to retreive
-   * @returns {*} the evidence value
+   * @returns {*} the evidence value, or undefined where there is none
    */
   get (key) {
-    return this.evidenceStore[key];
+    const folded = String(key).toLowerCase();
+    if (folded === Constants.evidenceHttpRequest) {
+      return this.httpRequest;
+    }
+    // The table also holds the set aside keys, which get does not read.
+    const stored = this.keys[folded];
+    return stored !== undefined &&
+      Object.prototype.hasOwnProperty.call(this.evidenceStore, stored)
+      ? this.evidenceStore[stored]
+      : undefined;
   }
 
   /**
-   * Get all evidence
+   * Get all evidence. server.http-request is left out, because it is the web
+   * request rather than a value to process, so get it with get.
    *
    * @returns {object} all evidence
    */
   getAll () {
     return this.evidenceStore;
+  }
+
+  /**
+   * Get the evidence no element in the pipeline accepts, which add set
+   * aside rather than throwing away. The Cloud Request Engine sends it
+   * along with the accepted evidence, because what the cloud service uses
+   * changes over time.
+   *
+   * @returns {object} the evidence set aside, empty where every key was
+   * accepted
+   */
+  getUnaccepted () {
+    return this.unacceptedStore;
   }
 }
 

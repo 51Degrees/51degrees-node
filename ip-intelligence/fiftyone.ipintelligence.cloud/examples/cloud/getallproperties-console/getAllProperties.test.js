@@ -35,21 +35,42 @@ const example = require(path.join(__dirname, '/getAllProperties.js'));
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
-// Test constants
-const tc = require51('fiftyone.ipintelligence.shared').testConstants;
+const shared = require51('fiftyone.ipintelligence.shared');
+const tc = shared.testConstants;
+const keyUtils = shared.keyUtils;
+const ExampleOutput = shared.exampleOutput.ExampleOutput;
+const OptionsExtension = shared.optionsExtension;
+const CloudRequestEngine =
+  require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const OptionsExtension =
-  require51('fiftyone.ipintelligence.shared').optionsExtension;
+const resourceKeyNames = keyUtils.resourceKeyNames(
+  tc.envVars.superResourceKeyVariable,
+  ExampleUtils.RESOURCE_KEY_VARIABLE);
 
 describe('Examples', () => {
   test('cloud get all properties', async () => {
+    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+        'ip', 'every IP Intelligence property of 8.8.8.8'));
+    }
+    await keyUtils.requireProduct(
+      new CloudRequestEngine({ resourceKey }), 'ip');
+
     // Load the configuration from a config file to a JSON object.
     const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')), 'utf8');
     OptionsExtension.updateElementPath(options, __dirname);
-    OptionsExtension.setResourceKey(
-      options, process.env[tc.envVars.superResourceKeyEnvVar] ||
-        ExampleUtils.getResourceKeyFromEnv());
-    await example.run(options, process.stdout);
-    expect(true);
+    OptionsExtension.setResourceKey(options, resourceKey);
+
+    const output = new ExampleOutput();
+
+    await example.run(options, output);
+
+    // The example prints one line per property. 8.8.8.8 is registered to
+    // Google in the United States.
+    expect(output.text()).toContain(
+      "What property values are associated with the IP '8.8.8.8'?");
+    expect(output.lines()).toContain('registeredcountry = US');
+    expect(output.faults()).toEqual([]);
   });
 });
