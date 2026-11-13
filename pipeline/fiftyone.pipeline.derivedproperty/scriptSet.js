@@ -211,7 +211,8 @@ class ScriptSet {
       return;
     }
     // A byte order mark is not part of the script.
-    this.addText(nameOf(filePath), text.replace(/^﻿/, ''), filePath);
+    const body = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+    this.addText(nameOf(filePath), body, filePath);
   }
 
   /**

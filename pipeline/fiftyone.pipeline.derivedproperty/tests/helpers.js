@@ -66,6 +66,8 @@ function asElementGives (value, wrap) {
  */
 class SourceElement extends core.FlowElement {
   /**
+   * Holds the values to give.
+   *
    * @param {string} dataKey the element data key.
    * @param {object} values the values by property name, as a case file
    *   writes them.

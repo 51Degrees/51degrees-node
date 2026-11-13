@@ -157,6 +157,8 @@ function faultsMessage (faults) {
 /** What one validation run has found so far. */
 class Context {
   /**
+   * Starts a run over one parsed script.
+   *
    * @param {object} parsed what `parse` returned.
    * @param {object} options as for `validate`.
    */

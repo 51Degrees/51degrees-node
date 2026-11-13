@@ -29,6 +29,8 @@ const { faultsMessage } = require('./lib/validate');
  */
 class ScriptValidationError extends Error {
   /**
+   * Collects the faults.
+   *
    * @param {object[]} faults every fault, each `{ script, source, path,
    *   line, message }`.
    */
@@ -47,6 +49,8 @@ class ScriptValidationError extends Error {
  */
 class PipelineConfigurationError extends Error {
   /**
+   * Collects the problems.
+   *
    * @param {string[]} faults one sentence for each problem.
    */
   constructor (faults) {

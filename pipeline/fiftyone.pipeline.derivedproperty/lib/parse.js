@@ -37,6 +37,8 @@ const yaml = require('js-yaml');
 /** Raised when the text is not YAML or JSON, or is not a mapping. */
 class ParseError extends Error {
   /**
+   * Records what is wrong and where.
+   *
    * @param {string} message what is wrong with the text.
    * @param {number|null} line the one based line, or null where the
    *   position is not known.
