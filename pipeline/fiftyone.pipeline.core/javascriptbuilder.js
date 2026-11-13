@@ -337,28 +337,28 @@ class JavaScriptBuilderElement extends FlowElement {
         'evidence. This is reported once.');
     }
 
-    if (url !== null && url.valid) {
-      settings._url = url.url;
-
-      // The parameters are the query evidence, each named by everything
-      // after the first dot of its key so that a name such as id.usage is
-      // kept whole, and leaving out the two the script appends itself. The
-      // script joins them into its request body as they stand, so each name
-      // and value is encoded here.
-      const evidence = this.evidenceKeyFilter.filterEvidence(
-        flowData.evidence.getAll()
-      );
-      const scriptParameters = {};
-      for (const key in evidence) {
-        if (key.startsWith('query.')) {
-          const name = key.substring('query.'.length);
-          if (excludedParameters.indexOf(name) === -1) {
-            scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
-          }
+    // The parameters are the query evidence, each named by everything after
+    // the first dot of its key so that a name such as id.usage is kept whole,
+    // and leaving out the two the script appends itself. The script joins
+    // them into its request body as they stand, so each name and value is
+    // encoded here. They are written with or without a callback URL, as the
+    // script reads them either way.
+    const evidence = this.evidenceKeyFilter.filterEvidence(
+      flowData.evidence.getAll()
+    );
+    const scriptParameters = {};
+    for (const key in evidence) {
+      if (key.startsWith('query.')) {
+        const name = key.substring('query.'.length);
+        if (excludedParameters.indexOf(name) === -1) {
+          scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
         }
       }
-      settings._parameters = JSON.stringify(scriptParameters);
+    }
+    settings._parameters = JSON.stringify(scriptParameters);
 
+    if (url !== null && url.valid) {
+      settings._url = url.url;
       settings._updateEnabled = true;
     } else {
       settings._updateEnabled = false;
