@@ -60,9 +60,13 @@ const ExampleUtils =
   require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data
-// directory, or you may specify another file as a command line parameter.
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-country-translation-console-gettingstarted.js&utm_term=enterprise-data-file';
 
 /**
  * Read an ordered "All" list from the translation element data, returning an
@@ -93,7 +97,10 @@ const listValue = (data, key) => {
  */
 const run = async function (dataFile, output, evidence) {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
-    performanceProfile: 'Balanced',
+    // This example needs the Enterprise data file, which is about 6 GB, so
+    // it uses the low memory profile, which reads the file as it goes. Max
+    // performance would hold all of the file in memory.
+    performanceProfile: 'LowMemory',
     dataFile,
     shareUsage: false,
     autoUpdate: false,
@@ -103,6 +110,16 @@ const run = async function (dataFile, output, evidence) {
     .add(new translation.CountryCodeTranslationEngineBuilder().build())
     .add(new translation.CountriesTranslationEngineBuilder().build())
     .build();
+
+  // Ordering the countries needs the country codes, which only the
+  // Enterprise data file has, so with a free data file the example says so
+  // and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(pipeline.getElement('ip'),
+    'Ordering the countries',
+    ['CountryCodesGeographical', 'CountryCodesPopulation'], output,
+    CONTACT_US)) {
+    return undefined;
+  }
 
   const values = evidence || new Map([
     // An IP address to look up.
@@ -164,8 +181,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
     run(dataFile, process.stdout);
   } else {
     console.error('Failed to find an IP intelligence data file. Make sure ' +
-      'the ip-intelligence-data submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'the cxx/data submodule has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
   }
 };
 

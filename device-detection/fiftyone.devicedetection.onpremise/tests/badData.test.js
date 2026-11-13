@@ -34,7 +34,7 @@ const errorMessages = require51('fiftyone.devicedetection.shared').errorMessages
 
 const FiftyOneDegreesDeviceDetectionOnPremise = require51('fiftyone.devicedetection.onpremise');
 
-const DataFile = (process.env.directory || __dirname) + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash';
+const DataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
 const BadVersionDataFile = (process.env.directory || __dirname) + '/BadVersionDataFile.hash';
 const BadHeaderDataFile = (process.env.directory || __dirname) + '/BadHeaderDataFile.hash';
 const SmallDataFile = (process.env.directory || __dirname) + '/SmallDataFile.hash';

@@ -22,12 +22,16 @@ declare class FlowElement {
      * @param {object} options.properties list of properties including metadata
      * @param {EvidenceKeyFilter} options.evidenceKeyFilter an instance of
      * an EvidenceKeyFilter to filter evidence added to the Pipeline
+     * @param {EvidenceKeyFilter} [options.keptEvidenceKeyFilter] the evidence
+     * the element reads without it changing its results, which the flow data
+     * keeps but which is not accepted evidence
      */
-    constructor({ processInternal, dataKey, properties, evidenceKeyFilter }?: {
+    constructor({ processInternal, dataKey, properties, evidenceKeyFilter, keptEvidenceKeyFilter }?: {
         dataKey: string;
         processInternal: Function;
         properties: object;
         evidenceKeyFilter: EvidenceKeyFilter;
+        keptEvidenceKeyFilter?: EvidenceKeyFilter;
     });
     dataKey: string;
     /**
@@ -41,6 +45,13 @@ declare class FlowElement {
     processInternal(flowData: FlowData): any;
     properties: object;
     evidenceKeyFilter: EvidenceKeyFilterBase;
+    /**
+     * Evidence the flow data keeps for the element, though it is not
+     * accepted, such as the evidence the usage sharing element shares.
+     *
+     * @type {EvidenceKeyFilter|undefined}
+     */
+    keptEvidenceKeyFilter: EvidenceKeyFilter | undefined;
     /**
      * @type {Function[]}
      */

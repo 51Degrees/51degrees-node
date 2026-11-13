@@ -33,7 +33,7 @@ const datafiles = [enterpriseDataFileName, liteDataFileName];
 const fileDirs = [
   (process.env.directory || __dirname) + '/../tests/',
   (process.env.directory || __dirname) +
-  '/../../../cxx/ip-intelligence-data/'];
+  '/../../../cxx/data/ip-intelligence/'];
 
 let testDataFile;
 

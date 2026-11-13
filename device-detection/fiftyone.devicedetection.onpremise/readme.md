@@ -1,6 +1,6 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=top "Data rewards the curious") **Node Device Detection On-Premise**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node Device Detection On-Premise**
 
-[Developer Documentation](https://51degrees.com/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=top "developer documentation")
 
 ## Introduction
 This project contains 51Degrees Device Detection engines that can be used with the [Pipeline API](https://github.com/51Degrees/51degrees-node/tree/main/pipeline).
@@ -13,7 +13,7 @@ This package provides a On-Premise implementation of Device Detection engine whi
 
 This package requires the following additional packages:
 
-- [**fiftyone.devicedetection.shared**](/fiftyone.devicedetection.shared#readme) - A Node.js module which contains shared functionality to build cloud and on-premise engines.
+- [**fiftyone.devicedetection.shared**](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.shared) - A Node.js module which contains shared functionality to build cloud and on-premise engines.
 
 ### Installation
 
@@ -26,9 +26,9 @@ npm install fiftyone.devicedetection.onpremise
 ### On-Premise
 When running on-premise, a local Hash V4.1 data file is required.
 
-[**Hash**](https://51degrees.com/documentation/_device_detection__hash.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=on-premise): A large binary file populated with User-Agent signatures allowing very fast detection speeds.
+[**Hash**](https://51degrees.com/documentation/_device_detection__hash.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=on-premise): A large binary file populated with User-Agent signatures allowing very fast detection speeds.
 
-51Degrees provides [multiple options](https://51degrees.com/Licencing-Pricing/On-Premise?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=on-premise), some of which support automatic updates through the Pipeline API.
+51Degrees provides [multiple options](https://51degrees.com/pricing?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=on-premise), some of which support automatic updates through the Pipeline API.
 
 If the module is installed directly from Git then the binaries are also required. These binaries are native module which contains the core engine of device detection. Below are the steps to build these binaries:
 #### Pre-requisites
@@ -69,29 +69,30 @@ If the module is installed directly from Git then the binaries are also required
   - MacOS:
     - FiftyOneDeviceDetectionHashV4-darwin-[ arch ]-[ Node major version ].node
   - [ arch ] is the value of `process.arch` (for example x64 or arm64) and [ Node major version ] is the major version of the Node.js runtime the module was built with.
-  - Testing targets the current Node.js LTS versions. There is no concept of 'supported' versions. The software may well run on other versions, but they are not tested. See the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=build-steps) for the versions that we currently test against.
+  - Testing targets the current Node.js LTS versions. There is no concept of 'supported' versions. The software may well run on other versions, but they are not tested. See the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=build-steps) for the versions that we currently test against.
   - You can optionally clear up by removing all the build files and folders except for the *.node file that's been created.
   - `WARNING`: `npm install` removes this copied file, so you will need to do the above steps again after running `npm install`
 
 
 ### Examples
 
-For details of how to run the examples, please refer to [run examples](/run_examples.md).
+For details of how to run the examples, please refer to [run examples](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/run_examples.md).
+The examples need no settings. They run on the free Lite data file, which they download when it is missing, and show each property they ask for that only the Enterprise data file has as needing it, with a link to [contact us](https://51degrees.com/contact-us?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=examples) for a copy.
 The tables below describe the examples that are available.
 
 | Example                                | Description |
 |----------------------------------------|-------------|
-| [automaticupdates/dataFileSystemWatcher.js](/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js) | How to configure automatic updates using the file system watcher to monitor for changes to the data file. |
-| [automaticupdates/updateOnStartUp.js](/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js)    | How to configure the Pipeline to automatically update the device detection data file on startup. |
-| [automaticupdates/updatePollingInterval.js](/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js) | Ho to configure and verify the various automatic data file update settings. |
-| [gettingstarted-console](/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console)                | How to use the 51Degrees on-premise device detection API to determine details about a device based on its User-Agent and User-Agent Client Hints HTTP header values. |
-| [gettingstarted-web](/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web)                     | How to use the 51Degrees Cloud service to determine details about a device as part of a simple web server. |
-| [matchmetrics-console](/fiftyone.devicedetection.onpremise/examples/onpremise/matchmetrics-console)                   | How to view metrics associated with the results of processing with a Device Detection engine. |
-| [metadata-console](/fiftyone.devicedetection.onpremise/examples/onpremise/metadata-console)                       | How to access the meta-data that relates to the device detection algorithm. |
-| [offlineprocessing-console](/fiftyone.devicedetection.onpremise/examples/onpremise/offlineprocessing-console)              | How to process data for later viewing using a Device Detection Hash data file. |
-| [performance-console](/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console)                    | How to configure the various performance options and run a simple performance test. |
-| [updatedatafile-console](/fiftyone.devicedetection.onpremise/examples/onpremise/updatedatafile-console)                 | This example illustrates various parameters that can be adjusted when using the on-premise device detection engine, and controls when a new data file is sought and when it is loaded by the device detection software. |
-| [useragentclienthints-web](/fiftyone.devicedetection.onpremise/examples/onpremise/useragentclienthints-web)               | This is now deprecated. Kept for testing purposes. Please see **gettingstarted-web** instead. |
+| [automaticupdates/dataFileSystemWatcher.js](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/dataFileSystemWatcher.js) | How to configure automatic updates using the file system watcher to monitor for changes to the data file. |
+| [automaticupdates/updateOnStartUp.js](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js)    | How to configure the Pipeline to automatically update the device detection data file on startup. |
+| [automaticupdates/updatePollingInterval.js](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js) | Ho to configure and verify the various automatic data file update settings. |
+| [gettingstarted-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console)                | How to use the 51Degrees on-premise device detection API to determine details about a device based on its User-Agent and User-Agent Client Hints HTTP header values. |
+| [gettingstarted-web](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web)                     | How to use the 51Degrees Cloud service to determine details about a device as part of a simple web server. |
+| [matchmetrics-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/matchmetrics-console)                   | How to view metrics associated with the results of processing with a Device Detection engine. |
+| [metadata-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/metadata-console)                       | How to access the meta-data that relates to the device detection algorithm. |
+| [offlineprocessing-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/offlineprocessing-console)              | How to process data for later viewing using a Device Detection Hash data file. |
+| [performance-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console)                    | How to configure the various performance options and run a simple performance test. |
+| [updatedatafile-console](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/updatedatafile-console)                 | This example illustrates various parameters that can be adjusted when using the on-premise device detection engine, and controls when a new data file is sought and when it is loaded by the device detection software. |
+| [useragentclienthints-web](https://github.com/51Degrees/51degrees-node/tree/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/useragentclienthints-web)               | This is now deprecated. Kept for testing purposes. Please see **gettingstarted-web** instead. |
 
 
 ## Tests
@@ -117,7 +118,7 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 
 1. Ensure Swig is installed.
    1. Use the 51Degrees fork of Swig, built from source from the `node-24-holder-this` branch of https://github.com/51Degrees/swig.
-   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-readme.md&utm_term=native-code-updates).
+   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=native-code-updates).
    3. All native modules loaded into one Node process must be generated by the same Swig version. Mixing modules generated by different Swig versions (for example this package and fiftyone.ipintelligence.onpremise) can crash the process, so regenerate and release them together.
 2. Update the `cxx` submodule at the root of the repository to reference the relevant commit.
 3. From terminal, navigate to fiftyone.pipeline.devicedetection and run:
@@ -127,3 +128,11 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 6. Copy the produced artifacts into the fiftyone.pipeline.devicedetection/build directory.
 7. Commit changes to repository.
 
+## Find out more
+
+- [Device Detection](https://51degrees.com/device-detection?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=find-out-more-device-detection)
+- [Device Detection documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=find-out-more-documentation)
+- [Getting started](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=find-out-more-getting-started)
+- [Pricing](https://51degrees.com/pricing?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=find-out-more-pricing)
+- https://github.com/51Degrees/51degrees-node
+- https://github.com/51Degrees/51degrees-cxx

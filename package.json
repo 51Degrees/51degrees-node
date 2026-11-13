@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/)\"",
-    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"performance\\.test\\.js\"",
+    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"(performance\\.test\\.js|tierEntitlement\\.integration\\.test\\.js)\"",
     "lint": "eslint . --ext .js",
     "tsc": "tsc -b --force"
   },
@@ -38,6 +38,10 @@
   },
   "jest": {
     "projects": [
+      {
+        "displayName": "ci",
+        "rootDir": "ci"
+      },
       {
         "displayName": "pipeline",
         "rootDir": "pipeline",

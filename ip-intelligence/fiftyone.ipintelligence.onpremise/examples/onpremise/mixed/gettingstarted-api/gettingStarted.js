@@ -29,7 +29,7 @@
  * for details of the endpoints provided.
  *
  * The cloud examples can be run against this local API by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can be used for the resource key when using the local API.
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api/gettingStarted.js).
@@ -116,7 +116,10 @@ const setPipeline = (deviceDataFile, ipDataFile) => {
   // Create the IP intelligence engine from scratch.
   const ipEngine = new IpIntelligenceOnPremise({
     dataFilePath: ipDataFile,
-    performanceProfile: 'MaxPerformance',
+    // This example picks the Enterprise IP intelligence data file first,
+    // which is about 6 GB, so the low memory profile reads the file as it
+    // goes rather than holding all of it in memory.
+    performanceProfile: 'LowMemory',
     // inhibit auto-update of the data file for this example. An empty
     // license key disables automatic updates.
     licenceKeys: '',
@@ -255,7 +258,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
   // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
+  // find one in priority order. The _51DEGREES_DD_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let deviceDataFile = args.length > 0 ? args[0] : undefined;
   if (deviceDataFile === undefined) {
@@ -266,7 +269,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   }
 
   // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
+  // find one in priority order. The _51DEGREES_IPI_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let ipDataFile = args.length > 1 ? args[1] : undefined;
   if (ipDataFile === undefined) {
@@ -284,17 +287,15 @@ if (process.env.JEST_WORKER_ID === undefined) {
     console.log(`Local cloud API listening on: http://localhost:${PORT}`);
   } else {
     if (deviceDataFile === undefined) {
-      console.error('Failed to find a device detection data file. A ' +
-        'lite data file is available from the device-detection-data ' +
-        'repository on GitHub ' +
-        'https://github.com/51Degrees/device-detection-data. The full ' +
-        'path to a data file can be specified as the first command ' +
-        'line argument');
+      console.error('Failed to find a device detection data file. ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path to a ' +
+        'data file can be specified as the first command line argument');
     }
     if (ipDataFile === undefined) {
       console.error('Failed to find an IP intelligence data file. ' +
-        'Make sure the ip-intelligence-data submodule has been updated ' +
-        'by running `git submodule update --recursive`. The full path ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path ' +
         'to a data file can be specified as the second command line ' +
         'argument');
     }

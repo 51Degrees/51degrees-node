@@ -71,10 +71,7 @@ const compiledFunction =
 
 const core = require51('fiftyone.pipeline.core');
 
-const dataExtension =
-  require51('fiftyone.ipintelligence.shared').dataExtension;
-
-const { DATA_FILE_AGE_WARNING, ExampleUtils } =
+const { DATA_FILE_AGE_WARNING, ExampleUtils, NEEDS_ENTERPRISE } =
   require(path.join(__dirname, '/../../exampleUtils'));
 
 // Pipeline variable to be used
@@ -83,8 +80,8 @@ let pipeline;
 // Check that the data files configured for each element exist, searching
 // the project directories for a file with the same name where they do
 // not. This allows the example to run from different working directories
-// without a copy of the data files in each one. The 51DEGREES_DD_PATH
-// and 51DEGREES_IPI_PATH environment variables are checked for explicit
+// without a copy of the data files in each one. The _51DEGREES_DD_PATH
+// and _51DEGREES_IPI_PATH environment variables are checked for explicit
 // paths before the folder hierarchy is searched.
 const fixDataFilePaths = (options) => {
   for (const element of options.PipelineOptions.Elements) {
@@ -105,12 +102,9 @@ const fixDataFilePaths = (options) => {
       } else {
         throw 'Failed to find a data file at ' +
           `'${parameters.dataFilePath}'. Ensure that the filename is ` +
-          'correct in 51d.json. A device detection lite data file is ' +
-          'available from ' +
-          'https://github.com/51Degrees/device-detection-data. If ' +
-          'using the IP intelligence lite file, then make sure the ' +
-          'ip-intelligence-data submodule has been updated by running ' +
-          '\'git submodule update --recursive\'.';
+          'correct in 51d.json. If using the lite files, then make sure ' +
+          'the cxx/data submodule has been fetched by running ' +
+          '\'git submodule update --init --recursive\'.';
       }
     }
   }
@@ -168,6 +162,15 @@ const server = http.createServer((req, res) => {
       (allEvidence['query.client-ip'] ||
         allEvidence['header.x-forwarded-for'] || '');
 
+    // A property that the data file does not have is shown as needing the
+    // Enterprise data file.
+    const deviceEngine = pipeline.getElement('device');
+    const ipEngine = pipeline.getElement('ip');
+    const areas = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'areas');
+    const latitude = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'latitude');
+    const longitude = ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'longitude');
+    const located = (value) => value === NEEDS_ENTERPRISE ? '' : value;
+
     // Compile a response
     res.end(compiledFunction(
       {
@@ -176,24 +179,27 @@ const server = http.createServer((req, res) => {
         evidenceUsed,
         allEvidence,
         inputIpAddress,
-        areas: dataExtension.getValueHelper(flowData.ip, 'areas'),
-        dataSourceTier: ExampleUtils.getDataTier(pipeline),
-        isMobile: dataExtension.getValueHelper(flowData.device, 'ismobile'),
-        platformName: dataExtension.getValueHelper(flowData.device, 'platformname'),
-        platformVersion: dataExtension.getValueHelper(flowData.device, 'platformversion'),
-        browserName: dataExtension.getValueHelper(flowData.device, 'browsername'),
-        browserVersion: dataExtension.getValueHelper(flowData.device, 'browserversion'),
-        deviceType: dataExtension.getValueHelper(flowData.device, 'devicetype'),
-        registeredName: dataExtension.getValueHelper(flowData.ip, 'registeredname'),
-        registeredOwner: dataExtension.getValueHelper(flowData.ip, 'registeredowner'),
-        registeredCountry: dataExtension.getValueHelper(flowData.ip, 'registeredcountry'),
-        ipRangeStart: dataExtension.getValueHelper(flowData.ip, 'iprangestart'),
-        ipRangeEnd: dataExtension.getValueHelper(flowData.ip, 'iprangeend'),
-        country: dataExtension.getValueHelper(flowData.ip, 'country'),
-        countryCode: dataExtension.getValueHelper(flowData.ip, 'countrycode'),
-        town: dataExtension.getValueHelper(flowData.ip, 'town'),
-        latitude: dataExtension.getValueHelper(flowData.ip, 'latitude'),
-        longitude: dataExtension.getValueHelper(flowData.ip, 'longitude')
+        areas,
+        mapAreas: located(areas),
+        freeDataFile: ExampleUtils.isFreeDataFile(ipEngine),
+        isMobile: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'ismobile'),
+        platformName: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'platformname'),
+        platformVersion: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'platformversion'),
+        browserName: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'browsername'),
+        browserVersion: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'browserversion'),
+        deviceType: ExampleUtils.getEnterpriseValue(deviceEngine, flowData.device, 'devicetype'),
+        registeredName: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredname'),
+        registeredOwner: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredowner'),
+        registeredCountry: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'registeredcountry'),
+        ipRangeStart: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'iprangestart'),
+        ipRangeEnd: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'iprangeend'),
+        country: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'country'),
+        countryCode: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'countrycode'),
+        town: ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'town'),
+        latitude,
+        longitude,
+        mapLatitude: located(latitude),
+        mapLongitude: located(longitude)
       })
     );
   });

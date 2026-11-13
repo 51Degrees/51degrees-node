@@ -27,7 +27,7 @@
  * It shows how to call the cloud with the newly created key and how to access the values
  * of the selected properties.
  *
- * See [Getting Started](https://51degrees.com/documentation/_examples__device_detection__getting_started__console__cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
+ * See [Getting Started](https://51degrees.com/documentation/_device_detection__examples__getting_started__console__cloud.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
  * for a fuller example.
  *
  * Required npm Dependencies:
@@ -109,7 +109,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
       'No resource key specified on the command line or in the environment variable ' +
       `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud service is accessed ` +
       'using a \'ResourceKey\'. For more information see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. A free resource key ' +
+      'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. A free resource key ' +
       'selecting the free properties used by this example can be created at ' +
       'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. Once complete, populate the config file or ' +
       'environment variable mentioned at the start of this message with the key.');

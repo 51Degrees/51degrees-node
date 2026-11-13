@@ -52,7 +52,12 @@ declare class Pipeline {
      */
     on(listener: string, callback: Function): void;
     /**
-     * Shorthand to trigger a message on the pipeline's eventEmitter
+     * Shorthand to trigger a message on the pipeline's eventEmitter.
+     *
+     * Every detection goes through here several times, so an emitted message
+     * is passed on as it is. A license key is masked where it can reach a
+     * message, which is the cloud request engine, the data update service
+     * and the 51Did client.
      *
      * @param {string} type type of message
      * @param {*} message message to store in the log

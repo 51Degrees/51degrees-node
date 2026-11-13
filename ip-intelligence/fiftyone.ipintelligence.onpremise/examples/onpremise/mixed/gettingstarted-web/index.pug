@@ -13,12 +13,12 @@ html
           | WARNING: This example is using a data file that is more than
           | #{dataFileAgeWarning} days old. A more recent data file may be needed
           | to correctly determine the details of the latest devices and IP
-          | ranges. The latest lite IP intelligence data file is available from
-          | the
-          | #[a(href='https://github.com/51Degrees/ip-intelligence-data') ip-intelligence-data]
-          | repository on Github. Find out about the
-          | Enterprise data file, which includes automatic daily updates, on our
-          | #[a(href='https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-web-index.pug&utm_term=mixed-web-integration-example') pricing page].
+          | ranges. To get the latest lite data files, run the get-data-files
+          | script in the
+          | #[a(href='https://github.com/51Degrees/data') cxx/data]
+          | submodule with -u, or -Update in PowerShell.
+          | #[a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-web-index.pug&utm_term=mixed-web-integration-example') Contact us]
+          | about the Enterprise data file, which includes automatic daily updates.
 
       h2.c-eg-page__title Combined device detection and IP intelligence example
       p.c-eg-page__lead
@@ -141,7 +141,7 @@ html
           h3.c-eg-map__title Location Map
           #map.c-eg-map__canvas
 
-      if (dataSourceTier === 'Lite')
+      if freeDataFile
         .c-eg-message
           p.c-eg-message__text Need more on-premise properties and features? #[a(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-web-index.pug&utm_term=on-premise-properties') Contact us] to explore the options.
           a.b-btn.c-eg-message__cta(href='https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-web-index.pug&utm_term=on-premise-properties') Contact us
@@ -155,8 +155,8 @@ html
         // JavaScript is present. The helper is a safe no-op otherwise.
         fodExamples.bindDeviceCallback({ targetId: 'content' });
         fodExamples.initLocationMap({
-          areasWkt: '#{areas}',
-          latitude: '#{latitude}',
-          longitude: '#{longitude}'
+          areasWkt: '#{mapAreas}',
+          latitude: '#{mapLatitude}',
+          longitude: '#{mapLongitude}'
         });
       };

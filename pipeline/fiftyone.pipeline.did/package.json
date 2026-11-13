@@ -42,6 +42,7 @@
       "./tests/setup.js"
     ]
   },
+  "homepage": "https://51degrees.com/developers/51did?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=homepage",
   "bugs": {
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },

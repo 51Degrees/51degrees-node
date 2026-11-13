@@ -1,18 +1,20 @@
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=top "Data rewards the curious") **Node Device Detection**
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node Device Detection**
 
-[Developer Documentation](https://51degrees.com/device-detection-node/index.html?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=top "developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=top "developer documentation")
 
 # Running examples
 
 The examples can be run either with modules included in the GitHub repository or with the **Device Detection** packages from `npm` repository.
 
-Usage examples are available for Cloud and OnPremise [`fiftyone.devicedetection`](/fiftyone.devicedetection/examples), [`fiftyone.devicedetection.cloud`](/fiftyone.devicedetection.cloud/examples/cloud) and [`fiftyone.devicedetection.onpremise`](/fiftyone.devicedetection.onpremise/examples/onpremise).
+Usage examples are available for Cloud and OnPremise [`fiftyone.devicedetection`](fiftyone.devicedetection/examples), [`fiftyone.devicedetection.cloud`](fiftyone.devicedetection.cloud/examples/cloud) and [`fiftyone.devicedetection.onpremise`](fiftyone.devicedetection.onpremise/examples/onpremise).
 
 ## Run with modules in GitHub repository
 
-First of all, you need to build the binaries for the on-premise examples to work as described in the **On-Premise** section of the [readme](/readme.md). **Skip** this part if you just want to run the cloud examples.
+First of all, you need to build the binaries for the on-premise examples to work as described in the **On-Premise** section of the [readme](readme.md). **Skip** this part if you just want to run the cloud examples.
 
-Then navigate to the root folder that contains the examples that you want to run. This folder can be either [`fiftyone.devicedetection`](/fiftyone.devicedetection#readme.md), [`fiftyone.devicedetection.cloud`](/fiftyone.devicedetection.cloud#readme.md) or [`fiftyone.devicedetection.onpremise`](/fiftyone.devicedetection.onpremise#readme.md)
+The on-premise examples need no settings. They use the free Lite data file, which is linked from the [data](https://github.com/51Degrees/data) repository, the `cxx/data` submodule, and is downloaded when it is missing. Each example also asks for properties that only the Enterprise data file has, such as HardwareVendor, HardwareName and DeviceType, and shows each one the data file in use does not have as needing the Enterprise data file, with a link to [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=enterprise-data-file) for a copy. The examples that update the data file need a licence key, and without one they say so and give the same link. To use another data file, set its path in the `_51DEGREES_DD_PATH` environment variable, or give it on the command line.
+
+Then navigate to the root folder that contains the examples that you want to run. This folder can be either [`fiftyone.devicedetection`](fiftyone.devicedetection), [`fiftyone.devicedetection.cloud`](fiftyone.devicedetection.cloud) or [`fiftyone.devicedetection.onpremise`](fiftyone.devicedetection.onpremise)
 
 Install the required packages:
 
@@ -44,9 +46,9 @@ Create a `package.json` file and make sure to include the package that you wish 
 ```
 
 Packages usage:
-- [`fiftyone.devicedetection`](/fiftyone.devicedetection#readme.md): contains pipeline builder which can be used to build both `Cloud` and `On-Premise` engines pipeline.
-- [`fiftyone.devicedetection.cloud`](/fiftyone.devicedetection.cloud#readme.md): contains cloud engine and cloud pipeline builder.
-- [`fiftyone.devicedetection.onpremise`](/fiftyone.devicedetection.onpremise#readme.md): contains on-premise engine and on-premise pipeline builder.
+- [`fiftyone.devicedetection`](fiftyone.devicedetection): contains pipeline builder which can be used to build both `Cloud` and `On-Premise` engines pipeline.
+- [`fiftyone.devicedetection.cloud`](fiftyone.devicedetection.cloud): contains cloud engine and cloud pipeline builder.
+- [`fiftyone.devicedetection.onpremise`](fiftyone.devicedetection.onpremise): contains on-premise engine and on-premise pipeline builder.
 
 Next, you will need to update the `require` statement, the data file path and the `51d.json` file if the example require to.
 
