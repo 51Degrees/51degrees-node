@@ -96,22 +96,12 @@ let getCountry = async function (latitude, longitude) {
 
 */
 
-const FiftyOneDegreesGeoLocation = require((process.env.directory || __dirname) + '/../');
+const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 
-let localResourceKey;
-// Check if there is a resource key in the global variable and use it if
-// there is one.
-try {
-  localResourceKey = resourceKey;
-} catch (e) {
-  if (e instanceof ReferenceError) {
-    console.log(e);
-  }
-}
 // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=top-2 and
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
-if (typeof localResourceKey === 'undefined' ||
-  localResourceKey.substr(0, 2) === '!!') {
+let localResourceKey = '!!YOUR_RESOURCE_KEY!!';
+if (localResourceKey.substr(0, 2) === '!!') {
   // RESOURCE_KEY is the deprecated name of the same variable, read only
   // when _51DEGREES_RESOURCE_KEY is unset or empty.
   if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
@@ -120,7 +110,7 @@ if (typeof localResourceKey === 'undefined' ||
       'instead.');
   }
   localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+    process.env.RESOURCE_KEY || localResourceKey;
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {
