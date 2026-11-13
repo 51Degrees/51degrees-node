@@ -533,13 +533,19 @@ class DataFileUpdateService {
           return;
         }
         written = false;
+        // A stream still opening its part file closes only once the file is
+        // open, so the file is removed after the stream closes, and the
+        // update is reported once the file has gone.
+        output.once('close', function () {
+          fs.unlink(filename, function () {
+            dataFileUpdateService.log('error', checkErrorText(
+              dataFileUpdateService.accessError(dataFile), cause));
+            dataFileUpdateService.fail(
+              dataFile,
+              AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+          });
+        });
         output.destroy();
-        fs.unlink(filename, function () {});
-        dataFileUpdateService.log('error', checkErrorText(
-          dataFileUpdateService.accessError(dataFile), cause));
-        dataFileUpdateService.fail(
-          dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       });
 
       output.on('finish', function () {
