@@ -334,12 +334,18 @@ into `main` from any other branch.
 Each package has its own version, tagged `<package>/<version>`, such as
 `fiftyone.pipeline.core/4.5.103`. A publish releases a package when a file
 under its `Path` or `ExtraPaths` in `ci/packages.json` changed since its last
-tag, other than under its `ExcludePaths`, and releases every package that
-depends on it with it. `ci/release-plan.ps1` works this out with common-ci's
-`steps/release-plan.ps1`, and only the patch number moves.
+tag, and releases every package that depends on it with it.
+`ci/release-plan.ps1` works this out with common-ci's `steps/release-plan.ps1`,
+and only the patch number moves.
 
-A package's examples are in its `ExcludePaths`, so a change only to them
-releases nothing. The two `shared` packages keep the code their `index.js`
+Some changes do not count. common-ci leaves out every `*.md` and `LICENSE`
+file and every `docs`, `tests`, `test` and `examples` folder, each package's
+`Ignore` adds `__tests__`, and its `ExcludePaths` leave out its `examples`
+folder. `ci/release-plan-filter.ps1` leaves out a `package.json` or
+`remote_package.json` whose only changes are to `description`, `keywords`,
+`homepage`, `repository`, `bugs`, `author`, `license` or `readme`.
+So a change only to documentation, tests, examples or that text releases
+nothing. The two `shared` packages keep the code their `index.js`
 exports in `lib`. Their `examples` and `tests` folders hold only files that
 re-export the module of the same name in `lib`, so a `require` of an old path
 still works. Those files never change, and a change to `lib` releases the
