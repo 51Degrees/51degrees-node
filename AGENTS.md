@@ -247,6 +247,19 @@ reads its key from `_51DEGREES_RESOURCE_KEY` instead.
   `51Degrees-LiteV41.ipi`, so CI reads the Lite IP Intelligence file only when
   it has no IP Intelligence licence.
 
+## Environment variable names
+
+[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md)
+holds every environment variable name that the packages, tests, examples and
+CI scripts of every language read, with what each name holds and the
+deprecated names each replaced. The list decides. Use the names it gives, and
+when a change needs a new name, or reads an old name again, change
+[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.json)
+in common-ci in the same piece of work. This repository's own name
+check, [`ci/tests/environmentVariableNames.test.js`](ci/tests/environmentVariableNames.test.js), still keeps a
+list of its own. Where the two differ, common-ci's list is the one to
+follow.
+
 ## Package references
 
 `package.json` refers to the other packages here by path, so the workspace links
@@ -317,3 +330,11 @@ into `main` from any other branch.
 
 The repository has one version, tagged as a plain version such as `4.5.97`.
 `ci/get-next-package-version.ps1` moves only the patch number.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.

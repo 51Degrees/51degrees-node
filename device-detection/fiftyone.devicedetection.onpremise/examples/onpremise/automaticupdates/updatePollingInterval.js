@@ -61,8 +61,15 @@ const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_
 // Set your licence key in the _51DEGREES_LICENSE_KEY environment
 // variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=top
 
+// LICENSE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_LICENSE_KEY is unset or empty.
+if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
+  console.warn('The LICENSE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
+    'instead.');
+}
 const myLicenseKey = process.env._51DEGREES_LICENSE_KEY ||
-  '!!YOUR_LICENSE_KEY!!';
+  process.env.LICENSE_KEY || '!!YOUR_LICENSE_KEY!!';
 
 if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   console.log('This example updates the data file automatically, which needs ' +

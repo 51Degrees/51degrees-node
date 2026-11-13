@@ -44,8 +44,8 @@ const CloudRequestEngine =
   require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
 const resourceKeyNames = keyUtils.resourceKeyNames(
-  tc.envVars.superResourceKeyEnvVar,
-  ExampleUtils.RESOURCE_KEY_ENV_VAR);
+  tc.envVars.superResourceKeyVariable,
+  ExampleUtils.RESOURCE_KEY_VARIABLE);
 
 describe('Examples', () => {
   test('cloud get all properties', async () => {

@@ -35,6 +35,13 @@ module.exports = {
     'request made with one that does not list the properties it wants. ' +
     'Set requestedProperties to the fully qualified names wanted, for ' +
     "example ['device.ismobile', 'device.iscrawler'].",
+  // Logged once for an engine whose endpoint was read from the deprecated
+  // variable name.
+  oldEndpointVariable: 'The FOD_CLOUD_API_URL environment variable is ' +
+    'deprecated and _51DEGREES_CLOUD_ENDPOINT replaces it. The cloud ' +
+    'endpoint was read from FOD_CLOUD_API_URL because ' +
+    '_51DEGREES_CLOUD_ENDPOINT is not set. Set _51DEGREES_CLOUD_ENDPOINT ' +
+    'to the same value.',
   // Logged once when, with a license key, an answer leaves out requested
   // properties.
   propertiesNotCovered: 'The cloud service did not return the ' +

@@ -54,7 +54,7 @@ const fs = require('fs');
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const { ExampleUtils, DATA_FILE_PATH_ENV_VAR } =
+const { ExampleUtils, DATA_FILE_PATH_VARIABLE } =
   require(path.join(__dirname, '/../exampleUtils'));
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
@@ -165,7 +165,7 @@ const findDataFile = function (dataFile, output) {
   // path, then search the folder hierarchy for the default file name.
   if (dataFile === null) {
     output.write('No filename specified. Checking the ' +
-      `'${DATA_FILE_PATH_ENV_VAR}' environment variable, then searching ` +
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable, then searching ` +
       `for the default '${LITE_V_4_1_HASH}'\n`);
     dataFile = ExampleUtils.findDataFile(LITE_V_4_1_HASH);
   } else if (path.isAbsolute(dataFile) === false) {

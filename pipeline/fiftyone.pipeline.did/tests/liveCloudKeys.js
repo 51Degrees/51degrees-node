@@ -32,13 +32,47 @@ const ACCESSIBLE_PROPERTIES_URL =
 // Where to create a resource key.
 const CONFIGURE_URL = 'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-tests-livecloudkeys.js&utm_term=resource-key-required';
 
+// The deprecated names, each with the name that replaced it. A deprecated
+// name comes last in a list, so it is read only when the names before it
+// are unset or empty.
+const DEPRECATED_NAMES = {
+  RESOURCE_KEY: '_51DEGREES_RESOURCE_KEY',
+  LICENSE_KEY: '_51DEGREES_LICENSE_KEY'
+};
+
+// The old names already said to be deprecated, so each is said once.
+const reportedOldNames = new Set();
+
+/**
+ * Prints, once for each old name, that the name is deprecated and which
+ * name replaces it.
+ *
+ * @param {string} oldName the deprecated environment variable name
+ * @param {string} name the name that replaces it
+ */
+const reportOldName = function (oldName, name) {
+  if (reportedOldNames.has(oldName) === false) {
+    reportedOldNames.add(oldName);
+    console.warn(`The ${oldName} environment variable is deprecated and ` +
+      `${name} replaces it. Set ${name} instead.`);
+  }
+};
+
 module.exports = {
   // The names the resource key is read from, in order. The workflow that
   // runs the tests once for each key sets _51DEGREES_RESOURCE_KEY to each
   // in turn, so it comes first.
   RESOURCE_KEY_NAMES: [
     '_51DEGREES_RESOURCE_KEY',
-    '_51DEGREES_RESOURCE_KEY_BESPOKE'
+    '_51DEGREES_RESOURCE_KEY_BESPOKE',
+    'RESOURCE_KEY'
+  ],
+
+  // The names the licence key is read from, in order.
+  LICENCE_KEY_NAMES: [
+    '_51DEGREES_LICENSE_KEY_51DID',
+    '_51DEGREES_LICENSE_KEY',
+    'LICENSE_KEY'
   ],
 
   /**
@@ -51,6 +85,9 @@ module.exports = {
     for (const name of names) {
       const value = process.env[name];
       if (value && value.trim()) {
+        if (DEPRECATED_NAMES[name]) {
+          reportOldName(name, DEPRECATED_NAMES[name]);
+        }
         return value.trim();
       }
     }
@@ -71,8 +108,9 @@ module.exports = {
       ? 'These tests call the live 51Degrees cloud service, so they need'
       : 'This test calls the live 51Degrees cloud service, so it needs';
     const asker = plural ? 'the tests ask' : 'the test asks';
+    const current = names.filter((name) => !DEPRECATED_NAMES[name]);
     return `${start} a resource key and there is nothing to fall back on. ` +
-      `None of ${names.join(', ')} is set, tried in that order. The key ` +
+      `None of ${current.join(', ')} is set, tried in that order. The key ` +
       `has to carry the ${product} product, because ${asker} the service ` +
       `for ${asksFor}. To see the products a key carries, open ` +
       `${ACCESSIBLE_PROPERTIES_URL}. Create a key at ${CONFIGURE_URL}.`;

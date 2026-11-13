@@ -113,6 +113,10 @@ The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
 the keys and data files its tests use.
 
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md),
+which decides.
+
 ## Regenerating the SWIG wrappers
 
 The wrappers are generated and must not be edited by hand. Use the

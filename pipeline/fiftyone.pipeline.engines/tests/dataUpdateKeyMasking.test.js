@@ -98,3 +98,20 @@ describe.each([
       .toContain('licenseKeys=' + MASKED + '%7C********9999');
   });
 });
+
+// The pipeline's log is on the path every detection takes, so it does not
+// mask. The service masks its own messages instead, which this test pins by
+// reading what the service hands to the pipeline rather than what a listener
+// hears.
+test('the service masks before the message reaches the pipeline', () => {
+  const handed = [];
+  const service = new DataFileUpdateService(
+    { log: (level, message) => handed.push({ level, message }) });
+  service.log('info', "Checking for update from 'https://d.example/" +
+    '?Type=HashV41&licenseKeys=' + KEY + "'");
+
+  expect(handed).toHaveLength(1);
+  expect(handed[0].level).toBe('info');
+  expect(handed[0].message).toContain('licenseKeys=' + MASKED);
+  expect(handed[0].message).not.toContain(KEY);
+});

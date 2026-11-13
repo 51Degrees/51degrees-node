@@ -134,7 +134,7 @@ const run = async function (options, output) {
     console.log(
       'No resource key specified in the configuration file ' +
       '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
       'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +

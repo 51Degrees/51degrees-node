@@ -26,11 +26,70 @@ const path = require('path');
 
 // The environment variable used to get the resource key to use when
 // running examples.
-const RESOURCE_KEY_ENV_VAR = '_51DEGREES_RESOURCE_KEY';
+const RESOURCE_KEY_VARIABLE = '_51DEGREES_RESOURCE_KEY';
 
-// Get the resource key from the environment, under the one name it has.
+/**
+ * The name the resource key variable had when it began with the digit.
+ *
+ * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
+ * read only when that variable is unset or empty.
+ */
+const RESOURCE_KEY_ENV_VAR = '51DEGREES_RESOURCE_KEY';
+
+/**
+ * The name the resource key variable had first.
+ *
+ * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
+ * read only when that variable and RESOURCE_KEY_ENV_VAR are unset or
+ * empty.
+ */
+const LEGACY_RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
+
+// The old names already said to be deprecated, so each is said once.
+const reportedOldNames = new Set();
+
+/**
+ * Prints, once for each old name, that the name is deprecated and which
+ * name replaces it.
+ *
+ * @param {string} oldName the deprecated environment variable name
+ * @param {string} name the name that replaces it
+ */
+const reportOldName = function (oldName, name) {
+  if (reportedOldNames.has(oldName) === false) {
+    reportedOldNames.add(oldName);
+    console.warn(`The ${oldName} environment variable is deprecated and ` +
+      `${name} replaces it. Set ${name} instead.`);
+  }
+};
+
+/**
+ * Reads an environment variable under its name and, when that is unset or
+ * empty, under the deprecated names it had before, in order.
+ *
+ * @param {string} name the environment variable name
+ * @param {...string} oldNames the deprecated names it had before
+ * @returns {string|undefined} the value, or undefined when none is set
+ */
+const readVariable = function (name, ...oldNames) {
+  if (process.env[name]) {
+    return process.env[name];
+  }
+  for (const oldName of oldNames) {
+    if (process.env[oldName]) {
+      reportOldName(oldName, name);
+      return process.env[oldName];
+    }
+  }
+  return undefined;
+};
+
+// Get the resource key from the environment. The two deprecated names are
+// read, in the order they were before, only when RESOURCE_KEY_VARIABLE is
+// unset or empty.
 const getResourceKeyFromEnv = function () {
-  return process.env[RESOURCE_KEY_ENV_VAR];
+  return readVariable(RESOURCE_KEY_VARIABLE, RESOURCE_KEY_ENV_VAR,
+    LEGACY_RESOURCE_KEY_ENV_VAR);
 };
 
 // The common message shown when a resource key leaves one or more of
@@ -90,7 +149,9 @@ const serveStaticAsset = (req, res, publicDir) => {
 };
 
 module.exports = {
+  RESOURCE_KEY_VARIABLE,
   RESOURCE_KEY_ENV_VAR,
+  LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,
   getResourceKeyFromEnv,
   serveStaticAsset
