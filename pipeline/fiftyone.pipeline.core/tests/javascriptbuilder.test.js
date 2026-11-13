@@ -281,6 +281,46 @@ test('JSON bundler - delayexecution only for a property with a value',
     expect(json).not.toHaveProperty('threedelayexecution');
   });
 
+// The bundler keeps each element's delayed properties after the first
+// request, so every later request must still mark each element's own.
+test('JSON bundler - each element keeps its own delayed properties on ' +
+  'later requests', async () => {
+  // Each element names its properties after its own key, so reading
+  // another element's list loses them.
+  const element = (dataKey) => new core.FlowElement({
+    dataKey,
+    properties: {
+      [dataKey + 'script']: { delayexecution: true },
+      [dataKey + 'result']: { evidenceproperties: [dataKey + 'script'] }
+    },
+    processInternal: function (flowData) {
+      flowData.setElementData(new core.ElementDataDictionary({
+        flowElement: this,
+        contents: {
+          [dataKey + 'script']: 'run()',
+          [dataKey + 'result']: 'value'
+        }
+      }));
+    }
+  });
+  const pipeline = new core.PipelineBuilder()
+    .add(element('first'))
+    .add(element('second'))
+    .build();
+
+  for (let request = 1; request <= 2; request++) {
+    const flowData = pipeline.createFlowData();
+    await flowData.process();
+    for (const dataKey of ['first', 'second']) {
+      const json = flowData.jsonbundler.json[dataKey];
+      expect([request, dataKey, json[dataKey + 'scriptdelayexecution']])
+        .toEqual([request, dataKey, true]);
+      expect([request, dataKey, json[dataKey + 'resultevidenceproperties']])
+        .toEqual([request, dataKey, [dataKey + '.' + dataKey + 'script']]);
+    }
+  }
+});
+
 test('JSON bundler - Verify output where a property has multiple evidence properties', (done) => {
   const delayExecutionEngine1 = new core.FlowElement({
     dataKey: 'jsontestengine',

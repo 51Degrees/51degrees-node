@@ -154,13 +154,13 @@ class JSONBundlerElement extends FlowElement {
           }
         }
 
-        this.propertyCache[flowElement.dataKey] = {
+        this.propertyCache[flowElement] = {
           delayExecutionList,
           evidenceProperties: delayedEvidenceProperties
         };
       }
 
-      const propertyCache = this.propertyCache[flowElement.dataKey];
+      const propertyCache = this.propertyCache[flowElement];
 
       for (const property in properties) {
         // Get the value
