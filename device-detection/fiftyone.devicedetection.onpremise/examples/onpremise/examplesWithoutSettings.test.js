@@ -44,7 +44,7 @@ const require51 = (requestedPackage) => {
 const optionsExtension =
   require51('fiftyone.devicedetection.shared').optionsExtension;
 
-const { ExampleUtils, NEEDS_ENTERPRISE } =
+const { ExampleUtils, NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
   require(path.join(__dirname, 'exampleUtils'));
 
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
@@ -59,10 +59,11 @@ const TIMEOUT_MS = 300000;
 // The settings that name a data file or a licence key. A fresh clone has
 // none of them.
 const SETTINGS = [
-  '51DEGREES_DD_PATH',
   '_51DEGREES_DD_PATH',
-  'LICENSEKEY',
-  'LICENSE_KEY'
+  DATA_FILE_PATH_ENV_VAR,
+  '_51DEGREES_LICENSE_KEY',
+  'LICENSE_KEY',
+  'LICENSEKEY'
 ];
 
 // Runs an example in its own process, from its own folder, as a person

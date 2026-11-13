@@ -23,14 +23,52 @@
 module.exports = {
   // warning message to be shown for conflicted evidences
   evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s",
-  // logged when the cloud answer has no element for an engine's data key
-  elementMissing: '%s not populated. The resource key does not include ' +
-    "the '%s' product, so the cloud service left it out of the answer. " +
-    'The other products in the answer can still be used. To see the ' +
-    'products a key includes, open ' +
+  // Refused when the engine is built, each saying why the cloud service
+  // would refuse every request.
+  noCredential: 'CloudRequestEngine needs a resourceKey or a licenseKey ' +
+    'to authenticate with, as the cloud service answers 401 to a request ' +
+    'that carries neither. Create a resource key for free at ' +
+    'https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
+  licenseKeyNeedsProperties: 'CloudRequestEngine has a licenseKey and no ' +
+    'resourceKey or requestedProperties. A license key names no ' +
+    'properties of its own, so the cloud service answers 400 to every ' +
+    'request made with one that does not list the properties it wants. ' +
+    'Set requestedProperties to the fully qualified names wanted, for ' +
+    "example ['device.ismobile', 'device.iscrawler'].",
+  // Logged once for an engine whose endpoint was read from the deprecated
+  // variable name.
+  oldEndpointVariable: 'The FOD_CLOUD_API_URL environment variable is ' +
+    'deprecated and _51DEGREES_CLOUD_ENDPOINT replaces it. The cloud ' +
+    'endpoint was read from FOD_CLOUD_API_URL because ' +
+    '_51DEGREES_CLOUD_ENDPOINT is not set. Set _51DEGREES_CLOUD_ENDPOINT ' +
+    'to the same value.',
+  // Logged once when, with a license key, an answer leaves out requested
+  // properties.
+  propertiesNotCovered: 'The cloud service did not return the ' +
+    'requested properties %s. They are not covered by the keys in use, ' +
+    'so they will be missing from every result. The other requested ' +
+    'properties came back and are usable.',
+  // Logged once when, with no license key, an answer leaves out
+  // requested properties.
+  propertiesNotProperties: 'The cloud service did not return the ' +
+    'requested properties %s. They are not properties the cloud service ' +
+    'knows, so they will be missing from every result. The other ' +
+    'requested properties came back and are usable.',
+  // logged when the cloud answer has no element for an engine's data key,
+  // followed by productHintResourceKey or productHintLicenseKey
+  elementMissing: "%s not populated. The cloud service left the '%s' " +
+    'product out of the answer. The other products in the answer can ' +
+    'still be used. %s',
+  // logged when the element is null and the cloud gave no reason, followed
+  // by productHintResourceKey or productHintLicenseKey
+  elementNullNoReason: 'The cloud service gave no reason. %s',
+  // how to check a product, where a resource key is in use
+  productHintResourceKey: "To see whether the resource key includes the '%s' " +
+    'product, open ' +
     'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>',
-  // logged when the element is null and the cloud gave no reason
-  elementNullNoReason: 'The cloud service gave no reason. To see whether ' +
-    "the resource key includes the '%s' product, open " +
-    'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>'
+  // how to check a product, where a license key is used alone
+  productHintLicenseKey: 'With a license key alone, the ' +
+    'answer holds only the properties requestedProperties names that the ' +
+    "license key includes, so check that requestedProperties names the '%s' " +
+    'properties wanted and that the license key includes them.'
 };

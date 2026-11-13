@@ -67,9 +67,10 @@ import FlowElement = require("./flowElement.js");
  * @typedef {import('./flowData')} FlowData
  */
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
+ * The evidence the JavaScript builder reads, being every query value, which
+ * the script sends back as its parameters, and the host and protocol of the
+ * callback URL. Other headers do not change the script, so they are not
+ * accepted.
  **/
 declare class JSEvidenceKeyFilter extends EvidenceKeyFilter {
     filterEvidenceKey(key: any): boolean;

@@ -142,8 +142,7 @@ const dataExtension =
 
 const {
   DATA_FILE_AGE_WARNING,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR,
+  DATA_FILE_PATH_VARIABLE,
   ExampleUtils
 } = require(path.join(__dirname, '/../exampleUtils'));
 
@@ -151,9 +150,9 @@ const {
 let pipeline;
 
 const setPipeline = (options) => {
-  // An explicit data file path supplied in the '51DEGREES_DD_PATH'
-  // environment variable (or the older '_51DEGREES_DD_PATH') takes
-  // precedence over the value in the configuration file.
+  // An explicit data file path supplied in the '_51DEGREES_DD_PATH'
+  // environment variable takes precedence over the value in the
+  // configuration file.
   const envDataFilePath = ExampleUtils.getDataFilePathFromEnv();
   if (envDataFilePath) {
     optionsExtension.setDataFilePath(options, envDataFilePath);
@@ -161,8 +160,7 @@ const setPipeline = (options) => {
   const dataFilePath = optionsExtension.getDataFilePath(options);
   if (!dataFilePath) {
     throw 'A data file must be specified in the 51d.json file or the ' +
-      `'${DATA_FILE_PATH_ENV_VAR}' environment variable (the older ` +
-      `'${LEGACY_DATA_FILE_PATH_ENV_VAR}' is also read).`;
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable.`;
   }
 
   if (!fs.existsSync(dataFilePath)) {

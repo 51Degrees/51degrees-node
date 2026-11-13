@@ -75,7 +75,7 @@ test('stop flag works', done => {
       syncFlowData.get('neverRun');
     } catch (e) {
       expect(e.indexOf(util.format(errorMessages.noElementData,
-        'neverRun', 'async, sync')) !== -1).toBe(true);
+        'neverRun', 'sequence, async, sync')) !== -1).toBe(true);
     }
     done();
   });

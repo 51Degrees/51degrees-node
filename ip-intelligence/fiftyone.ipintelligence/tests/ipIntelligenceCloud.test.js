@@ -32,8 +32,7 @@ const require51 = (requestedPackage) => {
 const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpIntelligencePipelineBuilder;
 const keyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  '51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY');
+const resourceKeyNames = keyUtils.resourceKeyNames();
 
 describe('ipIntelligenceCloud', () => {
   // Process an IP address using the live cloud service and check that

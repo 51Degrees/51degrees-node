@@ -33,11 +33,16 @@ module.exports = {
     hardwareResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_HARDWARE',
     browserResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_BROWSER',
     noSetHeaderResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_NO_SETHEADER',
+    /**
+     * @deprecated No test reads a licence key under this name. The licence
+     * key is read from the _51DEGREES_LICENSE_KEY environment variable.
+     */
     licenseKeyEnvVar: 'TEST_LICENSE_KEY'
   },
-  // The names used before the convention above was adopted. They are still
-  // read as a fallback, so an existing setup keeps working until the
-  // secrets behind them are renamed.
+  /**
+   * @deprecated The name each of envVars replaced. An old name is read only
+   * when the name that replaced it is unset or empty. Use envVars.
+   */
   legacyEnvVars: {
     _51DEGREES_RESOURCE_KEY: 'RESOURCE_KEY',
     _51DEGREES_RESOURCE_KEY_SUPER: 'TEST_SUPER_RESOURCE_KEY',

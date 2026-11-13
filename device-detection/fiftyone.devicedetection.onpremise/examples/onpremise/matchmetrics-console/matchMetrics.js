@@ -54,7 +54,7 @@ const fs = require('fs');
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const { ExampleUtils, DATA_FILE_PATH_ENV_VAR } =
+const { ExampleUtils, DATA_FILE_PATH_VARIABLE } =
   require(path.join(__dirname, '/../exampleUtils'));
 const exampleConstants = require51('fiftyone.devicedetection.shared').exampleConstants;
 
@@ -63,7 +63,7 @@ const exampleConstants = require51('fiftyone.devicedetection.shared').exampleCon
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities. On a free data file the example ends
+// a small number of Properties. On a free data file the example ends
 // by saying what the Enterprise data file adds, with a link to ask for a
 // copy.
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
@@ -165,7 +165,7 @@ const findDataFile = function (dataFile, output) {
   // path, then search the folder hierarchy for the default file name.
   if (dataFile === null) {
     output.write('No filename specified. Checking the ' +
-      `'${DATA_FILE_PATH_ENV_VAR}' environment variable, then searching ` +
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable, then searching ` +
       `for the default '${LITE_V_4_1_HASH}'\n`);
     dataFile = ExampleUtils.findDataFile(LITE_V_4_1_HASH);
   } else if (path.isAbsolute(dataFile) === false) {

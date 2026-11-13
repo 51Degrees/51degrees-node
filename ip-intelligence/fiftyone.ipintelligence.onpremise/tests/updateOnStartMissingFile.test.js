@@ -80,6 +80,11 @@ const builderFor = (server, folder, updateOnStart) =>
     tempDataDir: folder
   });
 
+// Each test serves, downloads and unpacks a whole data file, which can take
+// longer than the usual test timeout on a slow runner.
+const DownloadTestTimeoutMs = 60000;
+jest.setTimeout(DownloadTestTimeoutMs);
+
 describe('update on start-up with no data file', () => {
   let folder;
   let server;
@@ -127,6 +132,20 @@ describe('update on start-up with no data file', () => {
     expect(logged.some((message) => message.includes(
       'There is no file at \'' + path.join(folder, 'missing.ipi') + '\'')))
       .toBe(true);
+  });
+
+  // The engine reads the keys it accepts from the data file, which has not
+  // arrived yet, so until it does every key is kept and evidence added in
+  // the meantime is not lost.
+  test('keeps every key until the data file arrives', async () => {
+    server = await serve(500);
+    const pipeline = builderFor(server, folder, true).build();
+    const engine = pipeline.getElement('ip');
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('query.client-ip'))
+      .toBe(true);
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('query.client-ip', IpAddress);
+    expect(flowData.evidence.get('query.client-ip')).toBe(IpAddress);
   });
 
   test('still fails to build where the engine does not update on ' +

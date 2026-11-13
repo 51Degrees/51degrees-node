@@ -72,6 +72,10 @@ test('jsonbuilder contents', done => {
     expect(json).toBe(
       JSON.stringify({
         javascriptProperties: ['testengine.three'],
+        sequence: {
+          'session-id': flowData.evidence.get('query.session-id'),
+          sequence: 1
+        },
         testengine: {
           one: 1,
           two: 2,

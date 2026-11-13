@@ -62,8 +62,9 @@ export type DidClientOptions = {
     licenceKey?: string;
     /**
      * the API base including the `/api/v4/`
-     * segment. Defaults to the FOD_CLOUD_API_URL environment variable where
-     * the runtime has environment variables, then to the public cloud. A value
+     * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
+     * the runtime has environment variables, then to FOD_CLOUD_API_URL, the
+     * deprecated name of the same variable, then to the public cloud. A value
      * without a trailing slash gains one.
      */
     endpoint?: string;
@@ -118,8 +119,9 @@ export type DidClientOptions = {
  * side only. Needed to redeem where the account holds licence keys, and
  * sent only in the body of the redeem request, never in a URL.
  * @property {string} [endpoint] the API base including the `/api/v4/`
- * segment. Defaults to the FOD_CLOUD_API_URL environment variable where
- * the runtime has environment variables, then to the public cloud. A value
+ * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
+ * the runtime has environment variables, then to FOD_CLOUD_API_URL, the
+ * deprecated name of the same variable, then to the public cloud. A value
  * without a trailing slash gains one.
  * @property {FetchFunction} [fetch] the HTTP transport. Defaults to the
  * global `fetch`, on Node and in a browser alike.
@@ -546,8 +548,9 @@ export class DidArgumentError extends DidClientError {
 export class DidNotSupportedError extends DidClientError {
 }
 /**
- * The public cloud API base, used when neither the endpoint option nor the
- * FOD_CLOUD_API_URL environment variable is set.
+ * The public cloud API base, used when the endpoint option, the
+ * _51DEGREES_CLOUD_ENDPOINT environment variable and FOD_CLOUD_API_URL, the
+ * deprecated name of that variable, are all unset.
  */
 export const DEFAULT_ENDPOINT: "https://cloud.51degrees.com/api/v4/";
 import FodId = require("./fodId");

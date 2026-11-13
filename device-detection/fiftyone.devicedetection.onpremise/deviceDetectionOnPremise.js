@@ -32,6 +32,7 @@ const errorMessages = require('fiftyone.devicedetection.shared').errorMessages;
 const os = require('os');
 const path = require('path');
 const EvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
@@ -168,6 +169,21 @@ const initMatchMetrics = function () {
   ];
 
   this.components.metrics = metricComponent;
+};
+
+// Private method to map each property key in lower case to the key itself,
+// so a read can find a property whatever the letter case of the key it is
+// given. The match metric keys are not all in lower case. This should only be
+// called by the call() method, after the properties are made.
+const initPropertyKeys = function () {
+  const keys = Object.create(null);
+  for (const key of Object.keys(this.properties)) {
+    const lowerKey = key.toLowerCase();
+    if (keys[lowerKey] === undefined) {
+      keys[lowerKey] = key;
+    }
+  }
+  this.propertyKeys = keys;
 };
 
 /**
@@ -439,6 +455,13 @@ class DeviceDetectionOnPremise extends Engine {
 
     this.dataKey = 'device';
 
+    // The data file's keys are read when the engine is initialised,
+    // which waits for the download when updateOnStart is set and there
+    // is no file yet. Until then every key is kept, so evidence set
+    // before then is not lost, and initEngine replaces this with the
+    // keys the file lists.
+    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
+
     const current = this;
 
     /**
@@ -473,6 +496,7 @@ class DeviceDetectionOnPremise extends Engine {
       initProperties.call(current, metadata);
       initComponents.call(current, metadata);
       initMatchMetrics.call(current);
+      initPropertyKeys.call(current);
     };
 
     // Disable features that require a license key if one was
@@ -590,7 +614,12 @@ class DeviceDetectionOnPremise extends Engine {
 
       const evidence = new dd.swigWrapper.EvidenceDeviceDetectionSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = dd.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 

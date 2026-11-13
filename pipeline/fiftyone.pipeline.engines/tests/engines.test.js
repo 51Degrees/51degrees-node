@@ -96,6 +96,37 @@ test('restricted properties', done => {
   });
 });
 
+test('restricted properties are compared ignoring case', async () => {
+  // An engine restricted to a name in the data set's own spelling still
+  // gives that property under its lower case key, and still refuses one it
+  // was not given.
+  expect.assertions(2);
+  const engine = new Engine(
+    {
+      dataKey: 'caseEngine',
+      restrictedProperties: ['One'],
+      evidenceKeyFilter: new BasicListEvidenceKeyFilter(['header.user-agent']),
+      properties: {
+        one: { meta: { type: 'int' } },
+        two: { meta: { type: 'int' } }
+      },
+      processInternal: function (flowData) {
+        flowData.setElementData(new AspectDataDictionary(
+          { flowElement: this, contents: { one: 1, two: 2 } }));
+      }
+    }
+  );
+  const caseFlowData = new PipelineBuilder().add(engine).build()
+    .createFlowData();
+  await caseFlowData.process();
+  expect(caseFlowData.get('caseEngine').get('one')).toBe(1);
+  try {
+    caseFlowData.get('caseEngine').get('two');
+  } catch (e) {
+    expect(e).toBe(util.format(errorMessages.propertyExcluded, 'two'));
+  }
+});
+
 test('missing property service', done => {
   flowData.process().then(function () {
     try {
@@ -118,3 +149,166 @@ test('cache', done => {
     done();
   });
 });
+
+// Property names are compared ignoring case, so a key finds its value in any
+// letter case, including a key stored in mixed case.
+test('a dictionary of aspect data finds a key whatever its letter case', () => {
+  const data = new AspectDataDictionary({
+    flowElement: { dataKey: 'caseTest' },
+    contents: { one: 1, noCache: false }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('One')).toBe(1);
+  expect(data.get('ONE')).toBe(1);
+  expect(data.get('noCache')).toBe(false);
+  expect(data.get('nocache')).toBe(false);
+});
+
+// An element given restricted names without an engine's constructor makes
+// its lower case set on the first read and keeps it for later reads.
+test('an element restricted without an engine keeps its lower case names',
+  () => {
+    const flowElement = { dataKey: 'plain', restrictedProperties: ['One'] };
+    const data = new AspectDataDictionary(
+      { flowElement, contents: { one: 1 } });
+    expect(data.get('one')).toBe(1);
+    const keys = flowElement.restrictedPropertyKeys;
+    expect(keys).toEqual(new Set(['one']));
+    expect(data.get('one')).toBe(1);
+    expect(flowElement.restrictedPropertyKeys).toBe(keys);
+  });
+
+// Counts the reads that had to look past letter case, so what the new read
+// costs can be asserted exactly rather than timed.
+test('a read that finds its key as given never looks at letter case', () => {
+  // The count is held here and not on the dictionary because Element Data
+  // hands back a proxy that answers an unknown field by reading a property of
+  // that name, and a count of zero is falsy, so a field would be unreadable
+  // at the only moment that matters.
+  let caseLookups = 0;
+  class CountsCaseLookups extends AspectDataDictionary {
+    getInternalIgnoringCase (key) {
+      caseLookups++;
+      return super.getInternalIgnoringCase(key);
+    }
+  }
+  const data = new CountsCaseLookups({
+    flowElement: { dataKey: 'caseWork' },
+    contents: { one: 1, two: 2, noCache: false }
+  });
+  expect(data.get('one')).toBe(1);
+  expect(data.get('noCache')).toBe(false);
+  expect(caseLookups).toBe(0);
+  // Only a key that finds nothing as given pays for the second look, and it
+  // pays for one.
+  expect(data.get('One')).toBe(1);
+  expect(caseLookups).toBe(1);
+});
+
+// Finds nothing for a key not found as given, as the dictionary did before
+// letter case was ignored, so the read before and after can be timed in the
+// same job.
+class ReadByKeyOnly extends AspectDataDictionary {
+  getInternalIgnoringCase (key) {
+    return undefined;
+  }
+}
+
+// A measurement takes under a second on a quiet runner, but a runner busy
+// enough to need a second measurement is also one that takes longer over
+// both, so the test below gets more than the ten seconds setup.js gives every
+// other test in the package.
+const timingTestTimeoutMilliseconds = 60000;
+
+// Backstop for a read made slower in a way the count above cannot see, such
+// as letter case folded inside getInternal rather than in the second look.
+test('a dictionary read is no slower than it was', () => {
+  const timedReads = 10000;
+  const pairs = 10;
+  const roundsPerPair = 20;
+  // The most the read may cost over the read it replaced, as a ratio.
+  // Folding case on every read, which is what this catches, measures about
+  // twice a plain read, so the bound has room either side. The read of One
+  // in the log below is a different path, being a miss and then the second
+  // look, so it is dearer again and is not what this bound is set from.
+  const allowedRatio = 1.05;
+  const timeOf = (data, key) => {
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    const start = process.hrtime.bigint();
+    for (let i = 0; i < timedReads; i++) {
+      data.get(key);
+    }
+    return Number(process.hrtime.bigint() - start) / timedReads;
+  };
+  const middleOf = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  // Both dictionaries are timed one after the other inside each round and
+  // that round keeps its own ratio, so a runner that speeds up or slows down
+  // between rounds moves both times together and cancels out. Which of the
+  // two goes first changes each round, so neither gets the warm cache every
+  // time. Each pair is built fresh because the engine can settle on a faster
+  // shape for one object in a process, which has nothing to do with the code.
+  // The middle of the rounds decides a measurement, so no single round that
+  // lost its turn on a shared machine can.
+  const measure = () => {
+    const beforeTimes = [];
+    const afterTimes = [];
+    const ratios = [];
+    let last;
+    for (let pair = 0; pair < pairs; pair++) {
+      const flowElement = { dataKey: 'timing' };
+      const contents = { one: 1, two: 2, noCache: false };
+      const before = new ReadByKeyOnly({ flowElement, contents });
+      const after = new AspectDataDictionary({ flowElement, contents });
+      last = after;
+      for (let round = 0; round < roundsPerPair; round++) {
+        let beforeTime;
+        let afterTime;
+        if (round % 2 === 0) {
+          beforeTime = timeOf(before, 'one');
+          afterTime = timeOf(after, 'one');
+        } else {
+          afterTime = timeOf(after, 'one');
+          beforeTime = timeOf(before, 'one');
+        }
+        beforeTimes.push(beforeTime);
+        afterTimes.push(afterTime);
+        ratios.push(afterTime / beforeTime);
+      }
+    }
+    return {
+      before: middleOf(beforeTimes),
+      after: middleOf(afterTimes),
+      ratio: middleOf(ratios),
+      lowest: Math.min(...ratios),
+      highest: Math.max(...ratios),
+      mixedCase: timeOf(last, 'One')
+    };
+  };
+  // A whole measurement can land in a slow patch, so one over the allowance
+  // is taken again and the better of the two decides it. A read that really
+  // is slower is slower in both.
+  let result = measure();
+  let measurements = 1;
+  if (result.ratio > allowedRatio) {
+    const again = measure();
+    measurements = 2;
+    if (again.ratio < result.ratio) {
+      result = again;
+    }
+  }
+  console.log(
+    `Dictionary read of one, the middle of ${pairs * roundsPerPair} rounds ` +
+    `of ${timedReads} reads, each round timing a before and an after side ` +
+    `by side, before ${result.before.toFixed(1)} ns, after ` +
+    `${result.after.toFixed(1)} ns, middle ratio ${result.ratio.toFixed(3)}, ` +
+    `the rounds ranging from ${result.lowest.toFixed(3)} to ` +
+    `${result.highest.toFixed(3)}, from ${measurements} measurement` +
+    `${measurements === 1 ? '' : 's'}. A read of One, which found nothing ` +
+    `before, ${result.mixedCase.toFixed(1)} ns.`);
+  expect(result.ratio).toBeLessThanOrEqual(allowedRatio);
+}, timingTestTimeoutMilliseconds);

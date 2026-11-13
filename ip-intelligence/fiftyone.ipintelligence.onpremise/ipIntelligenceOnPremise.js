@@ -32,6 +32,7 @@ const errorMessages = require('fiftyone.ipintelligence.shared').errorMessages;
 const os = require('os');
 const path = require('path');
 const EvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
@@ -311,6 +312,13 @@ class IpIntelligenceOnPremise extends Engine {
 
     this.dataKey = 'ip';
 
+    // The data file's keys are read when the engine is initialised,
+    // which waits for the download when updateOnStart is set and there
+    // is no file yet. Until then every key is kept, so evidence set
+    // before then is not lost, and initEngine replaces this with the
+    // keys the file lists.
+    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
+
     const current = this;
 
     /**
@@ -461,7 +469,12 @@ class IpIntelligenceOnPremise extends Engine {
 
       const evidence = new ipi.swigWrapper.EvidenceIpiSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = ipi.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      Object.entries(accepted).forEach(function ([key, value]) {
         evidence.set(key, value);
       });
 

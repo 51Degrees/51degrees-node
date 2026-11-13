@@ -84,10 +84,9 @@ describe.each([
   }).urlFormatter();
 
   test('is masked when the key ends a sentence', () => {
-    const message = 'An error occurred while downloading a data file ' +
-      'update for ' + name + ' from ' + url('ABCDEFGH') +
-      '. Update will be attempted again later.';
-    expect(message).toContain('licenseKeys=ABCDEFGH. Update');
+    const message = "Error accessing data update service at '" +
+      url('ABCDEFGH') + "' for engine '" + name + "'. See the log.";
+    expect(message).toContain("licenseKeys=ABCDEFGH' for");
     const masked = LicenseKeys.mask(message);
     expect(masked).toBe(message.replace('ABCDEFGH', '****EFGH'));
   });
@@ -98,4 +97,21 @@ describe.each([
     expect(LicenseKeys.mask(text))
       .toContain('licenseKeys=' + MASKED + '%7C********9999');
   });
+});
+
+// The pipeline's log is on the path every detection takes, so it does not
+// mask. The service masks its own messages instead, which this test pins by
+// reading what the service hands to the pipeline rather than what a listener
+// hears.
+test('the service masks before the message reaches the pipeline', () => {
+  const handed = [];
+  const service = new DataFileUpdateService(
+    { log: (level, message) => handed.push({ level, message }) });
+  service.log('info', "Checking for update from 'https://d.example/" +
+    '?Type=HashV41&licenseKeys=' + KEY + "'");
+
+  expect(handed).toHaveLength(1);
+  expect(handed[0].level).toBe('info');
+  expect(handed[0].message).toContain('licenseKeys=' + MASKED);
+  expect(handed[0].message).not.toContain(KEY);
 });

@@ -8,7 +8,7 @@
  * @returns {string} the message
  */
 export function missingFromAnswerMessage(thing: string, reason: string, product: string): string;
-export declare function resourceKeyNames(...legacyNames: string[]): Array<string>;
+export declare function resourceKeyNames(...extraNames: string[]): Array<string>;
 export declare function getResourceKey(names: Array<string>): string;
 export declare function missingResourceKeyMessage(names: Array<string>, products: string | Array<string>, asksFor: string, plural?: boolean): string;
 export declare function requireProduct(cloudRequestEngine: object, product: string): Promise<void>;

@@ -21,11 +21,15 @@
  * ********************************************************************* */
 
 const engines = require('fiftyone.pipeline.engines');
+const core = require('fiftyone.pipeline.core');
 
 const Engine = engines.Engine;
+const BasicListEvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const Constants = core.Constants;
 const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
+const ShareUsageBackOff = require('./shareUsageBackOff');
 const zlib = require('zlib');
 const url = require('url');
 
@@ -38,6 +42,34 @@ const os = require('os');
 const SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
+
+/**
+ * The default maximum number of entries waiting to be sent, unless ten times
+ * the requested package size is larger.
+ */
+const MAX_QUEUE_SIZE_DEFAULT = 1000;
+
+/**
+ * While the queue is full, a message is logged for the first entry dropped
+ * and then once for every this many more, never one for each entry.
+ */
+const QUEUE_FULL_LOG_EVERY = 1000;
+
+/**
+ * The most characters of an answer's content that are logged.
+ */
+const LOGGED_CONTENT_LENGTH = 500;
+
+/**
+ * The default time in milliseconds to wait for the service to answer.
+ */
+const REQUEST_TIMEOUT_DEFAULT = 60000;
+
+/**
+ * The longest single wait during a pause. Longer pauses are waited out in
+ * parts, as a timer cannot wait longer than about 24 days.
+ */
+const LONGEST_WAIT_MILLIS = 86400000;
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
@@ -85,6 +117,23 @@ class ShareUsage extends Engine {
    * is shared again when it comes from a new session. False by default. It
    * needs cookie to be set, and has no effect when shareAll is true,
    * because every cookie is then shared and used to find repeats.
+   * @param {number} options.maximumQueueSize The most entries held while
+   * waiting to be sent. When the queue is full, new entries are dropped. The
+   * default is 1000, or ten times requestedPackageSize if that is larger.
+   * @param {number} options.requestTimeout The time in milliseconds to wait
+   * for the service to answer before the send counts as failed. 60000 by
+   * default.
+   * @param {number} options.failuresToEnterRecovery The number of failed
+   * sends within failuresWindowSeconds that pauses sending, from 1 to 100.
+   * Usage data is still queued while sending is paused. 10 by default.
+   * @param {number} options.failuresWindowSeconds The time in seconds over
+   * which failed sends are counted. 100 by default.
+   * @param {number} options.initialRecoveryDelaySeconds The length in
+   * seconds of the first pause after failed sends. 2 by default.
+   * @param {number} options.maxRecoveryDelaySeconds The longest a pause can
+   * be, in seconds. 300 by default.
+   * @param {number} options.recoveryMultiplier What the pause is multiplied
+   * by each time the send tried when a pause ends fails. 2 by default.
    */
   constructor (
     {
@@ -96,7 +145,14 @@ class ShareUsage extends Engine {
       sharePercentage = 1,
       endpoint = 'https://devices-v4.51degrees.com/new.ashx',
       shareAll = false,
-      trackSession = false
+      trackSession = false,
+      maximumQueueSize,
+      requestTimeout = REQUEST_TIMEOUT_DEFAULT,
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
     } = {}) {
     super(...arguments);
 
@@ -117,10 +173,13 @@ class ShareUsage extends Engine {
       shareAll
     };
 
-    // When sessions are tracked, the pipeline keeps the session cookie for
-    // the tracker. The data sent leaves it out unless all evidence is
-    // shared.
-    this.evidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
+    // The element accepts no evidence, as none of what it shares changes a
+    // result, so caching, the ETag and the Vary header never depend on it.
+    // The flow data still keeps the evidence it would share, and, when
+    // sessions are tracked, the session cookie for the tracker. The data
+    // sent leaves the cookie out unless all evidence is shared.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.keptEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: trackSession });
     this.dataEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: false });
@@ -135,7 +194,36 @@ class ShareUsage extends Engine {
 
     this.sharePercentage = sharePercentage;
 
+    // The entries waiting to be sent, oldest first.
     this.shareData = [];
+
+    // The entries dropped since the queue last had room.
+    this.dropped = 0;
+
+    this.maximumQueueSize = maximumQueueSize === undefined
+      ? Math.max(MAX_QUEUE_SIZE_DEFAULT, 10 * requestedPackageSize)
+      : maximumQueueSize;
+    if (!(this.maximumQueueSize >= requestedPackageSize)) {
+      throw new RangeError(
+        'maximumQueueSize cannot be smaller than requestedPackageSize.');
+    }
+
+    this.requestTimeout = requestTimeout;
+
+    // Pauses sending after repeated failed sends.
+    this.backOff = new ShareUsageBackOff({
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
+    });
+
+    // True while a message is being sent. One is sent at a time.
+    this.sending = false;
+
+    // Starts sending again when a pause ends.
+    this.resumeTimer = null;
 
     if (endpoint.includes('https://') === false &&
       endpoint.includes('http://') === false) {
@@ -160,8 +248,9 @@ class ShareUsage extends Engine {
    */
   processInternal (flowData) {
     if (Math.random() <= this.sharePercentage) {
+      // The tracker compares the values that would be shared.
       const cacheKey = this.trackerEvidenceKeyFilter
-        .filterEvidence(flowData.evidence.getAll());
+        .filterEvidence(this.getFoundEvidence(flowData));
 
       const share = this.tracker.track(cacheKey);
       if (share) {
@@ -170,6 +259,43 @@ class ShareUsage extends Engine {
         this.addToShareUsage(this.getDataFromEvidence(flowData));
       }
     }
+  }
+
+  /**
+   * The values the element finds to share, before its rules leave any out.
+   * They are every value of the web request the web integration supplied
+   * as server.http-request, under the key each has as evidence, and every
+   * evidence value. Keys ignore letter case, so a key in both places is
+   * one value, under the evidence spelling. The web request itself is not
+   * one of them.
+   *
+   * @param {FlowData} flowData the flow data to look in
+   * @returns {object} the values, keyed as evidence is
+   */
+  getFoundEvidence (flowData) {
+    const found = {};
+    // The name each value is held under in found, by that name folded.
+    const names = {};
+    const put = (key, value) => {
+      const folded = String(key).toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(names, folded)) {
+        delete found[names[folded]];
+      }
+      names[folded] = key;
+      found[key] = value;
+    };
+    const httpRequest = flowData.evidence.get(Constants.evidenceHttpRequest);
+    if (httpRequest !== null && typeof httpRequest === 'object') {
+      for (const [key, value] of Object.entries(httpRequest)) {
+        if (value !== undefined && value !== null) {
+          put(key, value);
+        }
+      }
+    }
+    for (const [key, value] of Object.entries(flowData.evidence.getAll())) {
+      put(key, value);
+    }
+    return found;
   }
 
   /**
@@ -182,9 +308,10 @@ class ShareUsage extends Engine {
    */
   getDataFromEvidence (flowData) {
     const data = new ShareUsageData();
+    const found = this.getFoundEvidence(flowData);
 
-    Object.keys(flowData.evidence.getAll()).forEach(key => {
-      const value = flowData.evidence.get(key);
+    Object.keys(found).forEach(key => {
+      const value = found[key];
       if (key === 'server.client-ip') {
         // The client IP is dealt with separately for backwards
         // compatibility purposes.
@@ -248,6 +375,19 @@ class ShareUsage extends Engine {
    * evidence in FlowData (filtered by the ShareUsageEvidenceKeyFilter)
    */
   addToShareUsage (data) {
+    // When the queue is full, the newest entries are dropped.
+    if (this.shareData.length >= this.maximumQueueSize) {
+      this.dropped++;
+      if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
+        this._log('warning', 'The usage sharing queue is full at ' +
+          `${this.maximumQueueSize} entries, so usage data is being ` +
+          `dropped. ${this.dropped} entries have been dropped since the ` +
+          'queue last had room.');
+      }
+      return;
+    }
+    this.dropped = 0;
+
     let xml = '';
 
     xml += '<Device>';
@@ -308,40 +448,156 @@ class ShareUsage extends Engine {
 
     this.shareData.push(xml);
 
-    if (this.shareData.length >= this.requestedPackageSize) {
-      this.sendShareUsage();
-    }
+    this.sendShareUsage();
   }
 
   /**
-   * Internal method to send the share usage bundle to the 51Degrees servers
+   * Internal method to start sending the share usage bundle to the 51Degrees
+   * servers. Nothing starts if a message is already being sent, if fewer
+   * than requestedPackageSize entries are queued, or while sending is paused
+   * after failed sends, in which case a timer starts sending when the pause
+   * ends.
    */
   sendShareUsage () {
+    if (this.sending) {
+      return;
+    }
+    const pause = this.backOff.remaining(ShareUsageBackOff.now());
+    if (pause > 0) {
+      this.scheduleResume(pause);
+      return;
+    }
+    if (this.shareData.length < this.requestedPackageSize) {
+      return;
+    }
+    this.sending = true;
+    this.sendNext();
+  }
+
+  /**
+   * Start sending when the pause ends.
+   *
+   * @param {number} pause the milliseconds until the pause ends
+   */
+  scheduleResume (pause) {
+    if (this.resumeTimer) {
+      return;
+    }
+    this.resumeTimer = setTimeout(() => {
+      this.resumeTimer = null;
+      this.sendShareUsage();
+    }, Math.min(pause, LONGEST_WAIT_MILLIS));
+    // The timer does not keep the process running.
+    this.resumeTimer.unref();
+  }
+
+  /**
+   * Send one message of at most twice requestedPackageSize entries, then the
+   * next until fewer than requestedPackageSize are queued or a failed send
+   * pauses sending.
+   */
+  sendNext () {
+    const shareData = this.shareData.splice(0, 2 * this.requestedPackageSize);
+    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join('')}</Devices>`;
+    this.post(data, accepted => {
+      let pause = 0;
+      if (accepted) {
+        if (this.backOff.succeeded()) {
+          this._log('info', 'Usage sharing resumed after a send succeeded.');
+        }
+      } else {
+        pause = this.backOff.failed(ShareUsageBackOff.now());
+        if (pause > 0) {
+          this._log('warning', `Usage sharing paused for ${pause / 1000} ` +
+            'seconds after failed sends. Usage data is still queued, up to ' +
+            'the maximum queue size, and sending starts again when the pause ' +
+            'ends.');
+          this.scheduleResume(pause);
+        }
+      }
+      if (pause > 0 || this.shareData.length < this.requestedPackageSize) {
+        this.sending = false;
+        return;
+      }
+      this.sendNext();
+    });
+  }
+
+  /**
+   * Post one message to the 51Degrees servers.
+   *
+   * @param {string} data the XML to send
+   * @param {Function} done called once with true if the service accepted the
+   * message, or false if the send failed
+   */
+  post (data, done) {
     const usageEngine = this;
-    const shareData = this.shareData;
-    this.shareData = [];
-    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join()}</Devices>`;
+    let finished = false;
+    const finish = accepted => {
+      if (finished === false) {
+        finished = true;
+        done(accepted);
+      }
+    };
 
     const options = {
       hostname: this.endpoint.hostname,
       path: this.endpoint.pathname,
       port: this.endpoint.port,
       method: 'POST',
-      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' }
+      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' },
+      timeout: this.requestTimeout
     };
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
         usageEngine._log('warning', err);
+        finish(false);
+        return;
       }
-      const req = usageEngine.http.request(options, function (res) {
-        usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
-      });
-      req.on('error', function (e) {
+      try {
+        const req = usageEngine.http.request(options, function (res) {
+          usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
+          if (res.statusCode === 200) {
+            // Reads the answer so the connection can be used again.
+            res.resume();
+            finish(true);
+            return;
+          }
+          let content = '';
+          res.setEncoding('utf8');
+          res.on('data', chunk => {
+            if (content.length < LOGGED_CONTENT_LENGTH) {
+              content += chunk;
+            }
+          });
+          res.on('end', function () {
+            usageEngine._log('warning', 'Usage sharing sent a message and ' +
+              `the service answered ${res.statusCode} with content ` +
+              `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
+            finish(false);
+          });
+          res.on('error', function () {
+            finish(false);
+          });
+          res.on('close', function () {
+            finish(false);
+          });
+        });
+        req.on('timeout', function () {
+          req.destroy(new Error(
+            `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
+        });
+        req.on('error', function (e) {
+          usageEngine._log('warning', e);
+          finish(false);
+        });
+        req.write(buffer);
+        req.end();
+      } catch (e) {
         usageEngine._log('warning', e);
-      });
-      req.write(buffer);
-      req.end();
+        finish(false);
+      }
     });
   }
 

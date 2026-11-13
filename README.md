@@ -27,10 +27,10 @@ The folder table and product guides below show where to find usage examples and 
 
 | Product | Read first | Documentation |
 | --- | --- | --- |
-| Pipeline API | [pipeline/readme.md](pipeline/readme.md) | [Node.js](https://51degrees.com/documentation/apis/pipeline-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
-| Device Detection | [device-detection/readme.md](device-detection/readme.md) | [Node.js](https://51degrees.com/documentation/apis/device-detection-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
-| IP Intelligence | [ip-intelligence/readme.md](ip-intelligence/readme.md) | [Node.js](https://51degrees.com/documentation/apis/ip-intelligence-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
-| Location | [location/README.md](location/README.md) | [Node.js](https://51degrees.com/documentation/apis/location-node/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
+| Pipeline API | [pipeline/readme.md](pipeline/readme.md) | [Guide](https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-guide) and [Node.js API](https://51degrees.com/documentation/apis/pipeline-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=pipeline-node-js) |
+| Device Detection | [device-detection/readme.md](device-detection/readme.md) | [Guide](https://51degrees.com/documentation/_device_detection__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-guide) and [Node.js API](https://51degrees.com/documentation/apis/device-detection-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=device-detection-node-js) |
+| IP Intelligence | [ip-intelligence/readme.md](ip-intelligence/readme.md) | [Guide](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-guide) and [Node.js API](https://51degrees.com/documentation/apis/ip-intelligence-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=ip-intelligence-node-js) |
+| Location | [location/README.md](location/README.md) | [Guide](https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-guide) and [Node.js API](https://51degrees.com/documentation/apis/location-node/annotated.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=location-node-js) |
 
 ## What is where
 
@@ -112,6 +112,10 @@ npm run tsc
 The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
 the keys and data files its tests use.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md),
+which decides.
 
 ## Regenerating the SWIG wrappers
 

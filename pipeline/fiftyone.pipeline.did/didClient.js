@@ -28,10 +28,20 @@ const PublicKeys = require('./publicKeys');
 const packageVersion = require('./package.json').version;
 
 /**
- * The public cloud API base, used when neither the endpoint option nor the
- * FOD_CLOUD_API_URL environment variable is set.
+ * The public cloud API base, used when the endpoint option, the
+ * _51DEGREES_CLOUD_ENDPOINT environment variable and FOD_CLOUD_API_URL, the
+ * deprecated name of that variable, are all unset.
  */
 const DEFAULT_ENDPOINT = 'https://cloud.51degrees.com/api/v4/';
+
+/**
+ * Said once when the endpoint is read from the deprecated variable name.
+ */
+const OLD_ENDPOINT_VARIABLE_MESSAGE = 'The FOD_CLOUD_API_URL environment ' +
+  'variable is deprecated and _51DEGREES_CLOUD_ENDPOINT replaces it. The ' +
+  'cloud endpoint was read from FOD_CLOUD_API_URL because ' +
+  '_51DEGREES_CLOUD_ENDPOINT is not set. Set _51DEGREES_CLOUD_ENDPOINT to ' +
+  'the same value.';
 
 /**
  * Sent with every request on Node so the cloud can tell which package
@@ -414,8 +424,9 @@ class RedeemResult {
  * side only. Needed to redeem where the account holds licence keys, and
  * sent only in the body of the redeem request, never in a URL.
  * @property {string} [endpoint] the API base including the `/api/v4/`
- * segment. Defaults to the FOD_CLOUD_API_URL environment variable where
- * the runtime has environment variables, then to the public cloud. A value
+ * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
+ * the runtime has environment variables, then to FOD_CLOUD_API_URL, the
+ * deprecated name of the same variable, then to the public cloud. A value
  * without a trailing slash gains one.
  * @property {FetchFunction} [fetch] the HTTP transport. Defaults to the
  * global `fetch`, on Node and in a browser alike.
@@ -998,16 +1009,34 @@ async function checkAgainst (fodId, keys) {
   return { valid: false, reason: SignatureReason.SIGNATURE };
 }
 
+// Whether this process has been told that it read the deprecated variable
+// name, which it is told once however many clients are built.
+let oldEndpointVariableReported = false;
+
 /**
- * The API base the FOD_CLOUD_API_URL environment variable names, where the
- * runtime has environment variables. A browser has none.
+ * The API base the _51DEGREES_CLOUD_ENDPOINT environment variable names,
+ * where the runtime has environment variables. A browser has none. When
+ * that variable is unset or empty, FOD_CLOUD_API_URL is read, the
+ * deprecated name of the same variable, and the first read that finds a
+ * value there raises a Node DeprecationWarning.
  * @returns {string | undefined} the API base, or undefined where there is
  * no variable to read
  */
 function environmentEndpoint () {
-  return typeof process !== 'undefined' && process.env
-    ? process.env.FOD_CLOUD_API_URL
-    : undefined;
+  if (typeof process === 'undefined' || !process.env) {
+    return undefined;
+  }
+  if (process.env._51DEGREES_CLOUD_ENDPOINT) {
+    return process.env._51DEGREES_CLOUD_ENDPOINT;
+  }
+  const oldEndpoint = process.env.FOD_CLOUD_API_URL;
+  if (oldEndpoint && oldEndpointVariableReported === false) {
+    oldEndpointVariableReported = true;
+    if (typeof process.emitWarning === 'function') {
+      process.emitWarning(OLD_ENDPOINT_VARIABLE_MESSAGE, 'DeprecationWarning');
+    }
+  }
+  return oldEndpoint;
 }
 
 /**
