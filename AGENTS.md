@@ -320,8 +320,8 @@ npm.
 
 `ci/select-options.ps1` chooses the entries a pull request runs. The standard
 set is Node 24 and Node 22 on Linux, with the Selenium contract on Node 24
-alone. A native change adds Windows and Linux ARM, and a change outside the
-package folders adds every entry but macOS. macOS and performance run only
+alone. A native change adds Node 24 on Windows and on Linux ARM, and a
+change outside the package folders adds every entry but macOS. macOS and performance run only
 when `rc` itself or the release pull request is built, which
 `.github/workflows/release-pull-request.yml` does on every entry.
 
