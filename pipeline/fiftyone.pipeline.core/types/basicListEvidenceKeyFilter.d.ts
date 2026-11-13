@@ -4,7 +4,6 @@ export = BasicListEvidenceKeyFilter;
  * Evidence not using these keys is filtered out
  */
 declare class BasicListEvidenceKeyFilter extends EvidenceKeyFilter {
-    #private;
     /**
      * constructor for basicListEvidenceKeyFilter
      *
@@ -12,5 +11,6 @@ declare class BasicListEvidenceKeyFilter extends EvidenceKeyFilter {
      */
     constructor(list: any[]);
     list: any[];
+    #private;
 }
 import EvidenceKeyFilter = require("./evidenceKeyFilter");

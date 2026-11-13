@@ -20,7 +20,6 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-
 // A detection checks each piece of evidence against an engine's key filter
 // as the evidence is added, and again as the engine reads the evidence it
 // accepts. These tests count how often a BasicListEvidenceKeyFilter puts the
