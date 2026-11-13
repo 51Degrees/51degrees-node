@@ -116,16 +116,8 @@ function run (script) {
 }
 
 /**
- * Asserts that the script uses the name given everywhere the name is
- * written, that it parses, and that the object works once the script has
- * run.
- *
- * @param {string} script the rendered script
- * @param {string} name the name the object is expected to have
- */
-/**
- * The places the script writes its object name as code, which a name that
- * was refused must not reach.
+ * Three of the places the script writes its object name as code, which a
+ * name that was refused must not reach.
  *
  * @param {string} name the refused name
  * @returns {Array<string>} the text each place would hold
@@ -135,6 +127,14 @@ function namedInCode (name) {
     'window["' + name + 'Evidence"]'];
 }
 
+/**
+ * Asserts that the script uses the name given everywhere the name is
+ * written, that it parses, and that the object works once the script has
+ * run.
+ *
+ * @param {string} script the rendered script
+ * @param {string} name the name the object is expected to have
+ */
 function expectWorkingObject (script, name) {
   expect(script).toMatch(new RegExp('var ' + name + ' = new ' +
     'fiftyoneDegreesManager\\(\\);'));
