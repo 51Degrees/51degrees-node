@@ -42,7 +42,7 @@
  * but it is not yet available for IP intelligence. For now, you can run
  * the onpremise/mixed/gettingstarted-api example to simulate a custom
  * hosted cloud service, and point this example to it by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can then be used for the resource key.
  *
  * Required npm Dependencies:
@@ -111,7 +111,7 @@ const run = async function (options, output) {
     console.log(
       'No resource key specified in the configuration file ' +
       '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
       'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required. ' +

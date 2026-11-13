@@ -150,9 +150,9 @@ cd ../../../../..
 ```
 
 To use another data file, give its path as the first argument, or set
-`51DEGREES_DD_PATH` for Device Detection or `51DEGREES_IPI_PATH` for IP
-Intelligence. The names start with a digit, so in a Linux shell set them with
-`env`, for example `env 51DEGREES_IPI_PATH=/path/to/file.ipi node gettingStarted.js`.
+`_51DEGREES_DD_PATH` for Device Detection or `_51DEGREES_IPI_PATH` for IP
+Intelligence, for example
+`export _51DEGREES_IPI_PATH=/path/to/file.ipi` before running the example.
 
 ### Correct output
 
@@ -213,7 +213,7 @@ has only the free properties, the platform and browser lines read
 `Unknown (...)`, and the example ends by saying that some properties are not
 available with a free resource key. The IP Intelligence cloud example, in
 `ip-intelligence/fiftyone.ipintelligence.cloud/examples/cloud/gettingstarted-console`,
-reads its key from `51DEGREES_RESOURCE_KEY` instead.
+reads its key from `_51DEGREES_RESOURCE_KEY` instead.
 
 ### Pitfalls
 
@@ -246,6 +246,19 @@ reads its key from `51DEGREES_RESOURCE_KEY` instead.
   look at first, and the paid IP Intelligence file in as
   `51Degrees-LiteV41.ipi`, so CI reads the Lite IP Intelligence file only when
   it has no IP Intelligence licence.
+
+## Environment variable names
+
+[common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md)
+holds every environment variable name that the packages, tests, examples and
+CI scripts of every language read, with what each name holds and the
+deprecated names each replaced. The list decides. Use the names it gives, and
+when a change needs a new name, or reads an old name again, change
+[`environment-variables.json`](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.json)
+in common-ci in the same piece of work. This repository's own name
+check, [`ci/tests/environmentVariableNames.test.js`](ci/tests/environmentVariableNames.test.js), still keeps a
+list of its own. Where the two differ, common-ci's list is the one to
+follow.
 
 ## Package references
 
@@ -291,7 +304,10 @@ paths relative to the file. Each free data file there is a `<file>.link` rather
 than the file. `cxx/data/get-data-files.sh` and `.ps1` download them, and the
 examples run the script for a linked file that is missing.
 `ci/fetch-assets.ps1` links the enterprise files in, some under the Lite names,
-then runs the script for the rest, which keeps a file that is already there.
+and copies or links every other file in from common-ci's assets, which each
+run caches once, so no test job downloads a data file. A file added to the
+data repository needs an entry in common-ci's `steps/fetch-assets.ps1`
+before CI can use it.
 Nothing reads the older `cxx/device-detection-data` and
 `cxx/ip-intelligence-data` submodules.
 
@@ -314,3 +330,11 @@ into `main` from any other branch.
 
 The repository has one version, tagged as a plain version such as `4.5.97`.
 `ci/get-next-package-version.ps1` moves only the patch number.
+
+## Tests that fail on timing
+
+A test that fails on a time limit, a performance threshold or a timeout is
+fixed, not run again until it passes. Either the limit is set to fit the
+slowest runner the test runs on, with each runner's measurement behind it, or
+the reason it takes too long is found and fixed. A failure that comes and goes
+costs everyone who meets it the time to look into it.

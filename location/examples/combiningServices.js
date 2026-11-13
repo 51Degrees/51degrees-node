@@ -65,7 +65,15 @@ try {
 // are used by this example.
 if (typeof localResourceKey === 'undefined' ||
   localResourceKey.substr(0, 2) === '!!') {
-  localResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+  // RESOURCE_KEY is the deprecated name of the same variable, read only
+  // when _51DEGREES_RESOURCE_KEY is unset or empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
+  }
+  localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+    process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {

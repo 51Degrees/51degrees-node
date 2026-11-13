@@ -85,21 +85,39 @@ class ElementData {
   }
 
   /**
+   * Looks for a key again ignoring its letter case, after getInternal found
+   * nothing for the key as given, because property names are compared
+   * ignoring case. Classes inheriting from elementData override this, and
+   * this one finds nothing.
+   *
+   * @param {string} key the key to retrieve a property value for
+   * @returns {*} the value, or undefined if there is none
+   */
+  getInternalIgnoringCase (key) {
+    return undefined;
+  }
+
+  /**
    * A wrapper that performs actions before passing on processing
-   * (or skipping) the getInternal method
+   * (or skipping) the getInternal method. A key that finds nothing as given
+   * is looked for again ignoring its letter case, so a read that found its
+   * value before costs no more.
    *
    * @param {string} key the key to retrieve a property value for
    * @returns {FlowData} value
    */
   get (key) {
-    const value = this.getInternal(key);
+    let value = this.getInternal(key);
     if (typeof value === 'undefined') {
-      throw util.format(errorMessages.genericMissingProperties, key) +
-        (typeof this.flowElement === 'undefined'
-          ? ''
-          : ' in data for element "' +
-          this.flowElement.dataKey) + '".' +
-        util.format(errorMessages.noReasonUnknown);
+      value = this.getInternalIgnoringCase(key);
+      if (typeof value === 'undefined') {
+        throw util.format(errorMessages.genericMissingProperties, key) +
+          (typeof this.flowElement === 'undefined'
+            ? ''
+            : ' in data for element "' +
+            this.flowElement.dataKey) + '".' +
+          util.format(errorMessages.noReasonUnknown);
+      }
     }
     return value;
   }

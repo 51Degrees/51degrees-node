@@ -26,7 +26,7 @@
 // is read from _51DEGREES_RESOURCE_KEY_BASIC alone, because a key of any
 // other tier would get different answers. The Cloud 51Did workflow is the
 // only place that key is set, so the integration-test script leaves this
-// file out. The endpoint follows FOD_CLOUD_API_URL as the client does.
+// file out. The endpoint follows _51DEGREES_CLOUD_ENDPOINT as the client does.
 
 const { FodId, DidClient, Usage } = require('../index');
 const keys = require('./liveCloudKeys');

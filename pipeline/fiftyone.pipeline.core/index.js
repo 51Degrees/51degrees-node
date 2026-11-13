@@ -34,6 +34,7 @@ module.exports = {
   PipelineBuilder: require('./pipelineBuilder'),
   AspectPropertyValue: require('./aspectPropertyValue'),
   JsonBundler: require('./jsonbundler'),
+  LicenseKeys: require('./licenseKeys'),
   JavascriptBuilder: require('./javascriptbuilder'),
   SequenceElement: require('./sequenceElement'),
   SetHeadersElement: require('./setHeadersElement'),

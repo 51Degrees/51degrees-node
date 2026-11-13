@@ -30,6 +30,43 @@ const SHARED_RESOURCE_KEY_NAMES = [
   '_51DEGREES_RESOURCE_KEY_BESPOKE'
 ];
 
+// The deprecated names each name replaced, in the order to try them. They
+// are read only when every name a test asks for is unset or empty.
+const DEPRECATED_NAMES = {
+  _51DEGREES_RESOURCE_KEY: ['51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY'],
+  _51DEGREES_RESOURCE_KEY_SUPER: ['TEST_SUPER_RESOURCE_KEY']
+};
+
+/**
+ * The name that replaced a deprecated name.
+ *
+ * @param {string} oldName an environment variable name
+ * @returns {string|undefined} the name that replaced it, or undefined when
+ * the name is not a deprecated one
+ */
+const replacementOf = function (oldName) {
+  return Object.keys(DEPRECATED_NAMES).find(
+    (name) => DEPRECATED_NAMES[name].includes(oldName));
+};
+
+// The old names already said to be deprecated, so each is said once.
+const reportedOldNames = new Set();
+
+/**
+ * Prints, once for each old name, that the name is deprecated and which
+ * name replaces it.
+ *
+ * @param {string} oldName the deprecated environment variable name
+ * @param {string} name the name that replaces it
+ */
+const reportOldName = function (oldName, name) {
+  if (reportedOldNames.has(oldName) === false) {
+    reportedOldNames.add(oldName);
+    console.warn(`The ${oldName} environment variable is deprecated and ` +
+      `${name} replaces it. Set ${name} instead.`);
+  }
+};
+
 // Where to see the products a resource key carries.
 const ACCESSIBLE_PROPERTIES_URL =
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>';
@@ -55,15 +92,19 @@ const missingFromAnswerMessage = function (thing, reason, product) {
 module.exports = {
   /**
    * The environment variable names a cloud test reads its resource key
-   * from, in order. The two shared names come first, then the names the
-   * test read before them.
+   * from, in order. The two shared names come first, then any name the
+   * test takes its own key from. The deprecated names those names replaced
+   * come last, so each is read only when the names before it are unset or
+   * empty.
    *
-   * @param {...string} legacyNames the older names, in the order to try
+   * @param {...string} extraNames further names, in the order to try
    * @returns {Array<string>} the names to try, in order
    */
-  resourceKeyNames: function (...legacyNames) {
-    return SHARED_RESOURCE_KEY_NAMES.concat(legacyNames)
-      .filter((name, index, names) => names.indexOf(name) === index);
+  resourceKeyNames: function (...extraNames) {
+    const names = SHARED_RESOURCE_KEY_NAMES.concat(extraNames);
+    const oldNames = names.flatMap((name) => DEPRECATED_NAMES[name] || []);
+    return names.concat(oldNames)
+      .filter((name, index, all) => all.indexOf(name) === index);
   },
 
   /**
@@ -76,6 +117,9 @@ module.exports = {
     for (const name of names) {
       const value = process.env[name];
       if (value && value.trim() && value !== PLACEHOLDER) {
+        if (replacementOf(name)) {
+          reportOldName(name, replacementOf(name));
+        }
         return value.trim();
       }
     }
@@ -100,8 +144,9 @@ module.exports = {
     const list = [].concat(products);
     const carried = list.join(' and ') +
       (list.length > 1 ? ' products' : ' product');
+    const current = names.filter((name) => !replacementOf(name));
     return `${start} a resource key and there is nothing to fall back on. ` +
-      `None of ${names.join(', ')} is set, tried in that order. The key ` +
+      `None of ${current.join(', ')} is set, tried in that order. The key ` +
       `has to carry the ${carried}, because ${asker} the service ` +
       `for ${asksFor}. To see the products a key carries, open ` +
       `${ACCESSIBLE_PROPERTIES_URL}. Create a key at ${CONFIGURE_URL}.`;

@@ -3,6 +3,7 @@ export let errorMessages: {
     evidenceNotFound: string;
     dataFilePathRequired: string;
     fileNotFound: string;
+    fileNotFoundNotDownloaded: string;
     moduleDirNotFound: string;
     nativeModuleNotFound: string;
     invalidFileExtension: string;
@@ -15,8 +16,22 @@ export let errorMessages: {
 };
 export let testConstants: {
     envVars: {
+        superResourceKeyVariable: string;
+        /**
+         * @deprecated The name the variable had before, which is read only
+         * when the variable superResourceKeyVariable names is unset or empty.
+         * Use superResourceKeyVariable.
+         */
         superResourceKeyEnvVar: string;
+        /**
+         * @deprecated No test reads a resource key under this name. Use
+         * superResourceKeyVariable.
+         */
         ipiResourceKeyEnvVar: string;
+        /**
+         * @deprecated No test reads a licence key under this name. The licence
+         * key is read from the _51DEGREES_LICENSE_KEY environment variable.
+         */
         licenseKeyEnvVar: string;
     };
     ipAddresses: {
@@ -29,7 +44,7 @@ export let testConstants: {
     };
 };
 export let keyUtils: {
-    resourceKeyNames: (...legacyNames: string[]) => Array<string>;
+    resourceKeyNames: (...extraNames: string[]) => Array<string>;
     getResourceKey: (names: Array<string>) => string;
     missingResourceKeyMessage: (names: Array<string>, products: string | Array<string>, asksFor: string, plural?: boolean) => string;
     missingFromAnswerMessage: (thing: string, reason: string, product: string) => string;

@@ -37,7 +37,6 @@ const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
-const IPI_DATA_FILE_ENV_VAR = require(path.join(__dirname, '/../exampleUtils')).IPI_DATA_FILE_ENV_VAR;
 const ExampleConstants = require51('fiftyone.ipintelligence.shared').exampleConstants;
 const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 
@@ -64,7 +63,7 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
  * customers may choose to download the files themselves and move them into place to be detected
  * by the 51Degrees filesystem watcher.
  * ## Lite Data File
- * Lite data files (free-to-use, limited capabilities, no license key required) are created
+ * Lite data files (free-to-use, with a small number of Properties, no license key required) are created
  * regularly and cannot be updated using auto-update, they may be downloaded with the scripts
  * in the (data repository)[href=https://github.com/51Degrees/data], which is included with
  * source distributions of this software.
@@ -233,7 +232,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   // No filename specified. Check the environment variable for an
   // explicit path before using the default.
   if (!dataFilePath) {
-    dataFilePath = process.env[IPI_DATA_FILE_ENV_VAR];
+    dataFilePath = ExampleUtils.getDataFilePathFromEnv();
   }
   // no filename specified use the default
   if (!dataFilePath) {

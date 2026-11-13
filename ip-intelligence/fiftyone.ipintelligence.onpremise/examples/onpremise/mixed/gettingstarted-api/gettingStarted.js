@@ -29,7 +29,7 @@
  * for details of the endpoints provided.
  *
  * The cloud examples can be run against this local API by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can be used for the resource key when using the local API.
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api/gettingStarted.js).
@@ -258,7 +258,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
   // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
+  // find one in priority order. The _51DEGREES_DD_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let deviceDataFile = args.length > 0 ? args[0] : undefined;
   if (deviceDataFile === undefined) {
@@ -269,7 +269,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   }
 
   // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
+  // find one in priority order. The _51DEGREES_IPI_PATH environment
   // variable is checked before the folder hierarchy is searched.
   let ipDataFile = args.length > 1 ? args[1] : undefined;
   if (ipDataFile === undefined) {
