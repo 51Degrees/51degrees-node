@@ -107,9 +107,14 @@ describe('polling timer', () => {
       update.mockClear();
 
       // The longest wait is the polling interval plus the randomisation.
+      // The check the timer starts is waited for, so that its failure, and
+      // the timer that failure schedules, cannot reach a later test or
+      // outlive the tests.
+      const done = failed(service);
       jest.advanceTimersByTime(
         (PollingMinutes + RandomisationMinutes) * MinuteMilliseconds);
       expect(update).toHaveBeenCalledTimes(1);
+      await done;
     });
 
   test('polling carries on after a check the timer started', async () => {
