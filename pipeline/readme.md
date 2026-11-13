@@ -15,12 +15,13 @@ the Node versions that we currently test against. The software may run fine agai
 but additional caution should be applied.
 
 ## Contents
-This repository contains 4 modules:
+This folder holds these modules, among others:
 
 - [**fiftyone.pipeline.core**](fiftyone.pipeline.core) - Defines the essential components of the Pipeline API such as 'flow elements', 'flow data' and 'evidence'
 - [**fiftyone.pipeline.engines**](fiftyone.pipeline.engines) - Functionality for a specialized type of flow element called an engine.
 - [**fiftyone.pipeline.engines.fiftyone**](fiftyone.pipeline.engines.fiftyone) - Functionality specific to 51Degrees engines.
 - [**fiftyone.pipeline.cloudrequestengine**](fiftyone.pipeline.cloudrequestengine) - An engine used to make requests to the 51Degrees cloud service.
+- [**fiftyone.pipeline.derivedproperty**](fiftyone.pipeline.derivedproperty) - Computes properties such as HumanConfidence and IsGdpr from properties other elements have produced. Not yet published to npm.
 
 ## Installation
 
