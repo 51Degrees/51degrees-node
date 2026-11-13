@@ -4,3 +4,6 @@
 [submodule "javascript-templates"]
 	path = pipeline/fiftyone.pipeline.core/javascript-templates
 	url = ../javascript-templates
+[submodule "pipeline/fiftyone.pipeline.derivedproperty/derived-properties"]
+	path = pipeline/fiftyone.pipeline.derivedproperty/derived-properties
+	url = ../derived-properties
