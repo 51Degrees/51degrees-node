@@ -77,6 +77,12 @@ BeforeAll {
             }
             'publish' {
                 $tarball = @($args | Where-Object { "$_" -like '*.tgz' })[0]
+                # npm reads a relative path such as 'package/name.tgz' as the
+                # GitHub repository 'package/name.tgz', so a path has to start
+                # with '.', '/' or a drive.
+                if ("$tarball" -notmatch '^(\.|/|[A-Za-z]:)') {
+                    throw "npm reads '$tarball' as a GitHub repository"
+                }
                 $file = Split-Path -Leaf "$tarball"
                 $name = $file -replace '-\d.*$'
                 $version = $file -replace '^.*-(\d+\.\d+\.\d+)\.tgz$', '$1'
