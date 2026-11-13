@@ -125,6 +125,22 @@ const whenResponded = (callback) => {
   });
 };
 
+// Resolves at the next updateComplete event with the number of files the
+// service had finished removing by then.
+const removedWhenCompleted = (service) => {
+  const unlink = fs.unlink;
+  const removed = [];
+  const spy = jest.spyOn(fs, 'unlink').mockImplementation((name, callback) =>
+    unlink(name, (err) => {
+      removed.push(name);
+      callback(err);
+    }));
+  const done = new Promise((resolve) => {
+    service.once('updateComplete', () => resolve(removed.length));
+  });
+  return { done, spy };
+};
+
 // The error for a data update service that could not be reached, with any
 // cause, as the cause's text differs between platforms.
 const accessError = (url) => expect.stringMatching(new RegExp(
@@ -570,6 +586,7 @@ describe('log messages', () => {
       cut = true;
       remote.server.closeAllConnections();
     });
+    let removal;
     try {
       const { service, logs } = loggingService();
       const dataFile = standInDataFile({
@@ -578,15 +595,20 @@ describe('log messages', () => {
         path: file
       });
       const done = completed(service);
+      removal = removedWhenCompleted(service);
       service.updateDataFile(dataFile);
       expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       expect(cut).toBe(true);
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([accessError(remote.url)]);
       // The cut comes before the service opens its part file, and the part
-      // file is gone by the time the update is reported.
+      // file has been removed by the time the update is reported.
+      expect(await removal.done).toBe(1);
       expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
+      if (removal) {
+        removal.spy.mockRestore();
+      }
       responded.mockRestore();
       stop(remote.server);
     }
@@ -951,6 +973,7 @@ describe('every update reports one status', () => {
       closed = new Promise((resolve) => response.once('close', resolve));
       remote.sockets[0].resetAndDestroy();
     });
+    let removal;
     try {
       const { service, logs } = loggingService();
       const dataFile = standInDataFile({
@@ -961,6 +984,7 @@ describe('every update reports one status', () => {
       const checks = jest.spyOn(service, 'checkNextUpdate');
       const seen = record(service, dataFile);
       const done = completed(service);
+      removal = removedWhenCompleted(service);
       service.updateDataFile(dataFile);
       await done;
       // The update is reported after the request has failed and the
@@ -974,8 +998,12 @@ describe('every update reports one status', () => {
       expect(checks).toHaveBeenCalledTimes(1);
       expect(logs.filter((log) => log.level === 'error')
         .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
+      expect(await removal.done).toBe(1);
       expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
+      if (removal) {
+        removal.spy.mockRestore();
+      }
       responded.mockRestore();
       stop(remote.server);
     }
