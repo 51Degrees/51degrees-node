@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const owid = require('owid');
+const owid = require('../owid-js/v1.js');
 const { FodId, FodIdParseError, IdType, Usage } = require('../index');
 // The named value is internal to the package and is not exported, so the
 // table test below reaches the module directly rather than through the

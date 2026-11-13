@@ -4,3 +4,4 @@ cxx/
 coverage/
 **/*.min.js
 **/javascript-templates/
+**/owid-js/

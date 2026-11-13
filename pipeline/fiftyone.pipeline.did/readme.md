@@ -342,24 +342,25 @@ appear in `FodId.ParseStatus` unchanged. The library also offers an offline
 in Node and the browser (Web Crypto), so `FodId.verify()` and
 `FodId.checkSignature()` run without contacting a network endpoint.
 
-The library is not on the npm registry, so `package.json` names it as a
-GitHub reference, which npm resolves by cloning the repository. The reference
-is `github:SWAN-community/owid-js#6c5ff4e7`, the commit on `main` of
-[SWAN-community/owid-js](https://github.com/SWAN-community/owid-js) where a
+The library is not on the npm registry. This repository takes it as the git
+submodule `owid-js` of this package, as every other 51Degrees language takes
+it, pinned at commit 6c5ff4e7 on `main` of
+[SWAN-community/owid-js](https://github.com/SWAN-community/owid-js), where a
 signature covers its own OWID and no other, and a creator's key is fetched
-from the `public-key` endpoint without following a redirect. Cloning is
-needed only when working in this repository, because the published
-`fiftyone.pipeline.did` package carries the OWID source inside its own
-tarball under `node_modules/owid`, named in `bundleDependencies`. Anyone
-installing the package from npm needs neither git nor reachable GitHub, and
-gets the same OWID code every time, whatever the referenced branch happens
-to hold on the day. owid-js is Apache-2.0 and its `LICENSE` file travels in
-the bundle alongside the source.
+from the `public-key` endpoint without following a redirect. The published
+`fiftyone.pipeline.did` package carries the library's `v1.js` and its
+Apache-2.0 `LICENSE` in its own tarball under `owid-js`, so installing the
+package from npm needs neither git nor reachable GitHub, and gives the same
+OWID code every time.
 
 ## Install / build
 
+Clone the repository with its submodules, or fetch them in a clone made
+without, so that `owid-js` is there.
+
 ```bash
-npm install   # needs git on the PATH to fetch owid-js
+git submodule update --init pipeline/fiftyone.pipeline.did/owid-js
+npm install
 npm test
 ```
 

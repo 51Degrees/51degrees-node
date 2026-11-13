@@ -27,11 +27,6 @@ foreach ($path in $PublishedPackages) {
         if (Test-Path remote_package.json) {
             Move-Item -Path remote_package.json -Destination package.json -Force
         }
-        # npm pack bundles from the package's own node_modules, and the
-        # workspace hoists everything to the root.
-        if ((Get-Content package.json | ConvertFrom-Json).bundleDependencies) {
-            npm install --no-workspaces --no-package-lock --omit=dev
-        }
         npm version $Version --no-git-tag-version --workspaces-update=false
         npm pack --pack-destination $packageFolder
     } finally {

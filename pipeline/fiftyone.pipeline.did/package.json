@@ -22,17 +22,21 @@
     },
     "./package.json": "./package.json"
   },
+  "files": [
+    "/*.js",
+    "internal/",
+    "types/",
+    "examples/",
+    "tests/",
+    "tsconfig.json",
+    "owid-js/v1.js",
+    "owid-js/LICENSE"
+  ],
   "scripts": {
     "test": "jest"
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "license": "EUPL-1.2",
-  "dependencies": {
-    "owid": "github:SWAN-community/owid-js#6c5ff4e7"
-  },
-  "bundleDependencies": [
-    "owid"
-  ],
   "devDependencies": {
     "jest": "^29.7.0",
     "typescript": "^5.9.3"
@@ -40,6 +44,10 @@
   "jest": {
     "setupFiles": [
       "./tests/setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/owid-js/"
     ]
   },
   "homepage": "https://51degrees.com/developers/51did?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=homepage",
