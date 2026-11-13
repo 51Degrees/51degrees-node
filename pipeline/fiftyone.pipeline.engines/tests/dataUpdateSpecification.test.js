@@ -408,19 +408,10 @@ describe('log messages', () => {
   test('a file system watcher is logged', async () => {
     const { service, logs } = loggingService();
     const dataFile = standInDataFile({
-      autoUpdate: true,
-      pollingInterval: 60,
-      updateTimeMaximumRandomisation: 1,
-      getNextUpdate: () => new Date(),
       fileSystemWatcher: true,
       path: file
     });
-    jest.useFakeTimers();
-    try {
-      service.registerDataFile(dataFile);
-    } finally {
-      jest.useRealTimers();
-    }
+    service.registerDataFile(dataFile);
     expect(messages(logs)).toContain('info: Creating file system watcher');
   });
 
@@ -740,23 +731,80 @@ describe('log messages', () => {
 });
 
 describe('file system watcher', () => {
-  test('is not created while autoUpdate is off', () => {
+  // The watcher runs on its own setting. Watching a file downloads nothing,
+  // so the watcher does not wait for automatic updates to be on, and with
+  // its own setting off a changed file is not loaded.
+  test.each([
+    {
+      name: 'watcher on, automatic updates on',
+      autoUpdate: true,
+      fileSystemWatcher: true,
+      watched: true
+    },
+    {
+      name: 'watcher on, automatic updates off',
+      autoUpdate: false,
+      fileSystemWatcher: true,
+      watched: true
+    },
+    {
+      name: 'watcher off, automatic updates on',
+      autoUpdate: true,
+      fileSystemWatcher: false,
+      watched: false
+    }
+  ])('runs on its own setting, $name', async ({
+    autoUpdate,
+    fileSystemWatcher,
+    watched
+  }) => {
     const folder = newFolder();
     const file = path.join(folder, 'data.dat');
     fs.writeFileSync(file, 'version 1');
     const { service, logs } = loggingService();
-    const watch = jest.spyOn(fs, 'watch');
+    const loaded = [];
+    let finished = false;
+    const dataFile = standInDataFile({
+      autoUpdate,
+      fileSystemWatcher,
+      pollingInterval: 60,
+      updateTimeMaximumRandomisation: 1,
+      getNextUpdate: () => new Date(),
+      path: file,
+      refresh: () => {
+        if (!finished) {
+          loaded.push(fs.readFileSync(file, 'utf8'));
+        }
+      }
+    });
+    // The wait for the next automatic update is on fake timers, so that it
+    // never runs and does not keep the process alive.
+    jest.useFakeTimers();
     try {
-      service.registerDataFile(standInDataFile({
-        autoUpdate: false,
-        fileSystemWatcher: true,
-        path: file
-      }));
-      expect(watch).not.toHaveBeenCalled();
-      expect(logs.map((log) => log.message))
-        .not.toContain('Creating file system watcher');
+      service.registerDataFile(dataFile);
     } finally {
-      watch.mockRestore();
+      jest.useRealTimers();
+    }
+
+    try {
+      expect(logs.map((log) => log.message)
+        .includes('Creating file system watcher')).toBe(watched);
+
+      // On macOS fs.watch can miss a change made straight after it starts.
+      await sleep(500);
+      fs.writeFileSync(file, 'version 2');
+      for (let waited = 0; waited < 3000; waited += 50) {
+        if (loaded.includes('version 2')) {
+          break;
+        }
+        await sleep(50);
+      }
+      expect(loaded.includes('version 2')).toBe(watched);
+    } finally {
+      // The folder is left in place. On Windows, removing the folder of a
+      // watched file makes fs.watch raise an error that nothing handles.
+      finished = true;
+      fs.unlinkSync(file);
     }
   });
 });
