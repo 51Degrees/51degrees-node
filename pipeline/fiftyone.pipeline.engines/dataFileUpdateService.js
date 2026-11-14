@@ -201,6 +201,10 @@ const watchDataFile = function (serviceRef, dataFileRef) {
         return;
       }
       service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    } else {
+      // Every check is reported. One that finds an update already under
+      // way has nothing left to do.
+      service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
     }
   });
   const service = serviceRef.deref();
