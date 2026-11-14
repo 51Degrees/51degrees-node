@@ -59,7 +59,7 @@ const FIND_OUT_MORE = [
 ].join('\n');
 
 // Obtain a resource key with the properties required to test this
-// example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+// example for free: https://51degrees.com/configure/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
 // RESOURCE_KEY is the deprecated name of the same variable, read only
@@ -78,12 +78,12 @@ let server;
 
 if (myResourceKey.substring(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
   console.log(FIND_OUT_MORE);
 } else {
   // Create a new pipeline and set the config.
-  // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+  // You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
   // and paste it into the code.
   // The JavaScriptBuilderSettings allow you to provide an endpoint
   // which will be requested by the client side JavaScript.

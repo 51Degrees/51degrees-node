@@ -193,9 +193,9 @@ describes.
 The cloud examples need a resource key, which a person creates in the
 configurator, so ask for one if none is set. A key with the free properties
 the examples use can be created
-[here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
+[here](https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
 and one that adds the paid properties they show
-[here](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
+[here](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
 as `device-detection/readme.md` and `ip-intelligence/readme.md` say.
 
 The Device Detection cloud example reads `51d.json` from the folder it runs

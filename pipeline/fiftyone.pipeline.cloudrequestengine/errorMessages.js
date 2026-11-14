@@ -28,7 +28,7 @@ module.exports = {
   noCredential: 'CloudRequestEngine needs a resourceKey or a licenseKey ' +
     'to authenticate with, as the cloud service answers 401 to a request ' +
     'that carries neither. Create a resource key for free at ' +
-    'https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
+    'https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
   licenseKeyNeedsProperties: 'CloudRequestEngine has a licenseKey and no ' +
     'resourceKey or requestedProperties. A license key names no ' +
     'properties of its own, so the cloud service answers 400 to every ' +

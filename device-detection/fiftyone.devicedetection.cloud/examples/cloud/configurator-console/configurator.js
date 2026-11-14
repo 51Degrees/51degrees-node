@@ -21,7 +21,7 @@
  * ********************************************************************* */
 
 /**
- * This example is displayed at the end of the [Configurator](https://configure.51degrees.com/?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
+ * This example is displayed at the end of the [configuration page](https://51degrees.com/configure/?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=header)
  * process, which is used to create resource keys for use with the 51Degrees cloud service.
  *
  * It shows how to call the cloud with the newly created key and how to access the values
@@ -124,7 +124,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
       'using a \'ResourceKey\'. For more information see ' +
       'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. A free resource key ' +
       'selecting the free properties used by this example can be created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. Once complete, populate the config file or ' +
+      'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. Once complete, populate the config file or ' +
       'environment variable mentioned at the start of this message with the key.');
     console.log(FIND_OUT_MORE);
   } else {

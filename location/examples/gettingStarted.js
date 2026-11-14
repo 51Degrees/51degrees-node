@@ -32,7 +32,7 @@ The resource key is used as short-hand to store the particular set of
 properties you are interested in as well as any associated license keys
 that entitle you to increased request limits and/or paid-for properties.
 
-You can create a resource key using the 51Degrees [Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=top).
+You can create a resource key using the 51Degrees [configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=top).
 
 Firstly require the fiftyone.geolocation modules which contain all of the pipeline specific classes we will be using in this example.
 
@@ -111,7 +111,7 @@ const FIND_OUT_MORE = [
 
 const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 
-// You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=top-2 and
+// You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=top-2 and
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 let localResourceKey = '!!YOUR_RESOURCE_KEY!!';
 if (localResourceKey.substr(0, 2) === '!!') {
@@ -128,7 +128,7 @@ if (localResourceKey.substr(0, 2) === '!!') {
 
 if (localResourceKey.substr(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-    'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=resource-key-required and paste it into the code, ' +
+    'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=resource-key-required and paste it into the code, ' +
     'replacing !!YOUR_RESOURCE_KEY!!.');
   console.log(FIND_OUT_MORE);
 } else {

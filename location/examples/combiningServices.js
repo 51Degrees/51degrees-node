@@ -35,7 +35,7 @@ that entitle you to increased request limits and/or paid-for properties.
 You will also need to install the fiftyone.devicedetection package with
 `npm install fiftyone.devicedetection`.
 
-You can create a resource key using the 51Degrees [Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
+You can create a resource key using the 51Degrees [configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
 
 */
 
@@ -62,7 +62,7 @@ try {
     'then execute "npm install fiftyone.devicedetection" and try again.');
 }
 
-// You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top-2 and
+// You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top-2 and
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 // Make sure to include the isMobile and country properties as they
 // are used by this example.
@@ -81,7 +81,7 @@ if (localResourceKey.substr(0, 2) === '!!') {
 
 if (localResourceKey.substr(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-    'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=resource-key-required and paste it into the code, ' +
+    'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=resource-key-required and paste it into the code, ' +
     'replacing !!YOUR_RESOURCE_KEY!!.');
   console.log('Make sure to include the ismobile property ' +
     'as it is used by this example.');
