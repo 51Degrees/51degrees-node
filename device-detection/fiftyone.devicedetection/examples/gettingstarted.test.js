@@ -20,53 +20,49 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const fs = require('fs');
+// Runs the getting started example in its own process, from its own
+// folder, as a person runs it. With a resource key it must give whether each User-Agent is a mobile,
+// and with none it must say how to create a key.
+
+const childProcess = require('child_process');
 const path = require('path');
 
-const testExample = function ({ file, portNumber }) {
-  if (portNumber) {
-    process.env.PORT = portNumber;
-  }
+const TIMEOUT_MS = 60000;
+// The names the example reads its resource key from.
+const KEY_NAMES = ['_51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY'];
 
-  // Change the working directory of the example to be the example itself
-
-  process.env.directory = path.dirname(file);
-
-  let code = fs.readFileSync(file, 'utf8');
-
-  // Add in closer of any apps
-
-  const serverClose = `
-    
-    if(typeof server !== "undefined"){
-
-        server.close();
-
-    }
-
-    `;
-
-  code += serverClose;
-
-  jest.fn(eval(code));
+// The line the example writes after the first line that starts with the
+// text given.
+const answerTo = (output, question) => {
+  const lines = output.split('\n').map((line) => line.trim());
+  const index = lines.findIndex((line) => line.startsWith(question));
+  return index === -1 ? undefined : lines[index + 1];
 };
 
 describe('Examples', () => {
-  // Skip the rest of the examples when async is not available
-  let isAsync = true;
+  test('cloud getting started', () => {
+    const env = Object.assign({}, process.env);
+    delete env.JEST_WORKER_ID;
+    const result = childProcess.spawnSync(
+      process.execPath, ['gettingStarted.js'], {
+        cwd: __dirname,
+        env,
+        encoding: 'utf8',
+        timeout: TIMEOUT_MS
+      });
 
-  try {
-    eval('async () => {}');
-  } catch (e) {
-    isAsync = false;
-  }
-
-  test('cloud getting started', (done) => {
-    if (isAsync) {
-      setTimeout(done, 4000);
-      testExample({ file: path.join(__dirname, '/gettingStarted.js') });
+    // What the example wrote to its error output is shown when it failed.
+    expect({
+      status: result.status,
+      stderr: result.status === 0 ? '' : result.stderr
+    }).toEqual({ status: 0, stderr: '' });
+    if (KEY_NAMES.some((name) => process.env[name])) {
+      expect(answerTo(result.stdout,
+        "Is user agent 'Mozilla/5.0 (iPhone")).toBe('true');
+      expect(answerTo(result.stdout,
+        "Is user agent 'Mozilla/5.0 (Windows NT")).toBe('false');
     } else {
-      done();
+      expect(result.stdout).toContain('You need to create a resource key');
     }
-  });
+  }, TIMEOUT_MS);
 });
