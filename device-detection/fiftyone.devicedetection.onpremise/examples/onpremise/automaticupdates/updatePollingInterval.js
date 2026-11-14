@@ -64,13 +64,6 @@ const FIND_OUT_MORE = [
 // https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=lite_v_4_1_hash
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
 
-// Load in a datafile
-const args = process.argv.slice(2);
-// Use the supplied path for the data file, the '_51DEGREES_DD_PATH'
-// environment variable, or find the lite file that is included
-// in the repository.
-const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
-
 // Set your licence key in the _51DEGREES_LICENSE_KEY environment
 // variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=top
 
@@ -90,6 +83,15 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
     'variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=license-key-required');
   console.log(FIND_OUT_MORE);
 } else {
+  // Use the supplied path for the data file, the '_51DEGREES_DD_PATH'
+  // environment variable, or find the Lite data file. This is only done
+  // once there is a licence key, so that a data file is not downloaded only
+  // to be told a key is needed.
+  const args = process.argv.slice(2);
+  const datafile = args.length > 0
+    ? args[0]
+    : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
+
   // Check if datafile exists
 
   const fs = require('fs');
@@ -134,6 +136,7 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   setTimeout(() => {
     console.log('Exiting auto update process');
     console.log(FIND_OUT_MORE);
-    process.exit(1);
+    // The example has shown how to set updates up, so it ends as a success.
+    process.exit(0);
   }, 3000);
 }

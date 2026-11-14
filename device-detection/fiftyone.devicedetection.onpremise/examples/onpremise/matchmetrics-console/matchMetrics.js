@@ -123,8 +123,8 @@ const displayMatchMetrics = async function (pipeline, output, evidenceValues) {
   output.write('\n');
 
   output.write('--- Listing all available properties, by component, by property name ---\n');
-  output.write(`For a discussion of what the match properties mean, see: 
-/documentation/4.5/_device_detection__hash.html#DeviceDetection_Hash_DataSetProduction\n`);
+  output.write('For a discussion of what the match properties mean, see ' +
+    'https://51degrees.com/documentation/4.5/_device_detection__hash.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=match-metrics#DeviceDetection_Hash_DataSetProduction\n');
 
   // Get the properties available from the DeviceDetection engine.
   const availableProperties = Object.entries(device.flowElement.properties);
