@@ -278,4 +278,56 @@ describe('Examples without settings', () => {
     expect(response.text).toContain(CONTACT_US);
     expectPageEndsWithFindOutMore(response.text);
   }, TIMEOUT_MS);
+
+  test('the mixed API names what needs the Enterprise data files', async () => {
+    // Names are matched without regard to case, as Windows matches them.
+    const remove = new Set(SETTINGS.concat(['JEST_WORKER_ID'])
+      .map((name) => name.toUpperCase()));
+    const env = {};
+    for (const [name, value] of Object.entries(process.env)) {
+      if (!remove.has(name.toUpperCase())) {
+        env[name] = value;
+      }
+    }
+    const child = childProcess.spawn(process.execPath, [
+      'gettingStarted.js', ExampleUtils.findFile(LITE_V_4_1_HASH), liteFile()
+    ], {
+      cwd: path.join(__dirname, 'mixed', 'gettingstarted-api'),
+      env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    child.stderr.on('data', (chunk) => { output += chunk; });
+    try {
+      const end = Date.now() + TIMEOUT_MS / 2;
+      while (!output.includes(FIND_OUT_MORE) && child.exitCode === null &&
+        Date.now() < end) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      // The local API answers with the properties of both engines. It may
+      // still be starting to listen, so a refused connection is tried
+      // again.
+      let response;
+      for (let attempt = 0; response === undefined && attempt < 20;
+        attempt++) {
+        try {
+          response = await request('http://127.0.0.1:5225')
+            .get('/accessibleproperties');
+        } catch (e) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+      expect(response.statusCode).toBe(200);
+      expect(Object.keys(response.body.Products).sort())
+        .toEqual(['device', 'ip']);
+    } finally {
+      child.kill();
+    }
+    for (const name of ['HardwareVendor', 'Country', 'Latitude']) {
+      expect(output).toContain(`${name}: ${NEEDS_ENTERPRISE}`);
+    }
+    expect(output).toContain(CONTACT_US);
+    expectEndsWithFindOutMore(output);
+  }, TIMEOUT_MS);
 });
