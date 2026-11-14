@@ -30,22 +30,6 @@ const CloudEngine = require('fiftyone.pipeline.cloudrequestengine').CloudEngine;
 const RAW_WEIGHTING_MAX = 65535;
 
 /**
- * A WKT value the service writes as an object with one member, value,
- * holding the WKT text, read as that text. Any other value is returned as
- * it is.
- *
- * @param {*} value the value the service sent
- * @returns {*} the WKT text, or the value
- */
-const wktText = function (value) {
-  return value !== null && typeof value === 'object' &&
-    Array.isArray(value) === false && Object.keys(value).length === 1 &&
-    typeof value.value === 'string'
-    ? value.value
-    : value;
-};
-
-/**
  * Whether an item of a list is a weighted value as the service sends one,
  * with a rawweighting member and a value member.
  *
@@ -61,8 +45,9 @@ const isWeighted = function (item) {
 /**
  * A value in the form the on-premise engine gives it. A list of weighted
  * values becomes objects with value, weight and rawWeight, where weight is
- * the raw weighting as a proportion of 65535, and a WKT value becomes its
- * text.
+ * the raw weighting as a proportion of 65535. Each keeps rawweighting, the
+ * name the service writes, which is deprecated in favour of rawWeight. Any
+ * other value, a WKT value among them, is returned as the service sent it.
  *
  * @param {*} value the value the service sent
  * @returns {*} the value as the Element Data gives it
@@ -70,12 +55,13 @@ const isWeighted = function (item) {
 const fromService = function (value) {
   if (Array.isArray(value) && value.length > 0 && value.every(isWeighted)) {
     return value.map((item) => ({
-      value: wktText(item.value),
+      value: item.value,
       weight: item.rawweighting / RAW_WEIGHTING_MAX,
-      rawWeight: item.rawweighting
+      rawWeight: item.rawweighting,
+      rawweighting: item.rawweighting
     }));
   }
-  return wktText(value);
+  return value;
 };
 
 /**
@@ -84,8 +70,10 @@ const fromService = function (value) {
  * It takes that raw JSON response and parses it to extract the
  * IP intelligence part. It also uses this data to generate a list
  * of properties. Properties that have weighted values are returned
- * as arrays of objects with 'value', 'weight' and 'rawWeight' entries,
- * and a WKT value as its text, as the on-premise engine returns them.
+ * as arrays of objects with 'value', 'weight' and 'rawWeight' entries, as
+ * the on-premise engine returns them, each keeping 'rawweighting', which is
+ * deprecated in favour of 'rawWeight'. A WKT value is as the service sends
+ * it, an object whose 'value' is the WKT text.
  **/
 class IpIntelligenceCloud extends CloudEngine {
   /**

@@ -6,8 +6,10 @@ declare const IpIntelligenceCloud_base: typeof import("fiftyone.pipeline.cloudre
  * It takes that raw JSON response and parses it to extract the
  * IP intelligence part. It also uses this data to generate a list
  * of properties. Properties that have weighted values are returned
- * as arrays of objects with 'value', 'weight' and 'rawWeight' entries,
- * and a WKT value as its text, as the on-premise engine returns them.
+ * as arrays of objects with 'value', 'weight' and 'rawWeight' entries, as
+ * the on-premise engine returns them, each keeping 'rawweighting', which is
+ * deprecated in favour of 'rawWeight'. A WKT value is as the service sends
+ * it, an object whose 'value' is the WKT text.
  **/
 declare class IpIntelligenceCloud extends IpIntelligenceCloud_base {
     /**
