@@ -41,6 +41,19 @@ const IpIntelligenceOnPremisePipelineBuilder =
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // In this example, by default, the free 51Degrees ASN data file is used from
 // the cxx/data/ip-intelligence folder, where it is downloaded if missing,
 // or you may specify another file as a command line parameter. Which
@@ -68,6 +81,7 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   console.log('This example updates the data file automatically, which needs ' +
     'a licence key. Set it in the _51DEGREES_LICENSE_KEY environment ' +
     'variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-updatepollinginterval.js&utm_term=license-key-required');
+  console.log(FIND_OUT_MORE);
 } else {
   // Use the supplied path for the data file, the path in the
   // _51DEGREES_IPI_PATH environment variable, or find the ASN data file.
@@ -125,6 +139,7 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   // Exit auto update process
   setTimeout(() => {
     console.log('Exiting auto update process');
+    console.log(FIND_OUT_MORE);
     // The example has shown how to set updates up, so it ends as a success.
     process.exit(0);
   }, 3000);

@@ -13,6 +13,11 @@
   },
   "main": "index.js",
   "types": "types/index.d.ts",
+  "files": [
+    "*.js",
+    "types",
+    "javascript-templates/JavaScriptResource.mustache"
+  ],
   "scripts": {
     "test": "jest"
   },

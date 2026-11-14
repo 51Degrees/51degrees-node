@@ -52,7 +52,7 @@ export let keyUtils: {
     getNamedKey: (keyName: string) => string;
     isInvalidKey: (keyValue: string) => boolean;
 };
-export let exampleOutput: typeof import("./tests/exampleOutput");
+export let exampleOutput: typeof import("./lib/exampleOutput");
 export let exampleConstants: {
     defaultEvidenceValues: Map<string, string>[];
     fileNames: {
@@ -62,5 +62,5 @@ export let exampleConstants: {
         evidenceCsvFileName: string;
     };
 };
-export let optionsExtension: typeof import("./examples/optionsExtension");
-export let dataExtension: typeof import("./examples/dataExtension");
+export let optionsExtension: typeof import("./lib/optionsExtension");
+export let dataExtension: typeof import("./lib/dataExtension");

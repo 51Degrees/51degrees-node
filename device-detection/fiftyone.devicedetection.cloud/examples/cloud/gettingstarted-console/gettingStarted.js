@@ -50,6 +50,19 @@ const exampleConstants = require51('fiftyone.devicedetection.shared').exampleCon
 const OptionsExtension = require51('fiftyone.devicedetection.shared').optionsExtension;
 const DataExtension = require51('fiftyone.devicedetection.shared').dataExtension;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const outputValue = function (name, value) {
   // Individual result values have a wrapper called
   // `AspectPropertyValue`. This functions similarly to
@@ -182,7 +195,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  run(options, process.stdout);
+  run(options, process.stdout).then(() => console.log(FIND_OUT_MORE));
 }
 
 module.exports = {

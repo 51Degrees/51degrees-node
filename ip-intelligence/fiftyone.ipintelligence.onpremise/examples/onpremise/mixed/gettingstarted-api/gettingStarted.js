@@ -77,6 +77,22 @@ const IpIntelligenceOnPremise =
 
 const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils')).ExampleUtils;
 
+// Where to go next, printed once the local API is listening, or when it
+// cannot start for want of a data file.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tDevice detection for Node.js: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe IP Intelligence and device detection engines: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-device-detection-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Device detection data file names in priority order.
 const HASH_FILE_NAMES = [
   'TAC-HashV41.hash',
@@ -300,6 +316,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
         'argument');
     }
   }
+
+  console.log(FIND_OUT_MORE);
 };
 
 // Export server object and set pipeline.

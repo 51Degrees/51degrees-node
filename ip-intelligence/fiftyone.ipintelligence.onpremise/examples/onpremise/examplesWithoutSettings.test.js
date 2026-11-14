@@ -51,6 +51,13 @@ const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code';
 const NEEDS_LICENCE_KEY = 'which needs a licence key';
 const TIMEOUT_MS = 300000;
 
+// Every example ends with a Find out more section, which gives this API's
+// folder and links to 51degrees.com tagged with the example.
+const FIND_OUT_MORE = 'Find out more';
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence';
+const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
+
 // The settings that name a data file or a licence key. A fresh clone has
 // none of them.
 const SETTINGS = [
@@ -91,14 +98,41 @@ const runExample = (file, args = []) => {
     });
 };
 
+// Checks the output ends with the Find out more section, which is a rule
+// of 79 equals signs, the heading, then one line per link, each a tab, a
+// label and an address, with this API's folder and a tagged 51degrees.com
+// link among them.
+const expectEndsWithFindOutMore = (stdout) => {
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const heading = lines.lastIndexOf(`${FIND_OUT_MORE}:`);
+  expect(heading).toBeGreaterThan(0);
+  expect(lines[heading - 1]).toBe('='.repeat(79));
+  const links = lines.slice(heading + 1);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThis API: ${REPOSITORY}`);
+  expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
+};
+
 // Checks the example finished, showing its error output when it did not,
-// and wrote each of the texts.
+// wrote each of the texts, and ended with the Find out more section.
 const expectOutput = (result, ...texts) => {
   expect({ status: result.status, stderr: result.stderr })
     .toEqual({ status: 0, stderr: expect.any(String) });
   for (const text of texts) {
     expect(result.stdout).toContain(text);
   }
+  expectEndsWithFindOutMore(result.stdout);
+};
+
+// Checks a page has the Find out more section after its results, with
+// this API's folder and a tagged 51degrees.com link.
+const expectPageEndsWithFindOutMore = (text) => {
+  const section = text.lastIndexOf(FIND_OUT_MORE);
+  expect(section).toBeGreaterThan(text.lastIndexOf(NEEDS_ENTERPRISE));
+  expect(text.slice(section)).toContain(REPOSITORY);
+  expect(text.slice(section)).toContain(FIND_OUT_MORE_LINK);
 };
 
 // Makes the settings of a web example use the free Lite data files and
@@ -229,6 +263,7 @@ describe('Examples without settings', () => {
     expect(response.statusCode).toBe(200);
     expect(response.text).toContain(NEEDS_ENTERPRISE);
     expect(response.text).toContain(CONTACT_US);
+    expectPageEndsWithFindOutMore(response.text);
   }, TIMEOUT_MS);
 
   test('the mixed web page marks the Enterprise properties', async () => {
@@ -241,5 +276,6 @@ describe('Examples without settings', () => {
     expect(response.statusCode).toBe(200);
     expect(response.text).toContain(NEEDS_ENTERPRISE);
     expect(response.text).toContain(CONTACT_US);
+    expectPageEndsWithFindOutMore(response.text);
   }, TIMEOUT_MS);
 });

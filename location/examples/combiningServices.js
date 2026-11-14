@@ -39,6 +39,19 @@ You can create a resource key using the 51Degrees [Configurator](https://configu
 
 */
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 let FiftyOneDegreesDeviceDetection = null;
 try {
@@ -72,6 +85,7 @@ if (localResourceKey.substr(0, 2) === '!!') {
     'replacing !!YOUR_RESOURCE_KEY!!.');
   console.log('Make sure to include the ismobile property ' +
     'as it is used by this example.');
+  console.log(FIND_OUT_MORE);
 } else if (FiftyOneDegreesDeviceDetection) {
   const pipeline = new FiftyOneDegreesDeviceDetection.DeviceDetectionPipelineBuilder({
     resourceKey: localResourceKey
@@ -116,5 +130,8 @@ if (localResourceKey.substr(0, 2) === '!!') {
 
   const mobileUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) Mobile/15C114';
 
-  getProperties('51.458048', '-0.9822207999999999', mobileUserAgent);
+  getProperties('51.458048', '-0.9822207999999999', mobileUserAgent)
+    .then(() => console.log(FIND_OUT_MORE));
+} else {
+  console.log(FIND_OUT_MORE);
 }

@@ -20,36 +20,5 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-module.exports = {
-  // This collection contains the various input values that will
-  // be used when running the examples.
-  defaultEvidenceValues: [
-    // An IPv4 address in Switzerland.
-    new Map([
-      ['query.client-ip', '194.209.0.1']
-    ]),
-    // An IPv4 address in Belgium.
-    new Map([
-      ['query.client-ip', '91.183.0.1']
-    ]),
-    // An IPv4 address in Austria.
-    new Map([
-      ['query.client-ip', '77.119.0.1']
-    ]),
-    // An IPv4 address supplied as a server value. This is the value
-    // that web integrations populate from the requesting socket.
-    new Map([
-      ['server.client-ip', '5.1.0.1']
-    ]),
-    // An IPv6 address.
-    new Map([
-      ['query.client-ip', '2001:0db8:085a:0000:0000:8a2e:0370:7334']
-    ])
-  ],
-  fileNames: {
-    enterpriseDataFileName: '51Degrees-EnterpriseIpiV41.ipi',
-    liteDataFileName: '51Degrees-LiteV41.ipi',
-    evidenceFileName: 'evidence.yml',
-    evidenceCsvFileName: 'evidence.csv'
-  }
-};
+// Keeps a require of the path this module had before it moved to lib.
+module.exports = require('../lib/exampleConstants');

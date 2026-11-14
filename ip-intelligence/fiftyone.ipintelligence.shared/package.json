@@ -38,8 +38,13 @@
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },
   "files": [
-    "examples",
-    "tests",
+    "lib",
+    "examples/dataExtension.js",
+    "examples/exampleConstants.js",
+    "examples/optionsExtension.js",
+    "tests/exampleOutput.js",
+    "tests/keyUtils.js",
+    "tests/testConstants.js",
     "*.js",
     "types"
   ]

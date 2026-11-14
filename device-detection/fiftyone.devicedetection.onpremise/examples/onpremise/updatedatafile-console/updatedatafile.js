@@ -204,6 +204,19 @@ const DEFAULT_DATA_FILENAME =
 // tagged with this example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licence-key';
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe device detection engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Without a licence key the example cannot download a data file, so it
 // shows the data file it would start from, the free Lite data file unless
 // another is given, and says what an update needs.
@@ -312,7 +325,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   // create update service and add listener
   const dataUpdateService = new DataFileUpdateService();
 
-  new Promise(resolve => {
+  // Settles when the example has finished, which is after the pipeline
+  // below has been built and both updates have completed.
+  const finished = new Promise(resolve => {
     dataUpdateService.once('updateComplete', function (status, dataFile) {
       // thread blocks till update checking is complete - or if there is an
       // exception we don't get this far
@@ -388,6 +403,8 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   })
   // build the pipeline
     .build();
+
+  return finished;
 };
 
 // Don't run the server if under TEST
@@ -398,7 +415,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
 
-  run(dataFilePath, licenseKey, true, process.stdout);
+  run(dataFilePath, licenseKey, true, process.stdout)
+    .then(() => console.log(FIND_OUT_MORE));
 };
 
 module.exports = { run, getLicenseKey };

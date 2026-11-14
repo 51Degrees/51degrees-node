@@ -192,16 +192,33 @@ class PipelineBuilder {
   }
 
   /**
-   * Add required elements to an existing FlowElement array
+   * Add required elements to an existing FlowElement array. Each web
+   * integration element is added only where the array has no element with
+   * its key, compared ignoring case, so one the caller added is the one
+   * used and building twice adds nothing more. A JSON Builder goes
+   * immediately before a JavaScript Builder the caller added, which reads
+   * what it writes.
    *
    * @param {FlowElement[]} flowElements array of elements to add to
    * @returns {FlowElement[]} resulting array with required elements
    */
   addRequiredElements (flowElements) {
-    return this.getSequenceElements()
-      .concat(flowElements)
-      .concat(this.getJavaScriptElements())
-      .concat(this.getHttpElements());
+    const keyOf = (element) => String(element.dataKey).toLowerCase();
+    const present = new Set(flowElements.flat().map(keyOf));
+    const absent = (element) => !present.has(keyOf(element));
+
+    const elements = this.getSequenceElements().filter(absent)
+      .concat(flowElements);
+    for (const element of this.getJavaScriptElements().filter(absent)) {
+      const javascriptBuilder = elements.findIndex(
+        (added) => keyOf(added) === 'javascriptbuilder');
+      if (element.dataKey === 'jsonbundler' && javascriptBuilder !== -1) {
+        elements.splice(javascriptBuilder, 0, element);
+      } else {
+        elements.push(element);
+      }
+    }
+    return elements.concat(this.getHttpElements().filter(absent));
   }
 
   /**
