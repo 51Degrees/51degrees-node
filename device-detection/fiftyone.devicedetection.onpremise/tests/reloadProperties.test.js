@@ -53,9 +53,8 @@ const USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) ' +
 const READ = ['ismobile', 'platformname', 'browsername'];
 const TIMEOUT_MS = 300000;
 
-// The values of READ the engine gives for USER_AGENT.
-const values = async (engine) => {
-  const pipeline = new core.PipelineBuilder().add(engine).build();
+// The values of READ the pipeline gives for USER_AGENT.
+const values = async (pipeline) => {
   const flowData = pipeline.createFlowData();
   flowData.evidence.add('header.user-agent', USER_AGENT);
   await flowData.process();
@@ -89,6 +88,9 @@ describe('an engine built with no Property names', () => {
         // while the engine is open.
         performanceProfile: 'MaxPerformance',
         autoUpdate: false,
+        // The test refreshes the data file itself, so no watcher is left
+        // on the file once the test has removed it.
+        fileSystemWatcher: false,
         licenceKeys: ''
       });
       // The data file the engine registers, which the update service
@@ -99,8 +101,9 @@ describe('an engine built with no Property names', () => {
           registerDataFile: (registered) => { dataFile = registered; }
         }
       });
+      const pipeline = new core.PipelineBuilder().add(engine).build();
       const before = Object.keys(engine.properties).sort();
-      const valuesBefore = await values(engine);
+      const valuesBefore = await values(pipeline);
       expect(valuesBefore[0]).toBe(true);
 
       fs.copyFileSync(ENTERPRISE, file);
@@ -108,6 +111,6 @@ describe('an engine built with no Property names', () => {
 
       expect(engine.engine.getProduct()).not.toBe('Lite');
       expect(Object.keys(engine.properties).sort()).toEqual(before);
-      expect(await values(engine)).toEqual(valuesBefore);
+      expect(await values(pipeline)).toEqual(valuesBefore);
     }, TIMEOUT_MS);
 });
