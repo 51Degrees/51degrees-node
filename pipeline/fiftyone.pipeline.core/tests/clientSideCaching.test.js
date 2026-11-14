@@ -23,7 +23,7 @@
 // The caching headers of the client-side JSON and JavaScript endpoints, as
 // the web integration specification's cache header detail sets them, and
 // the 304 and 412 answers RFC 9110 section 13.1.2 gives a matching
-// If-None-Match.
+// If-None-Match before the pipeline processes the request.
 
 const http = require('http');
 const path = require('path');
@@ -42,10 +42,12 @@ const USER_AGENT = 'Mozilla/5.0 (test)';
 const HOST = 'example.test';
 
 /**
- * Builds a pipeline with one element that reads the User-Agent and fails
- * while state.failing is true.
+ * Builds a pipeline with one element that reads the User-Agent, counts the
+ * requests it processes in state.processed, and fails while state.failing
+ * is true.
  *
- * @param {{failing: boolean}} state whether the element fails
+ * @param {{failing: boolean, processed?: number}} state whether the element
+ * fails, and how many requests it has processed
  * @returns {object} the pipeline
  */
 const makePipeline = (state) => {
@@ -53,6 +55,7 @@ const makePipeline = (state) => {
     dataKey: 'test',
     evidenceKeyFilter: new BasicListEvidenceKeyFilter(['header.user-agent']),
     processInternal: function (flowData) {
+      state.processed = (state.processed || 0) + 1;
       if (state.failing) {
         throw new Error('The test element failed.');
       }
@@ -72,9 +75,14 @@ const makePipeline = (state) => {
 };
 
 /**
- * Builds a server for the pipeline makePipeline gives.
+ * Builds a server for the pipeline makePipeline gives. It answers a
+ * matching If-None-Match before processing, as the examples do, unless
+ * state.processFirst is true, which is how a caller that processes every
+ * request before writing the response behaves.
  *
- * @param {{failing: boolean}} state whether the element fails
+ * @param {{failing: boolean, processed?: number, processFirst?: boolean,
+ * maxAgeSeconds?: number}} state the element's state, whether to process
+ * first, and the max-age to give the helpers
  * @returns {http.Server} the server
  */
 const makeServer = (state) => {
@@ -83,15 +91,24 @@ const makeServer = (state) => {
     // A fault answers 500 with its message, so a test fails on it rather
     // than waiting for a response that never comes.
     try {
+      const options = state.maxAgeSeconds === undefined
+        ? {}
+        : { maxAgeSeconds: state.maxAgeSeconds };
       const flowData = pipeline.createFlowData();
       await flowData.evidence.addFromRequestAsync(req);
+      if (state.processFirst !== true &&
+        Helpers.writeClientSideNotModified(req, res, flowData, options)) {
+        return;
+      }
       await flowData.process();
       if (req.url.startsWith('/json')) {
         Helpers.writeClientSideResponse(req, res, flowData,
-          'application/json', JSON.stringify(flowData.jsonbundler.json));
+          'application/json', JSON.stringify(flowData.jsonbundler.json),
+          options);
       } else {
         Helpers.writeClientSideResponse(req, res, flowData,
-          'application/x-javascript', flowData.javascriptbuilder.javascript);
+          'application/x-javascript', flowData.javascriptbuilder.javascript,
+          options);
       }
     } catch (e) {
       res.statusCode = 500;
@@ -163,7 +180,8 @@ describe('client-side caching headers', () => {
     });
 
   test('a matching If-None-Match on a POST gets a 412', async () => {
-    const server = makeServer({ failing: false });
+    const state = { failing: false };
+    const server = makeServer(state);
     const first = await request(server).post('/json').set('Host', HOST)
       .set('User-Agent', USER_AGENT).type('form').send({ a: '1' });
 
@@ -172,6 +190,45 @@ describe('client-side caching headers', () => {
       .type('form').send({ a: '1' });
 
     expect(again.statusCode).toBe(412);
+    expect(state.processed).toBe(1);
+  });
+
+  // web-integration.md lines 242 to 253: the endpoint compares
+  // If-None-Match with the ETag before the pipeline processes the request,
+  // and does not process a request whose If-None-Match matches.
+  test('a matching If-None-Match is answered without processing',
+    async () => {
+      const state = { failing: false };
+      const server = makeServer(state);
+      const first = await getScript(server);
+      expect(state.processed).toBe(1);
+
+      const again = await getScript(server,
+        { 'If-None-Match': first.headers.etag });
+      expect(again.statusCode).toBe(304);
+      expect(again.headers.etag).toBe(first.headers.etag);
+      expect(state.processed).toBe(1);
+
+      const changed = await getScript(server,
+        { 'If-None-Match': 'W/"other"' });
+      expect(changed.statusCode).toBe(200);
+      expect(state.processed).toBe(2);
+    });
+
+  // web-integration.md line 332: max-age is configurable.
+  test('the max-age option is used on a 200 and a 304', async () => {
+    const server = makeServer({ failing: false, maxAgeSeconds: 60 });
+    const first = await getScript(server);
+    expect(first.headers['cache-control']).toBe('private, max-age=60');
+
+    for (const processFirst of [false, true]) {
+      const again = await getScript(
+        makeServer({ failing: false, maxAgeSeconds: 60, processFirst }),
+        { 'If-None-Match': first.headers.etag });
+      expect({ processFirst, status: again.statusCode })
+        .toEqual({ processFirst, status: 304 });
+      expect(again.headers['cache-control']).toBe('private, max-age=60');
+    }
   });
 
   // A browser can stop waiting while the pipeline processes, and the
@@ -222,12 +279,23 @@ describe('client-side caching headers', () => {
       expect(failed.headers['cache-control']).toBe('private, no-cache');
       expect(failed.headers.etag).toBeUndefined();
 
-      // A browser that kept the good response keeps it through the outage.
+      // A browser that kept the good response keeps it through the outage,
+      // and its cache keeps the ETag and max-age (web-integration.md lines
+      // 313 to 321), whether or not the caller processed the request first.
       const kept = await getScript(server,
         { 'If-None-Match': good.headers.etag });
       expect(kept.statusCode).toBe(304);
-      expect(kept.headers['cache-control']).toBe('private, no-cache');
-      expect(kept.headers.etag).toBeUndefined();
+      expect(kept.headers['cache-control']).toBe('private, max-age=1800');
+      expect(kept.headers.etag).toBe(good.headers.etag);
+      expect(kept.headers.vary).toBe('user-agent');
+
+      const keptAfterProcessing = await getScript(
+        makeServer({ failing: true, processFirst: true }),
+        { 'If-None-Match': good.headers.etag });
+      expect(keptAfterProcessing.statusCode).toBe(304);
+      expect(keptAfterProcessing.headers['cache-control'])
+        .toBe('private, max-age=1800');
+      expect(keptAfterProcessing.headers.etag).toBe(good.headers.etag);
 
       // Once processing works again, the ETag is the one it was.
       state.failing = false;

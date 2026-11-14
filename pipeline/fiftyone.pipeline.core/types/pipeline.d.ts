@@ -1,7 +1,7 @@
 export = Pipeline;
 /**
  * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('fiftyone.pipeline.engines').DataFileUpdateService} DataFileUpdateService
+ * @typedef {any} DataFileUpdateService
  */
 /**
  * Pipeline holding a list of flowElements for processing, can create
