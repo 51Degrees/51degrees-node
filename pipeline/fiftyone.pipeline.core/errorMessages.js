@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 module.exports = {
+  flowDataAlreadyProcessed: 'FlowData has already been processed',
   noElementData: 'There is no element data for "%s" against this flow ' +
     'data. Available element data keys are: %s.',
   genericMissingProperties: 'Property "%s" not found',

@@ -25,6 +25,10 @@ const errorMessages = require('./errorMessages');
 const Evidence = require('./evidence');
 const LicenseKeys = require('./licenseKeys');
 
+// The Flow Data that have been processed, so that each is processed once.
+// A WeakSet lets a Flow Data be collected once nothing else holds it.
+const processedFlowData = new WeakSet();
+
 /**
  * @typedef {import('./pipeline')} Pipeline
  * @typedef {import('./flowElement')} FlowElement
@@ -161,6 +165,12 @@ class FlowData {
    * in flowData.errors, unless the pipeline suppresses process exceptions.
    */
   process () {
+    // A Flow Data is processed once. A second call, even one made before
+    // the first has finished, fails rather than running the elements again.
+    if (processedFlowData.has(this)) {
+      return Promise.reject(new Error(errorMessages.flowDataAlreadyProcessed));
+    }
+    processedFlowData.add(this);
     this.pipeline.log('info', 'Pipeline processing started');
 
     return this.pipeline.processMethod(this);
