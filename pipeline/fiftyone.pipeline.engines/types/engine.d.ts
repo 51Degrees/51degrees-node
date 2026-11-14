@@ -19,16 +19,17 @@ declare class Engine extends Engine_base {
      * @param {DataFile} options.dataFile an optional datafile
      * to add to the engine
      * @param {DataKeyedCache} options.cache instance of a DataKeyedCache
-     * @param {Array} options.restrictedProperties specific list
-     * of properties to fetch elementData for
+     * @param {Array<string>|string} options.restrictedProperties specific
+     * list of properties to fetch elementData for, or one comma separated
+     * string of them, as a configuration file gives a list
      */
     constructor({ cache, restrictedProperties, dataFile }?: {
         dataFile: DataFile;
         cache: DataKeyedCache;
-        restrictedProperties: any[];
+        restrictedProperties: Array<string> | string;
     }, ...args: any[]);
     cache: import("./dataKeyedCache");
-    restrictedProperties: any[];
+    restrictedProperties: string[];
     /**
      * The restricted property names in lower case, because property
      * names are compared ignoring case.
