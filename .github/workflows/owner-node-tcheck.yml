@@ -1,0 +1,32 @@
+name: Owner node types check
+
+# Throwaway. On a draft's head merged with the draft that writes rc's types
+# again, writes the types with tsc and prints every difference from the
+# committed types, new files included. The branch is deleted after.
+
+on:
+  push:
+    branches:
+      - 'tmp/owner-node-tcheck-*'
+
+jobs:
+  Types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Generate
+        run: |
+          git log --oneline -4
+          npm install
+          npx tsc --version
+          npm run tsc
+          git add -A -- '*.d.ts'
+          git diff --cached --stat
+          git diff --cached
+          git diff --cached --quiet
