@@ -35,6 +35,11 @@ const url = require('url');
 
 const os = require('os');
 
+// The version of the Pipeline, read from the package that provides it, so
+// that the usage shared names the release that is running.
+const PIPELINE_VERSION =
+  require('fiftyone.pipeline.core/package.json').version;
+
 /**
  * The maximum number of code points in a piece of evidence's value which
  * can be added to the usage data being sent.
@@ -312,14 +317,17 @@ class ShareUsage extends Engine {
 
     Object.keys(found).forEach(key => {
       const value = found[key];
-      if (key === 'server.client-ip') {
+      // Evidence keys are compared ignoring case, and the evidence keeps the
+      // letters of the key that first arrived.
+      const lowerKey = key.toLowerCase();
+      if (lowerKey === 'server.client-ip') {
         // The client IP is dealt with separately for backwards
         // compatibility purposes.
         data.clientIP = value;
-      } else if (key === 'query.session-id') {
+      } else if (lowerKey === 'query.session-id') {
         // The SessionID is dealt with separately.
         data.sessionId = value;
-      } else if (key === 'query.sequence') {
+      } else if (lowerKey === 'query.sequence') {
         // The Sequence is dealt with separately.
         const sequence = parseInt(value);
 
@@ -347,7 +355,7 @@ class ShareUsage extends Engine {
       let xml = '';
 
       // The version number of the Pipeline API
-      xml += '<Version>4.4.7</Version>';
+      xml += `<Version>${new ReplacedString(PIPELINE_VERSION).result}</Version>`;
       // Write Pipeline information
       // The product name
       xml += '<Product>Pipeline</Product>';
