@@ -210,8 +210,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.url.startsWith('/json')) {
+    // A matching If-None-Match gets its 304 without processing.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
@@ -223,8 +227,11 @@ const server = http.createServer(async (req, res) => {
     // the results of this request's detection. Query parameters, such as
     // 'fod-js-enable-cookies', are evidence like any other and are already in
     // the flow data via addFromRequest.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
