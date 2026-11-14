@@ -112,6 +112,30 @@ const sectionQuery = (file) => new RegExp(
   `&utm_content=${escapeRegExp(slug(file))}` +
   '&utm_term=find-out-more[a-z0-9-]*$');
 
+// What the file lacks of the section, one line for each thing, so that a
+// failure names it rather than printing the whole file.
+const problems = (file) => {
+  const text = fs.readFileSync(path.join(PRODUCT, file), 'utf8')
+    .replace(/&amp;/g, '&');
+  const found = [];
+  if (!text.includes('Find out more')) {
+    found.push('no "Find out more" heading');
+  }
+  if (!text.includes(REPOSITORY)) {
+    found.push(`no link to ${REPOSITORY}`);
+  }
+  const links = text.match(SECTION_LINK) || [];
+  if (links.length === 0) {
+    found.push('no 51degrees.com link with a utm_term of find-out-more');
+  }
+  for (const link of links) {
+    if (!sectionQuery(file).test(link)) {
+      found.push(`a link not tagged with this file: ${link}`);
+    }
+  }
+  return found;
+};
+
 // Folders that hold no example: installed packages, the scripts a page
 // loads and the JavaScript templates submodule.
 const SKIPPED_FOLDERS = ['node_modules', 'public', 'javascript-templates'];
@@ -186,15 +210,7 @@ describe('Find out more', () => {
 
   for (const file of EXAMPLES) {
     test(`${file} has the section`, () => {
-      const text = fs.readFileSync(path.join(PRODUCT, file), 'utf8')
-        .replace(/&amp;/g, '&');
-      expect(text).toContain('Find out more');
-      expect(text).toContain(REPOSITORY);
-      const links = text.match(SECTION_LINK) || [];
-      expect(links.length).toBeGreaterThan(0);
-      for (const link of links) {
-        expect(link).toMatch(sectionQuery(file));
-      }
+      expect(problems(file)).toEqual([]);
     });
   }
 
