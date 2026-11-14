@@ -68,6 +68,9 @@ function builtInScriptNames () {
   return files === null ? [] : files.map(nameOf);
 }
 
+// The platforms whose default file systems ignore letter case in names.
+const CASE_BLIND_PLATFORMS = ['win32', 'darwin'];
+
 /**
  * A regular expression matching a file name against a pattern holding
  * the wildcards `*` and `?`.
@@ -84,8 +87,10 @@ function wildcard (pattern) {
       return character.replace(/[.+^${}()|[\]\\]/g, '\\$&');
     })
     .join('');
-  // File names are compared the way the file system compares them.
-  return new RegExp(`^${source}$`, process.platform === 'win32' ? 'i' : '');
+  // Letter case is ignored on Windows and Apple systems, whose default file
+  // systems ignore it.
+  return new RegExp(`^${source}$`,
+    CASE_BLIND_PLATFORMS.includes(process.platform) ? 'i' : '');
 }
 
 /**
