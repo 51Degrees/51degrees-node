@@ -128,7 +128,7 @@ if (localResourceKey.substr(0, 2) === '!!') {
 
 if (localResourceKey.substr(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-    'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=resource-key-required and paste it into the code, ' +
+    'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-gettingstarted.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the code, ' +
     'replacing !!YOUR_RESOURCE_KEY!!.');
   console.log(FIND_OUT_MORE);
 } else {
