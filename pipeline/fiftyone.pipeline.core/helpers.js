@@ -127,6 +127,50 @@ const ifNoneMatchMatches = function (ifNoneMatch, etag) {
   return tags.some((tag) => opaque(tag) === opaque(etag));
 };
 
+/**
+ * The max-age a client-side response carries.
+ *
+ * @param {object} options the options given to a helper
+ * @returns {number} the max-age in seconds
+ */
+const maxAgeSecondsOf = function (options) {
+  return options.maxAgeSeconds === undefined
+    ? DEFAULT_MAX_AGE_SECONDS
+    : options.maxAgeSeconds;
+};
+
+/**
+ * Answer a request whose If-None-Match matches the ETag, with a 304 to a GET
+ * or HEAD and a 412 to any other method (RFC 9110 section 13.1.2). The 304
+ * carries the Cache-Control, Vary and ETag a good 200 carries (RFC 9110
+ * section 15.4.5), because a matching request is not processed, so a
+ * browser keeps the response it holds through an outage.
+ *
+ * @param {import('http').IncomingMessage} request the request
+ * @param {import('http').ServerResponse} response the response, which this
+ * ends
+ * @param {FlowData} flowData the flow data for the request
+ * @param {string} etag the ETag the request matched
+ * @param {number} maxAgeSeconds the max-age of a good response
+ */
+const writeNotModified = function (
+  request, response, flowData, etag, maxAgeSeconds) {
+  const method = (request.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    response.statusCode = 412;
+    response.end();
+    return;
+  }
+  response.setHeader('Cache-Control', 'private, max-age=' + maxAgeSeconds);
+  const vary = clientSideVary(flowData);
+  if (vary) {
+    response.setHeader('Vary', vary);
+  }
+  response.setHeader('ETag', etag);
+  response.statusCode = 304;
+  response.end();
+};
+
 class Helpers {
   /**
    * Set response headers in the response object (e.g. Accept-CH)
@@ -146,13 +190,46 @@ class Helpers {
   }
 
   /**
+   * Answer a request to a client-side endpoint, the JSON endpoint or the
+   * JavaScript endpoint, whose If-None-Match matches the ETag, without
+   * processing it. Call this once the evidence is added and before the flow
+   * data is processed, and process the request and call
+   * writeClientSideResponse only when this returns false. The web
+   * integration specification requires that a matching request is not
+   * processed, and the ETag depends only on the evidence the request
+   * supplied, so it is known before processing.
+   *
+   * @param {import('http').IncomingMessage} request the request
+   * @param {import('http').ServerResponse} response the response, which this
+   * ends when it returns true
+   * @param {FlowData} flowData the flow data for the request, with its
+   * evidence added and not yet processed
+   * @param {object} [options] options
+   * @param {number} [options.maxAgeSeconds] how long a browser may reuse the
+   * response, 1800 unless given
+   * @returns {boolean} true when the request matched and has been answered
+   * with a 304 or a 412
+   */
+  static writeClientSideNotModified (
+    request, response, flowData, options = {}) {
+    const etag = clientSideETag(flowData);
+    if (ifNoneMatchMatches(
+      (request.headers || {})['if-none-match'], etag) === false) {
+      return false;
+    }
+    writeNotModified(
+      request, response, flowData, etag, maxAgeSecondsOf(options));
+    return true;
+  }
+
+  /**
    * Write the response of a client-side endpoint, the JSON endpoint or the
    * JavaScript endpoint, with the caching headers of the web integration
-   * specification. A request whose If-None-Match matches the ETag gets a 304
-   * when it is a GET or HEAD and a 412 otherwise, as RFC 9110 section 13.1.2
-   * requires. A response to a request whose processing recorded errors has
-   * Cache-Control private, no-cache and no ETag, though a matching
-   * If-None-Match still gets its 304.
+   * specification. A response to a request whose processing recorded errors
+   * has Cache-Control private, no-cache and no ETag. A request whose
+   * If-None-Match matches the ETag gets what writeClientSideNotModified
+   * gives it, for a caller that processes every request before writing the
+   * response, though such a request should not have been processed.
    *
    * @param {import('http').IncomingMessage} request the request
    * @param {import('http').ServerResponse} response the response, which this
@@ -166,24 +243,16 @@ class Helpers {
    */
   static writeClientSideResponse (
     request, response, flowData, contentType, body, options = {}) {
-    const maxAgeSeconds = options.maxAgeSeconds === undefined
-      ? DEFAULT_MAX_AGE_SECONDS
-      : options.maxAgeSeconds;
-    const failed = Object.keys(flowData.errors || {}).length > 0;
+    const maxAgeSeconds = maxAgeSecondsOf(options);
     const etag = clientSideETag(flowData);
-    const method = (request.method || 'GET').toUpperCase();
-    const read = method === 'GET' || method === 'HEAD';
-    const matched = ifNoneMatchMatches(
-      (request.headers || {})['if-none-match'], etag);
-
-    if (matched && read === false) {
-      response.statusCode = 412;
-      response.end();
+    if (ifNoneMatchMatches(
+      (request.headers || {})['if-none-match'], etag)) {
+      writeNotModified(request, response, flowData, etag, maxAgeSeconds);
       return;
     }
 
-    // The headers a 200 carries, which a 304 carries too, as RFC 9110
-    // section 15.4.5 requires.
+    const failed = Object.keys(flowData.errors || {}).length > 0;
+    const method = (request.method || 'GET').toUpperCase();
     response.setHeader('Cache-Control', failed
       ? CACHE_CONTROL_AFTER_ERRORS
       : 'private, max-age=' + maxAgeSeconds);
@@ -193,12 +262,6 @@ class Helpers {
     }
     if (failed === false) {
       response.setHeader('ETag', etag);
-    }
-
-    if (matched) {
-      response.statusCode = 304;
-      response.end();
-      return;
     }
 
     response.statusCode = 200;

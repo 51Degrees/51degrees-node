@@ -170,9 +170,13 @@ const server = http.createServer(async (req, res) => {
 
   if (urlPath === jsonPath) {
     // Answer the client-side script with the results of processing the
-    // evidence it posted.
+    // evidence it posted. A matching If-None-Match gets its 304 without
+    // processing.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
@@ -183,8 +187,11 @@ const server = http.createServer(async (req, res) => {
     // Serve the client-side script built for this request. The script
     // carries the results of this request's detection, so it is built per
     // request rather than cached.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
