@@ -216,6 +216,37 @@ test('file watcher keeps watching after a failed refresh', async () => {
 });
 
 /**
+ * data-updates.md line 354 says every check is reported to onUpdateCallbacks
+ * once it ends, and lines 365 to 368 give a file watcher event that finds
+ * nothing left to do AUTO_UPDATE_IN_PROGRESS. An event that arrives while the
+ * data file is being updated is reported so, rather than dropped.
+ */
+test('file watcher reports an event that arrives during an update',
+  async () => {
+    const { file } = newDataFile('watcher-busy-');
+    const updateService = new DataFileUpdateService({ log: () => {} });
+    const dataFile = Object.assign(standInDataFile(file),
+      { fileSystemWatcher: true });
+
+    try {
+      updateService.registerDataFile(dataFile);
+      // On macOS fs.watch can miss a change made straight after it starts.
+      await sleep(500);
+
+      dataFile.updating = true;
+      const reported = next(updateService,
+        AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
+      fs.writeFileSync(file, 'version 2');
+      await reported;
+      expect(dataFile.data).toBe('version 1');
+    } finally {
+      dataFile.updating = false;
+      dataFile.finished = true;
+      fs.unlinkSync(file);
+    }
+  });
+
+/**
  * With a pipeline that has no 'error' listener, a refresh that fails on the
  * file watcher route is written to the console rather than thrown, and the
  * watcher picks up a later good file.
