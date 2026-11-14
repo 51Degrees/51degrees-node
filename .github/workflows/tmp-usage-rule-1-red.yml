@@ -1,0 +1,17 @@
+name: Usage rule 1 red test
+on:
+  push:
+    branches:
+      - tmp/usage-rule-1-red
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the workspace without native builds
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Test the usage record
+        run: >
+          node node_modules/jest/bin/jest.js --ci --runInBand --forceExit
+          pipeline/fiftyone.pipeline.engines.fiftyone/tests/shareUsage.test.js
+          -t "session id and sequence recorded whatever their case|repeat with new sequence"

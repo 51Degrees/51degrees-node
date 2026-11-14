@@ -994,3 +994,33 @@ test('share usage - repeat with new sequence not shared', done => {
     });
   });
 });
+
+/**
+ * Evidence keys ignore letter case, so the session id and sequence are
+ * written to the record as SessionId and Sequence whatever the letters of
+ * their keys.
+ */
+test('share usage - session id and sequence recorded whatever their case', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'agent');
+  flowData.evidence.add('query.Session-Id', 'the session');
+  flowData.evidence.add('query.Sequence', '2');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<SessionId>the session</SessionId>');
+      expect(received[0]).toContain('<Sequence>2</Sequence>');
+      done();
+    }, 2000);
+  });
+});
