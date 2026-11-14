@@ -12,15 +12,15 @@ declare class DeviceDetectionCloudPipelineBuilder extends DeviceDetectionCloudPi
      * @param {object} options the options for the pipeline builder
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-devicedetectioncloudpipelinebuilder.js&utm_term=constructor.
      * This parameter MUST be set when using a data file.
      * If you do not wish to use a key then you can specify
      * an empty string, but this will cause automatic updates
      * to be disabled.
-     * @param {string} options.resourceKey resourceKey
      * @param {Array<string>|string} options.requestedProperties the fully
      * qualified names of the properties to ask the cloud service for, such
      * as device.ismobile. Required with a license key and no resource key.
+     * @param {string} options.resourceKey resourceKey
      * @param {number} options.cacheSize size of the default cache
      * (includes cache if set).
      * @param {string} options.cloudEndPoint Choose a non default endpoint
@@ -36,8 +36,8 @@ declare class DeviceDetectionCloudPipelineBuilder extends DeviceDetectionCloudPi
      */
     constructor({ licenceKeys, resourceKey, requestedProperties, cacheSize, cloudEndPoint, cloudRequestOrigin }: {
         licenceKeys: string;
-        resourceKey: string;
         requestedProperties: Array<string> | string;
+        resourceKey: string;
         cacheSize: number;
         cloudEndPoint: string;
         cloudRequestOrigin: string;
