@@ -1,0 +1,34 @@
+name: Usage sharing errors check (throwaway)
+
+on:
+  push:
+    branches:
+      - 'tmp/ipnp-us19-**'
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 22 }
+          - { os: ubuntu-latest, node: 24 }
+          - { os: windows-latest, node: 24 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the submodule the pipeline core reads
+        run: git submodule update --init --depth 1 pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Lint the changed packages
+        run: npx eslint pipeline/fiftyone.pipeline.engines pipeline/fiftyone.pipeline.engines.fiftyone --ext .js
+      - name: Test the engines and usage sharing packages
+        run: node --expose-gc node_modules/jest/bin/jest.js --ci --verbose pipeline/fiftyone.pipeline.engines/tests pipeline/fiftyone.pipeline.engines.fiftyone/tests
