@@ -133,8 +133,11 @@ describe('web integration elements the caller added', () => {
       const pipeline = new core.PipelineBuilder()
         .addParallel([userElement(), setHeaders])
         .build();
+      // It stays where the caller put it, and no other is added.
       expect(pipeline.flowElementsChain.flat()
-        .map((element) => element.dataKey)).toEqual(allKeys);
+        .map((element) => element.dataKey)).toEqual([
+        'sequence', 'user', 'set-headers', 'jsonbundler', 'javascriptbuilder'
+      ]);
       expect(pipeline.getElement('set-headers')).toBe(setHeaders);
     });
 
