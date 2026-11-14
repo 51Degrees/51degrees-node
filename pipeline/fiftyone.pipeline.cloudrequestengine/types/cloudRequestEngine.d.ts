@@ -1,9 +1,5 @@
 export = CloudRequestEngine;
 declare const CloudRequestEngine_base: typeof import("fiftyone.pipeline.engines/types/engine");
-/**
- * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
- * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
- */
 declare class CloudRequestEngine extends CloudRequestEngine_base {
     /**
      * Constructor for CloudRequestEngine
@@ -86,17 +82,7 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @returns {Promise} resolved once the FlowData is processed
      */
     process(flowData: FlowData): Promise<any>;
-    discovery: Promise<any>;
-    /**
-     * A response with a top level `fodid` member, in any case, holds a 51Did
-     * created for the one request, so it is neither stored in the cache nor
-     * served from it. The answer is worked out once for each element data,
-     * so a cache hit does not parse the response again.
-     *
-     * @param {object} data the element data of a response
-     * @returns {boolean} false if the response has a top level fodid member
-     */
-    isCacheable(data: object): boolean;
+    discovery: any;
     /**
      * Typically, cloud will return errors as JSON.
      * However, transport level errors or other failures can result in
@@ -219,7 +205,8 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getSelectedEvidence(evidence: Evidence, type: string): Evidence;
     /**
-     * Check that the key of a KeyValuePair has the given prefix.
+     * Check that the key of a KeyValuePair has the given prefix, ignoring
+     * letter case as evidence keys do.
      *
      * @param {string} itemKey Key to check
      * @param {string} prefix The prefix to check for.

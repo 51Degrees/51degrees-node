@@ -22,16 +22,8 @@ export let testConstants: {
         hardwareResourceKeyEnvVar: string;
         browserResourceKeyEnvVar: string;
         noSetHeaderResourceKeyEnvVar: string;
-        /**
-         * @deprecated No test reads a licence key under this name. The licence
-         * key is read from the _51DEGREES_LICENSE_KEY environment variable.
-         */
         licenseKeyEnvVar: string;
     };
-    /**
-     * @deprecated The name each of envVars replaced. An old name is read only
-     * when the name that replaced it is unset or empty. Use envVars.
-     */
     legacyEnvVars: {
         _51DEGREES_RESOURCE_KEY: string;
         _51DEGREES_RESOURCE_KEY_SUPER: string;
