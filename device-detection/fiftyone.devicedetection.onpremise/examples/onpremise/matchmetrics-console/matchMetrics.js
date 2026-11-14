@@ -72,6 +72,19 @@ const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=enterprise-data-file';
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe device detection engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-matchmetrics-console-matchmetrics.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Here we make a function that gets a userAgent as evidence and
 // uses the Device Detection Engine to detect if it is a mobile or not
 const displayMatchMetrics = async function (pipeline, output, evidenceValues) {
@@ -243,7 +256,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const dataFile = args.length > 0 ? args[0] : null;
 
   // Just take the third entry from the default evidence values.
-  run(dataFile, process.stdout, exampleConstants.defaultEvidenceValues.slice(2, 3));
+  run(dataFile, process.stdout, exampleConstants.defaultEvidenceValues.slice(2, 3))
+    .then(() => console.log(FIND_OUT_MORE));
 };
 
 module.exports = {

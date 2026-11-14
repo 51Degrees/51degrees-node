@@ -80,6 +80,19 @@ const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=enterprise-data-file';
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe device detection engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-metadata-console-metadata.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const truncateToNl = function (string) {
   const lines = string.split('\n');
   let result = '';
@@ -214,7 +227,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
 
   if (dataFile !== undefined) {
-    run(dataFile, process.stdout);
+    run(dataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     console.error('Failed to find a device detection ' +
       'data file. Make sure the cxx/data submodule ' +
@@ -222,6 +235,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
       '`git submodule update --init --recursive`. By default, the \'lite\' file ' +
       'included with this code will be used. A different file can be ' +
       'specified by supplying the full path as a command line argument');
+    console.log(FIND_OUT_MORE);
   }
 };
 

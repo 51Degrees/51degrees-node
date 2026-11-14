@@ -99,6 +99,37 @@ const getFromExample = async (file, urlPath) => {
 
 const EXAMPLES = path.resolve(__dirname, '..', 'examples');
 
+// Every example ends with a Find out more section, which is a rule of 79
+// equals signs, the heading, then one line per link, each a tab, a label
+// and an address, with the Pipeline API folder and a 51degrees.com link
+// tagged for the section among them.
+const RULE = '='.repeat(79);
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/pipeline';
+const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
+
+const expectEndsWithFindOutMore = (stdout) => {
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const heading = lines.lastIndexOf('Find out more:');
+  expect(heading).toBeGreaterThan(0);
+  expect(lines[heading - 1]).toBe(RULE);
+  const links = lines.slice(heading + 1);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThe Pipeline API: ${REPOSITORY}`);
+  expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
+};
+
+// Checks a page has the section after the text given, with the Pipeline
+// API folder and a tagged 51degrees.com link.
+const expectPageEndsWithFindOutMore = (body, before) => {
+  const section = body.lastIndexOf('Find out more');
+  expect(section).toBeGreaterThan(body.lastIndexOf(before));
+  expect(body.slice(section)).toContain(REPOSITORY);
+  expect(body.slice(section)).toContain(FIND_OUT_MORE_LINK);
+};
+
 test('caching example', () => {
   const result = runExample(path.join(EXAMPLES, 'caching.js'));
 
@@ -106,6 +137,7 @@ test('caching example', () => {
     .toEqual({ status: 0, stderr: expect.any(String) });
   // The second request with the same user id is answered from the cache.
   expect(result.stdout).toContain('Fetched from cache');
+  expectEndsWithFindOutMore(result.stdout);
 }, TIMEOUT_MS);
 
 test('on premise flow element example asks for a date of birth',
@@ -120,6 +152,7 @@ test('on premise flow element example asks for a date of birth',
     }).toEqual({ status: 200, output: '' });
     expect(page.body)
       .toContain('Add your date of birth to get your starsign');
+    expectPageEndsWithFindOutMore(page.body, 'Add your date of birth to get your starsign');
   }, TIMEOUT_MS);
 
 test('on premise flow element example gives the star sign', async () => {
@@ -132,4 +165,5 @@ test('on premise flow element example gives the star sign', async () => {
     output: page.status === 200 ? '' : page.output
   }).toEqual({ status: 200, output: '' });
   expect(page.body).toMatch(/Your starsign is libra/i);
+  expectPageEndsWithFindOutMore(page.body, 'Your starsign is');
 }, TIMEOUT_MS);

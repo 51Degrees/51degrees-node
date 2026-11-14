@@ -48,6 +48,19 @@ const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 const DataExtension =
   require51('fiftyone.devicedetection.shared').dataExtension;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const run = async function (resourceKey, output) {
   // The pipeline should be managed as a singleton. Creating a pipeline instance for every request
   // will cause extreme resource problems.
@@ -113,8 +126,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
       'selecting the free properties used by this example can be created at ' +
       'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-configurator-console-configurator.js&utm_term=resource-key-required. Once complete, populate the config file or ' +
       'environment variable mentioned at the start of this message with the key.');
+    console.log(FIND_OUT_MORE);
   } else {
-    run(resourceKey, process.stdout);
+    run(resourceKey, process.stdout).then(() => console.log(FIND_OUT_MORE));
   }
 }
 

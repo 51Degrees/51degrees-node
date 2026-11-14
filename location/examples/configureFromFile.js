@@ -55,6 +55,19 @@ Which country is the location [51.458048,-0.9822207999999999] in? United Kingdom
 
 const PipelineBuilder = require('fiftyone.pipeline.core').PipelineBuilder;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -130,5 +143,7 @@ if (resourceKeySet) {
     }
   };
 
-  getCountry('51.458048', '-0.9822207999999999');
+  getCountry('51.458048', '-0.9822207999999999').then(() => console.log(FIND_OUT_MORE));
+} else {
+  console.log(FIND_OUT_MORE);
 }
