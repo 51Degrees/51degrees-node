@@ -62,20 +62,35 @@ async function render (sequenceElement, evidence) {
   if (sequenceElement) {
     pipeline = new core.PipelineBuilder().build();
   } else {
-    // The JSON bundler needs a sequence number, which this stand-in gives
-    // without touching the evidence, so the builder reads what was given.
+    // A stand-in for the Sequence Element whose data holds the values given,
+    // as they were given, so the builder's own checks on the Sequence
+    // Element's data are what is tested. A stand-in for the JSON builder
+    // gives the script its JSON, because the JSON builder refuses a
+    // sequence that is not a whole number before the script is built.
     const standIn = new core.FlowElement({
       dataKey: 'sequence',
       processInternal: function (flowData) {
         flowData.setElementData(new core.ElementDataDictionary({
           flowElement: this,
-          contents: { 'session-id': '', sequence: 1 }
+          contents: {
+            'session-id': flowData.evidence.get(sessionIdKey),
+            sequence: flowData.evidence.get(sequenceKey)
+          }
+        }));
+      }
+    });
+    const jsonStandIn = new core.FlowElement({
+      dataKey: 'jsonbundler',
+      processInternal: function (flowData) {
+        flowData.setElementData(new core.ElementDataDictionary({
+          flowElement: this,
+          contents: { json: {} }
         }));
       }
     });
     pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
       .add(standIn)
-      .add(new core.JsonBundler())
+      .add(jsonStandIn)
       .add(new core.JavascriptBuilder({}))
       .build();
   }
@@ -147,15 +162,15 @@ describe('session id and sequence', () => {
       expect(sequence(script)).toBe('1');
     });
 
-  test('with no Sequence Element and no evidence the script still has a ' +
+  test('with a Sequence Element that gives nothing the script still has a ' +
     'sequence', async () => {
     const script = await render(false, {});
     expect(sessionId(script)).toBe('');
     expect(sequence(script)).toBe('1');
   });
 
-  // A sequence from a web request is text. With no Sequence Element it
-  // reaches the builder as it is.
+  // A sequence from a web request is text. A Sequence Element that hands
+  // it on as it is still gives a script that parses.
   test.each(['abc', '-1', '0', '99999999999', '', '2147483648'])(
     'a sequence of "%s" is written as 1',
     async (given) => {
