@@ -179,7 +179,7 @@ with the address, then `Results:` with `Registered Name`, `Registered Owner`,
 `Country Code`, `Town`, `Latitude` and `Longitude`. The Lite file has only
 RegisteredCountry, RegisteredName and RegisteredOwner. The example reads each
 value through `getValueHelper` in
-`ip-intelligence/fiftyone.ipintelligence.shared/examples/dataExtension.js`,
+`ip-intelligence/fiftyone.ipintelligence.shared/lib/dataExtension.js`,
 which catches the error a missing property raises, so the lines for the other
 properties read `Unknown (...)` and the example carries on. It ends with the
 same two lines about the data file.
@@ -263,9 +263,12 @@ follow.
 ## Package references
 
 `package.json` refers to the other packages here by path, so the workspace links
-them. `remote_package.json` is the same manifest with the versions consumers
-install, and `ci/build-package.ps1` swaps it in before packing. Change both when
-a dependency or a field changes. A package with no in-repository dependency has
+them. `remote_package.json` is the same manifest as published, and
+`ci/build-package.ps1` swaps it in before packing. The build then writes the
+package's version, and requires each package here at the version that package
+has once the release is out. Change both files when a dependency or a field
+changes, and `DependsOn` in `ci/packages.json` when a dependency changes, as the
+build stops when they disagree. A package with no in-repository dependency has
 no `remote_package.json`.
 
 ## Everything hoists to the root
@@ -315,8 +318,8 @@ Nothing reads the older `cxx/device-detection-data` and
 
 The workflows in `.github/workflows` call the shared workflows in
 [common-ci](https://github.com/51Degrees/common-ci), which run the scripts in
-`ci/`. `ci/packages.ps1` lists the native modules and the packages published to
-npm.
+`ci/`. `ci/packages.ps1` lists the native modules, and `ci/packages.json` the
+packages published to npm.
 
 `ci/select-options.ps1` chooses the entries a pull request runs. The standard
 set is Node 24 and Node 22 on Linux, with the Selenium contract on Node 24
@@ -339,8 +342,42 @@ into `main` from any other branch.
 
 ## Versions
 
-The repository has one version, tagged as a plain version such as `4.5.97`.
-`ci/get-next-package-version.ps1` moves only the patch number.
+Each package has its own version, tagged `<package>/<version>`, such as
+`fiftyone.pipeline.core/4.5.103`. A publish releases a package when a file
+under its `Path` or `ExtraPaths` in `ci/packages.json` changed since its last
+tag, and releases every package that depends on it with it.
+`ci/release-plan.ps1` works this out with common-ci's `steps/release-plan.ps1`,
+and only the patch number moves.
+
+Some changes do not count. common-ci leaves out every `*.md` and `LICENSE`
+file and every `docs`, `tests`, `test` and `examples` folder, each package's
+`Ignore` adds `__tests__`, and its `ExcludePaths` leave out its `examples`
+folder. `ci/release-plan-filter.ps1` leaves out a `package.json` or
+`remote_package.json` whose only changes are to `description`, `keywords`,
+`homepage`, `repository`, `bugs`, `author`, `license` or `readme`.
+So a change only to documentation, tests, examples or that text releases
+nothing. The two `shared` packages keep the code their `index.js`
+exports in `lib`. Their `examples` and `tests` folders hold only files that
+re-export the module of the same name in `lib`, so a `require` of an old path
+still works. Those files never change, and a change to `lib` releases the
+package.
+
+`ci/check-version-bump.ps1` refuses a major or minor move for any package,
+against its own tags and against the version npm installs by default.
+`ci/check-release-interval.ps1` holds each package to one release a week. A
+package with no tag of its own stops the publish, unless `ci/packages.json`
+gives it a `FirstVersion`. The plain tags such as `4.5.102` are the releases
+from when every package had one version.
+
+`ci/publish-package.ps1` publishes, tags and releases each planned package in
+turn, after the packages it requires, so a publish that stops part way leaves
+the packages before the failure complete. A version npm already has is tagged
+and released without publishing it again, so running Publish again finishes
+the release. `ci/publish-package.Tests.ps1` tests this with Pester, with
+`COMMON_CI` set to a checkout of common-ci. The CI script tests workflow
+(`.github/workflows/ci-script-tests.yml`) runs every `ci/*.Tests.ps1` on
+Ubuntu and Windows for a pull request or a push to `main` or `rc` that
+changes `ci/`.
 
 ## Tests that fail on timing
 

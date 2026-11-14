@@ -26,10 +26,10 @@ This file is used for development package.
 
 module.exports = {
   errorMessages: require('./errorMessages'),
-  testConstants: require('./tests/testConstants'),
-  keyUtils: require('./tests/keyUtils'),
-  exampleOutput: require('./tests/exampleOutput'),
-  exampleConstants: require('./examples/exampleConstants'),
-  optionsExtension: require('./examples/optionsExtension'),
-  dataExtension: require('./examples/dataExtension')
+  testConstants: require('./lib/testConstants'),
+  keyUtils: require('./lib/keyUtils'),
+  exampleOutput: require('./lib/exampleOutput'),
+  exampleConstants: require('./lib/exampleConstants'),
+  optionsExtension: require('./lib/optionsExtension'),
+  dataExtension: require('./lib/dataExtension')
 };
