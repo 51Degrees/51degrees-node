@@ -37,6 +37,17 @@ const pipelineCore = require('../');
 
 const PipelineBuilder = pipelineCore.PipelineBuilder;
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tPipeline API documentation: https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-pipelines.js&utm_term=find-out-more-documentation',
+  '\tBuild your own: https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-pipelines.js&utm_term=find-out-more-build-your-own',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-pipelines.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Load in some example flowElements
 
 // A flowElement that runs asyncronously with a sitetimeout task
@@ -84,6 +95,7 @@ syncFlowData.process().then(function () {
   console.log(syncFlowData.getFromElement(sync).integer);
   console.log(syncFlowData.getWhere('type', 'int'));
   console.log(syncFlowData.getWhere('type', (type) => type === 'int'));
+  console.log(FIND_OUT_MORE);
 });
 
 syncPipeline.on('error', console.error);

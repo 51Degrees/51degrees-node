@@ -76,6 +76,21 @@ const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tDevice detection for Node.js: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe IP Intelligence and device detection engines: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-device-detection-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Evidence that includes both a User-Agent (for device detection) and an
 // IP address (for IP intelligence).
 const combinedEvidence = [
@@ -237,7 +252,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   if (deviceDataFile !== undefined && ipDataFile !== undefined) {
     console.log(`Device detection data file: ${deviceDataFile}`);
     console.log(`IP intelligence data file: ${ipDataFile}`);
-    run(deviceDataFile, ipDataFile, process.stdout);
+    run(deviceDataFile, ipDataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     if (deviceDataFile === undefined) {
       console.error('Failed to find a device detection data file. ' +
@@ -252,6 +267,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
         'to a data file can be specified as the second command line ' +
         'argument');
     }
+    console.log(FIND_OUT_MORE);
   }
 };
 

@@ -44,6 +44,17 @@ const FiftyOnePipelineCore = require(
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
 
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE = `
+        <h3>Find out more</h3>
+        <ul>
+          <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+          <li><a href="https://51degrees.com/documentation/_pipeline_api__features__client_side_evidence.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-client-side-evidence">Client-side evidence</a></li>
+          <li><a href="https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-custom-elements">Flow elements of your own</a></li>
+          <li><a href="https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-build-your-own">Build your own</a></li>
+          <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-contact">Contact us</a></li>
+        </ul>`;
+
 // Function to get star sign from month and day
 const getStarSign = (month, day) => {
   if ((month === 1 && day <= 20) || (month === 12 && day >= 22)) {
@@ -268,7 +279,7 @@ const server = http.createServer((req, res) => {
         }
 
         </script>
-        
+        ${FIND_OUT_MORE}
         `;
 
     res.statusCode = 200;
