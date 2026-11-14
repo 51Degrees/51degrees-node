@@ -137,8 +137,11 @@ describe.each(EXAMPLES)('%s', (file) => {
     () => {
       const result = runExample(file, {});
 
-      expect({ status: result.status, stderr: result.stderr })
-        .toEqual({ status: 0, stderr: expect.any(String) });
+      // What the example wrote to its error output is shown when it failed.
+      expect({
+        status: result.status,
+        stderr: result.status === 0 ? '' : result.stderr
+      }).toEqual({ status: 0, stderr: '' });
       expect(result.stdout).toContain(NEEDS_LICENCE_KEY);
       expect(result.stdout).not.toContain('Looked for');
     }, TIMEOUT_MS);
@@ -148,8 +151,11 @@ describe.each(EXAMPLES)('%s', (file) => {
       const result = runExample(file,
         { _51DEGREES_LICENSE_KEY: 'TestLicenceKey' });
 
-      expect({ status: result.status, stderr: result.stderr })
-        .toEqual({ status: 0, stderr: expect.any(String) });
+      // What the example wrote to its error output is shown when it failed.
+      expect({
+        status: result.status,
+        stderr: result.status === 0 ? '' : result.stderr
+      }).toEqual({ status: 0, stderr: '' });
       expect(result.stdout).toContain(`Looked for ${ASN_V_4_1_IPI}`);
       expect(result.stdout).toContain(`Built a Pipeline on ${ASN_V_4_1_IPI}`);
       expect(result.stdout).toContain('Exiting auto update process');
