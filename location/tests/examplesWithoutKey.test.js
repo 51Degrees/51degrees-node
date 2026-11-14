@@ -40,14 +40,11 @@ const CLOUD_EXAMPLES = [
   'examples/webIntegration.js'
 ];
 
-// The names a resource key is read from, removed for the run, and jest's
-// own variable, which some examples read to tell a test run apart.
-const REMOVED_NAMES = [
-  '_51DEGREES_RESOURCE_KEY',
-  '51DEGREES_RESOURCE_KEY',
-  'RESOURCE_KEY',
-  'JEST_WORKER_ID'
-];
+// Whether a variable is taken out for the run: every name a resource key is
+// read from, which is every name that ends RESOURCE_KEY, and jest's own
+// variable, which some examples read to tell a test run apart.
+const removed = (name) => name.toUpperCase().endsWith('RESOURCE_KEY') ||
+  name.toUpperCase() === 'JEST_WORKER_ID';
 
 // The environment variable an example names for the resource key.
 const RESOURCE_KEY_NAME = '_51DEGREES_RESOURCE_KEY';
@@ -65,10 +62,9 @@ const TIMEOUT_MS = 30000;
 // Runs an example from its own folder with no resource key. A web example
 // that does start its server listens on a port the system chooses.
 const runWithoutKey = (file) => {
-  const remove = new Set(REMOVED_NAMES.map((name) => name.toUpperCase()));
   const env = {};
   for (const [name, value] of Object.entries(process.env)) {
-    if (!remove.has(name.toUpperCase())) {
+    if (!removed(name)) {
       env[name] = value;
     }
   }
