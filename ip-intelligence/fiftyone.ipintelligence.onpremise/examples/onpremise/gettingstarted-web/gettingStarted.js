@@ -119,7 +119,10 @@ const setPipeline = (options) => {
   pipeline = new ipi.IpIntelligenceOnPremisePipelineBuilder({
     performanceProfile: 'Balanced',
     dataFile: dataFilePath,
-    shareUsage: false,
+    // Usage sharing is on, as it should be in production, because the
+    // usage data shared improves the data and the service for everyone.
+    // The console examples turn it off, as they run sample evidence only.
+    shareUsage: true,
     autoUpdate: false,
     updateOnStart: false,
     fileSystemWatcher: false,
