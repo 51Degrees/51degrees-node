@@ -465,6 +465,23 @@ class DeviceDetectionOnPremise extends Engine {
     const current = this;
 
     /**
+     * The accepted Evidence keys the native engine gives for the data it
+     * holds, read at start-up and after each refresh, because a new data
+     * file can accept other keys.
+     *
+     * @param {object} engine the native engine
+     * @returns {EvidenceKeyFilter} a filter of those keys
+     */
+    const readEvidenceKeyFilter = function (engine) {
+      const evidenceKeys = engine.getKeys();
+      const evidenceKeyArray = [];
+      for (let i = 0; i < evidenceKeys.size(); i += 1) {
+        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
+      }
+      return new EvidenceKeyFilter(evidenceKeyArray);
+    };
+
+    /**
      * Function for initialising the engine, wrapped like this so
      * that an engine can be initialised once the datafile is
      * retrieved if updateOnStart is set to true
@@ -474,17 +491,7 @@ class DeviceDetectionOnPremise extends Engine {
     this.initEngine = function () {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
-      // Get keys and add to evidenceKey filter
-
-      const evidenceKeys = engine.getKeys();
-
-      const evidenceKeyArray = [];
-
-      for (let i = 0; i < evidenceKeys.size(); i += 1) {
-        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
-      }
-
-      current.evidenceKeyFilter = new EvidenceKeyFilter(evidenceKeyArray);
+      current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;
@@ -549,6 +556,7 @@ class DeviceDetectionOnPremise extends Engine {
     dataFileSettings.refresh = function () {
       if (current.engine) {
         current.engine.refreshData();
+        current.evidenceKeyFilter = readEvidenceKeyFilter(current.engine);
       } else {
         current.initEngine();
         current.startUpError = undefined;
