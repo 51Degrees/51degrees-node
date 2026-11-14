@@ -252,17 +252,24 @@ class ShareUsage extends Engine {
    * @param {FlowData} flowData flowData to process
    */
   processInternal (flowData) {
-    if (Math.random() <= this.sharePercentage) {
-      // The tracker compares the values that would be shared.
-      const cacheKey = this.trackerEvidenceKeyFilter
-        .filterEvidence(this.getFoundEvidence(flowData));
+    // Usage sharing never stops processing, so an error is logged here
+    // rather than passed to the Pipeline.
+    try {
+      if (Math.random() <= this.sharePercentage) {
+        // The tracker compares the values that would be shared.
+        const cacheKey = this.trackerEvidenceKeyFilter
+          .filterEvidence(this.getFoundEvidence(flowData));
 
-      const share = this.tracker.track(cacheKey);
-      if (share) {
-        this.tracker.put(cacheKey);
+        const share = this.tracker.track(cacheKey);
+        if (share) {
+          this.tracker.put(cacheKey);
 
-        this.addToShareUsage(this.getDataFromEvidence(flowData));
+          this.addToShareUsage(this.getDataFromEvidence(flowData));
+        }
       }
+    } catch (err) {
+      this._log('error', 'Usage sharing could not record a request. ' +
+        (err && err.stack ? err.stack : err));
     }
   }
 
