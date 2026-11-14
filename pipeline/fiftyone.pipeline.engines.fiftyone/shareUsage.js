@@ -30,6 +30,7 @@ const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
 const ShareUsageBackOff = require('./shareUsageBackOff');
+const packageVersions = require('./packageVersions');
 const zlib = require('zlib');
 const url = require('url');
 
@@ -362,6 +363,15 @@ class ShareUsage extends Engine {
       // The flow elements in the current pipeline
       this.getFlowElements().forEach(element => {
         xml += `<FlowElement>${element}</FlowElement>`;
+      });
+      // Every 51Degrees package in use, with its version, so that the
+      // spread of each package's releases can be measured
+      const elements = this.pipelines.length === 1
+        ? Object.values(this.pipelines[0].flowElements)
+        : [];
+      packageVersions(elements).forEach(({ name, version }) => {
+        xml += `<Package Name="${new ReplacedString(name).result}">` +
+          `${new ReplacedString(version).result}</Package>`;
       });
       xml += '<Language>Node.JS</Language>';
       // The software language version
