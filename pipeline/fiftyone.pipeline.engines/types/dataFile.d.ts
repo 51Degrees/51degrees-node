@@ -110,6 +110,7 @@ declare class DataFile {
      * @param {string} identifier the identifier of the datafile
      */
     refresh(identifier: string): void;
+    onUpdateComplete: Function;
     updating: boolean;
     /**
      * Getter for the update url for the datafile update service to use

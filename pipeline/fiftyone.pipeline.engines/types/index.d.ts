@@ -19,5 +19,7 @@ export let AutoUpdateStatus: {
     AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED: string;
     AUTO_UPDATE_NEW_FILE_CANT_RENAME: string;
     AUTO_UPDATE_REFRESH_FAILED: string;
+    AUTO_UPDATE_TEMP_PATH_NOT_SET: string;
+    AUTO_UPDATE_UNKNOWN_ERROR: string;
 };
 export let Tracker: typeof import("./tracker");

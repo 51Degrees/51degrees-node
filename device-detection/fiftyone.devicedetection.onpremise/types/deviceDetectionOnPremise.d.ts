@@ -69,7 +69,8 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation
+     * the datafile on initialisation. If there is no file at dataFilePath it
+     * is downloaded, and processing fails if the download does not work.
      */
     constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, concurrency, allowUnmatched, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
