@@ -1,0 +1,92 @@
+name: OWID submodule check (throwaway)
+
+on:
+  push:
+    branches:
+      - 'tmp/ipnp-78-**'
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 22 }
+          - { os: ubuntu-latest, node: 24 }
+          - { os: windows-latest, node: 24 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the submodules the package uses
+        run: |
+          git submodule update --init --depth 1 pipeline/fiftyone.pipeline.core/javascript-templates
+          if grep -q 'fiftyone.pipeline.did/owid-js' .gitmodules; then
+            git submodule update --init --depth 1 pipeline/fiftyone.pipeline.did/owid-js
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Lint as the build does
+        run: npm run lint
+      - name: Test the 51Did package as the unit tests do
+        run: |
+          pattern=$(node -p "require('./package.json').scripts['unit-test'].match(/--testPathIgnorePatterns=\"([^\"]*)\"/)[1]")
+          echo "Ignoring $pattern"
+          node node_modules/jest/bin/jest.js --ci --verbose --testPathPattern=pipeline/fiftyone.pipeline.did "--testPathIgnorePatterns=$pattern"
+
+  package:
+    name: Pack, then install with GitHub blocked
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the OWID submodule where there is one
+        run: |
+          if grep -q 'fiftyone.pipeline.did/owid-js' .gitmodules; then
+            git submodule update --init --depth 1 pipeline/fiftyone.pipeline.did/owid-js
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Pack the package as ci/build-package.ps1 does
+        working-directory: pipeline/fiftyone.pipeline.did
+        run: |
+          mv remote_package.json package.json
+          if node -e "process.exit(require('./package.json').bundleDependencies ? 0 : 1)"; then
+            echo "Installing the bundled dependencies"
+            npm install --no-workspaces --no-package-lock --omit=dev
+          fi
+          npm pack --pack-destination "$RUNNER_TEMP"
+          tar -tzf "$RUNNER_TEMP"/fiftyone.pipeline.did-*.tgz | sort > "$RUNNER_TEMP/new.txt"
+          cat "$RUNNER_TEMP/new.txt"
+      - name: Compare with the files of the published 4.5.102
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir -p published
+          npm pack fiftyone.pipeline.did@4.5.102 --pack-destination published > /dev/null
+          tar -tzf published/fiftyone.pipeline.did-4.5.102.tgz | sort > old.txt
+          diff old.txt new.txt || true
+      - name: Block GitHub, then install the packed package into an empty project
+        run: |
+          echo "127.0.0.1 github.com codeload.github.com api.github.com objects.githubusercontent.com raw.githubusercontent.com" | sudo tee -a /etc/hosts
+          if git ls-remote https://github.com/SWAN-community/owid-js.git > /dev/null 2>&1; then
+            echo "GitHub is still reachable"; exit 1
+          fi
+          mkdir "$RUNNER_TEMP/consumer" && cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/fiftyone.pipeline.did-*.tgz
+          npm ls --all
+          find node_modules/fiftyone.pipeline.did -path '*owid*' -type f | sort
+      - name: Run the 51Did tests on a copy of the installed package, GitHub still blocked
+        run: |
+          # Jest leaves out every path under node_modules, so test a copy.
+          cp -r "$RUNNER_TEMP/consumer/node_modules/fiftyone.pipeline.did" "$RUNNER_TEMP/installed"
+          cd "$RUNNER_TEMP/installed"
+          ls owid-js
+          npm install --no-audit --no-fund --no-save --no-package-lock jest@29
+          npx jest --ci tests/fodId.test.js tests/reader.test.js tests/base64.test.js tests/publicKeys.test.js tests/packaging.test.js
