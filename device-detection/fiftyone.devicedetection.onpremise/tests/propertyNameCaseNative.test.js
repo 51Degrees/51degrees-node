@@ -110,6 +110,33 @@ describe('property names in any letter case with the native engine', () => {
     });
 });
 
+// Counts the reads that had to look past letter case, so what a read costs
+// can be asserted exactly rather than timed.
+describe('the letter case work of a read with the native engine', () => {
+  test('a read that finds its key as given never looks at letter case',
+    async () => {
+      // The count is held here and not on the Element Data, which answers an
+      // unknown field by reading a property of that name.
+      let caseLookups = 0;
+      class CountsCaseLookups extends SwigData {
+        getInternalIgnoringCase (key) {
+          caseLookups++;
+          return super.getInternalIgnoringCase(key);
+        }
+      }
+      const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
+      const swigResults = (await processed(engine)).device.swigResults;
+      const data = new CountsCaseLookups({ flowElement: engine, swigResults });
+      const expected = shown(data.get('ismobile'));
+      expect(expected).not.toBe('missing');
+      expect(caseLookups).toBe(0);
+      // Only a key that finds nothing as given pays for the second look, and
+      // it pays for one.
+      expect(shown(data.get('IsMobile'))).toBe(expected);
+      expect(caseLookups).toBe(1);
+    });
+});
+
 // Finds nothing for a key not found as given, as every read did before letter
 // case was ignored, so the read before and after can be timed in the same
 // job.
@@ -119,48 +146,99 @@ class ReadByKeyOnly extends SwigData {
   }
 }
 
-// Reads timed in each round for the figures the test prints.
-const timedReads = 20000;
-// Rounds of each, taking the fastest, and changing which goes first, so a
-// pause in one round or the order does not decide it.
-const rounds = 10;
+// A measurement takes a few seconds, and one over the allowance is taken
+// again, so the test gets more than the ten seconds setup.js gives.
+const timingTestTimeoutMilliseconds = 120000;
 
-// The time of one read of the key, in nanoseconds.
-const timeOf = (data, key) => {
-  for (let i = 0; i < timedReads; i++) {
-    data.get(key);
-  }
-  const start = process.hrtime.bigint();
-  for (let i = 0; i < timedReads; i++) {
-    data.get(key);
-  }
-  return Number(process.hrtime.bigint() - start) / timedReads;
-};
-
+// Backstop for a read made slower in a way the count above cannot see, such
+// as letter case folded inside getInternal rather than in the second look.
 describe('the time of a read with the native engine', () => {
   test('a read by name is no slower than it was', async () => {
+    const timedReads = 2000;
+    const pairs = 10;
+    const roundsPerPair = 20;
+    // The most the read may cost over the read it replaced, as a ratio. Two
+    // reads of the same code measure within 1.04 of each other on every
+    // runner. Folding letter case inside getInternal measures over 1.05 on
+    // every runner but macOS, where it can measure 1.03, and the count above
+    // is the exact check.
+    const allowedRatio = 1.05;
     const engine = build(['IsMobile', 'BrowserName', 'PlatformName']);
     const swigResults = (await processed(engine)).device.swigResults;
-    const before = new ReadByKeyOnly({ flowElement: engine, swigResults });
-    const after = new SwigData({ flowElement: engine, swigResults });
-    let beforeTime = Infinity;
-    let afterTime = Infinity;
-    for (let round = 0; round < rounds; round++) {
-      if (round % 2 === 0) {
-        beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
-        afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
-      } else {
-        afterTime = Math.min(afterTime, timeOf(after, 'ismobile'));
-        beforeTime = Math.min(beforeTime, timeOf(before, 'ismobile'));
+    const timeOf = (data, key) => {
+      for (let i = 0; i < timedReads; i++) {
+        data.get(key);
+      }
+      const start = process.hrtime.bigint();
+      for (let i = 0; i < timedReads; i++) {
+        data.get(key);
+      }
+      return Number(process.hrtime.bigint() - start) / timedReads;
+    };
+    const middleOf = (values) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)];
+    };
+    // Both reads are timed one after the other inside each round and that
+    // round keeps its own ratio, so a runner that speeds up or slows down
+    // between rounds moves both times together. Which goes first changes each
+    // round. Each pair is built fresh because the engine can settle on a
+    // faster shape for one object in a process, which has nothing to do with
+    // the code. The middle of the rounds decides a measurement.
+    const measure = () => {
+      const beforeTimes = [];
+      const afterTimes = [];
+      const ratios = [];
+      let last;
+      for (let pair = 0; pair < pairs; pair++) {
+        const before = new ReadByKeyOnly({ flowElement: engine, swigResults });
+        const after = new SwigData({ flowElement: engine, swigResults });
+        last = after;
+        for (let round = 0; round < roundsPerPair; round++) {
+          let beforeTime;
+          let afterTime;
+          if (round % 2 === 0) {
+            beforeTime = timeOf(before, 'ismobile');
+            afterTime = timeOf(after, 'ismobile');
+          } else {
+            afterTime = timeOf(after, 'ismobile');
+            beforeTime = timeOf(before, 'ismobile');
+          }
+          beforeTimes.push(beforeTime);
+          afterTimes.push(afterTime);
+          ratios.push(afterTime / beforeTime);
+        }
+      }
+      return {
+        before: middleOf(beforeTimes),
+        after: middleOf(afterTimes),
+        ratio: middleOf(ratios),
+        lowest: Math.min(...ratios),
+        highest: Math.max(...ratios),
+        mixedCase: timeOf(last, 'IsMobile')
+      };
+    };
+    // A whole measurement can land in a slow patch, so one over the allowance
+    // is taken again and the better of the two decides it. A read that really
+    // is slower is slower in both.
+    let result = measure();
+    let measurements = 1;
+    if (result.ratio > allowedRatio) {
+      const again = measure();
+      measurements = 2;
+      if (again.ratio < result.ratio) {
+        result = again;
       }
     }
-    const mixedCaseTime = timeOf(after, 'IsMobile');
     console.log(
-      `Read of ismobile, fastest of ${rounds} rounds of ${timedReads}, ` +
-      `before ${beforeTime.toFixed(0)} ns, after ${afterTime.toFixed(0)} ns. ` +
-      'A read of IsMobile, which found nothing before, ' +
-      `${mixedCaseTime.toFixed(0)} ns.`);
-    // A tenth is allowed for timing noise.
-    expect(afterTime).toBeLessThanOrEqual(beforeTime * 1.1);
-  });
+      `Read of ismobile, the middle of ${pairs * roundsPerPair} rounds of ` +
+      `${timedReads} reads, each round timing a before and an after side by ` +
+      `side, before ${result.before.toFixed(0)} ns, after ` +
+      `${result.after.toFixed(0)} ns, middle ratio ${result.ratio.toFixed(3)}, ` +
+      `the rounds ranging from ${result.lowest.toFixed(3)} to ` +
+      `${result.highest.toFixed(3)}, from ${measurements} measurement` +
+      `${measurements === 1 ? '' : 's'}. A read of IsMobile, which found ` +
+      `nothing before, ${result.mixedCase.toFixed(0)} ns.`);
+    expect(result.ratio).toBeLessThanOrEqual(allowedRatio);
+  }, timingTestTimeoutMilliseconds);
 });

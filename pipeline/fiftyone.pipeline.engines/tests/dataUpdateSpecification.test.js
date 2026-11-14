@@ -97,6 +97,58 @@ const stop = (server) => {
   server.close();
 };
 
+// Answers each request with the start of a file that never arrives in full,
+// and keeps the server's end of each connection.
+const serveCutShort = () => new Promise((resolve) => {
+  const sockets = [];
+  const server = http.createServer((request, response) => {
+    sockets.push(request.socket);
+    response.writeHead(200, { 'content-length': '1000' });
+    response.write('version');
+  });
+  server.listen(0, '127.0.0.1', () => resolve({
+    server,
+    sockets,
+    url: 'http://127.0.0.1:' + server.address().port + '/datafile'
+  }));
+});
+
+// Calls back once the service's request for new data has its response, so
+// that a test cuts the connection part way through the download rather
+// than at a time that may come before the response.
+const whenResponded = (callback) => {
+  const get = http.get;
+  return jest.spyOn(http, 'get').mockImplementation((...args) => {
+    const request = get.apply(http, args);
+    request.once('response', callback);
+    return request;
+  });
+};
+
+// Resolves at the next updateComplete event with the number of files the
+// service had finished removing by then.
+const removedWhenCompleted = (service) => {
+  const unlink = fs.unlink;
+  const removed = [];
+  const spy = jest.spyOn(fs, 'unlink').mockImplementation((name, callback) =>
+    unlink(name, (err) => {
+      removed.push(name);
+      callback(err);
+    }));
+  const done = new Promise((resolve) => {
+    service.once('updateComplete', () => resolve(removed.length));
+  });
+  return { done, spy };
+};
+
+// The error for a data update service that could not be reached, with any
+// cause, as the cause's text differs between platforms.
+const accessError = (url) => expect.stringMatching(new RegExp(
+  '^Error during check for data update\\. Error detail: ' +
+  "Error accessing data update service at '" +
+  url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+  "' for engine 'TestEngine'\\. Error detail: .+$"));
+
 // Resolves at the next updateComplete event.
 const completed = (service) => new Promise((resolve) => {
   service.once('updateComplete', (status) => resolve(status));
@@ -523,8 +575,18 @@ describe('log messages', () => {
       "'TestEngine'. Error detail: Invalid URL");
   });
 
-  test('a download cut short is the no response error', async () => {
-    const remote = await serve(200, 'version 2');
+  // .NET reads the whole response before its request returns, so a download
+  // cut short fails that request, which .NET reports as the service that
+  // could not be reached, with the cause attached.
+  test('a download cut short is the error for a service that could not be ' +
+    'reached', async () => {
+    const remote = await serveCutShort();
+    let cut = false;
+    const responded = whenResponded(() => {
+      cut = true;
+      remote.server.closeAllConnections();
+    });
+    let removal;
     try {
       const { service, logs } = loggingService();
       const dataFile = standInDataFile({
@@ -533,17 +595,45 @@ describe('log messages', () => {
         path: file
       });
       const done = completed(service);
+      removal = removedWhenCompleted(service);
       service.updateDataFile(dataFile);
-      setTimeout(() => remote.server.closeAllConnections(), 10);
       expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
-      expect(logs.find((log) => log.level === 'error').message).toBe(
-        'Error during check for data update. Error detail: ' +
-        "No response from data update service at '" + remote.url +
-        "' for engine 'TestEngine'");
+      expect(cut).toBe(true);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([accessError(remote.url)]);
+      // The cut comes before the service opens its part file, and the part
+      // file has been removed by the time the update is reported.
+      expect(await removal.done).toBe(1);
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
+      if (removal) {
+        removal.spy.mockRestore();
+      }
+      responded.mockRestore();
       stop(remote.server);
     }
   });
+
+  test('a connection closed before any response is the same error',
+    async () => {
+      const server = http.createServer((request) => request.socket.destroy());
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+          tempDataDirectory: folder,
+          path: file
+        });
+        const done = completed(service);
+        service.updateDataFile(dataFile);
+        expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+        expect(logs.filter((log) => log.level === 'error')
+          .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
+      } finally {
+        stop(server);
+      }
+    });
 
   test('a failed refresh is an error naming the tries', async () => {
     const remote = await serve(200, 'version 2');
@@ -877,36 +967,45 @@ describe('every update reports one status', () => {
   // and schedule the next check.
   test('a connection reset part way through the download is reported ' +
     'once and schedules one check', async () => {
-    const server = http.createServer((request, response) => {
-      response.writeHead(200, { 'content-length': '1000' });
-      response.write('version');
-      setTimeout(() => request.socket.resetAndDestroy(), 50);
+    const remote = await serveCutShort();
+    let closed;
+    const responded = whenResponded((response) => {
+      closed = new Promise((resolve) => response.once('close', resolve));
+      remote.sockets[0].resetAndDestroy();
     });
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    let removal;
     try {
       const { service, logs } = loggingService();
       const dataFile = standInDataFile({
-        updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+        updateUrl: remote.url,
         tempDataDirectory: folder,
         path: file
       });
       const checks = jest.spyOn(service, 'checkNextUpdate');
       const seen = record(service, dataFile);
+      const done = completed(service);
+      removal = removedWhenCompleted(service);
       service.updateDataFile(dataFile);
-      await sleep(500);
+      await done;
+      // The update is reported after the request has failed and the
+      // response has closed, so no handler is left that could report it
+      // again.
+      expect(closed).toBeDefined();
+      await closed;
       expect(seen).toEqual([
         { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
       ]);
       expect(checks).toHaveBeenCalledTimes(1);
       expect(logs.filter((log) => log.level === 'error')
-        .map((log) => log.message)).toEqual([
-        'Error during check for data update. Error detail: ' +
-        "No response from data update service at '" + dataFile.updateUrl +
-        "' for engine 'TestEngine'"
-      ]);
+        .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
+      expect(await removal.done).toBe(1);
       expect(fs.readdirSync(folder)).toEqual(['data.dat']);
     } finally {
-      stop(server);
+      if (removal) {
+        removal.spy.mockRestore();
+      }
+      responded.mockRestore();
+      stop(remote.server);
     }
   });
 

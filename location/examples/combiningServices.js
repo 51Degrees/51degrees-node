@@ -39,7 +39,7 @@ You can create a resource key using the 51Degrees [configuration page](https://5
 
 */
 
-const FiftyOneDegreesGeoLocation = require((process.env.directory || __dirname) + '/../');
+const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 let FiftyOneDegreesDeviceDetection = null;
 try {
   FiftyOneDegreesDeviceDetection = require('fiftyone.devicedetection');
@@ -49,22 +49,12 @@ try {
     'then execute "npm install fiftyone.devicedetection" and try again.');
 }
 
-let localResourceKey;
-// Check if there is a resource key in the global variable and use it if
-// there is one.
-try {
-  localResourceKey = resourceKey;
-} catch (e) {
-  if (e instanceof ReferenceError) {
-    console.log(e);
-  }
-}
 // You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top-2 and
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 // Make sure to include the isMobile and country properties as they
 // are used by this example.
-if (typeof localResourceKey === 'undefined' ||
-  localResourceKey.substr(0, 2) === '!!') {
+let localResourceKey = '!!YOUR_RESOURCE_KEY!!';
+if (localResourceKey.substr(0, 2) === '!!') {
   // RESOURCE_KEY is the deprecated name of the same variable, read only
   // when _51DEGREES_RESOURCE_KEY is unset or empty.
   if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
@@ -73,7 +63,7 @@ if (typeof localResourceKey === 'undefined' ||
       'instead.');
   }
   localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+    process.env.RESOURCE_KEY || localResourceKey;
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {

@@ -56,9 +56,10 @@ Which country is the location [51.458048,-0.9822207999999999] in? United Kingdom
 const PipelineBuilder = require('fiftyone.pipeline.core').PipelineBuilder;
 
 const fs = require('fs');
+const path = require('path');
 
-const configFile = fs.readFileSync((process.env.directory || __dirname) +
-  '/51d.json');
+const configPath = path.join(__dirname, '51d.json');
+const configFile = fs.readFileSync(configPath);
 
 const config = JSON.parse(configFile);
 let resourceKeySet = true;
@@ -66,30 +67,16 @@ let resourceKeySetFromFile = true;
 // Check if a resource key has been set in the config file.
 if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
   .startsWith('!!')) {
-  let myResourceKey;
-  // Check if there is a resource key in the global variable and use it if
-  // there is one.
-  try {
-    myResourceKey = resourceKey;
-  } catch (e) {
-    if (e instanceof ReferenceError) {
-      console.log(e);
-    }
+  // If not, check the resource key environment variable. RESOURCE_KEY is
+  // the deprecated name of the same variable, read only when
+  // _51DEGREES_RESOURCE_KEY is unset or empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
   }
-
-  // If not, check the resource key environment variable.
-  if (typeof myResourceKey === 'undefined' ||
-    myResourceKey.startsWith('!!')) {
-    // RESOURCE_KEY is the deprecated name of the same variable, read only
-    // when _51DEGREES_RESOURCE_KEY is unset or empty.
-    if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-      console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-        '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-        'instead.');
-    }
-    myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-      process.env.RESOURCE_KEY;
-  }
+  const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+    process.env.RESOURCE_KEY;
 
   if (myResourceKey) {
     // If there is a resource key in the environment variable then use it.
@@ -112,8 +99,7 @@ if (resourceKeySet) {
   if (resourceKeySetFromFile) {
     // Create a new pipeline from the supplied config file.
     pipeline = new PipelineBuilder()
-      .buildFromConfigurationFile((process.env.directory || __dirname) +
-        '/51d.json');
+      .buildFromConfigurationFile(configPath);
   } else {
     // Create a new pipeline from the config object.
     pipeline = new PipelineBuilder().buildFromConfiguration(config);

@@ -1,6 +1,9 @@
 param (
     [Parameter(Mandatory)][string]$RepoName,
-    [string]$TestResourceKey
+    [string]$TestResourceKey,
+    # False, from select-options.ps1, on every entry of a pull request but
+    # one, so the browser contract runs once.
+    [bool]$SeleniumContract = $true
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
@@ -10,10 +13,25 @@ $env:_51DEGREES_RESOURCE_KEY = $TestResourceKey
 
 ./node/run-integration-tests.ps1 -RepoName $RepoName
 
+if (-not $SeleniumContract) {
+    Write-Host "Another entry runs the Selenium contract tests for this pull request."
+    exit
+}
+
 if ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64 (no selenium-manager aarch64 build); covered on x64 and macOS-arm."
     exit
 }
+
+# The suite runs on .NET. A dotnet that is only a file, such as a link to an
+# SDK that has been removed, is opened rather than run, which sets no exit
+# code, so the tests would be reported as passed without running.
+$dotnet = Get-Command dotnet -CommandType Application -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if (-not $dotnet -or -not (Test-Path -PathType Leaf $dotnet.Source)) {
+    throw "The Selenium contract tests need .NET, and no dotnet program was found."
+}
+& $dotnet.Source --version
 
 # Starts one of this repository's web examples, runs the shared Selenium
 # contract tests against it, and stops it again. Throws if the tests fail,
@@ -49,8 +67,13 @@ function Invoke-ContractTests {
 
         $env:EXAMPLE_URL = "http://localhost:$Port"
         $env:EXAMPLE_LANG = 'node'
-        dotnet test selenium-api-tests -c Release --filter TestCategory=Contract
+        & $dotnet.Source test selenium-api-tests -c Release --filter TestCategory=Contract |
+            Tee-Object -Variable output | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "dotnet test exited with $LASTEXITCODE." }
+        # A run that found no test also exits with 0.
+        if (-not ($output -match 'Passed:\s+[1-9]')) {
+            throw "dotnet test reported no test that passed."
+        }
         Write-Host "Selenium contract tests passed against the $Name example."
     } catch {
         Write-Host "::error title=Selenium contract failed::The Selenium contract tests failed against the $Name example. $_"

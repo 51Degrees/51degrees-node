@@ -147,17 +147,25 @@ const watchersToClose = new FinalizationRegistry(
 
 /**
  * Updates the data file once the interval has passed, unless the update
- * service or the data file has been collected by then.
+ * service or the data file has been collected by then. The data file keeps
+ * the pending timer and a new one replaces it, so a data file has one
+ * polling schedule however many updates are started.
  *
  * @param {WeakRef} serviceRef the update service
  * @param {WeakRef} dataFileRef the data file to update
  * @param {number} interval milliseconds to wait
  */
 const scheduleUpdate = function (serviceRef, dataFileRef, interval) {
-  setTimeout(function () {
+  const scheduled = dataFileRef.deref();
+  if (!scheduled) {
+    return;
+  }
+  clearTimeout(scheduled.pollingTimer);
+  scheduled.pollingTimer = setTimeout(function () {
     const service = serviceRef.deref();
     const dataFile = dataFileRef.deref();
     if (service && dataFile) {
+      dataFile.pollingTimer = undefined;
       service.updateDataFile(dataFile, true);
     }
   }, interval);
@@ -423,14 +431,16 @@ class DataFileUpdateService {
     // Each update reports one status. Once the response has arrived its
     // handlers report how the update ended. A connection reset part way
     // through the download raises an error on the request and then closes
-    // the response, so that error is left to the response's handlers.
+    // the response, so that error is kept as the cause they report.
     let responded = false;
+    let cause;
 
     // Without an error listener a connection failure (for example a
     // refused or reset connection) emits an unhandled 'error' event,
     // which crashes the whole process.
     request.on('error', function (err) {
       if (responded) {
+        cause = cause || err;
         return;
       }
       dataFileUpdateService.log(
@@ -520,21 +530,30 @@ class DataFileUpdateService {
       response.pipe(output);
 
       // A download that ends before the whole file has arrived never
-      // finishes writing, so it is reported when the response closes.
-      response.on('error', function () {});
+      // finishes writing, so it is reported when the response closes. .NET
+      // reads the whole response before its request returns, so it reports
+      // this as a service that could not be reached, with the cause.
+      response.on('error', function (err) {
+        cause = cause || err;
+      });
       response.on('close', function () {
         if (response.complete || !written) {
           return;
         }
         written = false;
+        // A stream still opening its part file closes only once the file is
+        // open, so the file is removed after the stream closes, and the
+        // update is reported once the file has gone.
+        output.once('close', function () {
+          fs.unlink(filename, function () {
+            dataFileUpdateService.log('error', checkErrorText(
+              dataFileUpdateService.accessError(dataFile), cause));
+            dataFileUpdateService.fail(
+              dataFile,
+              AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+          });
+        });
         output.destroy();
-        fs.unlink(filename, function () {});
-        dataFileUpdateService.log('error', checkErrorText(
-          "No response from data update service at '" + dataFile.updateUrl +
-          "' for engine '" + engineName(dataFile) + "'"));
-        dataFileUpdateService.fail(
-          dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       });
 
       output.on('finish', function () {
