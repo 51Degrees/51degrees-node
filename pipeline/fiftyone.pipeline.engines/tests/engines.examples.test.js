@@ -108,12 +108,25 @@ test('caching example', () => {
   expect(result.stdout).toContain('Fetched from cache');
 }, TIMEOUT_MS);
 
-test('on premise flow element example', async () => {
+test('on premise flow element example asks for a date of birth',
+  async () => {
+    const page = await getFromExample(
+      path.join(EXAMPLES, 'onPremiseFlowElement.js'), '/');
+
+    // What the example wrote is shown when it served no page.
+    expect({
+      status: page.status,
+      output: page.status === 200 ? '' : page.output
+    }).toEqual({ status: 200, output: '' });
+    expect(page.body)
+      .toContain('Add your date of birth to get your starsign');
+  }, TIMEOUT_MS);
+
+test('on premise flow element example gives the star sign', async () => {
   const page = await getFromExample(
     path.join(EXAMPLES, 'onPremiseFlowElement.js'),
     '/?dateOfBirth=2019-09-26');
 
-  // What the example wrote is shown when it served no page.
   expect({
     status: page.status,
     output: page.status === 200 ? '' : page.output

@@ -120,12 +120,23 @@ test('custom flowElements 1', () => {
   expect(result.stdout.trim()).toBe('libra');
 }, TIMEOUT_MS);
 
-test('custom flowElements 2', async () => {
+test('custom flowElements 2 asks for a date of birth', async () => {
+  const page = await getFromExample(path.join(
+    __dirname, 'customFlowElements', 'clientSideEvidenceFlowElement.js'), '/');
+
+  // What the example wrote is shown when it served no page.
+  expect({
+    status: page.status,
+    output: page.status === 200 ? '' : page.output
+  }).toEqual({ status: 200, output: '' });
+  expect(page.body).toContain('Add your date of birth to get your starsign');
+}, TIMEOUT_MS);
+
+test('custom flowElements 2 gives the star sign', async () => {
   const page = await getFromExample(path.join(
     __dirname, 'customFlowElements', 'clientSideEvidenceFlowElement.js'),
   `/?dateOfBirth=${DATE_OF_BIRTH}`);
 
-  // What the example wrote is shown when it served no page.
   expect({
     status: page.status,
     output: page.status === 200 ? '' : page.output
