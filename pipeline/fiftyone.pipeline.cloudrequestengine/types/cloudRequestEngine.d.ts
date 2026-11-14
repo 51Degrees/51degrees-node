@@ -107,6 +107,15 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getErrorMessages(responseBody: string): any[];
     /**
+     * Logs each entry of the warnings array of a cloud response as a warning,
+     * with the license key masked as it is in the errors, because the cloud's
+     * text can name the key it was sent.
+     *
+     * @param {*} answer the response, parsed from JSON
+     * @param {Array<object>} pipelines the pipelines to log to
+     */
+    logWarnings(answer: any, pipelines: Array<object>): void;
+    /**
      * Used to handle errors from http requests
      *
      * @param {import('http').ServerResponse} response Responce to get errors from
