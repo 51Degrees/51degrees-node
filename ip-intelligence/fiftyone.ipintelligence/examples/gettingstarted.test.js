@@ -25,7 +25,6 @@
 // for 8.8.8.8, and with none it must say how to create a key.
 
 const childProcess = require('child_process');
-const path = require('path');
 
 const TIMEOUT_MS = 60000;
 // The names the example reads its resource key from.
