@@ -328,6 +328,21 @@ class ExampleUtils {
     return ipiEngine ? ipiEngine.engine.getProduct() : undefined;
   }
 
+  // True when a data file of the pipeline's IP Intelligence or device
+  // detection engine was published more than DATA_FILE_AGE_WARNING days ago.
+  static isDataFileOld (pipeline) {
+    return ['ip', 'device'].some((key) => {
+      const element = pipeline.flowElements[key];
+      if (element === undefined || element.engine === undefined) {
+        return false;
+      }
+      const published =
+        swigHelpers.swigDateToDate(element.engine.getPublishedTime());
+      return Date.now() >
+        published.getTime() + DATA_FILE_AGE_WARNING * MS_PER_DAY;
+    });
+  }
+
   static checkDataFile (pipeline, filePath) {
     // Get the 'engine' element within the pipeline that
     // performs IP intelligence. We can use this to get

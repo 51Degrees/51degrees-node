@@ -117,6 +117,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
@@ -174,7 +176,7 @@ const server = http.createServer((req, res) => {
     // Compile a response
     res.end(compiledFunction(
       {
-        dataFilePublishedTime: new Date().getTime(),
+        dataFileOld: ExampleUtils.isDataFileOld(pipeline),
         dataFileAgeWarning: DATA_FILE_AGE_WARNING,
         evidenceUsed,
         allEvidence,
