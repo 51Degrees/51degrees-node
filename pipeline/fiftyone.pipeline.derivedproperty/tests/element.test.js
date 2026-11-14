@@ -33,6 +33,7 @@ const DerivedPropertyElement = require('../derivedPropertyElement');
 const DerivedPropertyElementBuilder =
   require('../derivedPropertyElementBuilder');
 const { ScriptValidationError } = require('../errors');
+const { ScriptSet } = require('../scriptSet');
 const { USUAL_CAUSES } = require('../lib/evaluate');
 const {
   SourceElement,
@@ -300,6 +301,24 @@ describe('settings', () => {
     expect(() => new DerivedPropertyElement({ script: 'IsGdpr' }))
       .toThrow("The derived property element has no setting 'script'. " +
         'Its settings are scripts and scriptFiles.');
+  });
+
+  // The default file systems of Windows and Apple systems ignore letter
+  // case, so a wildcard does too there, as the Rust crate's does.
+  test.each([
+    ['win32', ['Band', 'Other']],
+    ['darwin', ['Band', 'Other']],
+    ['linux', []]
+  ])('a wildcard on %s matches %j in any case', (platform, names) => {
+    const real = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: platform });
+    try {
+      const scripts = new ScriptSet();
+      scripts.addFiles(path.join(folder, '*.YAML'));
+      expect(scripts.scripts.map(script => script.name)).toEqual(names);
+    } finally {
+      Object.defineProperty(process, 'platform', real);
+    }
   });
 
   test('a file or folder that is not there is a fault', () => {
