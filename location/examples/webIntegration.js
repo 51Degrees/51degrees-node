@@ -30,7 +30,7 @@ This example is available in full on [GitHub](https://github.com/51Degrees/51deg
 @include{doc} example-require-resourcekey.txt
  */
 
-const FiftyOneDegreesLocation = require((process.env.directory || __dirname) + '/../');
+const FiftyOneDegreesLocation = require('fiftyone.geolocation');
 
 // Obtain a resource key with the properties required to test this
 // example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
