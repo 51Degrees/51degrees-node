@@ -91,6 +91,60 @@ describe('web integration elements', () => {
   });
 });
 
+// The page says each element MUST be present and is added only if not.
+describe('web integration elements the caller added', () => {
+  const allKeys = [
+    'sequence', 'user', 'jsonbundler', 'javascriptbuilder', 'set-headers'
+  ];
+
+  test('are not added again, and are the ones the Pipeline uses', () => {
+    const sequence = new core.SequenceElement();
+    const jsonBundler = new core.JsonBundler();
+    const javascriptBuilder = new core.JavascriptBuilder({ endPoint: '/own' });
+    const setHeaders = new core.SetHeadersElement();
+    const pipeline = new core.PipelineBuilder()
+      .add(sequence)
+      .add(userElement())
+      .add(jsonBundler)
+      .add(javascriptBuilder)
+      .add(setHeaders)
+      .build();
+    expect(dataKeys(pipeline)).toEqual(allKeys);
+    expect(pipeline.getElement('sequence')).toBe(sequence);
+    expect(pipeline.getElement('jsonbundler')).toBe(jsonBundler);
+    expect(pipeline.getElement('javascriptbuilder')).toBe(javascriptBuilder);
+    expect(pipeline.getElement('set-headers')).toBe(setHeaders);
+  });
+
+  test('a JSON Builder the Pipeline lacks goes immediately before the ' +
+    'JavaScript Builder the caller added', () => {
+    const javascriptBuilder = new core.JavascriptBuilder({});
+    const pipeline = new core.PipelineBuilder()
+      .add(userElement())
+      .add(javascriptBuilder)
+      .build();
+    expect(dataKeys(pipeline)).toEqual(allKeys);
+    expect(pipeline.getElement('javascriptbuilder')).toBe(javascriptBuilder);
+  });
+
+  test('one added in parallel with another element counts as present',
+    () => {
+      const setHeaders = new core.SetHeadersElement();
+      const pipeline = new core.PipelineBuilder()
+        .addParallel([userElement(), setHeaders])
+        .build();
+      expect(pipeline.flowElementsChain.flat()
+        .map((element) => element.dataKey)).toEqual(allKeys);
+      expect(pipeline.getElement('set-headers')).toBe(setHeaders);
+    });
+
+  test('building twice adds none of them twice', () => {
+    const builder = new core.PipelineBuilder().add(userElement());
+    builder.build();
+    expect(dataKeys(builder.build())).toEqual(allKeys);
+  });
+});
+
 describe('Sequence Element data', () => {
   const run = async (evidence) => {
     const pipeline = new core.PipelineBuilder().add(userElement()).build();
