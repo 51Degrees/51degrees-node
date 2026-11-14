@@ -273,16 +273,30 @@ no `remote_package.json`.
 
 ## Everything hoists to the root
 
-npm installs into the root `node_modules`, which has three effects:
+npm installs into the root `node_modules`, which has two effects:
 
 - Do not write a path into a package's own `node_modules`. Use the package
   name: the `require51` helpers fall back to a plain `require`, and `elementName`
   in `51d.json` is a package path.
-- `npm pack` bundles from the package's own `node_modules`, so
-  `fiftyone.pipeline.did`'s bundled `owid` has to be installed there first.
-  `ci/build-package.ps1` does this.
 - A rule in the root `.gitignore` also applies to what `npm pack` puts in a
   workspace package. Anchoring it with `/` does not stop that.
+
+## OWID
+
+`fiftyone.pipeline.did` takes [owid-js](https://github.com/SWAN-community/owid-js)
+as the submodule `pipeline/fiftyone.pipeline.did/owid-js`, with the absolute
+URL every language uses, and requires `./owid-js/v1.js`. The package's `files`
+carry `owid-js/v1.js` and the Apache 2.0 `owid-js/LICENSE` beside it and
+nothing else from the submodule, so installing the package fetches nothing
+from GitHub. `files` names the top level JavaScript as `/*.js`, because npm
+reads `*.js` without the slash at every depth and would pack the submodule's
+tests too. `tests/packaging.test.js` checks what `npm pack` really packs, and
+is itself left out with `!tests/packaging.test.js`, as it reads
+`remote_package.json`, which only the repository has. The nightly submodule
+update moves `owid-js` to the newest commit on its `main`, as it moves every
+submodule, through a pull request into `rc`.
+Jest and ESLint leave the submodule's own tests and code alone
+(`--testPathIgnorePatterns` in the root `package.json` and `.eslintignore`).
 
 Every sibling now resolves, so a JSDoc type import between packages is a real
 reference. `fiftyone.pipeline.core` must not import types from a package which

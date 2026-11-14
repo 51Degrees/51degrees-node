@@ -43,12 +43,6 @@ foreach ($release in $plan) {
         }
         $manifest = Get-Content -Raw package.json | ConvertFrom-Json
 
-        # npm pack bundles from the package's own node_modules, and the
-        # workspace hoists everything to the root.
-        if ($manifest.bundleDependencies) {
-            npm install --no-workspaces --no-package-lock --omit=dev
-        }
-
         # A requirement on a package here that packages.json does not list
         # would not be raised when that package is released.
         $required = @($manifest.dependencies.PSObject.Properties.Name |

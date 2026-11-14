@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const owid = require('owid');
+const owid = require('./owid-js/v1.js');
 const IdType = require('./idType');
 const layout = require('./internal/layout');
 const { PayloadStatus, unpack } = require('./internal/payload');

@@ -22,7 +22,7 @@
     "ip-intelligence/fiftyone.ipintelligence.translation"
   ],
   "scripts": {
-    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/)\"",
+    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/|owid-js/)\"",
     "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"(performance\\.test\\.js|tierEntitlement\\.integration\\.test\\.js)\"",
     "lint": "eslint . --ext .js",
     "tsc": "tsc -b --force"
