@@ -41,7 +41,7 @@ const MOBILE = 'Does the User-Agent \'Mozilla/5.0 (iPhone; CPU iPhone OS ' +
   '11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) ' +
   'Mobile/15C114\' represent a mobile device? true';
 const NEEDS_KEY = expect.stringMatching(
-  /^You need to create a resource key at https:\/\/configure\.51degrees\.com/);
+  /^You need to create a resource key at https:\/\/51degrees\.com\/configure/);
 const NEEDS_ISMOBILE = 'Make sure to include the ismobile property as it ' +
   'is used by this example.';
 
