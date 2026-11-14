@@ -42,10 +42,17 @@ module.exports = {
     'https://51degrees.com/contact-us?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-errormessages.js&utm_term=nativemodulenotfound. Original error: \'%s\'',
   invalidFileExtension: 'dataFilePath must point to a file with a ".hash" ' +
     'extension',
-  licenseKeyRequired: 'license key is required. A key can be obtained from ' +
-    'the 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-errormessages.js&utm_term=licensekeyrequired. If you do not ' +
-    'wish to use a key then you can specify an empty string, but this will ' +
-    'cause automatic updates to be disabled.',
+  /**
+   * @deprecated No longer thrown. The engines throw
+   * licenseKeyRequiredForUpdates, which names the options that need a key.
+   */
+  licenseKeyRequired: 'license key is required for automatic updates. A key ' +
+    'can be obtained from the 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-errormessages.js&utm_term=licensekeyrequired.',
+  licenseKeyRequiredForUpdates: 'Some enabled features (%s) require a ' +
+    'license key but one has not been supplied. Supply one with the ' +
+    'licenceKeys option, or set %s to false to build without one. The file ' +
+    'system watcher needs no license key. A key can be obtained from the ' +
+    '51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-errormessages.js&utm_term=licensekeyrequiredforupdates.',
   invalidPerformanceProfile: 'The performance profile \'%s\' is not valid',
   propertyKeyDataFiles: 'Property %s can be found in the following datafiles ' +
     '%s not %s',

@@ -13,10 +13,9 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * @param {string} [options.licenceKeys] license key(s) used by the
      * data file update service. A key can be obtained from the
      * 51Degrees website: https://51degrees.com/pricing.
-     * This parameter MUST be set when using a data file.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates
-     * to be disabled.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {string} options.dataFile dataFile path for the on premise engine
      * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
      * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
