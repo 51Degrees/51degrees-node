@@ -112,10 +112,12 @@ class Engine extends FlowElement {
    *
    * @param {FlowData} flowData checks if a FlowData's evidence
    * is already in the cache and processing can be bypassed
+   * @param {string} [key] the flow data's cache key, made from it when not
+   * given
    * @returns {boolean} whether in cache
    */
-  inCache (flowData) {
-    const cached = this.cache.get(this.cacheKey(flowData));
+  inCache (flowData, key = this.cacheKey(flowData)) {
+    const cached = this.cache.get(key);
 
     if (cached && this.isCacheable(cached)) {
       flowData.setElementData(cached);
@@ -145,7 +147,7 @@ class Engine extends FlowElement {
     let key;
     if (this.cache) {
       key = this.cacheKey(flowData);
-      if (this.inCache(flowData)) {
+      if (this.inCache(flowData, key)) {
         return Promise.resolve(true);
       }
     }

@@ -61,9 +61,11 @@ declare class Engine extends Engine_base {
      *
      * @param {FlowData} flowData checks if a FlowData's evidence
      * is already in the cache and processing can be bypassed
+     * @param {string} [key] the flow data's cache key, made from it when not
+     * given
      * @returns {boolean} whether in cache
      */
-    inCache(flowData: FlowData): boolean;
+    inCache(flowData: FlowData, key?: string): boolean;
     /**
      * An engine's process function checks cache for an item
      * (calling inCache)
