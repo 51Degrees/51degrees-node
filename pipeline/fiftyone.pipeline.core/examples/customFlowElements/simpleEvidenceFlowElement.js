@@ -68,7 +68,7 @@ const getStarSign = (month, day) => {
     return 'taurus';
   } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
     return 'gemini';
-  } else if ((month === 6 && day >= 22) || (month === 7 && day <= 22)) {
+  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
     return 'cancer';
   } else if ((month === 7 && day >= 23) || (month === 8 && day <= 23)) {
     return 'leo';
