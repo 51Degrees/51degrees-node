@@ -124,7 +124,9 @@ class Astrology extends FiftyOnePipelineCore.FlowElement {
   // The processInternal function is the core working of a
   // flowElement. It takes flowData, reads evidence and returns data.
   processInternal (flowData) {
-    const result = {};
+    // The star sign and the hemisphere are in the data from the start,
+    // null until they are known, so the page can read them before then.
+    const result = { starSign: null, hemisphere: null };
 
     // Get the date of birth from the query string
     // (submitted through a form on the client side)

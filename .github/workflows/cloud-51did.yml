@@ -30,7 +30,7 @@ on:
   schedule:
     - cron: '20 5 * * *'
   pull_request:
-    branches: [main]
+    branches: [main, rc]
     paths:
       - 'pipeline/fiftyone.pipeline.did/**'
       - '.github/workflows/cloud-51did.yml'

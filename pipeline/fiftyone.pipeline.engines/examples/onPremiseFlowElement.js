@@ -133,9 +133,11 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
   processInternal (flowData) {
     let dateOfBirth = flowData.evidence.get('query.dateOfBirth');
 
-    // Collect data to save back into the flowData under this engine
+    // Collect data to save back into the flowData under this engine. The
+    // star sign is in the data from the start, null until it is known, so
+    // the page can read it when no date of birth was given.
 
-    const result = {};
+    const result = { starSign: null };
 
     // Lookup the date of birth using the provided and now parsed datafile
 
