@@ -2,7 +2,7 @@
   "PipelineOptions": {
     "Elements": [
       {
-        "elementName": "../../../deviceDetectionOnPremise",
+        "elementName": "fiftyone.devicedetection.onpremise/deviceDetectionOnPremise",
         "elementParameters": {
           "performanceProfile": "MaxPerformance",
           "dataFilePath": "../../../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash",

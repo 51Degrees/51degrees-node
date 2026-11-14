@@ -38,6 +38,17 @@ const fs = require('fs');
 // First require the core Pipeline
 const FiftyOnePipelineCore = require(path.resolve(__dirname, '../../fiftyone.pipeline.core'));
 
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE = `
+          <h3>Find out more</h3>
+          <ul>
+            <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+            <li><a href="https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-custom-elements">Flow elements of your own</a></li>
+            <li><a href="https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-data-file-updates">Data file updates</a></li>
+            <li><a href="https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-build-your-own">Build your own</a></li>
+            <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-contact">Contact us</a></li>
+          </ul>`;
+
 // Next require the engines extension that extends flowElements to support
 // functionality such as auto updating datafiles,
 // caches and missing property services
@@ -122,9 +133,11 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
   processInternal (flowData) {
     let dateOfBirth = flowData.evidence.get('query.dateOfBirth');
 
-    // Collect data to save back into the flowData under this engine
+    // Collect data to save back into the flowData under this engine. The
+    // star sign is in the data from the start, null until it is known, so
+    // the page can read it when no date of birth was given.
 
-    const result = {};
+    const result = { starSign: null };
 
     // Lookup the date of birth using the provided and now parsed datafile
 
@@ -206,7 +219,7 @@ const server = http.createServer((req, res) => {
             <input type='date' name='dateOfBirth' id='dateOfBirth'>
             <input type='submit'>
           </form>
-          
+          ${FIND_OUT_MORE}
           `;
 
       res.statusCode = 200;

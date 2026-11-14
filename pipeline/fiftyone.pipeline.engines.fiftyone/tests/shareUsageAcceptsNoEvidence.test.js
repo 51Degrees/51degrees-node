@@ -377,4 +377,33 @@ describe('client-side endpoint with usage sharing', () => {
       expect(plain.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
       expect(withCookie.headers.etag).toBe(plain.headers.etag);
     });
+
+  test('the JA4 and HTTP/2 fingerprints and a billing key added with the ' +
+    'web request are shared', async () => {
+    const pipeline = usagePipeline();
+    await new Promise((resolve, reject) => {
+      const server = http.createServer(async (req, res) => {
+        try {
+          const flowData = pipeline.createFlowData();
+          await flowData.evidence.addFromRequestAsync(req);
+          // A web integration that can read the connection adds these.
+          flowData.evidence.add('server.ja4', 't13d1516h2_8daaf6152771');
+          flowData.evidence.add('server.h2', '1:65536;2:0;4:6291456|15663105');
+          flowData.evidence.add('fiftyone.resource-key', 'AQTestKey');
+          await flowData.process();
+          res.end('done');
+        } catch (e) {
+          reject(e);
+          res.end();
+        }
+      });
+      request(server).get('/page').set({ 'User-Agent': 'agent' })
+        .then(resolve, reject);
+    });
+    await receivedCount(1);
+
+    expect(received[0]).toContain('t13d1516h2_8daaf6152771');
+    expect(received[0]).toContain('1:65536;2:0;4:6291456|15663105');
+    expect(received[0]).toContain('AQTestKey');
+  });
 });

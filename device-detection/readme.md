@@ -37,7 +37,7 @@ The API can either use our cloud service to get its data or it can use a local (
 
 You will require a [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
+[configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
 [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 The cloud property tiers changed in May 2026. The examples and this documentation
@@ -46,14 +46,14 @@ the following device properties used by the examples: IsMobile, DeviceType,
 ScreenPixelsWidth, ScreenPixelsHeight, ScreenPixelsHeightJavaScript, the three
 `SetHeader*Accept-CH` properties, JavascriptGetHighEntropyValues, IsCrawler,
 DeviceId and UserAgents. A resource key that selects these free properties can be
-created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+created [here](https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 
 The paid device properties used by the examples are: HardwareVendor, HardwareName,
 HardwareModel, PlatformVendor, PlatformName, PlatformVersion, BrowserVendor,
 BrowserName, BrowserVersion, ScreenPixelsWidthJavaScript and
 JavascriptHardwareProfile, plus the TAC and native model hardware profiles. A
 resource key that selects the free properties plus these paid properties can be
-created [here](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+created [here](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 See [pricing](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) to get a paid subscription with more properties.
 
 #### On-Premise
@@ -199,7 +199,7 @@ npm install jest --global
 
 You will also need to install any required packages for the examples in the **Examples** section.
 
-Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
 
 There are other environment variables that you will also need to set in your test environment before running all tests:
 - `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.

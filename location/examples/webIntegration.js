@@ -32,8 +32,34 @@ This example is available in full on [GitHub](https://github.com/51Degrees/51deg
 
 const FiftyOneDegreesLocation = require('fiftyone.geolocation');
 
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE_HTML = `
+<h3>Find out more</h3>
+<ul>
+    <li>This API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/location">https://github.com/51Degrees/51degrees-node/tree/main/location</a></li>
+    <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+    <li><a href="https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-documentation">Reverse geocoding documentation</a></li>
+    <li><a href="https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-resource-keys">Resource keys</a></li>
+    <li><a href="https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-pricing">Pricing</a></li>
+    <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-contact">Contact us</a></li>
+</ul>`;
+
+// The same links, printed when the example stops early for want of a
+// resource key.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Obtain a resource key with the properties required to test this
-// example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+// example for free: https://51degrees.com/configure/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
 // RESOURCE_KEY is the deprecated name of the same variable, read only
@@ -52,11 +78,12 @@ let server;
 
 if (myResourceKey.substring(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
+  console.log(FIND_OUT_MORE);
 } else {
   // Create a new pipeline and set the config.
-  // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+  // You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
   // and paste it into the code.
   // The JavaScriptBuilderSettings allow you to provide an endpoint
   // which will be requested by the client side JavaScript.
@@ -185,6 +212,9 @@ if (myResourceKey.substring(0, 2) === '!!') {
         element.appendChild(list);
     }
 </script>`;
+
+        // Where to go next.
+        output += FIND_OUT_MORE_HTML;
 
         // Get JavaScript to put inside the page to gather extra evidence
         const js = `<script>${flowData.javascriptbuilder.javascript}</script>`;
