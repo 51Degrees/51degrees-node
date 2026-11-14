@@ -44,8 +44,19 @@ describe('Examples', () => {
       throw (`No Lite data file '${liteDataFileName}' found at 
         '${dataFileDirectories}'!`);
     }
-    await example.run(filePath, process.stdout, exampleConstants.defaultEvidenceValues.slice(2, 3));
-    expect(true);
+    const output = {
+      text: '',
+      write (chunk) {
+        this.text += chunk;
+        return true;
+      }
+    };
+    await example.run(filePath, output, exampleConstants.defaultEvidenceValues.slice(2, 3));
+    // A person reads this in a terminal, so the link has to be one they can
+    // follow.
+    expect(output.text).toContain(
+      'https://51degrees.com/documentation/4.5/_device_detection__hash.html?');
+    expect(output.text).not.toMatch(/^\/documentation\//m);
   });
 });
 
