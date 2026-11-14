@@ -28,7 +28,7 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * will be restricted to
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
      * If you do not wish to use a key then you can specify
      * an empty string, but this will cause automatic updates to
      * be disabled.
@@ -51,7 +51,8 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation
+     * the datafile on initialisation. If there is no file at dataFilePath it
+     * is downloaded, and processing fails if the download does not work.
      */
     constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;

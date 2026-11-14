@@ -62,6 +62,10 @@ declare class PipelineBuilder {
     flowElements: FlowElement[];
     dataFileUpdateService: any;
     addJavaScriptBuilder: boolean;
+    addSequenceElement: boolean;
+    addJsonBuilderElement: boolean;
+    addJavaScriptBuilderElement: boolean;
+    addSetHeadersElement: boolean;
     javascriptBuilderSettings: {
         objName: string;
         protocol: string;
@@ -70,11 +74,7 @@ declare class PipelineBuilder {
         enableCookies: boolean;
         minify: boolean;
     };
-    addSequenceElement: boolean;
-    addJsonBuilderElement: boolean;
-    addJavaScriptBuilderElement: boolean;
     useSetHeaderProperties: boolean;
-    addSetHeadersElement: boolean;
     suppressProcessExceptions: boolean;
     /**
      * Helper that loads a JSON configuration file from
@@ -103,7 +103,12 @@ declare class PipelineBuilder {
      */
     getSuppressProcessExceptions(config: object): boolean;
     /**
-     * Add required elements to an existing FlowElement array
+     * Add required elements to an existing FlowElement array. Each web
+     * integration element is added only where the array has no element with
+     * its key, compared ignoring case, so one the caller added is the one
+     * used and building twice adds nothing more. A JSON Builder goes
+     * immediately before a JavaScript Builder the caller added, which reads
+     * what it writes.
      *
      * @param {FlowElement[]} flowElements array of elements to add to
      * @returns {FlowElement[]} resulting array with required elements
