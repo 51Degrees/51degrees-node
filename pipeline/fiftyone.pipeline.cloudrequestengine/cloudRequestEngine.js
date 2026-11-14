@@ -336,6 +336,27 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * Logs each entry of the warnings array of a cloud response as a warning,
+   * with the license key masked as it is in the errors, because the cloud's
+   * text can name the key it was sent.
+   *
+   * @param {*} answer the response, parsed from JSON
+   * @param {Array<object>} pipelines the pipelines to log to
+   */
+  logWarnings (answer, pipelines) {
+    if (answer === null || typeof answer !== 'object' ||
+      Array.isArray(answer.warnings) === false) {
+      return;
+    }
+    for (const warning of answer.warnings) {
+      const text = LicenseKeys.mask(String(warning), this.licenseKey);
+      for (const pipeline of pipelines || []) {
+        pipeline.log('warn', text);
+      }
+    }
+  }
+
+  /**
    * Used to handle errors from http requests
    *
    * @param {import('http').ServerResponse} response Responce to get errors from
@@ -407,6 +428,7 @@ class CloudRequestEngine extends Engine {
           const propertiesOutput = {};
 
           properties = JSON.parse(properties);
+          engine.logWarnings(properties, engine.pipelines);
 
           const products = properties.Products;
 
@@ -502,6 +524,14 @@ class CloudRequestEngine extends Engine {
         content,
         engine.cloudRequestOrigin)
         .then(function (body) {
+          let answer;
+          try {
+            answer = JSON.parse(body);
+          } catch (e) {
+            answer = undefined;
+          }
+          engine.logWarnings(answer, [flowData.pipeline]);
+
           const data = new AspectDataDictionary({
             flowElement: engine,
             contents: {
