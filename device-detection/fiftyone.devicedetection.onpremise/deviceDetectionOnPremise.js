@@ -465,6 +465,18 @@ class DeviceDetectionOnPremise extends Engine {
     const current = this;
 
     /**
+     * Reads the Properties and components from the engine's data file, when
+     * the engine is created and again each time the file reloads.
+     */
+    const readProperties = function () {
+      const metadata = current.engine.getMetaData();
+      initProperties.call(current, metadata);
+      initComponents.call(current, metadata);
+      initMatchMetrics.call(current);
+      initPropertyKeys.call(current);
+    };
+
+    /**
      * Function for initialising the engine, wrapped like this so
      * that an engine can be initialised once the datafile is
      * retrieved if updateOnStart is set to true
@@ -490,13 +502,7 @@ class DeviceDetectionOnPremise extends Engine {
       current.swigWrapper = swigWrapper;
       current.swigWrapperType = swigWrapperType;
 
-      // Get properties list
-
-      const metadata = engine.getMetaData();
-      initProperties.call(current, metadata);
-      initComponents.call(current, metadata);
-      initMatchMetrics.call(current);
-      initPropertyKeys.call(current);
+      readProperties();
     };
 
     // Disable features that require a license key if one was
@@ -549,6 +555,10 @@ class DeviceDetectionOnPremise extends Engine {
     dataFileSettings.refresh = function () {
       if (current.engine) {
         current.engine.refreshData();
+        // The reloaded file can hold other Properties than the one before,
+        // for example the Enterprise data file after the Lite one.
+        readProperties();
+        current.updateProperties();
       } else {
         current.initEngine();
         current.startUpError = undefined;
