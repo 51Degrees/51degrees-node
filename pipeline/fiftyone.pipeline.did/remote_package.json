@@ -28,6 +28,7 @@
     "types/",
     "examples/",
     "tests/",
+    "!tests/packaging.test.js",
     "tsconfig.json",
     "owid-js/v1.js",
     "owid-js/LICENSE"
