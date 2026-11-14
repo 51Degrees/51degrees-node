@@ -7,7 +7,12 @@ export let errorMessages: {
     moduleDirNotFound: string;
     nativeModuleNotFound: string;
     invalidFileExtension: string;
+    /**
+     * @deprecated No longer thrown. The engines throw
+     * licenseKeyRequiredForUpdates, which names the options that need a key.
+     */
     licenseKeyRequired: string;
+    licenseKeyRequiredForUpdates: string;
     invalidPerformanceProfile: string;
     propertyKeyDataFiles: string;
     propertyNotFound: string;

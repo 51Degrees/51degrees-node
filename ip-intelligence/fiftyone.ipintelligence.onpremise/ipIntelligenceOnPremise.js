@@ -122,9 +122,9 @@ class IpIntelligenceOnPremise extends Engine {
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
-   * If you do not wish to use a key then you can specify
-   * an empty string, but this will cause automatic updates to
-   * be disabled.
+   * A key is needed only when autoUpdate or updateOnStart is on with the
+   * default dataUpdateUrl, and the engine refuses to build without one
+   * then. The file system watcher needs no key.
    * @param {boolean} options.download whether to download the datafile
    * or store it in memory
    * @param {string} options.performanceProfile options are:
@@ -178,6 +178,25 @@ class IpIntelligenceOnPremise extends Engine {
 
     if (typeof dataFilePath === 'undefined') {
       throw errorMessages.dataFilePathRequired;
+    }
+    // Only polling and the update on start-up download from the
+    // Distributor, so only they need a license key. The file system
+    // watcher needs none.
+    autoUpdate = Boolean(autoUpdate);
+    updateOnStart = Boolean(updateOnStart);
+    if (dataUpdateUrl === constants.dataUpdateUrl &&
+      !(licenceKeys && licenceKeys.length > 0)) {
+      const needKey = [];
+      if (autoUpdate) {
+        needKey.push('autoUpdate');
+      }
+      if (updateOnStart) {
+        needKey.push('updateOnStart');
+      }
+      if (needKey.length > 0) {
+        throw util.format(errorMessages.licenseKeyRequiredForUpdates,
+          needKey.join(', '), needKey.join(' and '));
+      }
     }
     // A file that is not there is downloaded when the engine updates on
     // start-up, so only an engine that cannot do so needs the file.
@@ -244,10 +263,6 @@ class IpIntelligenceOnPremise extends Engine {
       dataFileType = 'IPIV41';
     } else {
       throw errorMessages.invalidFileExtension;
-    }
-
-    if (typeof licenceKeys === 'undefined') {
-      throw errorMessages.licenseKeyRequired;
     }
 
     // Create vector for restricted properties
@@ -353,18 +368,6 @@ class IpIntelligenceOnPremise extends Engine {
       initProperties.call(current, metadata);
       initComponents.call(current, metadata);
     };
-
-    // Disable features that require a license key if one was
-    // not supplied.
-    if (dataUpdateUrl === constants.dataUpdateUrl) {
-      if (licenceKeys) {
-        autoUpdate = autoUpdate && licenceKeys.length > 0;
-        updateOnStart = updateOnStart && licenceKeys.length > 0;
-      } else {
-        autoUpdate = false;
-        updateOnStart = false;
-      }
-    }
 
     // Construct datafile
     const dataFileSettings = {
