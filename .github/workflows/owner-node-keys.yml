@@ -1,0 +1,73 @@
+name: Owner node refresh keys tests
+
+# Throwaway. Builds the native modules, fetches the free data files as CI
+# does, lints the two on-premise packages and runs their refresh tests on the
+# pushed commit, for red and green runs. The branch is deleted after.
+
+on:
+  push:
+    branches:
+      - 'tmp/owner-node-keys-*'
+
+jobs:
+  Test:
+    name: refresh keys tests Ubuntu Node 24
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Checkout common-ci
+        uses: actions/checkout@v6
+        with:
+          repository: 51Degrees/common-ci
+          path: common-ci
+
+      - name: Install Runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Build
+        shell: pwsh
+        run: |
+          git log --oneline -3
+          npm install
+          . ./ci/packages.ps1
+          foreach ($package in $NativePackages) {
+            Push-Location $package.Path
+            try {
+              & "$env:GITHUB_WORKSPACE/ci/build-extension.ps1" -PackageName $package.Path -ModuleName $package.Module
+            } finally {
+              Pop-Location
+            }
+          }
+
+      - name: Data files
+        shell: pwsh
+        working-directory: common-ci
+        run: |
+          $RepoName = '.'
+          ./steps/fetch-assets.ps1 -Assets '51Degrees-LiteV4.1.hash', '51Degrees-IPIV4AsnIpiV41.ipi'
+
+      - name: Place the data files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path cxx/data/device-detection, cxx/data/ip-intelligence | Out-Null
+          Copy-Item common-ci/assets/51Degrees-LiteV4.1.hash cxx/data/device-detection/51Degrees-LiteV4.1.hash
+          Copy-Item common-ci/assets/51Degrees-IPIV4AsnIpiV41.ipi cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi
+
+      - name: Lint
+        if: always()
+        run: >
+          npx eslint --ext .js device-detection/fiftyone.devicedetection.onpremise
+          ip-intelligence/fiftyone.ipintelligence.onpremise
+
+      - name: Refresh tests
+        if: always()
+        run: >
+          node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit
+          --testPathPattern 'onpremise/tests/(refreshEvidenceKeys|reloadProperties)\.test\.js'
