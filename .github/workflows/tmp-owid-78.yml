@@ -84,9 +84,11 @@ jobs:
           find node_modules/fiftyone.pipeline.did -path '*owid*' -type f | sort
       - name: Run the 51Did tests on a copy of the installed package, GitHub still blocked
         run: |
-          # Jest leaves out every path under node_modules, so test a copy.
+          # Jest leaves out every path under node_modules, so test a copy. The
+          # packaging tests read remote_package.json, which only the repository
+          # has, so they run in the test jobs instead.
           cp -r "$RUNNER_TEMP/consumer/node_modules/fiftyone.pipeline.did" "$RUNNER_TEMP/installed"
           cd "$RUNNER_TEMP/installed"
           ls owid-js
           npm install --no-audit --no-fund --no-save --no-package-lock jest@29
-          npx jest --ci tests/fodId.test.js tests/reader.test.js tests/base64.test.js tests/publicKeys.test.js tests/packaging.test.js
+          npx jest --ci tests/fodId.test.js tests/reader.test.js tests/base64.test.js tests/publicKeys.test.js
