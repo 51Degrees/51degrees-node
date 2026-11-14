@@ -1,0 +1,21 @@
+name: tmp spec cache node
+
+on:
+  push:
+    branches:
+      - tmp/spec-cache-node
+
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the templates the core package reads
+        run: git submodule update --init --depth 1 pipeline/fiftyone.pipeline.core/javascript-templates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install the workspace
+        run: npm install --ignore-scripts
+      - name: Run the specification case
+        run: node node_modules/jest/bin/jest.js --ci --runInBand --forceExit --selectProjects pipeline --testPathPattern specCacheKey
