@@ -42,6 +42,7 @@ The folder table and product guides below show where to find usage examples and 
 | `location` | The `fiftyone.geolocation` package |
 | `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code |
 | `cxx/data` | The [data](https://github.com/51Degrees/data) submodule of `cxx`, whose `device-detection` and `ip-intelligence` folders hold the data files the tests and examples use |
+| `pipeline/fiftyone.pipeline.derivedproperty/derived-properties` | Submodule of [derived-properties](https://github.com/51Degrees/derived-properties), whose `scripts` folder is the derived property scripts the package carries and whose `tests` folder is the cases its tests run |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
 ## Getting the code

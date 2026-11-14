@@ -10,6 +10,7 @@
     "pipeline/fiftyone.pipeline.cloudrequestengine",
     "pipeline/fiftyone.pipeline.did",
     "pipeline/fiftyone.pipeline.translation",
+    "pipeline/fiftyone.pipeline.derivedproperty",
     "device-detection/fiftyone.devicedetection",
     "device-detection/fiftyone.devicedetection.cloud",
     "device-detection/fiftyone.devicedetection.onpremise",
