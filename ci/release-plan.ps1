@@ -33,7 +33,45 @@ function Get-NodePackages([string]$RepoPath) {
 }
 
 function Get-NodeReleasePlan([string]$RepoPath) {
-    return @(Get-ReleasePlan $RepoPath (Get-NodePackages $RepoPath))
+    $packages = @(Get-NodePackages $RepoPath)
+    $plan = @(Get-ReleasePlan $RepoPath $packages)
+
+    # common-ci's plan leaves out a package tagged at HEAD, as released from
+    # this commit, and so does not count it as a change for the packages that
+    # depend on it. A publish that stopped part way leaves exactly that, so a
+    # dependant not yet tagged here, with no change of its own, is added with
+    # the patch after its last release, and the plan is put back in order.
+    $published = @($packages | Where-Object { $_.Publish -eq $true })
+    $atHead = @($published | Where-Object {
+        @(Get-ReleasedVersions $RepoPath $_.Name -AtHead).Count -gt 0
+    } | ForEach-Object { $_.Name })
+    if ($atHead.Count -eq 0) {
+        return $plan
+    }
+    $planned = @($plan | ForEach-Object { $_.Name })
+    $added = @(Get-DependentClosure $published $atHead | Where-Object {
+        $_ -notin $atHead -and $_ -notin $planned
+    })
+    if ($added.Count -eq 0) {
+        return $plan
+    }
+    $entries = @{}
+    foreach ($release in $plan) {
+        $entries[$release.Name] = $release
+    }
+    foreach ($name in $added) {
+        $package = $published | Where-Object { $_.Name -eq $name }
+        $last = @(Get-ReleasedVersions $RepoPath $name)[-1]
+        $entries[$name] = [pscustomobject]@{
+            Name = $name
+            Path = $package.Path
+            Version = "$($last.Major).$($last.Minor).$($last.Build + 1)"
+            Previous = $last
+            Reason = 'a package it depends on was released from this commit'
+        }
+    }
+    return @(Sort-ByDependency $published @($entries.Keys) |
+        ForEach-Object { $entries[$_] })
 }
 
 # What a build of HEAD packs. That is the release plan, or, when nothing is to
