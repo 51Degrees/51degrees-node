@@ -77,7 +77,7 @@ const load = (name) => {
 };
 const { ExampleUtils } = require(path.join(exampleDir, '..', 'exampleUtils'));
 ExampleUtils.findFile = (fileName) => {
-  process.stdout.write('Looked for ' + fileName + '\n');
+  process.stdout.write('Looked for ' + fileName + '\\n');
   const file = path.join(${JSON.stringify(folder)}, fileName);
   fs.writeFileSync(file, '');
   return file;
@@ -85,7 +85,7 @@ ExampleUtils.findFile = (fileName) => {
 load('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder = class {
   constructor (options) {
     process.stdout.write(
-      'Built a Pipeline on ' + path.basename(options.dataFile) + '\n');
+      'Built a Pipeline on ' + path.basename(options.dataFile) + '\\n');
   }
 
   build () {
