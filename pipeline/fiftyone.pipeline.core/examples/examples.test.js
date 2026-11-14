@@ -101,6 +101,37 @@ const getFromExample = async (file, urlPath) => {
 const DATE_OF_BIRTH = '2019-09-26';
 const STAR_SIGN = /Your starsign is libra/i;
 
+// Every example ends with a Find out more section, which is a rule of 79
+// equals signs, the heading, then one line per link, each a tab, a label
+// and an address, with the Pipeline API folder and a 51degrees.com link
+// tagged for the section among them.
+const RULE = '='.repeat(79);
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/pipeline';
+const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
+
+const expectEndsWithFindOutMore = (stdout) => {
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const heading = lines.lastIndexOf('Find out more:');
+  expect(heading).toBeGreaterThan(0);
+  expect(lines[heading - 1]).toBe(RULE);
+  const links = lines.slice(heading + 1);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThe Pipeline API: ${REPOSITORY}`);
+  expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
+};
+
+// Checks a page has the section after the text given, with the Pipeline
+// API folder and a tagged 51degrees.com link.
+const expectPageEndsWithFindOutMore = (body, before) => {
+  const section = body.lastIndexOf('Find out more');
+  expect(section).toBeGreaterThan(body.lastIndexOf(before));
+  expect(body.slice(section)).toContain(REPOSITORY);
+  expect(body.slice(section)).toContain(FIND_OUT_MORE_LINK);
+};
+
 test('pipeline functionality example', () => {
   const result = runExample(path.join(__dirname, 'pipelines.js'));
 
@@ -109,6 +140,7 @@ test('pipeline functionality example', () => {
   // The sync element's integer, read by its element's key and by the
   // element itself.
   expect(result.stdout.split('\n').slice(0, 2)).toEqual(['5', '5']);
+  expectEndsWithFindOutMore(result.stdout);
 }, TIMEOUT_MS);
 
 test('custom flowElements 1', () => {
@@ -117,7 +149,11 @@ test('custom flowElements 1', () => {
 
   expect({ status: result.status, stderr: result.stderr })
     .toEqual({ status: 0, stderr: expect.any(String) });
-  expect(result.stdout.trim()).toBe('libra');
+  // The star sign, then the section.
+  const section = result.stdout.indexOf(RULE);
+  expect(section).toBeGreaterThan(-1);
+  expect(result.stdout.slice(0, section).trim()).toBe('libra');
+  expectEndsWithFindOutMore(result.stdout);
 }, TIMEOUT_MS);
 
 test('custom flowElements 2 asks for a date of birth', async () => {
@@ -130,6 +166,7 @@ test('custom flowElements 2 asks for a date of birth', async () => {
     output: page.status === 200 ? '' : page.output
   }).toEqual({ status: 200, output: '' });
   expect(page.body).toContain('Add your date of birth to get your starsign');
+  expectPageEndsWithFindOutMore(page.body, 'Add your date of birth to get your starsign');
 }, TIMEOUT_MS);
 
 test('custom flowElements 2 gives the star sign', async () => {
@@ -142,4 +179,5 @@ test('custom flowElements 2 gives the star sign', async () => {
     output: page.status === 200 ? '' : page.output
   }).toEqual({ status: 200, output: '' });
   expect(page.body).toMatch(STAR_SIGN);
+  expectPageEndsWithFindOutMore(page.body, 'Your starsign is');
 }, TIMEOUT_MS);
