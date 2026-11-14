@@ -87,6 +87,24 @@ const PayloadStatus = Object.freeze({
  */
 function unpack (payload) {
   const length = payload.length;
+  // The version is read before any field and before the length is checked,
+  // because a later version exists precisely because a field moved, so its
+  // header need not be as long as this one. Reading a payload of a version
+  // this package does not know under the layout it does know would answer
+  // with values that are wrong rather than absent, which is worse than
+  // refusing, and a version that nothing checks protects nothing.
+  if (length > layout.FLAGS_OFFSET) {
+    const payloadVersion = (payload[layout.FLAGS_OFFSET] >> 4) & 0b11;
+    if (payloadVersion !== layout.SUPPORTED_PAYLOAD_VERSION) {
+      return {
+        ok: false,
+        status: PayloadStatus.UNSUPPORTED_PAYLOAD_VERSION,
+        length,
+        required: layout.HEADER_LENGTH,
+        payloadVersion
+      };
+    }
+  }
   if (length < layout.HEADER_LENGTH) {
     return {
       ok: false,
@@ -96,21 +114,6 @@ function unpack (payload) {
     };
   }
   const flags = payload[layout.FLAGS_OFFSET];
-  // The version is read before any field, because a later version exists
-  // precisely because a field moved. Reading a payload of a version this
-  // package does not know under the layout it does know would answer with
-  // values that are wrong rather than absent, which is worse than
-  // refusing, and a version that nothing checks protects nothing.
-  const payloadVersion = (flags >> 4) & 0b11;
-  if (payloadVersion !== layout.SUPPORTED_PAYLOAD_VERSION) {
-    return {
-      ok: false,
-      status: PayloadStatus.UNSUPPORTED_PAYLOAD_VERSION,
-      length,
-      required: layout.HEADER_LENGTH,
-      payloadVersion
-    };
-  }
   // Usage bits 000 are not a usage. The cloud writes no flags byte without
   // bit 0, so a payload carrying them is damaged or forged, and there is
   // nothing a caller could do with a fourth usage that a refusal does not
