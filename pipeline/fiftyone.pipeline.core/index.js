@@ -38,5 +38,6 @@ module.exports = {
   JavascriptBuilder: require('./javascriptbuilder'),
   SequenceElement: require('./sequenceElement'),
   SetHeadersElement: require('./setHeadersElement'),
-  Helpers: require('./helpers')
+  Helpers: require('./helpers'),
+  listSetting: require('./listSetting')
 };

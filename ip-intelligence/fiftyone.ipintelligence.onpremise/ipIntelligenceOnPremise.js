@@ -117,8 +117,9 @@ class IpIntelligenceOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-   * @param {Array<string>} options.restrictedProperties list of properties the engine
-   * will be restricted to
+   * @param {Array<string>|string} options.restrictedProperties list of
+   * properties the engine will be restricted to, or one comma separated
+   * string of them, as a configuration file gives a list
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
@@ -253,8 +254,9 @@ class IpIntelligenceOnPremise extends Engine {
     // Create vector for restricted properties
     const propertiesList = new swigWrapper.VectorStringSwig();
 
-    if (restrictedProperties) {
-      restrictedProperties.forEach(function (property) {
+    const restricted = core.listSetting(restrictedProperties);
+    if (restricted) {
+      restricted.forEach(function (property) {
         propertiesList.add(property);
       });
     }
