@@ -89,6 +89,8 @@ test('npm packs the OWID library and its licence, and no more of it', () => {
   const topLevel = fs.readdirSync(PACKAGE)
     .filter(name => name.endsWith('.js'));
   expect(files).toEqual(expect.arrayContaining(topLevel));
+  // This test reads remote_package.json, which only the repository has.
+  expect(files).not.toContain('tests/packaging.test.js');
 }, NPM_PACK_TIMEOUT_MS);
 
 test('the 51Did reader uses the OWID library of the submodule', () => {
