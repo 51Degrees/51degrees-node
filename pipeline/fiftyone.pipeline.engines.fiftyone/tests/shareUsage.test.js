@@ -717,8 +717,8 @@ test.each([
 
 /**
  * Check that with no options the element shares headers and the 51Degrees
- * cookies and parameters, and leaves out other cookies, the Cookie header,
- * and other query string and form parameters.
+ * cookies, every query string and form parameter, and leaves out other
+ * cookies and the Cookie header.
  */
 test('share usage - default shares only accepted evidence', done => {
   const usageEngine = new ShareUsage({
@@ -747,7 +747,7 @@ test('share usage - default shares only accepted evidence', done => {
       expect(received[0]).toContain('<query Name="51d_gethighentropyvalues">hev</query>');
       expect(received[0]).not.toContain('cookie value');
       expect(received[0]).not.toContain('header value');
-      expect(received[0]).not.toContain('password value');
+      expect(received[0]).toContain('<query Name="password">password value</query>');
       expect(received[0]).not.toContain('email value');
       done();
     }, 2000);
@@ -791,7 +791,8 @@ test('share usage - never shared evidence', done => {
 
 /**
  * Check that sharing all evidence shares what the other rules leave out,
- * but not the evidence that is never shared.
+ * but not the evidence that is never shared or a cookie whose name does
+ * not start with 51D_.
  */
 test('share usage - share all', done => {
   const usageEngine = new ShareUsage({
@@ -812,7 +813,7 @@ test('share usage - share all', done => {
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).toContain('<cookie Name="sessionid">cookie value</cookie>');
+      expect(received[0]).not.toContain('cookie value');
       expect(received[0]).toContain('<query Name="campaign">campaign value</query>');
       expect(received[0]).not.toContain('email value');
       done();
@@ -828,6 +829,7 @@ test('share usage - parameter names with dots', done => {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/',
+    shareAllQueryStringParameters: false,
     queryWhitelist: ['valid.email']
   });
 
