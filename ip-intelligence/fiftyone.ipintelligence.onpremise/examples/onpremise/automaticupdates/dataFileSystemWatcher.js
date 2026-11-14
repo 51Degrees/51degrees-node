@@ -41,22 +41,15 @@ const IpIntelligenceOnPremisePipelineBuilder =
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 
-// In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/data/ip-intelligence folder, where it is downloaded if missing,
-// or you may specify another file as a command line parameter.
+// In this example, by default, the free 51Degrees ASN data file is used from
+// the cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter. Which
+// Properties the file has does not matter to an update, and the ASN data
+// file is far smaller to download than the Lite data file.
 //
-// Note that the Lite data file is only used for illustration, and has
-// a small number of Properties.
 // Contact us for a copy of the Enterprise data file at
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=lite_v_4_1_ipi
-const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
-
-// Load in a datafile
-const args = process.argv.slice(2);
-// Use the supplied path for the data file, the path in the
-// _51DEGREES_IPI_PATH environment variable, or find the lite
-// file that is included in the repository.
-const datafile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
+// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=asn_v_4_1_ipi
+const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
 
 // Set your licence key in the _51DEGREES_LICENSE_KEY environment
 // variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=mylicensekey
@@ -76,6 +69,15 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
     'a licence key. Set it in the _51DEGREES_LICENSE_KEY environment ' +
     'variable. Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-automaticupdates-datafilesystemwatcher.js&utm_term=license-key-required');
 } else {
+  // Use the supplied path for the data file, the path in the
+  // _51DEGREES_IPI_PATH environment variable, or find the ASN data file.
+  // This is only done once there is a licence key, so that a data file is
+  // not downloaded only to be told a key is needed.
+  const args = process.argv.slice(2);
+  const datafile = args.length > 0
+    ? args[0]
+    : ExampleUtils.findDataFile(ASN_V_4_1_IPI);
+
   // Check if datafile exists
 
   const fs = require('fs');
@@ -114,6 +116,7 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
   // Exit auto update process
   setTimeout(() => {
     console.log('Exiting auto update process');
-    process.exit(1);
+    // The example has shown how to set updates up, so it ends as a success.
+    process.exit(0);
   }, 3000);
 }

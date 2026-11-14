@@ -170,7 +170,33 @@ const KeyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
  * - [fiftyone.devicedetection.onpremise](https://www.npmjs.com/package/fiftyone.devicedetection.onpremise)
  */
 
+// The variable that holds the licence key.
+const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
+
+// The deprecated names of the same variable, read only when
+// _51DEGREES_LICENSE_KEY is unset or empty.
 const UPDATE_EXAMPLE_LICENSE_KEY_NAME = 'LicenseKey';
+const OLD_LICENSE_KEY_NAMES = [UPDATE_EXAMPLE_LICENSE_KEY_NAME, 'LICENSEKEY'];
+let reportedOldName = false;
+
+// Reads the licence key from the environment, saying once that an old name
+// is deprecated when the key was found under it.
+const getLicenseKey = function () {
+  if (process.env[LICENSE_KEY_VARIABLE]) {
+    return process.env[LICENSE_KEY_VARIABLE];
+  }
+  const oldName = OLD_LICENSE_KEY_NAMES.find((name) => process.env[name]);
+  if (oldName === undefined) {
+    return undefined;
+  }
+  if (!reportedOldName) {
+    reportedOldName = true;
+    console.warn(`The ${oldName} environment variable is deprecated and ` +
+      `${LICENSE_KEY_VARIABLE} replaces it. Set ${LICENSE_KEY_VARIABLE} ` +
+      'instead.');
+  }
+  return process.env[oldName];
+};
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
 
@@ -199,7 +225,7 @@ const explainLicenseKey = function (dataFilePath, output) {
   output.write('Updating the data file downloads the Enterprise data file, ' +
     'which needs a licence key. Give the key as the first command line ' +
     'argument, or in the environment variable ' +
-    `'${UPDATE_EXAMPLE_LICENSE_KEY_NAME}'. Contact us for a key and a copy ` +
+    `'${LICENSE_KEY_VARIABLE}'. Contact us for a key and a copy ` +
     `at ${CONTACT_US}\n`);
 };
 
@@ -207,7 +233,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   output.write('Starting example\n');
   // try to find a license key
   if (!licenseKey) {
-    licenseKey = KeyUtils.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
+    licenseKey = getLicenseKey();
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
     explainLicenseKey(dataFilePath, output);
@@ -375,4 +401,4 @@ if (process.env.JEST_WORKER_ID === undefined) {
   run(dataFilePath, licenseKey, true, process.stdout);
 };
 
-module.exports = { run };
+module.exports = { run, getLicenseKey };

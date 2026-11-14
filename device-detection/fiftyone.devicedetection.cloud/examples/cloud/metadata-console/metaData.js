@@ -117,12 +117,12 @@ if (process.env.JEST_WORKER_ID === undefined) {
   if (resourceKey) {
     run(resourceKey, process.stdout);
   } else {
-    console.error('No resource key specified on the command line or in the ' +
+    console.error('No resource key specified on the command line or in ' +
     `the environment variable '${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. ` +
     'The 51Degrees cloud service is accessed using a \'ResourceKey\'. ' +
     'For more information ' +
     'see https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required. ' +
-    'Native model lookup requires a paid subscription. See ' +
+    'Showing every property needs a paid subscription. See ' +
     'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-metadata-console-metadata.js&utm_term=resource-key-required to get a paid subscription with more ' +
     'properties. Once subscribed, a resource key with the properties ' +
     'required by this example can be created at ' +
