@@ -141,6 +141,19 @@ describe('web integration elements the caller added', () => {
       expect(pipeline.getElement('set-headers')).toBe(setHeaders);
     });
 
+  // Keys are compared ignoring case, as access-to-results.md asks of every
+  // string comparison.
+  test('one whose key differs only in case counts as present', () => {
+    const pipeline = new core.PipelineBuilder()
+      .add(new FlowElement({ dataKey: 'Sequence' }))
+      .add(userElement())
+      .add(new FlowElement({ dataKey: 'Set-Headers' }))
+      .build();
+    expect(dataKeys(pipeline)).toEqual([
+      'Sequence', 'user', 'Set-Headers', 'jsonbundler', 'javascriptbuilder'
+    ]);
+  });
+
   test('building twice adds none of them twice', () => {
     const builder = new core.PipelineBuilder().add(userElement());
     builder.build();
