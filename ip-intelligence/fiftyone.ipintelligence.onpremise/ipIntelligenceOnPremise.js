@@ -41,6 +41,19 @@ const Property = require('./property');
 const Profile = require('./profile');
 
 /**
+ * The key with the part before its first dot in lower case.
+ *
+ * @param {string} key an evidence key, such as Header.User-Agent
+ * @returns {string} the key with a lower case prefix
+ */
+const lowerCasePrefix = (key) => {
+  const dot = key.indexOf('.');
+  return dot === -1
+    ? key
+    : key.substring(0, dot).toLowerCase() + key.substring(dot);
+};
+
+/**
  * @typedef {import('fiftyone.pipeline.engines').DataKeyedCache} DataKeyedCache
  */
 
@@ -484,8 +497,10 @@ class IpIntelligenceOnPremise extends Engine {
       const accepted = ipi.evidenceKeyFilter.filterEvidence(
         flowData.evidence.getAll());
 
+      // Evidence keys ignore case, but the native evidence matches a key's
+      // prefix with case, so the prefix is given in lower case.
       Object.entries(accepted).forEach(function ([key, value]) {
-        evidence.set(key, value);
+        evidence.set(lowerCasePrefix(key), value);
       });
 
       const result = ipi.engine.process(evidence);

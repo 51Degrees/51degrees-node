@@ -96,22 +96,8 @@ class FlowData {
    * @returns {object} Evidence that is requested by flowElements
    */
   getEvidenceDataKey () {
-    // Get all evidence in flowData
-    const evidence = this.evidence.getAll();
-
-    // Evidence that is requested by flowElements
-    let keep = {};
-
-    Object.keys(this.pipeline.flowElements).forEach(function (key) {
-      const flowElement = this.pipeline.flowElements[key];
-      // merge in the filtered evidence for the flowElement
-      keep = Object.assign(
-        keep,
-        flowElement.evidenceKeyfilter.filterEvidence(evidence)
-      );
-    });
-
-    return keep;
+    return this.pipeline.evidenceKeyFilter.filterEvidence(
+      this.evidence.getAll());
   }
 
   /**

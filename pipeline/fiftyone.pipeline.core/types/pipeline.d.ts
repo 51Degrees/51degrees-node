@@ -32,6 +32,10 @@ declare class Pipeline {
     flowElements: object;
     dataFileUpdateService: any;
     /**
+     * @type {EvidenceKeyFilter}
+     */
+    evidenceKeyFilter: EvidenceKeyFilter;
+    /**
      * @type {object}
      */
     propertyDatabase: object;
@@ -83,6 +87,7 @@ declare namespace Pipeline {
     export { FlowElement, DataFileUpdateService };
 }
 import EventEmitter = require("events");
+import EvidenceKeyFilter = require("./evidenceKeyFilter");
 import FlowData = require("./flowData");
 type FlowElement = import("./flowElement");
 type DataFileUpdateService = any;
