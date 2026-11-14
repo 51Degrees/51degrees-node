@@ -81,3 +81,15 @@ test('share usage tracker - repeat inside the interval leaves the time', () => {
 
   expect(shareAt(tracker, 'a', INTERVAL_MILLISECONDS)).toBe(true);
 });
+
+// usage-sharing-element.md line 280: "Evidence matching an entry shared the
+// interval or more ago MUST be shared, and the entry's time MUST be set to
+// the time it is shared."
+test('share usage tracker - a repeat shared after the interval starts a new ' +
+  'interval', () => {
+  const tracker = new ShareUsageTracker({ interval: INTERVAL_MILLISECONDS });
+  expect(shareAt(tracker, 'a', 0)).toBe(true);
+  expect(shareAt(tracker, 'a', INTERVAL_MILLISECONDS)).toBe(true);
+  expect(shareAt(tracker, 'a', 2 * INTERVAL_MILLISECONDS - 1)).toBe(false);
+  expect(shareAt(tracker, 'a', 2 * INTERVAL_MILLISECONDS)).toBe(true);
+});
