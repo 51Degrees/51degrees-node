@@ -22,8 +22,7 @@
 
 // Runs the getting started example in its own process, from its own
 // folder, as a person runs it. With a resource key it must name a country
-// for 8.8.8.8,
-// and with none it must say how to create a key.
+// for 8.8.8.8, and with none it must say how to create a key.
 
 const childProcess = require('child_process');
 const path = require('path');
