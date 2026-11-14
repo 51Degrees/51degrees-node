@@ -131,12 +131,13 @@ class CloudEngine extends Engine {
       if (elementData === undefined) {
         // The cloud service leaves out a product the keys in use do not
         // include, and under a license key alone one that requestedProperties
-        // names none of. That cannot change while the keys and the list stay
-        // the same, so it is logged once rather than on every request, and
-        // the request carries on with empty element data.
+        // names none of. That is not a fault in the request and cannot change
+        // while the keys and the list stay the same, so it is a warning,
+        // logged once rather than on every request, and the request carries
+        // on with empty element data.
         if (engine._missingElementReported === false) {
           engine._missingElementReported = true;
-          flowData.pipeline.log('error', util.format(
+          flowData.pipeline.log('warn', util.format(
             errorMessages.elementMissing, engine.dataKey, engine.dataKey,
             productHint(flowData, engine.dataKey)));
         }
