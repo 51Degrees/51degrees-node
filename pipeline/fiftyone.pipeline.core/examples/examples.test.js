@@ -125,7 +125,10 @@ test('custom flowElements 2', async () => {
     __dirname, 'customFlowElements', 'clientSideEvidenceFlowElement.js'),
   `/?dateOfBirth=${DATE_OF_BIRTH}`);
 
-  expect({ status: page.status, output: page.output })
-    .toEqual({ status: 200, output: expect.any(String) });
+  // What the example wrote is shown when it served no page.
+  expect({
+    status: page.status,
+    output: page.status === 200 ? '' : page.output
+  }).toEqual({ status: 200, output: '' });
   expect(page.body).toMatch(STAR_SIGN);
 }, TIMEOUT_MS);

@@ -113,7 +113,10 @@ test('on premise flow element example', async () => {
     path.join(EXAMPLES, 'onPremiseFlowElement.js'),
     '/?dateOfBirth=2019-09-26');
 
-  expect({ status: page.status, output: page.output })
-    .toEqual({ status: 200, output: expect.any(String) });
+  // What the example wrote is shown when it served no page.
+  expect({
+    status: page.status,
+    output: page.status === 200 ? '' : page.output
+  }).toEqual({ status: 200, output: '' });
   expect(page.body).toMatch(/Your starsign is libra/i);
 }, TIMEOUT_MS);
