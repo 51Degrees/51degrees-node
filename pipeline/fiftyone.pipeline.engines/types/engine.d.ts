@@ -37,6 +37,16 @@ declare class Engine extends Engine_base {
      */
     restrictedPropertyKeys: Set<string>;
     /**
+     * The key the cache keeps a result under, made from the evidence this
+     * engine accepts with each key in lower case and the keys in order, so
+     * the same evidence gives the same key whatever order it was added in and
+     * whatever the letters of its keys. Values keep their letters.
+     *
+     * @param {FlowData} flowData the flow data being processed
+     * @returns {string} the cache key
+     */
+    cacheKey(flowData: FlowData): string;
+    /**
      * Checks cache and returns cached result if found.
      *
      * @param {FlowData} flowData checks if a FlowData's evidence
