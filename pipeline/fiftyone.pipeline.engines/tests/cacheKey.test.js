@@ -88,4 +88,19 @@ describe('cache keys', () => {
     await run(pipeline, [['header.user-agent', 'ua']]);
     expect(state.processed).toBe(2);
   });
+
+  test('each request makes its cache key once', async () => {
+    const state = { processed: 0 };
+    const pipeline = build(state);
+    const made = jest.spyOn(Engine.prototype, 'cacheKey');
+    try {
+      // One request that is processed and one served from the cache.
+      await run(pipeline, [['header.user-agent', 'UA']]);
+      await run(pipeline, [['header.user-agent', 'UA']]);
+      expect(state.processed).toBe(1);
+      expect(made).toHaveBeenCalledTimes(2);
+    } finally {
+      made.mockRestore();
+    }
+  });
 });
