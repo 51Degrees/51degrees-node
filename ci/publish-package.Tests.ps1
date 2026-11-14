@@ -161,8 +161,9 @@ Describe 'publish-package.ps1' {
         @($global:TestReleases) | Should -Contain 'zeta.base/1.0.1'
     }
 
+    # The plan's order is mid.tool, zeta.base, alpha.app.
     It 'finishes the release on a rerun after a publish that stopped part way' {
-        Reset-Registry -FailOn @('mid.tool')
+        Reset-Registry -FailOn @('zeta.base')
         { Invoke-Publish $script:Test } | Should -Throw
         # The rerun starts from what the first run left on npm and in origin.
         $global:TestNpmPublishes.Clear()
@@ -172,6 +173,16 @@ Describe 'publish-package.ps1' {
         }
         Get-OriginTags $script:Test | Should -Be $script:AllTags
         @($global:TestReleases | Sort-Object -Unique) | Should -HaveCount 3
+    }
+
+    It 'releases on a rerun a package whose only change is a dependency the stopped publish released' {
+        Reset-Registry -FailOn @('alpha.app')
+        { Invoke-Publish $script:Test } | Should -Throw
+        Get-OriginTags $script:Test | Should -Be 'mid.tool/1.0.1,zeta.base/1.0.1'
+        $global:TestNpmPublishes.Clear()
+        Invoke-Publish $script:Test | Out-Null
+        @($global:TestNpmPublishes) | Should -Be @('alpha.app@1.0.1')
+        Get-OriginTags $script:Test | Should -Be $script:AllTags
     }
 
     It 'publishes nothing and pushes no tag in a dry run' {
