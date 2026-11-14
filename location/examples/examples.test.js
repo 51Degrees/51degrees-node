@@ -20,65 +20,76 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const fs = require('fs');
-const path = require('path');
+// Runs each example in its own process, from its own folder, as a person
+// runs it, and checks every line it printed. An example that stops with an
+// error, or prints anything else, such as an error it caught, fails its
+// test. With a resource key the examples call the cloud service, and
+// without one they say where to create one.
 
-const testExample = function ({ file, portNumber }) {
-  if (portNumber) {
-    process.env.PORT = portNumber;
-  }
+const childProcess = require('child_process');
 
-  // Change the working directory of the example to be the example itself
+const TIMEOUT_MS = 60000;
+const RESOURCE_KEY = '_51DEGREES_RESOURCE_KEY';
 
-  process.env.directory = path.dirname(file);
+// The deprecated name of the key, removed so that only the name above
+// decides what the examples print.
+const DEPRECATED_NAMES = ['RESOURCE_KEY'];
 
-  let code = fs.readFileSync(file, 'utf8');
+const COUNTRY = 'Which country is the location ' +
+  '[51.458048,-0.9822207999999999] in? United Kingdom';
+const MOBILE = 'Does the User-Agent \'Mozilla/5.0 (iPhone; CPU iPhone OS ' +
+  '11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) ' +
+  'Mobile/15C114\' represent a mobile device? true';
+const NEEDS_KEY = expect.stringMatching(
+  /^You need to create a resource key at https:\/\/configure\.51degrees\.com/);
+const NEEDS_ISMOBILE = 'Make sure to include the ismobile property as it ' +
+  'is used by this example.';
 
-  // Add in closer of any apps
+const hasKey = Boolean(process.env[RESOURCE_KEY]);
 
-  const serverClose = `
-    
-    if(typeof server !== "undefined"){
-
-        server.close();
-
+// Runs an example and returns its exit status, its error output and the
+// lines of its output. The deprecated names are removed without regard to
+// case, as Windows matches them.
+const runExample = (file) => {
+  const remove = new Set(DEPRECATED_NAMES.map((name) => name.toUpperCase()));
+  const env = Object.assign({}, process.env);
+  for (const name of Object.keys(env)) {
+    if (remove.has(name.toUpperCase())) {
+      delete env[name];
     }
-
-    `;
-
-  code += serverClose;
-
-  jest.fn(eval(code));
+  }
+  const result = childProcess.spawnSync(process.execPath, [file], {
+    cwd: __dirname,
+    env,
+    encoding: 'utf8',
+    timeout: TIMEOUT_MS
+  });
+  return {
+    error: result.error,
+    status: result.status,
+    stderr: result.stderr,
+    lines: (result.stdout || '').split(/\r?\n/).filter((line) => line !== '')
+  };
 };
 
-// Skip the rest of the examples when async is not available
-let isAsync = true;
-
-try {
-  eval('async () => {}');
-} catch (e) {
-  isAsync = false;
-}
-
-if (isAsync) {
-  test('cloud getting started', async (done) => {
-    setTimeout(done, 1000);
-
-    testExample({ file: path.resolve(__dirname, 'gettingStarted.js') });
+const expectLines = (file, lines) => {
+  expect(runExample(file)).toEqual({
+    error: undefined,
+    status: 0,
+    stderr: '',
+    lines
   });
+};
 
-  test('combining services', async (done) => {
-    setTimeout(done, 1000);
+test('getting started', () => {
+  expectLines('gettingStarted.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);
 
-    testExample({ file: path.resolve(__dirname, 'combiningServices.js') });
-  });
+test('combining services', () => {
+  expectLines('combiningServices.js',
+    hasKey ? [COUNTRY, MOBILE] : [NEEDS_KEY, NEEDS_ISMOBILE]);
+}, TIMEOUT_MS * 2);
 
-  test('configure from file', async (done) => {
-    setTimeout(done, 1000);
-
-    testExample({ file: path.resolve(__dirname, 'configureFromFile.js') });
-  });
-} else {
-  // Skip if async is not available (e.g node 6)
-  test.skip('Workaround', () => 1);
-}
+test('configure from file', () => {
+  expectLines('configureFromFile.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);
