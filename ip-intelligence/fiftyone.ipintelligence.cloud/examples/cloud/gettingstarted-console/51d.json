@@ -8,7 +8,7 @@
             }
         },
         {
-            "elementName": "../../../ipIntelligenceCloud"
+            "elementName": "fiftyone.ipintelligence.cloud/ipIntelligenceCloud"
         }
         ]
     }

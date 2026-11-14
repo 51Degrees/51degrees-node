@@ -69,25 +69,7 @@ const HardwareProfileCloudEngine = require('fiftyone.devicedetection.cloud').Har
 
 Updated the data file path to point to where the data file is stored.
 
-Update the `51d.json` file if required. For example, if the `51d.json` contains:
-
-```
-        "Elements": [
-        {
-            "elementName": "../../deviceDetectionCloud"
-        },
-```
-
-It will need to be updated to 
-
-```
-        ...
-        "Elements": [
-        {
-            "elementName": "fiftyone.devicedetection.cloud/DeviceDetectionCloud"
-        },
-    ...
-```
+Each `51d.json` names its engines by package, for example `fiftyone.devicedetection.cloud/deviceDetectionCloud`, so it works unchanged with the installed packages.
 
 If the `51d.json` contains the data file for on-premise example, it will also need to be updated to point to the correct location.
 
