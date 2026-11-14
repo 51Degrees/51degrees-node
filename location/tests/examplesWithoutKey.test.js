@@ -90,24 +90,22 @@ const sectionLinks = (printed) => {
   return heading < 0 ? [] : lines.slice(heading + 1);
 };
 
-describe('cloud examples with no resource key', () => {
-  for (const file of CLOUD_EXAMPLES) {
-    test(`${file} ends cleanly and says how to get a key`, () => {
-      const result = runWithoutKey(file);
-      const printed = `${result.stdout || ''}\n${result.stderr || ''}`;
-      // What the example printed is shown when it did not end cleanly.
-      expect({
-        status: result.status,
-        signal: result.signal,
-        printed: result.status === 0 ? '' : printed
-      }).toEqual({ status: 0, signal: null, printed: '' });
-      expect(printed).toContain(RESOURCE_KEY_NAME);
-      expect(printed).toMatch(CREATE_KEY_LINK);
-      const links = sectionLinks(result.stdout || '');
-      expect(links.length).toBeGreaterThan(0);
-      for (const line of links) {
-        expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
-      }
-    }, TIMEOUT_MS + 5000);
-  }
-});
+for (const file of CLOUD_EXAMPLES) {
+  test(`${file} ends cleanly and says how to get a key`, () => {
+    const result = runWithoutKey(file);
+    const printed = `${result.stdout || ''}\n${result.stderr || ''}`;
+    // What the example printed is shown when it did not end cleanly.
+    expect({
+      status: result.status,
+      signal: result.signal,
+      printed: result.status === 0 ? '' : printed
+    }).toEqual({ status: 0, signal: null, printed: '' });
+    expect(printed).toContain(RESOURCE_KEY_NAME);
+    expect(printed).toMatch(CREATE_KEY_LINK);
+    const links = sectionLinks(result.stdout || '');
+    expect(links.length).toBeGreaterThan(0);
+    for (const line of links) {
+      expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+    }
+  }, TIMEOUT_MS + 5000);
+}
