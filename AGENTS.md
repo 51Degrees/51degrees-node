@@ -363,7 +363,10 @@ turn, after the packages it requires, so a publish that stops part way leaves
 the packages before the failure complete. A version npm already has is tagged
 and released without publishing it again, so running Publish again finishes
 the release. `ci/publish-package.Tests.ps1` tests this with Pester, with
-`COMMON_CI` set to a checkout of common-ci.
+`COMMON_CI` set to a checkout of common-ci. The CI script tests workflow
+(`.github/workflows/ci-script-tests.yml`) runs every `ci/*.Tests.ps1` on
+Ubuntu and Windows for a pull request or a push to `main` or `rc` that
+changes `ci/`.
 
 ## Tests that fail on timing
 
