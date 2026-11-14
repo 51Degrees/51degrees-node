@@ -344,10 +344,12 @@ in Node and the browser (Web Crypto), so `FodId.verify()` and
 
 The library is not on the npm registry. This repository takes it as the git
 submodule `owid-js` of this package, as every other 51Degrees language takes
-it, pinned at commit 6c5ff4e7 on `main` of
+it, from `main` of
 [SWAN-community/owid-js](https://github.com/SWAN-community/owid-js), where a
 signature covers its own OWID and no other, and a creator's key is fetched
-from the `public-key` endpoint without following a redirect. The published
+from the `public-key` endpoint without following a redirect. The nightly
+submodule update moves it to the newest commit on `main`, as it moves every
+submodule, through a pull request into `rc`. The published
 `fiftyone.pipeline.did` package carries the library's `v1.js` and its
 Apache-2.0 `LICENSE` in its own tarball under `owid-js`, so installing the
 package from npm needs neither git nor reachable GitHub, and gives the same

@@ -290,7 +290,11 @@ carry `owid-js/v1.js` and the Apache 2.0 `owid-js/LICENSE` beside it and
 nothing else from the submodule, so installing the package fetches nothing
 from GitHub. `files` names the top level JavaScript as `/*.js`, because npm
 reads `*.js` without the slash at every depth and would pack the submodule's
-tests too. `tests/packaging.test.js` checks what `npm pack` really packs.
+tests too. `tests/packaging.test.js` checks what `npm pack` really packs, and
+is itself left out with `!tests/packaging.test.js`, as it reads
+`remote_package.json`, which only the repository has. The nightly submodule
+update moves `owid-js` to the newest commit on its `main`, as it moves every
+submodule, through a pull request into `rc`.
 Jest and ESLint leave the submodule's own tests and code alone
 (`--testPathIgnorePatterns` in the root `package.json` and `.eslintignore`).
 
