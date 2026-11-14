@@ -202,13 +202,24 @@ const server = http.createServer((req, res) => {
   // provided information). The client side script sends its information
   // in a form body, so the asynchronous form reads that body as well.
   flowData.evidence.addFromRequestAsync(req).then(function () {
-    return flowData.process();
-  }).then(function () {
+    // A matching If-None-Match on the JSON endpoint gets its 304 without
+    // processing.
+    if (req.url.indexOf('/json') !== -1 &&
+      FiftyOnePipelineCore.Helpers.writeClientSideNotModified(
+        req, res, flowData)) {
+      return false;
+    }
+    return flowData.process().then(() => true);
+  }).then(function (processed) {
+    if (processed === false) {
+      return;
+    }
+
     // Send back JSON if requesting it from the client side
     // via the JavaScriptBuilder
 
     if (req.url.indexOf('/json') !== -1) {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       FiftyOnePipelineCore.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
 

@@ -110,10 +110,16 @@ if (myResourceKey.substring(0, 2) === '!!') {
     // (headers, cookies and additional client side provided information)
     flowData.evidence.addFromRequest(req);
 
+    // A matching If-None-Match on the JSON endpoint gets its 304 without
+    // processing.
+    if (req.url.startsWith('/json') &&
+      core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
+
     flowData.process().then(function () {
       if (req.url.startsWith('/json')) {
-        // Return the json to the client, with the caching headers, and a
-        // 304 to a matching If-None-Match.
+        // Return the json to the client, with the caching headers.
         core.Helpers.writeClientSideResponse(req, res, flowData,
           'application/json', JSON.stringify(flowData.jsonbundler.json));
       } else {

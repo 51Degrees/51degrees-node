@@ -61,12 +61,12 @@ class SetHeadersElement extends FlowElement {
   getHeaderName (propertyName) {
     // Skip over the 'SetHeader' prefix.
     let str = propertyName.replace('SetHeader', '');
-    // Skip over the first uppercase character in the component
-    // name.
+    // Skip over the first character of the identifier, then every
+    // character up to the next upper-case one, because the identifier has
+    // no upper-case character after its first and may hold digits and
+    // other characters.
     str = str.substr(1);
-    // Now keep skipping until the next uppercase character is
-    // found.
-    while (str[0] >= 'a' && str[0] <= 'z') {
+    while (str.length > 0 && (str[0] < 'A' || str[0] > 'Z')) {
       str = str.substr(1);
     }
     return str;
