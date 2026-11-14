@@ -264,6 +264,18 @@ class ExampleUtils {
     return ddEngine ? ddEngine.engine.getProduct() : undefined;
   }
 
+  // True when the device detection data file was published more than
+  // DATA_FILE_AGE_WARNING days ago.
+  static isDataFileOld (pipeline) {
+    const ddEngine = pipeline.flowElements.device;
+    if (ddEngine === undefined) {
+      return false;
+    }
+    const published =
+      swigHelpers.swigDateToDate(ddEngine.engine.getPublishedTime());
+    return Date.now() > published.getTime() + DATA_FILE_AGE_WARNING * MS_PER_DAY;
+  }
+
   static checkDataFile (pipeline, filePath) {
     // Get the 'engine' element within the pipeline that
     // performs device detection. We can use this to get
