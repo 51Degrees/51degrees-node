@@ -24,7 +24,8 @@
 // runs it, and checks every line it printed. An example that stops with an
 // error, or prints anything else, such as an error it caught, fails its
 // test. With a resource key the examples call the cloud service, and
-// without one they say where to create one.
+// without one they say where to create one. Either way each ends with the
+// Find out more section.
 
 const childProcess = require('child_process');
 
@@ -41,11 +42,32 @@ const MOBILE = 'Does the User-Agent \'Mozilla/5.0 (iPhone; CPU iPhone OS ' +
   '11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) ' +
   'Mobile/15C114\' represent a mobile device? true';
 const NEEDS_KEY = expect.stringMatching(
-  /^You need to create a resource key at https:\/\/configure\.51degrees\.com/);
+  /^You need to create a resource key at https:\/\/51degrees\.com\/configure/);
 const NEEDS_ISMOBILE = 'Make sure to include the ismobile property as it ' +
   'is used by this example.';
 
 const hasKey = Boolean(process.env[RESOURCE_KEY]);
+
+// Every example ends with the Find out more section, which is a rule of 79
+// equals signs, the heading, then one line per link, each a tab, a label
+// and an address. It gives this API's folder, and its links to
+// 51degrees.com are tagged with the example's file.
+const RULE = '='.repeat(79);
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/location';
+
+const expectFindOutMore = (file, lines) => {
+  expect(lines.slice(0, 2)).toEqual([RULE, 'Find out more:']);
+  const links = lines.slice(2);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThis API: ${REPOSITORY}`);
+  const tagged = links.filter((line) => line.includes('51degrees.com/'));
+  expect(tagged.length).toBeGreaterThan(0);
+  const content = `&utm_content=examples-${file.toLowerCase()}&`;
+  expect(tagged.filter((line) => !line.includes(content))).toEqual([]);
+};
 
 // Runs an example and returns its exit status, its error output and the
 // lines of its output. The deprecated names are removed without regard to
@@ -72,13 +94,19 @@ const runExample = (file) => {
   };
 };
 
+// Checks the example printed the lines, then the Find out more section.
 const expectLines = (file, lines) => {
-  expect(runExample(file)).toEqual({
-    error: undefined,
-    status: 0,
-    stderr: '',
-    lines
-  });
+  const result = runExample(file);
+  const rule = result.lines.lastIndexOf(RULE);
+  expect(rule).toBeGreaterThan(-1);
+  expect(Object.assign({}, result, { lines: result.lines.slice(0, rule) }))
+    .toEqual({
+      error: undefined,
+      status: 0,
+      stderr: '',
+      lines
+    });
+  expectFindOutMore(file, result.lines.slice(rule));
 };
 
 test('getting started', () => {

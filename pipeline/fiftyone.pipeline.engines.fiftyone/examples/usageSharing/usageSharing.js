@@ -41,7 +41,7 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/tree/main/pipeline/fiftyone.pipeline.engines.fiftyone/examples/usageSharing/usageSharing.js).
  *
- * Expected output
+ * Expected output, before the Find out more section
  * ```
  * Constructing pipeline from configuration file.
  *
@@ -59,6 +59,17 @@ const core = require('fiftyone.pipeline.core');
 // out version below it.
 const engine51 = require('../..'); // eslint-disable-line
 // const engine51 = require("fiftyone.pipeline.engines.fiftyone");
+
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tUsage sharing: https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines.fiftyone-examples-usagesharing-usagesharing.js&utm_term=find-out-more-usage-sharing',
+  '\tPipeline API documentation: https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines.fiftyone-examples-usagesharing-usagesharing.js&utm_term=find-out-more-documentation',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines.fiftyone-examples-usagesharing-usagesharing.js&utm_term=find-out-more-contact'
+].join('\n');
 
 console.log('Constructing pipeline from configuration file.');
 console.log();
@@ -78,3 +89,5 @@ const pipeline = new core.PipelineBuilder().buildFromConfigurationFile('51d.json
 console.log(`Pipeline created with share usage element. Evidence processed 
 with this pipeline will now be periodically shared with 51Degrees using the 
 specified configuration.`);
+
+console.log(FIND_OUT_MORE);

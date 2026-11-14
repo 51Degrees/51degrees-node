@@ -39,6 +39,18 @@ const FiftyOnePipelineCore = require(
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tFlow elements of your own: https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-custom-elements',
+  '\tPipeline API documentation: https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-documentation',
+  '\tBuild your own: https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-build-your-own',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Function to get star sign from month and day
 const getStarSign = (month, day) => {
   if ((month === 1 && day <= 20) || (month === 12 && day >= 22)) {
@@ -144,6 +156,8 @@ flowData.process().then(function () {
   // Get the starsign from the results
 
   console.log(flowData.astrology.starSign);
+
+  console.log(FIND_OUT_MORE);
 });
 
 //! [usage]

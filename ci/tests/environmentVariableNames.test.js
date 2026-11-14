@@ -50,7 +50,7 @@ const DIGIT_INITIAL_NAME_FILES = new Set([
     'cloud', 'exampleUtils.js'),
   path.join('ip-intelligence', 'fiftyone.ipintelligence.onpremise',
     'examples', 'onpremise', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence.shared', 'tests',
+  path.join('ip-intelligence', 'fiftyone.ipintelligence.shared', 'lib',
     'keyUtils.js')
 ]);
 

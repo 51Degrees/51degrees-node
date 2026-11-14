@@ -80,9 +80,9 @@ const setPipeline = (options) => {
       'see ' +
       'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
       'A resource key with everything this example displays can be ' +
-      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
+      'created at https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
       'subscription. A free key created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required populates only the ' +
+      'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required populates only the ' +
       'Country, LocationConfidence, Ip and IpV6 properties. See ' +
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
       'more properties. Once complete, populate the config file or ' +
