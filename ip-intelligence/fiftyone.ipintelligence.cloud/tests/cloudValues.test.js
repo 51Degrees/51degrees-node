@@ -72,8 +72,7 @@ const run = async (json) => {
 };
 
 describe('IP Intelligence cloud values', () => {
-  test('weighted values are given as value, weight and rawWeight, with ' +
-    'rawweighting kept',
+  test('weighted values keep rawweighting beside value, weight and rawWeight',
     async () => {
       const { ip } = await run({
         ip: {
