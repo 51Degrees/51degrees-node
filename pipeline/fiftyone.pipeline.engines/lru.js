@@ -48,8 +48,12 @@ class LRU {
   }
 
   write (key, value) {
-    this.ensureLimit();
     key = this.__convertKey(key);
+    // A key holds one node, so writing a key already held replaces it.
+    if (this.cache[key]) {
+      this.remove(key);
+    }
+    this.ensureLimit();
     if (!this.head) {
       this.head = this.tail = new Node(key, value);
     } else {
