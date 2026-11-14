@@ -43,7 +43,12 @@ const Engine = require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPr
 const DATA = path.join(__dirname, '..', '..', '..', 'cxx', 'data',
   'ip-intelligence');
 const SMALL = path.join(DATA, '51Degrees-IPIV4AsnIpiV41.ipi');
-const LARGE = path.join(DATA, '51Degrees-LiteIpiV41.ipi');
+// CI keeps the free Lite data file under its asset name and puts the
+// Enterprise data file under the Lite name, so the asset name comes first.
+const LARGE = ['51Degrees-LiteIpiV41.ipi', '51Degrees-LiteV41.ipi']
+  .map((name) => path.join(DATA, name))
+  .find((file) => fs.existsSync(file)) ||
+  path.join(DATA, '51Degrees-LiteV41.ipi');
 // A Property the second file has and the first does not.
 const ADDED = 'registeredcountry';
 const TIMEOUT_MS = 300000;
