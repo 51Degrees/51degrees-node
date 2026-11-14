@@ -27,6 +27,9 @@
  * which takes a birth date as evidence and uses it to check a
  * lookup table for a starsign.
  *
+ * Give a date of birth as YYYY-MM-DD to look up its star sign, for example
+ * `node simpleEvidenceFlowElement.js 1990-06-21`.
+ *
  */
 
 // First require the core Pipeline
@@ -148,8 +151,9 @@ const pipeline = new FiftyOnePipelineCore.PipelineBuilder()
 // Create the flowData object used to set evidence on and get results from
 const flowData = pipeline.createFlowData();
 
-// Add the date of birth evidence
-flowData.evidence.add('query.dateOfBirth', '2019-09-26');
+// Add the date of birth evidence, the one given as YYYY-MM-DD on the command
+// line, or 26 September 2019 when none is given
+flowData.evidence.add('query.dateOfBirth', process.argv[2] || '2019-09-26');
 
 // Process the flowData
 flowData.process().then(function () {
