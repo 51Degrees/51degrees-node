@@ -69,21 +69,18 @@ class FlowData {
         // approach. For now, we work around this by only passing string keys
         // to the data getters.
         if (typeof key === 'string' || key === Symbol.iterator) {
-          try {
-            let value = data[key];
-            if (typeof value === 'undefined') {
-              value = data.get(key);
-            }
-            return value;
-          } catch (e) {
-            // If the key was 'then' and an error was thrown then we
-            // can ignore it. Otherwise, throw the error back up the stack.
-            // The key can be 'then' when using 'Promise.then(flowData)'.
-            // if (key !== 'then' && key !== 'stopped') {
-            if (key !== 'then') {
-              throw e;
-            }
+          // A promise reads 'then' from every value it resolves with, and
+          // the Pipeline resolves one with the Flow Data at each element.
+          // 'then' is never Element Data, so it is answered here rather
+          // than by a lookup that finds nothing.
+          if (key === 'then') {
+            return undefined;
           }
+          let value = data[key];
+          if (typeof value === 'undefined') {
+            value = data.get(key);
+          }
+          return value;
         }
       }
     });
