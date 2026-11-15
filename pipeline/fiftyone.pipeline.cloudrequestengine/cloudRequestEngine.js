@@ -344,7 +344,7 @@ class CloudRequestEngine extends Engine {
 
     if (discoveryState !== undefined && discoveryState !== null) {
       // A saved copy is used in place of the discovery requests
-      // (cloud-request-engine.md lines 307 to 313).
+      // (cloud-request-engine.md lines 307 to 314).
       useDiscoveryState(this, discoveryState instanceof CloudDiscoveryState
         ? discoveryState
         : CloudDiscoveryState.fromJson(discoveryState));

@@ -23,7 +23,7 @@
 // An Engine can be built from a saved copy of its discovery results, the
 // accepted Evidence keys and the accessible Properties, and then makes no
 // discovery request. The copy is read back once discovery has answered
-// (cloud-request-engine.md lines 307 to 313). Its JSON is the form the Java
+// (cloud-request-engine.md lines 307 to 314). Its JSON is the form the Java
 // package's CloudDiscoveryState writes.
 
 const path = require('path');
