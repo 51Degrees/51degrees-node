@@ -36,6 +36,32 @@ const SOURCE_HEADER_SEPARATOR = ',';
  * headers based on what the browser supports. For example, newer
  * Chrome browsers support the Accept-CH header.
  */
+// The headers each Pipeline's elements can set, kept for each Pipeline,
+// because one Set Headers element can be added to several Pipelines whose
+// elements differ.
+const pipelineHeaders = new WeakMap();
+
+/**
+ * The headers a Pipeline's elements can set, made the first time the
+ * Pipeline asks.
+ *
+ * @param {SetHeadersElement} element the Set Headers element
+ * @param {Pipeline} pipeline the Pipeline
+ * @returns {object} the headers, as constructHeaders gives them
+ */
+const headersOf = function (element, pipeline) {
+  let headers = pipelineHeaders.get(pipeline);
+  if (headers === undefined) {
+    headers = element.constructHeaders(pipeline);
+    pipelineHeaders.set(pipeline, headers);
+  }
+  // Holds the first Pipeline's, as it always has.
+  if (element.headers === null) {
+    element.headers = headers;
+  }
+  return headers;
+};
+
 class SetHeadersElement extends FlowElement {
   constructor () {
     super(...arguments);
@@ -114,10 +140,6 @@ class SetHeadersElement extends FlowElement {
    * @param {FlowData} flowData the FlowData being processed
    */
   processInternal (flowData) {
-    if (this.headers === null) {
-      this.headers = this.constructHeaders(flowData.pipeline);
-    }
-
     const data = new ElementDataDictionary({
       flowElement: this,
       contents: { responseheadersdictionary: this.getResponseHeaders(flowData) }
@@ -136,7 +158,8 @@ class SetHeadersElement extends FlowElement {
    */
   getResponseHeaders (flowData) {
     const result = {};
-    for (const [, header] of Object.entries(this.headers)) {
+    const headers = headersOf(this, flowData.pipeline);
+    for (const [, header] of Object.entries(headers)) {
       const headerValue = new Set();
       header.properties.forEach(property => {
         const keys = property.split('.');
