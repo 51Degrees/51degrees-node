@@ -127,8 +127,9 @@ describe('refreshing the data', () => {
       const expected = valuesOf(await processed(pipeline));
       expect(expected[0]).toBe(true);
 
-      // One request processed before the refresh and read after it, and a
-      // batch started either side of the refresh, read once all are done.
+      // One request processed before the refresh and read after it, a batch
+      // started either side of the refresh, and one processed after the
+      // batch, all read once the last is done.
       const early = await processed(pipeline);
       const batch = [];
       for (let i = 0; i < REQUESTS; i++) {
@@ -137,12 +138,10 @@ describe('refreshing the data', () => {
         }
         batch.push(processed(pipeline));
       }
-      // Collected before the next wait, so that a request that fails is a
-      // failure of this test rather than an unhandled rejection.
-      const all = Promise.all(batch);
+      const done = await Promise.all(batch);
       const late = await processed(pipeline);
 
-      for (const flowData of [early, ...(await all), late]) {
+      for (const flowData of [early, ...done, late]) {
         expect(flowData.errors).toEqual({});
         expect(valuesOf(flowData)).toEqual(expected);
       }
