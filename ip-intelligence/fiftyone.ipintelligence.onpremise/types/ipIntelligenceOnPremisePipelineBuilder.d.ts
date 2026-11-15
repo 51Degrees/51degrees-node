@@ -12,7 +12,7 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * @param {object} options the options for the pipeline builder
      * @param {string} [options.licenceKeys] license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremisepipelinebuilder.js&utm_term=constructor.
      * A key is needed only when autoUpdate or updateOnStart is on with the
      * default dataUpdateUrl, and the engine refuses to build without one
      * then. The file system watcher needs no key.

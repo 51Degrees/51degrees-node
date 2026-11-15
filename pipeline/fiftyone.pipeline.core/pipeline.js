@@ -47,8 +47,12 @@ class Pipeline {
   constructor (flowElements = [], suppressProcessExceptions = false, dataFileUpdateService = null) {
     const pipeline = this;
 
-    // The chain of flowElements to run, including arrays of parallel elements
-    this.flowElementsChain = flowElements;
+    // The chain of flowElements to run, including arrays of parallel
+    // elements. A frozen copy, so a built Pipeline cannot change whatever
+    // happens to the lists it was given.
+    this.flowElementsChain = /** @type {FlowElement[]} */ (Object.freeze(
+      flowElements.map((slot) =>
+        Array.isArray(slot) ? Object.freeze([...slot]) : slot)));
 
     // If true then pipeline will suppress exceptions added to FlowData.
     this.suppressProcessExceptions = suppressProcessExceptions;
@@ -59,7 +63,8 @@ class Pipeline {
      */
     this.eventEmitter = new EventEmitter();
 
-    // Flattened dictionary of flowElements the pipeline contains
+    // Flattened dictionary of flowElements the pipeline contains, frozen
+    // once the constructor has filled it
     /**
      * @type {object}
      */
@@ -90,7 +95,8 @@ class Pipeline {
       });
     };
 
-    storeInFlowElementList(flowElements);
+    storeInFlowElementList(this.flowElementsChain);
+    Object.freeze(this.flowElements);
 
     // Empty property database, later populated and possibly
     // updated by flowElements' property lists
@@ -228,7 +234,7 @@ class Pipeline {
     // error is written to the console instead, masked, because the console
     // is the end of the line. A failed detection's message arrives already
     // masked by FlowData.setError. The cloud engine also logs an error here
-    // for a missing or null element while the detection carries on.
+    // for a null element while the detection carries on.
     if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
       console.error(LicenseKeys.mask(message));
       return;

@@ -100,7 +100,7 @@ if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
     // rest of the example.
     resourceKeySet = false;
     console.log('You need to create a resource key at ' +
-        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and paste it into the 51d.json ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the 51d.json ' +
         'config file, replacing !!YOUR_RESOURCE_KEY!!.');
   }
 

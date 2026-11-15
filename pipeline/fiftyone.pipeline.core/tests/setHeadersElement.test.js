@@ -119,3 +119,16 @@ test('testGetResponseHeaderValue - append to existing header', async () => {
   // Check the correct headers were added to the response.
   expect(response.getHeader('Accept-CH')).toBe(`existing,${browserValue.value}`);
 });
+
+// set-headers-element.md line 17: the identifier has no upper-case character
+// after its first, so it may hold digits and other characters, and the
+// header name starts at the next upper-case character.
+each([
+  ['SetHeaderBrowserAccept-CH', 'Accept-CH'],
+  ['SetHeaderBrowser2Accept-CH', 'Accept-CH'],
+  ['SetHeaderUa_platform9Critical-CH', 'Critical-CH'],
+  ['SetHeaderX1Accept-CH', 'Accept-CH']
+]).test('the header name of %s is %s', (property, header) => {
+  const SetHeadersElement = require('../setHeadersElement');
+  expect(SetHeadersElement.prototype.getHeaderName(property)).toBe(header);
+});

@@ -78,6 +78,15 @@ const helpers = {
     'examples', 'onpremise', 'exampleUtils.js')
 };
 
+// The examples that download the Enterprise data file, which read the
+// licence key through a function of their own.
+const updateDataFileExamples = {
+  dd: path.join(DD, 'fiftyone.devicedetection.onpremise', 'examples',
+    'onpremise', 'updatedatafile-console', 'updatedatafile.js'),
+  ipi: path.join(IPI, 'fiftyone.ipintelligence.onpremise', 'examples',
+    'onpremise', 'updatedatafile-console', 'updatedatafile.js')
+};
+
 // Each helper that reads a variable: what it is, the file, how the value
 // is read from it, the name in use and the old name behind it. The last
 // entry is false where the helper searches for a file when neither name
@@ -123,7 +132,11 @@ const reads = [
     IPI_PATH, digitName('IPI_PATH'), false],
   ['IP Intelligence on-premise examples', helpers.ipiOnPremiseExamples,
     (utils) => utils.ExampleUtils.findDeviceDataFile('no-such-file.hash'),
-    DD_PATH, digitName('DD_PATH'), false]
+    DD_PATH, digitName('DD_PATH'), false],
+  ['device detection update data file example', updateDataFileExamples.dd,
+    (example) => example.getLicenseKey(), LICENSE_KEY, 'LicenseKey', true],
+  ['IP Intelligence update data file example', updateDataFileExamples.ipi,
+    (example) => example.getLicenseKey(), LICENSE_KEY, 'LicenseKey', true]
 ];
 
 // The examples that read a variable themselves.
@@ -179,6 +192,7 @@ const allNames = [...new Set([
   RESOURCE_KEY, LICENSE_KEY, DD_PATH, IPI_PATH,
   '_51DEGREES_RESOURCE_KEY_BESPOKE', '_51DEGREES_LICENSE_KEY_51DID',
   'LICENSE_KEY', 'TEST_LICENSE_KEY', 'TEST_IPI_RESOURCE_KEY',
+  'LicenseKey', 'LICENSEKEY',
   digitName('RESOURCE_KEY'), digitName('DD_PATH'), digitName('IPI_PATH'),
   ...Object.keys(DD_TEST_KEYS), ...Object.values(DD_TEST_KEYS)
 ])];

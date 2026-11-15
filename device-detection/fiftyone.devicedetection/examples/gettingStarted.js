@@ -85,8 +85,9 @@ const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +
-        'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection-examples-gettingstarted.js&utm_term=resource-key-required and paste it into ' +
-        'the code, replacing !!YOUR_RESOURCE_KEY!!');
+        'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection-examples-gettingstarted.js&utm_term=resource-key-required and set the ' +
+        'environment variable _51DEGREES_RESOURCE_KEY to it, or paste it ' +
+        'into the code, replacing !!YOUR_RESOURCE_KEY!!.');
   console.log('Make sure to include the ismobile property ' +
         'as it is used by this example.');
   console.log(FIND_OUT_MORE);
