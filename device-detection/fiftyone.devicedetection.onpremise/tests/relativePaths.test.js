@@ -63,6 +63,18 @@ const isMobile = async (options) => {
 
 describe('a relative path', () => {
   let folder;
+  let workingFolder;
+
+  // The tests run from this folder, which is on the same drive as the data
+  // file, so a path to the file can be made relative to it on Windows too.
+  beforeAll(() => {
+    workingFolder = process.cwd();
+    process.chdir(__dirname);
+  });
+
+  afterAll(() => {
+    process.chdir(workingFolder);
+  });
 
   beforeAll(() => {
     if (!fs.existsSync(LITE)) {
