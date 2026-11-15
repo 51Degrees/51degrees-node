@@ -75,7 +75,7 @@ function reportOldEndpointVariable (engine, flowData) {
 const discoveryAttempts = new WeakMap();
 
 // The failures to a discovery request that got no answer or a 5xx, which
-// cloud-request-engine.md lines 258 to 263 treat as transient.
+// cloud-request-engine.md lines 259 to 264 treat as transient.
 const transientFailures = new WeakSet();
 
 // For an engine in no Pipeline when its build attempt failed, what the

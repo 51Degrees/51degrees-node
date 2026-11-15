@@ -24,7 +24,7 @@
 // so that a built engine is ready to process (cloud-request-engine.md line
 // 241). A transient failure then, being no answer or a 5xx, does not fail
 // the build. The engine logs a warning and tries discovery again on first
-// use (lines 258 to 263).
+// use (lines 259 to 264).
 
 const path = require('path');
 const MockRequestClient = require('./classes/mockRequestClient');
