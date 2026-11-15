@@ -23,7 +23,7 @@
 // A Pipeline's Resource Key and License Key, held as the Evidence
 // fiftyone.resource-key and fiftyone.license-key, are shared whatever the
 // configuration, because usage is counted against them
-// (usage-sharing-element.md lines 77 to 80).
+// (usage-sharing-element.md lines 76 to 79).
 
 const ShareUsage = require('../shareUsage');
 const ShareUsageEvidenceKeyFilter = require('../shareUsageEvidenceKeyFilter');
