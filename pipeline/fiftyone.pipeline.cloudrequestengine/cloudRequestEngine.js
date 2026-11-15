@@ -315,9 +315,10 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Typically, cloud will return errors as JSON.
-   * However, transport level errors or other failures can result in
-   * responses that are plain text. This function handles these cases.
+   * The error messages a failed answer's body gives, being each entry of
+   * its errors array, or the no data message when the body is empty. A body
+   * that is not JSON, or has no errors array, gives none, so that
+   * getErrorsFromResponse describes the failure by its status.
    *
    * @param {string} responseBody the response data to process
    * @param {string} url the address the request went to
@@ -331,7 +332,7 @@ class CloudRequestEngine extends Engine {
     try {
       parsed = JSON.parse(responseBody);
     } catch (parseError) {
-      return ['Error parsing response - ' + responseBody];
+      return [];
     }
     return parsed !== null && typeof parsed === 'object' &&
       Array.isArray(parsed.errors)
@@ -386,10 +387,13 @@ class CloudRequestEngine extends Engine {
         response.statusCode));
     });
 
-    if (cloudErrors.length === 0 &&
-      response.statusCode > 299) {
-      const message = `Cloud service at '${url}' returned status code ` +
-        `'${response.statusCode}' with content ${content}`;
+    // With no entry to give, a failed answer is described by its status,
+    // and a request that got no answer by the reason it failed.
+    if (cloudErrors.length === 0) {
+      const message = response.statusCode > 299
+        ? `Cloud service at '${url}' returned status code ` +
+          `'${response.statusCode}' with content ${content}`
+        : 'Error parsing response - ' + content;
       cloudErrors.push(new CloudRequestError(
         LicenseKeys.mask(message, licenseKey),
         response.headers,
