@@ -605,3 +605,19 @@ test('share usage back-off - pause and resume reach the Pipeline as warn and inf
         entry.message.includes('resumed')),
     () => `No information that sending resumed was heard. Heard: ${JSON.stringify(heard)}`);
 }, 30000);
+
+/**
+ * The pause is heard at the deprecated level 'warning' as well, so that a
+ * listener on it still hears usage sharing's warnings in this release.
+ */
+test('share usage back-off - pause still reaches the deprecated warning level', async () => {
+  const pipeline = createPipeline();
+  const heard = [];
+  pipeline.on('warning', message => heard.push(String(message)));
+  holdClock();
+  await failSends(pipeline, 10);
+
+  await waitFor(
+    () => heard.some(message => message.includes('paused for 2 ')),
+    () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);
