@@ -181,8 +181,10 @@ RegisteredCountry, RegisteredName and RegisteredOwner. The example reads each
 value through `getValueHelper` in
 `ip-intelligence/fiftyone.ipintelligence.shared/lib/dataExtension.js`,
 which catches the error a missing property raises, so the lines for the other
-properties read `Unknown (...)` and the example carries on. It ends with the
-same two lines about the data file.
+properties read `Unknown (...)` and the example carries on. It then gives each
+value of Registered Country again with its weighting, which is 1 for a single
+answer, as `Registered Country: CH, weighting 1`. It ends with the same two
+lines about the data file.
 
 The paid data files have many more properties, as the
 [pricing page](https://51degrees.com/pricing?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=correct-output)
