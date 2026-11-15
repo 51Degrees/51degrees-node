@@ -22,5 +22,6 @@
 
 module.exports = {
   CloudRequestEngine: require('./cloudRequestEngine'),
-  CloudEngine: require('./cloudEngine')
+  CloudEngine: require('./cloudEngine'),
+  CloudDiscoveryState: require('./cloudDiscoveryState')
 };
