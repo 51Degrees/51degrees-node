@@ -25,6 +25,56 @@ const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
 
 /**
+ * Whether a value is an Aspect Property Value, which carries hasValue.
+ *
+ * @param {*} value the value
+ * @returns {boolean} true when it carries hasValue
+ */
+const isAspectValue = function (value) {
+  return value !== null && typeof value === 'object' &&
+    Object.prototype.hasOwnProperty.call(value, 'hasValue');
+};
+
+/**
+ * An item of a list Property as the JSON carries it. An item that is Element
+ * Data, or an object whose every value is an Aspect Property Value as each
+ * hardware profile is, is written as an object whose Properties follow the
+ * rules for the Element Data's own Properties, so a Property with no value
+ * is null with its nullreason, a plain null has no entry, and every key is
+ * in lower case. Any other item is written as it is.
+ *
+ * @param {*} item the item
+ * @returns {*} the item as the JSON carries it
+ */
+const listItem = function (item) {
+  let contents;
+  if (item instanceof ElementDataDictionary) {
+    contents = item.contents;
+  } else if (item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false && Object.keys(item).length > 0 &&
+    Object.values(item).every(isAspectValue)) {
+    contents = item;
+  } else {
+    return item;
+  }
+  const written = {};
+  for (const [key, value] of Object.entries(contents)) {
+    const name = key.toLowerCase();
+    if (isAspectValue(value)) {
+      if (value.hasValue) {
+        written[name] = value.value;
+      } else {
+        written[name] = null;
+        written[name + 'nullreason'] = value.noValueMessage;
+      }
+    } else if (value !== null && value !== undefined) {
+      written[name] = value;
+    }
+  }
+  return written;
+};
+
+/**
  * @typedef {import('./flowData')} FlowData
  */
 
@@ -187,6 +237,12 @@ class JSONBundlerElement extends FlowElement {
             // Standard value
 
             value = valueContainer;
+          }
+
+          // A list of Element Data, such as the hardware profiles, is a
+          // list of objects whose Properties follow the same rules.
+          if (Array.isArray(value)) {
+            value = value.map(listItem);
           }
         } catch (e) {
           // Catching missing property exceptions and other errors

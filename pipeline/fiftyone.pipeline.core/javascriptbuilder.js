@@ -115,7 +115,7 @@ const maxSequence = 2147483647;
  * The session id to write into the script, which is the value given when it
  * is safe to write and an empty string otherwise.
  *
- * @param {*} value the session id evidence
+ * @param {*} value the session id from the Sequence Element
  * @returns {string} the session id, or an empty string
  */
 function safeSessionId (value) {
@@ -131,7 +131,7 @@ function safeSessionId (value) {
  * number could break the script, and a number below 1 is not a sequence the
  * Sequence Element would ever give.
  *
- * @param {*} value the sequence evidence
+ * @param {*} value the sequence from the Sequence Element
  * @returns {number} the sequence, which is always at least 1
  */
 function safeSequence (value) {
@@ -380,10 +380,19 @@ class JavaScriptBuilderElement extends FlowElement {
 
     settings._hasDelayedProperties = settings._jsonObject.includes('delayexecution');
 
-    settings._sessionId =
-      safeSessionId(flowData.evidence.get('query.session-id'));
-    settings._sequence =
-      safeSequence(flowData.evidence.get('query.sequence'));
+    // The session id and the sequence come from the Sequence Element's
+    // data. Where there is no Sequence Element, or its data lacks one of
+    // them, the script gets an empty session id and a sequence of 1, so it
+    // always parses.
+    const fromSequenceElement = (key) => {
+      try {
+        return flowData.get('sequence').get(key);
+      } catch (e) {
+        return undefined;
+      }
+    };
+    settings._sessionId = safeSessionId(fromSequenceElement('session-id'));
+    settings._sequence = safeSequence(fromSequenceElement('sequence'));
 
     // Try and get the requested enable cookies from evidence.
     const enableCookies = flowData.evidence.get(Constants.evidenceEnableCookies);
