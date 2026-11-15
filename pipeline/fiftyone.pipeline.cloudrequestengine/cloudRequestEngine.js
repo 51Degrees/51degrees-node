@@ -69,13 +69,9 @@ function reportOldEndpointVariable (engine, flowData) {
   }
 }
 
-// The discovery attempt each engine is making, shared by everything that
-// waits for discovery while it is under way.
+// The discovery attempt each engine is making, shared by the build and every
+// process that starts while it is under way.
 const discoveryAttempts = new WeakMap();
-
-// The attempt each engine made when it was built, which settles once any
-// failure has been logged.
-const buildAttempts = new WeakMap();
 
 // The failures to a discovery request that got no answer or a 5xx, which
 // cloud-request-engine.md lines 258 to 263 treat as transient.
@@ -299,8 +295,7 @@ class CloudRequestEngine extends Engine {
     // Both discovery requests are made now, so that in the normal case the
     // engine is ready to process once it is built
     // (cloud-request-engine.md line 241).
-    buildAttempts.set(this, discover(this)
-      .catch((errors) => reportBuildFailure(this, errors)));
+    discover(this).catch((errors) => reportBuildFailure(this, errors));
   }
 
   /**
@@ -380,9 +375,10 @@ class CloudRequestEngine extends Engine {
   /**
    * Has the evidence keys and properties before processing, whatever else
    * is in the pipeline, because the cache key is built from the evidence
-   * keys. A process that starts while the attempt made at build is under
-   * way waits for it. When discovery has failed it is tried again, and a
-   * failure then is the process error.
+   * keys. A process that starts while a discovery attempt is under way,
+   * such as the one made when the engine was built, shares its answer. A
+   * process that starts after discovery failed tries again, and a failure
+   * is the process error.
    *
    * @param {FlowData} flowData FlowData to process
    * @returns {Promise} resolved once the FlowData is processed
@@ -395,11 +391,9 @@ class CloudRequestEngine extends Engine {
     }
     // One fetch at a time, shared by the requests that wait on it.
     if (this.discovery === undefined) {
-      this.discovery = buildAttempts.get(this)
-        .then(() => this.ready())
-        .finally(() => {
-          this.discovery = undefined;
-        });
+      this.discovery = this.ready().finally(() => {
+        this.discovery = undefined;
+      });
     }
     return this.discovery.then(() => super.process(flowData));
   }
