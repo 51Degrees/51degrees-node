@@ -74,7 +74,6 @@ const listItem = function (item) {
   return written;
 };
 
-// The Property types whose values are WKT text.
 /**
  * Whether an item of a list is a weighted value, as the on-premise engines
  * give one with rawWeight, or as the cloud service writes one with
@@ -288,9 +287,9 @@ class JSONBundlerElement extends FlowElement {
             value = valueContainer;
           }
 
-          // A weighted value, a WKT value and a list of Element Data, such
-          // as the hardware profiles, are written in the forms the
-          // specification gives.
+          // Each item of a weighted value gets rawweighting and value, and
+          // each item of a list of Element Data, such as the hardware
+          // profiles, is written as that Element Data's own Properties are.
           value = jsonValue(value);
         } catch (e) {
           // Catching missing property exceptions and other errors
