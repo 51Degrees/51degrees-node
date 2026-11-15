@@ -26,7 +26,6 @@
 // missing product is logged once for each engine, at warning level, naming
 // its data key (cloud-aspect-engine.md lines 63 to 68).
 
-const util = require('util');
 const path = require('path');
 const MockRequestClient = require('./classes/mockRequestClient');
 
@@ -40,10 +39,6 @@ const CloudRequestEngine = require('../cloudRequestEngine');
 const CloudEngine = require('../cloudEngine');
 const PipelineBuilder = require(
   path.resolve(__dirname, '../../fiftyone.pipeline.core/pipelineBuilder'));
-const coreErrorMessages = require(
-  path.resolve(__dirname, '../../fiftyone.pipeline.core/errorMessages'));
-const engineErrorMessages = require(
-  path.resolve(__dirname, '../../fiftyone.pipeline.engines/errorMessages'));
 
 const dataKey = 'ip';
 
@@ -143,10 +138,10 @@ function thrownReading (flowData, property) {
 }
 
 const missingPropertyMessage =
-  util.format(coreErrorMessages.genericMissingProperties,
-    'registeredcountry') +
-  ' in data for element "' + dataKey + '".' +
-  util.format(engineErrorMessages.cloudNoPropertiesAccess, dataKey);
+  "Property 'registeredcountry' not found in data for element '" + dataKey +
+  "'. This is because your resource key does not include access to any " +
+  "properties under '" + dataKey + "'. Check or create a resource key " +
+  'with the properties you need on the configuration page at https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-errormessages.js&utm_term=missingpropertyproduct.';
 
 test('an answer without the element resolves and warns the key lacks it',
   async () => {
