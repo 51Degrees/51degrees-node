@@ -152,6 +152,8 @@ test('there is no copy before discovery has answered, nor after it fails',
 
 test('a copy without the evidence keys or the accessible properties answer ' +
   'is refused', () => {
+  expect(() => new CloudDiscoveryState(['header.user-agent'],
+    { Products: {} })).not.toThrow();
   expect(() => new CloudDiscoveryState(undefined, { Products: {} }))
     .toThrow(TypeError);
   expect(() => new CloudDiscoveryState(['header.user-agent'], '{}'))
