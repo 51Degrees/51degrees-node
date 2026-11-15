@@ -224,7 +224,9 @@ describe('accepted combinations', () => {
 
   test('a list may be one comma separated string', () => {
     const engine = new CloudRequestEngine({
-      licenseKey, requestedProperties: ' device.ismobile , device.istablet,'
+      licenseKey,
+      requestedProperties: ' device.ismobile , device.istablet,',
+      requestClient: new RecordingClient()
     });
 
     expect(engine.requestedProperties).toEqual(requested);
@@ -236,7 +238,8 @@ describe('accepted combinations', () => {
     const engine = new CloudRequestEngine({
       resourceKey: ' ' + resourceKey + '\n',
       licenseKey: '   ',
-      requestedProperties: [' ', '']
+      requestedProperties: [' ', ''],
+      requestClient: new RecordingClient()
     });
 
     expect(engine.resourceKey).toBe(' ' + resourceKey + '\n');
