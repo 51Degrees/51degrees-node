@@ -180,7 +180,18 @@ class Helpers {
    * from.
    */
   static setResponseHeaders (response, flowData) {
-    for (const [key, value] of Object.entries(flowData['set-headers'].responseheadersdictionary)) {
+    let headers;
+    try {
+      headers = flowData.get('set-headers').responseheadersdictionary;
+    } catch (e) {
+      // A request whose processing stopped before the Set Headers element
+      // has no headers to set, and its response goes on without them
+      // rather than failing the request.
+      flowData.pipeline.log('warn', 'No response headers were set, as ' +
+        'the Flow Data has no result from the Set Headers element. ' + e);
+      return;
+    }
+    for (const [key, value] of Object.entries(headers || {})) {
       if (response.hasHeader(key)) {
         response.setHeader(key, `${response.getHeader(key)},${value}`);
       } else {
