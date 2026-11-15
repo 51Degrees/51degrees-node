@@ -510,7 +510,8 @@ class DeviceDetectionOnPremise extends Engine {
     // nothing can change its results, and keeps every key, so evidence
     // set before then is not lost. initEngine replaces both with the keys
     // the file lists.
-    this.evidenceKeyFilter = new EvidenceKeyFilter([]);
+    this.evidenceKeyFilter = /** @type {AnyEvidenceKeyFilter} */ (
+      new EvidenceKeyFilter([]));
     this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
 
     const current = this;
