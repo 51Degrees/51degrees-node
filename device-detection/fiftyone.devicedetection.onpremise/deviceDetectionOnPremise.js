@@ -36,7 +36,9 @@ const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
-const metricCategory = 'Device metrics';
+const metricCategory = 'Device Metrics';
+// The data files every match metric Property is available with.
+const metricDataFiles = ['Lite', 'Premium', 'Enterprise', 'TAC'];
 const Component = require('./component');
 const Property = require('./property');
 const Profile = require('./profile');
@@ -101,11 +103,43 @@ const initMatchMetrics = function () {
     }
   };
 
-  // Special properties
+  // Special properties, added in the order the specification lists them
+  this.properties.matchedNodes = {
+    name: 'MatchedNodes',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.matchedNodesDescription,
+    component: metricComponent
+  };
+
+  this.properties.difference = {
+    name: 'Difference',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.differenceDescription,
+    component: metricComponent
+  };
+
+  this.properties.drift = {
+    name: 'Drift',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.driftDescription,
+    component: metricComponent
+  };
+
   this.properties.deviceID = {
     name: 'DeviceId',
     type: 'string',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: '0-0-0-0',
     description: constants.deviceIdDescription,
     component: metricComponent
   };
@@ -114,39 +148,9 @@ const initMatchMetrics = function () {
     name: 'UserAgents',
     type: 'string[]',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: [],
     description: constants.userAgentsDescription,
-    component: metricComponent
-  };
-
-  this.properties.difference = {
-    name: 'Difference',
-    type: 'int',
-    category: metricCategory,
-    description: constants.differenceDescription,
-    component: metricComponent
-  };
-
-  this.properties.method = {
-    name: 'Method',
-    type: 'string',
-    category: metricCategory,
-    description: constants.methodDescription,
-    component: metricComponent
-  };
-
-  this.properties.matchedNodes = {
-    name: 'MatchedNodes',
-    type: 'int',
-    category: metricCategory,
-    description: constants.matchedNodesDescription,
-    component: metricComponent
-  };
-
-  this.properties.drift = {
-    name: 'Drift',
-    type: 'int',
-    category: metricCategory,
-    description: constants.driftDescription,
     component: metricComponent
   };
 
@@ -154,18 +158,30 @@ const initMatchMetrics = function () {
     name: 'Iterations',
     type: 'int',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
     description: constants.iterationsDescription,
     component: metricComponent
   };
 
+  this.properties.method = {
+    name: 'Method',
+    type: 'string',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 'NONE',
+    description: constants.methodDescription,
+    component: metricComponent
+  };
+
   metricComponent.properties = [
+    this.properties.matchedNodes,
+    this.properties.difference,
+    this.properties.drift,
     this.properties.deviceID,
     this.properties.userAgents,
-    this.properties.difference,
-    this.properties.method,
-    this.properties.matchedNodes,
-    this.properties.drift,
-    this.properties.iterations
+    this.properties.iterations,
+    this.properties.method
   ];
 
   this.components.metrics = metricComponent;
@@ -210,8 +226,9 @@ class DeviceDetectionOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-   * @param {Array<string>} options.restrictedProperties list of properties the engine
-   * will be restricted to
+   * @param {Array<string>|string} options.restrictedProperties list of
+   * properties the engine will be restricted to, or one comma separated
+   * string of them, as a configuration file gives a list
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
@@ -373,8 +390,9 @@ class DeviceDetectionOnPremise extends Engine {
     // Create vector for restricted properties
     const propertiesList = new swigWrapper.VectorStringSwig();
 
-    if (restrictedProperties) {
-      restrictedProperties.forEach(function (property) {
+    const restricted = core.listSetting(restrictedProperties);
+    if (restricted) {
+      restricted.forEach(function (property) {
         propertiesList.add(property);
       });
     }
@@ -465,6 +483,23 @@ class DeviceDetectionOnPremise extends Engine {
     const current = this;
 
     /**
+     * The accepted Evidence keys the native engine gives for the data it
+     * holds, read at start-up and after each refresh, because a new data
+     * file can accept other keys.
+     *
+     * @param {object} engine the native engine
+     * @returns {EvidenceKeyFilter} a filter of those keys
+     */
+    const readEvidenceKeyFilter = function (engine) {
+      const evidenceKeys = engine.getKeys();
+      const evidenceKeyArray = [];
+      for (let i = 0; i < evidenceKeys.size(); i += 1) {
+        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
+      }
+      return new EvidenceKeyFilter(evidenceKeyArray);
+    };
+
+    /**
      * Function for initialising the engine, wrapped like this so
      * that an engine can be initialised once the datafile is
      * retrieved if updateOnStart is set to true
@@ -474,17 +509,7 @@ class DeviceDetectionOnPremise extends Engine {
     this.initEngine = function () {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
-      // Get keys and add to evidenceKey filter
-
-      const evidenceKeys = engine.getKeys();
-
-      const evidenceKeyArray = [];
-
-      for (let i = 0; i < evidenceKeys.size(); i += 1) {
-        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
-      }
-
-      current.evidenceKeyFilter = new EvidenceKeyFilter(evidenceKeyArray);
+      current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;
@@ -549,6 +574,7 @@ class DeviceDetectionOnPremise extends Engine {
     dataFileSettings.refresh = function () {
       if (current.engine) {
         current.engine.refreshData();
+        current.evidenceKeyFilter = readEvidenceKeyFilter(current.engine);
       } else {
         current.initEngine();
         current.startUpError = undefined;

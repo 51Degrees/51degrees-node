@@ -78,7 +78,7 @@ let server;
 
 if (myResourceKey.substring(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
   console.log(FIND_OUT_MORE);
 } else {
@@ -110,10 +110,16 @@ if (myResourceKey.substring(0, 2) === '!!') {
     // (headers, cookies and additional client side provided information)
     flowData.evidence.addFromRequest(req);
 
+    // A matching If-None-Match on the JSON endpoint gets its 304 without
+    // processing.
+    if (req.url.startsWith('/json') &&
+      core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
+
     flowData.process().then(function () {
       if (req.url.startsWith('/json')) {
-        // Return the json to the client, with the caching headers, and a
-        // 304 to a matching If-None-Match.
+        // Return the json to the client, with the caching headers.
         core.Helpers.writeClientSideResponse(req, res, flowData,
           'application/json', JSON.stringify(flowData.jsonbundler.json));
       } else {

@@ -188,7 +188,18 @@ class FlowData {
   get (flowElementDataKey) {
     this.pipeline.log('debug', 'Getting flowElement ' + flowElementDataKey);
 
-    const elementData = this.data[flowElementDataKey];
+    let elementData = this.data[flowElementDataKey];
+    if (typeof elementData === 'undefined' &&
+      typeof flowElementDataKey === 'string') {
+      // A key is compared ignoring its letter case, so a key that finds
+      // nothing as given is looked for again that way.
+      const lower = flowElementDataKey.toLowerCase();
+      const key = Object.keys(this.data)
+        .find((dataKey) => dataKey.toLowerCase() === lower);
+      if (key !== undefined) {
+        elementData = this.data[key];
+      }
+    }
     if (typeof elementData === 'undefined') {
       const message = util.format(errorMessages.noElementData,
         flowElementDataKey, Object.keys(this.data).join(', '));
