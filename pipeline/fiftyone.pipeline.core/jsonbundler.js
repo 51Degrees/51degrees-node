@@ -24,9 +24,11 @@ const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
 
-// The delayed execution Properties of each element by its data key, made
-// once for each Pipeline, because one JSON Builder can be added to several
-// Pipelines whose elements differ.
+// The delayed execution Properties of each element by its data key, kept for
+// each Pipeline, because one JSON Builder can be added to several Pipelines
+// whose elements differ. An element's entry is made again once its
+// Properties are replaced, as a cloud engine's are when discovery succeeds
+// and an on-premise engine's when its data file is refreshed.
 const pipelineCaches = new WeakMap();
 
 /**
@@ -147,12 +149,11 @@ class JSONBundlerElement extends FlowElement {
       javascriptProperties: []
     };
 
-    // Check if this Pipeline's property cache has already been set
+    // This Pipeline's property cache
 
     let cache = pipelineCaches.get(flowData.pipeline);
-    const propertyCacheSet = cache !== undefined;
 
-    if (!propertyCacheSet) {
+    if (cache === undefined) {
       cache = {};
       pipelineCaches.set(flowData.pipeline, cache);
     }
@@ -180,7 +181,8 @@ class JSONBundlerElement extends FlowElement {
 
       const properties = flowElementObject.getProperties();
 
-      if (!propertyCacheSet) {
+      if (cache[flowElement] === undefined ||
+        cache[flowElement].properties !== properties) {
         const delayExecutionList = [];
         const delayedEvidenceProperties = {};
 
@@ -214,6 +216,7 @@ class JSONBundlerElement extends FlowElement {
         }
 
         cache[flowElement] = {
+          properties,
           delayExecutionList,
           evidenceProperties: delayedEvidenceProperties
         };
