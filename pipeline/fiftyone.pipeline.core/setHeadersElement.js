@@ -27,15 +27,6 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 // SetHeader source headers separator
 const SOURCE_HEADER_SEPARATOR = ',';
 
-/**
- * @typedef {import('./pipeline')} Pipeline
- * @typedef {import('./flowData')} FlowData
- */
-/**
- * Set response headers element class. This is used to get response
- * headers based on what the browser supports. For example, newer
- * Chrome browsers support the Accept-CH header.
- */
 // The headers each Pipeline's elements can set, kept for each Pipeline,
 // because one Set Headers element can be added to several Pipelines whose
 // elements differ.
@@ -62,6 +53,15 @@ const headersOf = function (element, pipeline) {
   return headers;
 };
 
+/**
+ * @typedef {import('./pipeline')} Pipeline
+ * @typedef {import('./flowData')} FlowData
+ */
+/**
+ * Set response headers element class. This is used to get response
+ * headers based on what the browser supports. For example, newer
+ * Chrome browsers support the Accept-CH header.
+ */
 class SetHeadersElement extends FlowElement {
   constructor () {
     super(...arguments);
@@ -75,6 +75,7 @@ class SetHeadersElement extends FlowElement {
         type: 'object'
       }
     };
+    /** @type {object} */
     this.headers = null;
   }
 
