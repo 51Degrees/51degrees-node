@@ -112,6 +112,10 @@ const fixDataFilePaths = (options) => {
 
 const setPipeline = (options) => {
   fixDataFilePaths(options);
+  // Usage sharing is on, as this example's 51d.json names the usage sharing
+  // element and as it should be in production, because the usage data shared
+  // improves the data and the service for everyone. The console examples
+  // turn it off, as they run sample evidence only.
   pipeline = new core.PipelineBuilder().buildFromConfiguration(options);
 
   // Logging of errors and other messages.
