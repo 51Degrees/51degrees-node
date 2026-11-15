@@ -95,12 +95,19 @@ const outputValue = function (name, value) {
  * @returns {string} a line for each value, or nothing where there is none
  */
 const outputWeightings = function (name, property) {
-  if (!property || property.hasValue !== true ||
-    !Array.isArray(property.value)) {
+  if (!property || property.hasValue !== true) {
     return '';
   }
-  return property.value
-    .map((item) => `\n\t${name}: ${item.value}, weighting ${item.weight}`)
+  // A property gives a list of weighted values, or a single value, which
+  // is the one answer, so its weighting is 1.
+  const items = Array.isArray(property.value)
+    ? property.value
+    : [property.value];
+  return items
+    .map((item) => item !== null && typeof item === 'object' &&
+      item.weight !== undefined
+      ? `\n\t${name}: ${item.value}, weighting ${item.weight}`
+      : `\n\t${name}: ${item}, weighting 1`)
     .join('');
 };
 
