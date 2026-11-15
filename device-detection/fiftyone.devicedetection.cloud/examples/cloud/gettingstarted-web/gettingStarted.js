@@ -138,28 +138,47 @@ const DataExtension =
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
+// Where to go next, printed when the example ends with no resource key. The
+// page holds the same section when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Pipeline variable to be used
 let pipeline;
+
+// What the example says when it has no resource key, which it needs to use
+// the 51Degrees cloud service.
+const NO_RESOURCE_KEY_MESSAGE =
+  'No resource key specified in the configuration file ' +
+  '\'51d.json\' or the environment variable ' +
+  `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+  'service is accessed using a \'ResourceKey\'. For more information ' +
+  'see ' +
+  'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+  'A resource key with the free properties used by this example can ' +
+  'be created at https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
+  'key populates the free properties only, whilst a key created at ' +
+  'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
+  'properties this example displays. See ' +
+  'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+  'more properties. Once complete, populate the config file or ' +
+  'environment variable mentioned at the start of this message ' +
+  'with the key.';
 
 const setPipeline = (options) => {
   const resourceKey = OptionsExtension.getResourceKey(options);
   // If we don't have a resource key then log an error
   if (!resourceKey) {
-    throw 'No resource key specified in the configuration file ' +
-    '\'51d.json\' or the environment variable ' +
-    `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
-    'service is accessed using a \'ResourceKey\'. For more information ' +
-    'see ' +
-    'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
-    'A resource key with the free properties used by this example can ' +
-    'be created at https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
-    'key populates the free properties only, whilst a key created at ' +
-    'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
-    'properties this example displays. See ' +
-    'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
-    'more properties. Once complete, populate the config file or ' +
-    'environment variable mentioned at the start of this message ' +
-    'with the key.';
+    throw NO_RESOURCE_KEY_MESSAGE;
   }
 
   // 'suppressProcessExceptions' is set to true in 51d.json
@@ -300,11 +319,18 @@ if (process.env.JEST_WORKER_ID === undefined) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  setPipeline(options);
-  const port = process.env.PORT || 3001;
-  const hostname = 'localhost';
-  server.listen(port, hostname);
-  console.log(`Server listening on: http://${hostname}:${port}`);
+  if (!OptionsExtension.getResourceKey(options)) {
+    // With no resource key there is nothing to serve, so the example says
+    // how to get one and ends.
+    console.log(NO_RESOURCE_KEY_MESSAGE);
+    console.log(FIND_OUT_MORE);
+  } else {
+    setPipeline(options);
+    const port = process.env.PORT || 3001;
+    const hostname = 'localhost';
+    server.listen(port, hostname);
+    console.log(`Server listening on: http://${hostname}:${port}`);
+  }
 }
 
 // Export server object and set pipeline.
