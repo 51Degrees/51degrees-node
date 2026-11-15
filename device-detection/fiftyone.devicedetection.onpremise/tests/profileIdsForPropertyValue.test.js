@@ -87,8 +87,9 @@ const valuesOf = (engine, propertyName) => {
 const idsOf = (engine, values) => new Map(values.map((value) =>
   [value, engine.profileIdsForPropertyValue(PROPERTY, value)]));
 
-// Every so many values the engine's ids are checked against a native
-// lookup of its own, as each lookup without the index reads every profile.
+// Each lookup without the index reads every profile of the data file, so
+// that engine is asked for every so many values only, and each engine's ids
+// are checked against a native lookup of its own on those values.
 const SAMPLE_EVERY = 25;
 
 beforeAll(() => {
@@ -100,15 +101,16 @@ beforeAll(() => {
 describe('The profile ids for a value', () => {
   let plain;
   let indexed;
-  let values;
+  let sample;
   let fromEvery;
   let fromIndex;
 
   beforeAll(() => {
     plain = build({});
     indexed = build({ indexedProperties: [PROPERTY] });
-    values = valuesOf(plain, PROPERTY);
-    fromEvery = idsOf(plain, values);
+    const values = valuesOf(plain, PROPERTY);
+    sample = values.filter((value, i) => i % SAMPLE_EVERY === 0);
+    fromEvery = idsOf(plain, sample);
     fromIndex = idsOf(indexed, values);
   }, TIMEOUT_MS);
 
@@ -119,11 +121,11 @@ describe('The profile ids for a value', () => {
     test('are those of the native lookup', () => {
       const native = engineOf().engine;
       const given = givenOf();
-      expect(values.length).toBeGreaterThan(1);
-      values.filter((value, i) => i % SAMPLE_EVERY === 0).forEach((value) => {
+      expect(sample.length).toBeGreaterThan(1);
+      for (const value of sample) {
         expect([value, given.get(value)]).toEqual([value,
           itemsOf(native.getProfileIdsForPropertyValue(PROPERTY, value))]);
-      });
+      }
       expect([...given.values()].filter((ids) => ids.length > 1).length)
         .toBeGreaterThan(0);
     }, TIMEOUT_MS);
@@ -137,21 +139,23 @@ describe('The profile ids for a value', () => {
     test('match the value exactly', () => {
       // A value held by some profile whose spelling in capitals the data
       // file does not hold.
-      const value = values.find((v) => givenOf().get(v).length > 0 &&
-        v.toUpperCase() !== v && !values.includes(v.toUpperCase()));
+      const given = givenOf();
+      const value = [...given.keys()].find((v) => given.get(v).length > 0 &&
+        v.toUpperCase() !== v && !fromIndex.has(v.toUpperCase()));
       expect(engineOf().profileIdsForPropertyValue(PROPERTY,
         value.toUpperCase())).toEqual([]);
     }, TIMEOUT_MS);
 
     test('match the Property name exactly', () => {
-      const value = values.find((v) => givenOf().get(v).length > 0);
+      const given = givenOf();
+      const value = [...given.keys()].find((v) => given.get(v).length > 0);
       expect(engineOf().profileIdsForPropertyValue(PROPERTY.toLowerCase(),
         value)).toEqual([]);
     }, TIMEOUT_MS);
   });
 
   test('are the same through the native index as from every profile', () => {
-    for (const value of values) {
+    for (const value of sample) {
       expect([value, fromIndex.get(value)])
         .toEqual([value, fromEvery.get(value)]);
     }
