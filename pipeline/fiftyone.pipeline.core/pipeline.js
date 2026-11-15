@@ -63,7 +63,8 @@ class Pipeline {
      */
     this.eventEmitter = new EventEmitter();
 
-    // Flattened dictionary of flowElements the pipeline contains
+    // Flattened dictionary of flowElements the pipeline contains, frozen
+    // once the constructor has filled it
     /**
      * @type {object}
      */
@@ -95,6 +96,7 @@ class Pipeline {
     };
 
     storeInFlowElementList(this.flowElementsChain);
+    Object.freeze(this.flowElements);
 
     // Empty property database, later populated and possibly
     // updated by flowElements' property lists
