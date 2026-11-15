@@ -286,7 +286,7 @@ class CloudRequestEngine extends Engine {
     // (cloud-request-engine.md lines 296 and 297), and keeps every key, so
     // evidence set before then is still sent and in the cache key.
     // getEvidenceKeys replaces both.
-    this.evidenceKeyFilter = /** @type {EvidenceKeyFilter} */ (
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
       new BasicListEvidenceKeyFilter([]));
     this.keptEvidenceKeyFilter = new EvidenceKeyFilter();
 

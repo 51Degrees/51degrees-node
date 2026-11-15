@@ -333,7 +333,7 @@ class IpIntelligenceOnPremise extends Engine {
     // nothing can change its results, and keeps every key, so evidence
     // set before then is not lost. initEngine replaces both with the keys
     // the file lists.
-    this.evidenceKeyFilter = /** @type {AnyEvidenceKeyFilter} */ (
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
       new EvidenceKeyFilter([]));
     this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
 
