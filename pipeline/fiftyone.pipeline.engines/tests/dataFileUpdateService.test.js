@@ -34,6 +34,11 @@ const Pipeline = require(
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// A refresh from a file that was written is tried 10 times 200 ms apart
+// before it fails, so a test of a failed refresh takes about two seconds
+// longer than the five Jest allows by default.
+const FailedRefreshTestMilliseconds = 15000;
+
 // A new folder holding a data file at version 1.
 const newDataFile = (prefix) => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -196,7 +201,7 @@ test('file watcher keeps watching after a failed refresh', async () => {
     const error = logs.find((log) => log.level === 'error');
     expect(error.message).toBe('Error during check for data update. Error detail: ' +
       'An error occurred when applying a data ' +
-      "update to engine 'testEngine' after 1 tries. Error detail: The data " +
+      "update to engine 'testEngine' after 10 tries. Error detail: The data " +
       'file cannot be used.');
     // The test resumes before the watcher has finished with the first
     // change, and on macOS a change made then is never reported.
@@ -213,7 +218,7 @@ test('file watcher keeps watching after a failed refresh', async () => {
     dataFile.finished = true;
     fs.unlinkSync(file);
   }
-});
+}, FailedRefreshTestMilliseconds);
 
 /**
  * With a pipeline that has no 'error' listener, a refresh that fails on the
@@ -254,7 +259,7 @@ test('file watcher with no error listener writes a failed refresh to the ' +
     fs.unlinkSync(file);
     consoleError.mockRestore();
   }
-});
+}, FailedRefreshTestMilliseconds);
 
 /**
  * With an 'error' listener, a refresh that fails on the file watcher route
@@ -290,7 +295,7 @@ test('file watcher with an error listener reports a failed refresh to it',
       fs.unlinkSync(file);
       consoleError.mockRestore();
     }
-  });
+  }, FailedRefreshTestMilliseconds);
 
 /**
  * A download the server refuses is logged as an error, in the words the
@@ -353,7 +358,7 @@ test('update route with no error listener writes a failed refresh to the ' +
     fs.rmSync(folder, { recursive: true, force: true });
     consoleError.mockRestore();
   }
-});
+}, FailedRefreshTestMilliseconds);
 
 /**
  * A refresh that fails on the update route is reported to an 'error'
@@ -387,7 +392,7 @@ test('update route reports a failed refresh with no success after it',
       fs.rmSync(folder, { recursive: true, force: true });
       consoleError.mockRestore();
     }
-  });
+  }, FailedRefreshTestMilliseconds);
 
 /**
  * A good file on the update route is loaded and reported as a success.
