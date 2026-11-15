@@ -159,7 +159,7 @@ class JSONBundlerElement extends FlowElement {
 
     // Holds the first Pipeline's, as it always has.
     if (!this.propertyCache) {
-      this.propertyCache = cache;
+      this.propertyCache = /** @type {{}} */ (cache);
     }
 
     for (const flowElement in flowData.pipeline.flowElements) {
