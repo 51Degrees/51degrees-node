@@ -1,0 +1,15 @@
+{
+  "PipelineOptions": {
+    "Elements": [
+      {
+        "elementName": "./sessionElement.js"
+      },
+      {
+        "elementName": "fiftyone.pipeline.derivedproperty/derivedPropertyElement",
+        "elementParameters": {
+          "scriptFiles": "ReaderEngagement.yaml"
+        }
+      }
+    ]
+  }
+}

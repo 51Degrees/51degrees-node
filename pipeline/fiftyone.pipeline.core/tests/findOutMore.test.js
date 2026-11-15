@@ -41,6 +41,7 @@ const EXAMPLES = [
   'fiftyone.pipeline.core/examples/customFlowElements/clientSideEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/simpleEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/pipelines.js',
+  'fiftyone.pipeline.derivedproperty/examples/derivedProperty.js',
   'fiftyone.pipeline.did/examples/creator-context-web/page.html',
   'fiftyone.pipeline.did/examples/fodIdExample.js',
   'fiftyone.pipeline.engines/examples/caching.js',
@@ -49,13 +50,14 @@ const EXAMPLES = [
 ];
 
 // The other files in the examples folders. These are the flow elements
-// the pipelines example uses and the server of the 51Did demo, whose page
-// holds the section.
+// the pipelines and derived property examples use and the server of the
+// 51Did demo, whose page holds the section.
 const NOT_EXAMPLES = [
   'fiftyone.pipeline.core/examples/flowElementsForExamples/async.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/neverRun.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/stop.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/sync.js',
+  'fiftyone.pipeline.derivedproperty/examples/sessionElement.js',
   'fiftyone.pipeline.did/examples/creator-context-web/server.js'
 ];
 
