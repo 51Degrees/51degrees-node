@@ -30,6 +30,23 @@ const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
 const ShareUsageBackOff = require('./shareUsageBackOff');
+
+// Usage sharing's warnings are also emitted at 'warning', a deprecated
+// level, so that a listener on it still hears them until a later release
+// emits them at 'warn' alone.
+const DEPRECATED_WARNING_LEVEL = 'warning';
+
+/**
+ * Logs a warning from a usage sharing element at 'warn', and at the
+ * deprecated 'warning' as well.
+ *
+ * @param {object} element the usage sharing element
+ * @param {*} message the warning
+ */
+const warn = (element, message) => {
+  element._log('warn', message);
+  element._log(DEPRECATED_WARNING_LEVEL, message);
+};
 const zlib = require('zlib');
 const url = require('url');
 
@@ -390,7 +407,7 @@ class ShareUsage extends Engine {
     if (this.shareData.length >= this.maximumQueueSize) {
       this.dropped++;
       if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
-        this._log('warn', 'The usage sharing queue is full at ' +
+        warn(this, 'The usage sharing queue is full at ' +
           `${this.maximumQueueSize} entries, so usage data is being ` +
           `dropped. ${this.dropped} entries have been dropped since the ` +
           'queue last had room.');
@@ -519,7 +536,7 @@ class ShareUsage extends Engine {
       } else {
         pause = this.backOff.failed(ShareUsageBackOff.now());
         if (pause > 0) {
-          this._log('warn', `Usage sharing paused for ${pause / 1000} ` +
+          warn(this, `Usage sharing paused for ${pause / 1000} ` +
             'seconds after failed sends. Usage data is still queued, up to ' +
             'the maximum queue size, and sending starts again when the pause ' +
             'ends.');
@@ -562,7 +579,7 @@ class ShareUsage extends Engine {
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
-        usageEngine._log('warn', err);
+        warn(usageEngine, err);
         finish(false);
         return;
       }
@@ -583,7 +600,7 @@ class ShareUsage extends Engine {
             }
           });
           res.on('end', function () {
-            usageEngine._log('warn', 'Usage sharing sent a message and ' +
+            warn(usageEngine, 'Usage sharing sent a message and ' +
               `the service answered ${res.statusCode} with content ` +
               `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
             finish(false);
@@ -600,13 +617,13 @@ class ShareUsage extends Engine {
             `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
         });
         req.on('error', function (e) {
-          usageEngine._log('warn', e);
+          warn(usageEngine, e);
           finish(false);
         });
         req.write(buffer);
         req.end();
       } catch (e) {
-        usageEngine._log('warn', e);
+        warn(usageEngine, e);
         finish(false);
       }
     });
