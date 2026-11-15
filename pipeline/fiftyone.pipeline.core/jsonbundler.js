@@ -75,24 +75,6 @@ const listItem = function (item) {
 };
 
 // The Property types whose values are WKT text.
-const WKT_TYPES = [
-  'wkb', 'wkbr', 'wkt', 'weightedwkb', 'weightedwkbr', 'weightedwkt'
-];
-
-/**
- * Whether a Property's metadata gives it a WKT type, whatever the letter
- * case of the type and of the key it is held under.
- *
- * @param {object} metadata the Property's metadata
- * @returns {boolean} true when its values are WKT text
- */
-const isWktProperty = function (metadata) {
-  const key = Object.keys(metadata || {})
-    .find((name) => name.toLowerCase() === 'type');
-  return key !== undefined &&
-    WKT_TYPES.includes(String(metadata[key]).toLowerCase());
-};
-
 /**
  * Whether an item of a list is a weighted value, as the on-premise engines
  * give one with rawWeight, or as the cloud service writes one with
@@ -110,40 +92,35 @@ const isWeightedItem = function (item) {
 };
 
 /**
- * A WKT value as the JSON carries it, an object with one member, value,
- * holding the WKT text. A value already in that form is kept.
- *
- * @param {*} value the WKT text, or the value as given
- * @returns {*} the value as the JSON carries it
- */
-const wktValue = function (value) {
-  return typeof value === 'string' ? { value } : value;
-};
-
-/**
- * A Property's value as the JSON carries it. A weighted value is a list of
- * objects with the lower-case keys rawweighting and value, a WKT value is an
- * object with one member, value, and each item of any other list is written
- * as listItem writes it.
+ * A Property's value as the JSON carries it. Each item of a weighted value
+ * has the lower-case keys rawweighting and value, and keeps the weight and
+ * rawWeight it had beside them, which are deprecated and go in a later
+ * release. Each item of any other list is written as listItem writes it.
  *
  * @param {*} value the value
- * @param {boolean} wkt whether the Property's values are WKT text
  * @returns {*} the value as the JSON carries it
  */
-const jsonValue = function (value, wkt) {
-  const form = wkt ? wktValue : (item) => item;
-  if (Array.isArray(value)) {
-    return value.map((item) => {
-      if (isWeightedItem(item) === false) {
-        return listItem(item);
-      }
-      const rawweighting = typeof item.rawWeight === 'number'
-        ? item.rawWeight
-        : item.rawweighting;
-      return { rawweighting, value: form(item.value) };
-    });
+const jsonValue = function (value) {
+  if (Array.isArray(value) === false) {
+    return value;
   }
-  return form(value);
+  return value.map((item) => {
+    if (isWeightedItem(item) === false) {
+      return listItem(item);
+    }
+    const written = {
+      rawweighting: typeof item.rawWeight === 'number'
+        ? item.rawWeight
+        : item.rawweighting,
+      value: item.value
+    };
+    for (const name of ['weight', 'rawWeight']) {
+      if (name in item) {
+        written[name] = item[name];
+      }
+    }
+    return written;
+  });
 };
 
 /**
@@ -314,7 +291,7 @@ class JSONBundlerElement extends FlowElement {
           // A weighted value, a WKT value and a list of Element Data, such
           // as the hardware profiles, are written in the forms the
           // specification gives.
-          value = jsonValue(value, isWktProperty(properties[property]));
+          value = jsonValue(value);
         } catch (e) {
           // Catching missing property exceptions and other errors
 
