@@ -137,6 +137,10 @@ const setPipeline = (options) => {
     throw NO_RESOURCE_KEY_MESSAGE;
   }
 
+  // Usage sharing is on, as this example's 51d.json names the usage sharing
+  // element and as it should be in production, because the usage data shared
+  // improves the data and the service for everyone. The console examples
+  // turn it off, as they run sample evidence only.
   pipeline = new core.PipelineBuilder({
     // Add the elements that build the client-side script and the JSON it
     // fetches.
@@ -150,6 +154,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
