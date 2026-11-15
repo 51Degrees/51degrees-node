@@ -28,10 +28,48 @@ const CloudEngine = require('fiftyone.pipeline.cloudrequestengine').CloudEngine;
 
 const AspectPropertyValue = require('fiftyone.pipeline.core').AspectPropertyValue;
 const AspectDataDictionary = require('fiftyone.pipeline.engines').AspectDataDictionary;
+const MissingPropertyService =
+  require('fiftyone.pipeline.engines').MissingPropertyService;
 
 // The suffix the cloud service adds to a property name to carry the reason
 // that property has no value, for example 'hardwarevendornullreason'.
 const NULL_REASON_SUFFIX = 'nullreason';
+
+const missingPropertyService = new MissingPropertyService();
+
+/**
+ * One device profile from a hardware lookup. It is Aspect Data, read through
+ * get as the device data of the cloud and on-premise engines is, and each
+ * Property is also a member of the profile.
+ */
+class HardwareProfileData extends AspectDataDictionary {
+  /**
+   * Makes the data for one profile. It is made without ElementData's
+   * constructor, whose proxy throws for a name the data does not hold, so an
+   * absent member reads as undefined and JSON.stringify and await treat the
+   * profile as a plain object. Only the Properties are enumerable.
+   *
+   * @param {HardwareProfileCloudEngine} flowElement the engine the profile
+   * is from
+   * @param {object} values Property name to AspectPropertyValue
+   * @returns {HardwareProfileData} the profile
+   */
+  static create (flowElement, values) {
+    const profile = Object.create(HardwareProfileData.prototype);
+    Object.defineProperties(profile, {
+      flowElement: { value: flowElement },
+      contents: { value: values },
+      missingPropertyService: { value: missingPropertyService }
+    });
+    Object.entries(values).forEach(function ([name, value]) {
+      // A name the profile uses itself, such as get, is read through get.
+      if (!(name in profile)) {
+        profile[name] = value;
+      }
+    });
+    return profile;
+  }
+}
 
 /**
  * Build the aspect level property values from the 'hardware' section of a
@@ -118,7 +156,7 @@ class HardwareProfileCloudEngine extends CloudEngine {
         }
       });
 
-      devices.push(device);
+      devices.push(HardwareProfileData.create(engine, device));
     });
 
     // The aspect level values are exposed alongside the profiles so a
