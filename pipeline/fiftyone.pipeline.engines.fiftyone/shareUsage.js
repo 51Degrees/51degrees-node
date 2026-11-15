@@ -390,7 +390,7 @@ class ShareUsage extends Engine {
     if (this.shareData.length >= this.maximumQueueSize) {
       this.dropped++;
       if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
-        this._log('warning', 'The usage sharing queue is full at ' +
+        this._log('warn', 'The usage sharing queue is full at ' +
           `${this.maximumQueueSize} entries, so usage data is being ` +
           `dropped. ${this.dropped} entries have been dropped since the ` +
           'queue last had room.');
@@ -519,7 +519,7 @@ class ShareUsage extends Engine {
       } else {
         pause = this.backOff.failed(ShareUsageBackOff.now());
         if (pause > 0) {
-          this._log('warning', `Usage sharing paused for ${pause / 1000} ` +
+          this._log('warn', `Usage sharing paused for ${pause / 1000} ` +
             'seconds after failed sends. Usage data is still queued, up to ' +
             'the maximum queue size, and sending starts again when the pause ' +
             'ends.');
@@ -562,7 +562,7 @@ class ShareUsage extends Engine {
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
-        usageEngine._log('warning', err);
+        usageEngine._log('warn', err);
         finish(false);
         return;
       }
@@ -583,7 +583,7 @@ class ShareUsage extends Engine {
             }
           });
           res.on('end', function () {
-            usageEngine._log('warning', 'Usage sharing sent a message and ' +
+            usageEngine._log('warn', 'Usage sharing sent a message and ' +
               `the service answered ${res.statusCode} with content ` +
               `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
             finish(false);
@@ -600,13 +600,13 @@ class ShareUsage extends Engine {
             `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
         });
         req.on('error', function (e) {
-          usageEngine._log('warning', e);
+          usageEngine._log('warn', e);
           finish(false);
         });
         req.write(buffer);
         req.end();
       } catch (e) {
-        usageEngine._log('warning', e);
+        usageEngine._log('warn', e);
         finish(false);
       }
     });
