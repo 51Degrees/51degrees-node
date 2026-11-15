@@ -35,6 +35,11 @@ module.exports = {
     'request made with one that does not list the properties it wants. ' +
     'Set requestedProperties to the fully qualified names wanted, for ' +
     "example ['device.ismobile', 'device.iscrawler'].",
+  // Logged as a warning when discovery got no answer or a 5xx when the
+  // engine was built, followed by the errors.
+  discoveryTriedAgain: 'The cloud service did not answer the Cloud ' +
+    "Request Engine's discovery requests when the engine was built, so " +
+    'they are tried again when it first processes. %s',
   // Logged once for an engine whose endpoint was read from the deprecated
   // variable name.
   oldEndpointVariable: 'The FOD_CLOUD_API_URL environment variable is ' +
