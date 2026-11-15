@@ -36,7 +36,9 @@ const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
-const metricCategory = 'Device metrics';
+const metricCategory = 'Device Metrics';
+// The data files every match metric Property is available with.
+const metricDataFiles = ['Lite', 'Premium', 'Enterprise', 'TAC'];
 const Component = require('./component');
 const Property = require('./property');
 const Profile = require('./profile');
@@ -101,11 +103,43 @@ const initMatchMetrics = function () {
     }
   };
 
-  // Special properties
+  // Special properties, added in the order the specification lists them
+  this.properties.matchedNodes = {
+    name: 'MatchedNodes',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.matchedNodesDescription,
+    component: metricComponent
+  };
+
+  this.properties.difference = {
+    name: 'Difference',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.differenceDescription,
+    component: metricComponent
+  };
+
+  this.properties.drift = {
+    name: 'Drift',
+    type: 'int',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.driftDescription,
+    component: metricComponent
+  };
+
   this.properties.deviceID = {
     name: 'DeviceId',
     type: 'string',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: '0-0-0-0',
     description: constants.deviceIdDescription,
     component: metricComponent
   };
@@ -114,39 +148,9 @@ const initMatchMetrics = function () {
     name: 'UserAgents',
     type: 'string[]',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: [],
     description: constants.userAgentsDescription,
-    component: metricComponent
-  };
-
-  this.properties.difference = {
-    name: 'Difference',
-    type: 'int',
-    category: metricCategory,
-    description: constants.differenceDescription,
-    component: metricComponent
-  };
-
-  this.properties.method = {
-    name: 'Method',
-    type: 'string',
-    category: metricCategory,
-    description: constants.methodDescription,
-    component: metricComponent
-  };
-
-  this.properties.matchedNodes = {
-    name: 'MatchedNodes',
-    type: 'int',
-    category: metricCategory,
-    description: constants.matchedNodesDescription,
-    component: metricComponent
-  };
-
-  this.properties.drift = {
-    name: 'Drift',
-    type: 'int',
-    category: metricCategory,
-    description: constants.driftDescription,
     component: metricComponent
   };
 
@@ -154,18 +158,30 @@ const initMatchMetrics = function () {
     name: 'Iterations',
     type: 'int',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
     description: constants.iterationsDescription,
     component: metricComponent
   };
 
+  this.properties.method = {
+    name: 'Method',
+    type: 'string',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 'NONE',
+    description: constants.methodDescription,
+    component: metricComponent
+  };
+
   metricComponent.properties = [
+    this.properties.matchedNodes,
+    this.properties.difference,
+    this.properties.drift,
     this.properties.deviceID,
     this.properties.userAgents,
-    this.properties.difference,
-    this.properties.method,
-    this.properties.matchedNodes,
-    this.properties.drift,
-    this.properties.iterations
+    this.properties.iterations,
+    this.properties.method
   ];
 
   this.components.metrics = metricComponent;
