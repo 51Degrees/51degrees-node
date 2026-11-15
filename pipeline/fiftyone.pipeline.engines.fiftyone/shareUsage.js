@@ -102,12 +102,15 @@ class ShareUsage extends Engine {
    * For example, the 51Degrees cloud service uses a value of 2500.
    * @param {string} options.cookie The name of the cookie that holds the
    * session id. It has no effect unless trackSession is true. The cookie
-   * itself is not shared unless shareAll is true.
-   * @param {Array<string>|string|null} options.queryWhitelist By default
-   * query string and HTTP form parameters are not shared unless prefixed
-   * with '51D_'. If you need to share query string parameters, a list can
-   * be specified here, or one comma separated string of them, as a
-   * configuration file gives a list. null shares every parameter.
+   * itself is never shared unless its name starts with '51D_', as no other
+   * cookie is.
+   * @param {boolean} options.shareAllQueryStringParameters If true, every
+   * query string and HTTP form parameter is shared. True by default.
+   * @param {Array<string>|string|null} options.queryWhitelist When
+   * shareAllQueryStringParameters is false, query string and HTTP form
+   * parameters are not shared unless prefixed with '51D_' or given in this
+   * list, or in one comma separated string of them, as a configuration file
+   * gives a list. null shares every parameter.
    * @param {Array<string>|string} options.headerBlacklist By default, all
    * HTTP headers except Cookie are shared. Individual headers can be
    * excluded from sharing by adding them to this list, or to one comma
@@ -117,13 +120,14 @@ class ShareUsage extends Engine {
    * @param {string} options.endpoint The target destination for usage
    * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
    * @param {boolean} options.shareAll If true, all evidence is shared apart
-   * from the email address, the salt used for hashed email identifiers, and
-   * the request's query string and path. False by default.
+   * from the email address, the salt used for hashed email identifiers, the
+   * request's query string and path, and every cookie whose name does not
+   * start with '51D_'. False by default.
    * @param {boolean} options.trackSession If true, the cookie named by
    * cookie is used to tell user sessions apart, so evidence already shared
    * is shared again when it comes from a new session. False by default. It
-   * needs cookie to be set, and has no effect when shareAll is true,
-   * because every cookie is then shared and used to find repeats.
+   * needs cookie to be set, and works the same whether or not shareAll is
+   * true.
    * @param {number} options.maximumQueueSize The most entries held while
    * waiting to be sent. When the queue is full, new entries are dropped. The
    * default is 1000, or ten times requestedPackageSize if that is larger.
@@ -147,6 +151,7 @@ class ShareUsage extends Engine {
       interval = 1200000,
       requestedPackageSize = 10,
       cookie,
+      shareAllQueryStringParameters = true,
       queryWhitelist,
       headerBlacklist,
       sharePercentage = 1,
@@ -174,6 +179,7 @@ class ShareUsage extends Engine {
     const queryList = core.listSetting(queryWhitelist);
     const options = {
       cookie,
+      shareAllQueryStringParameters,
       queryWhitelist: queryList === null
         ? null
         : [...(queryList || []), 'session-id', 'sequence'],
@@ -185,7 +191,7 @@ class ShareUsage extends Engine {
     // result, so caching, the ETag and the Vary header never depend on it.
     // The flow data still keeps the evidence it would share, and, when
     // sessions are tracked, the session cookie for the tracker. The data
-    // sent leaves the cookie out unless all evidence is shared.
+    // sent leaves out every cookie whose name does not start with 51D_.
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
     this.keptEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: trackSession });
