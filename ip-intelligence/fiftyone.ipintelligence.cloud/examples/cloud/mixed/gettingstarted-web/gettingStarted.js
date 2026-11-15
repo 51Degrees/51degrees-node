@@ -150,6 +150,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
