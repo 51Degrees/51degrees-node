@@ -27,8 +27,9 @@
 
 const PipelineBuilder = require('../pipelineBuilder');
 
-// The most minifying may add to one request, in milliseconds.
-const ADDED_LIMIT_MS = 1000;
+// The most minifying may add to one request, in milliseconds, about three
+// times the median of the slowest runner the builds use.
+const ADDED_LIMIT_MS = 160;
 // Rounds of requests, each timing a few requests with minify off and on.
 const ROUNDS = 21;
 const REQUESTS_PER_ROUND = 5;
