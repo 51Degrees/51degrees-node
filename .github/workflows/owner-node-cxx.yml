@@ -1,0 +1,61 @@
+name: Owner node SWIG wrappers
+
+# Throwaway. Builds SWIG from the 51Degrees fork named in the README, checks
+# that it writes rc's committed wrappers again from rc's cxx, then writes the
+# wrappers from the cxx this branch points at and uploads the difference as
+# a patch. The branch is deleted after.
+
+on:
+  push:
+    branches:
+      - 'tmp/owner-node-cxx-*'
+
+jobs:
+  Wrappers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build SWIG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake bison libpcre2-dev
+          git clone https://github.com/51Degrees/swig.git "$RUNNER_TEMP/swig"
+          cd "$RUNNER_TEMP/swig"
+          git checkout 48753552ee7d0e0f886f9d624f761a501ce70b64
+          ./autogen.sh
+          ./configure --prefix="$RUNNER_TEMP/swig-install"
+          make -j"$(nproc)"
+          make install
+          echo "$RUNNER_TEMP/swig-install/bin" >> "$GITHUB_PATH"
+
+      - name: Wrappers from rc's cxx
+        run: |
+          swig -version
+          git -C cxx checkout -q 7992af7010b7654c115510938a2f7626204bf936
+          git -C cxx submodule update --init --recursive
+          (cd device-detection/fiftyone.devicedetection.onpremise && swig -c++ -javascript -node hash_node.i)
+          (cd ip-intelligence/fiftyone.ipintelligence.onpremise && swig -c++ -javascript -node ipi_node.i)
+          echo "Difference from the committed wrappers at rc's cxx:"
+          git diff --stat -- '*_wrap.cxx'
+          git checkout -- '*_wrap.cxx'
+
+      - name: Wrappers from this branch's cxx
+        run: |
+          git submodule update --init --recursive
+          git -C cxx log --oneline -1
+          (cd device-detection/fiftyone.devicedetection.onpremise && swig -c++ -javascript -node hash_node.i)
+          (cd ip-intelligence/fiftyone.ipintelligence.onpremise && swig -c++ -javascript -node ipi_node.i)
+          git status --short
+          git diff --stat -- '*_wrap.cxx'
+          git diff --binary -- '*_wrap.cxx' > wrappers.patch
+          wc -c wrappers.patch
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wrappers-patch
+          path: wrappers.patch
