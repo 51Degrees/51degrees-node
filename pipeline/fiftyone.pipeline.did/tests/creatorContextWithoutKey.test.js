@@ -56,6 +56,10 @@ const CREATE_KEY_LINK = new RegExp(
 // its server with no key runs until this ends it.
 const TIMEOUT_MS = 30000;
 
+// Jest waits this much longer than spawnSync, so that it can report a run
+// spawnSync stopped.
+const JEST_MARGIN_MS = 5000;
+
 // Runs an example from its own folder with no resource key. A web example
 // that does start its server listens on a port the system chooses.
 const runWithoutKey = (file) => {
@@ -101,6 +105,6 @@ describe('cloud examples with no resource key', () => {
       for (const line of links) {
         expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
       }
-    }, TIMEOUT_MS + 5000);
+    }, TIMEOUT_MS + JEST_MARGIN_MS);
   }
 });
