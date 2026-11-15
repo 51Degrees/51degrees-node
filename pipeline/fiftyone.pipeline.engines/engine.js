@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const FlowElement = require('fiftyone.pipeline.core').FlowElement;
+const { FlowElement, listSetting } = require('fiftyone.pipeline.core');
 
 const DataFileUpdateService = require('./dataFileUpdateService');
 
@@ -44,8 +44,9 @@ class Engine extends FlowElement {
    * @param {DataFile} options.dataFile an optional datafile
    * to add to the engine
    * @param {DataKeyedCache} options.cache instance of a DataKeyedCache
-   * @param {Array} options.restrictedProperties specific list
-   * of properties to fetch elementData for
+   * @param {Array<string>|string} options.restrictedProperties specific
+   * list of properties to fetch elementData for, or one comma separated
+   * string of them, as a configuration file gives a list
    */
   constructor (
     {
@@ -62,8 +63,9 @@ class Engine extends FlowElement {
       this.cache = cache;
     }
 
-    if (restrictedProperties) {
-      this.restrictedProperties = restrictedProperties;
+    const restricted = listSetting(restrictedProperties);
+    if (restricted) {
+      this.restrictedProperties = restricted;
 
       /**
        * The restricted property names in lower case, because property
@@ -72,7 +74,7 @@ class Engine extends FlowElement {
        * @type {Set<string>}
        */
       this.restrictedPropertyKeys = new Set(
-        restrictedProperties.map((name) => name.toLowerCase()));
+        restricted.map((name) => name.toLowerCase()));
     }
   }
 

@@ -29,13 +29,15 @@ declare class ShareUsage extends ShareUsage_base {
      * cookie is.
      * @param {boolean} options.shareAllQueryStringParameters If true, every
      * query string and HTTP form parameter is shared. True by default.
-     * @param {Array<string>|null} options.queryWhitelist When
+     * @param {Array<string>|string|null} options.queryWhitelist When
      * shareAllQueryStringParameters is false, query string and HTTP form
      * parameters are not shared unless prefixed with '51D_' or given in this
-     * list. null shares every parameter.
-     * @param {Array<string>} options.headerBlacklist By default, all HTTP
-     * headers except Cookie are shared. Individual headers can
-     * be excluded from sharing by adding them to this list.
+     * list, or in one comma separated string of them, as a configuration file
+     * gives a list. null shares every parameter.
+     * @param {Array<string>|string} options.headerBlacklist By default, all
+     * HTTP headers except Cookie are shared. Individual headers can be
+     * excluded from sharing by adding them to this list, or to one comma
+     * separated string of them, as a configuration file gives a list.
      * @param {number} options.sharePercentage approximate proportion of
      * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
      * @param {string} options.endpoint The target destination for usage
@@ -72,8 +74,8 @@ declare class ShareUsage extends ShareUsage_base {
         requestedPackageSize: number;
         cookie: string;
         shareAllQueryStringParameters: boolean;
-        queryWhitelist: Array<string> | null;
-        headerBlacklist: Array<string>;
+        queryWhitelist: Array<string> | string | null;
+        headerBlacklist: Array<string> | string;
         sharePercentage: number;
         endpoint: string;
         shareAll: boolean;
