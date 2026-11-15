@@ -24,8 +24,9 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * update service
      * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
      * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-     * @param {Array<string>} options.restrictedProperties list of properties the engine
-     * will be restricted to
+     * @param {Array<string>|string} options.restrictedProperties list of
+     * properties the engine will be restricted to, or one comma separated
+     * string of them, as a configuration file gives a list
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
      * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
@@ -81,7 +82,7 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
         dataUpdateUrl: string;
         dataUpdateVerifyMd5: boolean;
         dataUpdateUseUrlFormatter: boolean;
-        restrictedProperties: Array<string>;
+        restrictedProperties: Array<string> | string;
         licenceKeys: string;
         download: boolean;
         performanceProfile: string;
