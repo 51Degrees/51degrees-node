@@ -80,6 +80,9 @@ const sharedFor = async (queryWhitelist, headerBlacklist) => {
       Elements: [{
         elementName: 'fiftyone.pipeline.engines.fiftyone/shareUsage',
         elementParameters: {
+          // The list of parameters to share has an effect only when
+          // sharing every parameter is turned off.
+          shareAllQueryStringParameters: false,
           requestedPackageSize: 1,
           endpoint,
           queryWhitelist,
