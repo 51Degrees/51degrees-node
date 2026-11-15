@@ -311,9 +311,14 @@ const watchDataFile = function (serviceRef, dataFileRef) {
     }
     if (!dataFile.updating) {
       // One change raises several events, so the data file is updating
-      // until the change has been applied and the other events pass.
+      // until the change has been applied.
       dataFile.updating = true;
       applyWatchedChange(serviceRef, dataFileRef, dataFile.path);
+    } else {
+      // Every check is reported. One that finds an update already under
+      // way, the other events of a change being applied among them, has
+      // nothing left to do.
+      service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
     }
   });
   const service = serviceRef.deref();

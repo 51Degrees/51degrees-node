@@ -348,9 +348,10 @@ class JavaScriptBuilderElement extends FlowElement {
     );
     const scriptParameters = {};
     for (const key in evidence) {
-      if (key.startsWith('query.')) {
+      // Evidence keys ignore case, so the prefix and the excluded names do.
+      if (key.toLowerCase().startsWith('query.')) {
         const name = key.substring('query.'.length);
-        if (excludedParameters.indexOf(name) === -1) {
+        if (excludedParameters.indexOf(name.toLowerCase()) === -1) {
           scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
         }
       }
