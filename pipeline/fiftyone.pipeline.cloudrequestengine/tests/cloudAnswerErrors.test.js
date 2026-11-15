@@ -137,6 +137,32 @@ describe('a cloud answer that the request engine refuses', () => {
         'content {"message":"Service Unavailable"}');
     });
 
+  test('a failed one that is not JSON raises the status code message',
+    async () => {
+      const { rejected, errors } = await answerWith({
+        failure: {
+          statusCode: 502,
+          headers: {},
+          content: '<html>Bad gateway</html>'
+        }
+      });
+
+      expect(rejected).toBe(true);
+      expect(shown(errors)).toContain(
+        `Cloud service at '${DATA_URL}' returned status code '502' with ` +
+        'content <html>Bad gateway</html>');
+    });
+
+  test('a request that got no answer keeps the reason it failed',
+    async () => {
+      const { rejected, errors } = await answerWith({
+        failure: { content: 'getaddrinfo ENOTFOUND cloud.example' }
+      });
+
+      expect(rejected).toBe(true);
+      expect(shown(errors)).toContain('getaddrinfo ENOTFOUND cloud.example');
+    });
+
   test('an error naming the license key has the key masked', async () => {
     const { rejected, errors } = await answerWith({
       body: JSON.stringify({ errors: [`Key ${LICENSE_KEY} is not valid.`] })
