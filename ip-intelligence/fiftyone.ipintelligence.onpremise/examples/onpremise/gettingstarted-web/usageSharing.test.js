@@ -22,8 +22,11 @@
 
 // IP Intelligence web examples share usage, as the Device Detection web
 // examples do, where the console examples do not
-// (ip-intelligence-specification/required-examples.md lines 239 to 241).
+// (ip-intelligence-specification/required-examples.md line 241). The page
+// shares usage when its configuration names the usage sharing element, as
+// its 51d.json does, so a test that takes that element out shares nothing.
 
+const fs = require('fs');
 const path = require('path');
 
 const example = require(path.join(__dirname, 'gettingStarted.js'));
@@ -34,18 +37,31 @@ const ASN = path.resolve(__dirname, '..', '..', '..', '..', '..', 'cxx',
   'data', 'ip-intelligence', '51Degrees-IPIV4AsnIpiV41.ipi');
 const TIMEOUT_MS = 120000;
 
+// The example's own configuration, on the ASN data file.
+const ownConfiguration = () => {
+  const options = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '51d.json'), 'utf8'));
+  for (const element of options.PipelineOptions.Elements) {
+    if (element.elementName.endsWith('ipIntelligenceOnPremise')) {
+      element.elementParameters.dataFilePath = ASN;
+    }
+  }
+  return options;
+};
+
 describe('IP Intelligence getting started web page', () => {
-  test('shares usage', () => {
-    const pipeline = example.setPipeline({
-      PipelineOptions: {
-        Elements: [{
-          elementName:
-            'fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise',
-          elementParameters: { dataFilePath: ASN }
-        }]
-      }
-    });
+  test('shares usage with its own 51d.json', () => {
+    const pipeline = example.setPipeline(ownConfiguration());
 
     expect(Object.keys(pipeline.flowElements)).toContain('shareUsage');
+  }, TIMEOUT_MS);
+
+  test('shares no usage when the usage sharing element is taken out', () => {
+    const options = ownConfiguration();
+    options.PipelineOptions.Elements = options.PipelineOptions.Elements
+      .filter((element) => !element.elementName.endsWith('shareUsage'));
+    const pipeline = example.setPipeline(options);
+
+    expect(Object.keys(pipeline.flowElements)).not.toContain('shareUsage');
   }, TIMEOUT_MS);
 });
