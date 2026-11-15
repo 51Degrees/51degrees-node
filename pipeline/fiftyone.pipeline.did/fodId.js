@@ -128,7 +128,12 @@ class FodId {
     }
     /** @type {object} the OWID the OWID library read, frozen */
     this._owid = read.value._owid;
-    /** @type {number} the flags byte */
+    /**
+     * @type {number} the flags byte
+     * @deprecated The raw flags byte is not part of a 51Did package's
+     * surface, and a later release removes it. Read type, usage and
+     * usageIsIndirect, which name its bits, instead.
+     */
     this._flags = read.value._flags;
     /** @type {Uint8Array} this identifier's own copy of the match key bytes */
     this._matchKey = read.value._matchKey;

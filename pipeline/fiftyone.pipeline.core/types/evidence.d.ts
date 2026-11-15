@@ -14,7 +14,7 @@ declare class Evidence {
     constructor(flowData: FlowData);
     flowData: import("./flowData");
     evidenceStore: {};
-    keys: {};
+    keys: any;
     unacceptedStore: {};
     /**
      * The web request as server.http-request holds it, being every value

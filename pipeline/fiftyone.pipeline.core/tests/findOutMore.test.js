@@ -37,6 +37,7 @@ const REPOSITORY =
 
 // Every file that holds a section. A web example holds it in its page.
 const EXAMPLES = [
+  'fiftyone.pipeline.cloudrequestengine/examples/cloudFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/clientSideEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/simpleEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/pipelines.js',

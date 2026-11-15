@@ -20,7 +20,49 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+/**
+ * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
+ */
+
 const CloudEngine = require('fiftyone.pipeline.cloudrequestengine').CloudEngine;
+
+// The raw weighting that stands for a weight of 1.
+const RAW_WEIGHTING_MAX = 65535;
+
+/**
+ * Whether an item of a list is a weighted value as the service sends one,
+ * with a rawweighting member and a value member.
+ *
+ * @param {*} item the item
+ * @returns {boolean} true when it is a weighted value
+ */
+const isWeighted = function (item) {
+  return item !== null && typeof item === 'object' &&
+    Object.prototype.hasOwnProperty.call(item, 'rawweighting') &&
+    Object.prototype.hasOwnProperty.call(item, 'value');
+};
+
+/**
+ * A value in the form the on-premise engine gives it. A list of weighted
+ * values becomes objects with value, weight and rawWeight, where weight is
+ * the raw weighting as a proportion of 65535. Each keeps rawweighting, the
+ * name the service writes, which is deprecated in favour of rawWeight. Any
+ * other value, a WKT value among them, is returned as the service sent it.
+ *
+ * @param {*} value the value the service sent
+ * @returns {*} the value as the Element Data gives it
+ */
+const fromService = function (value) {
+  if (Array.isArray(value) && value.length > 0 && value.every(isWeighted)) {
+    return value.map((item) => ({
+      value: item.value,
+      weight: item.rawweighting / RAW_WEIGHTING_MAX,
+      rawWeight: item.rawweighting,
+      rawweighting: item.rawweighting
+    }));
+  }
+  return value;
+};
 
 /**
  * The IP intelligence cloud engine requires the 51Degrees
@@ -28,7 +70,10 @@ const CloudEngine = require('fiftyone.pipeline.cloudrequestengine').CloudEngine;
  * It takes that raw JSON response and parses it to extract the
  * IP intelligence part. It also uses this data to generate a list
  * of properties. Properties that have weighted values are returned
- * as arrays of objects with 'value' and 'weight' entries.
+ * as arrays of objects with 'value', 'weight' and 'rawWeight' entries, as
+ * the on-premise engine returns them, each keeping 'rawweighting', which is
+ * deprecated in favour of 'rawWeight'. A WKT value is as the service sends
+ * it, an object whose 'value' is the WKT text.
  **/
 class IpIntelligenceCloud extends CloudEngine {
   /**
@@ -38,6 +83,28 @@ class IpIntelligenceCloud extends CloudEngine {
     super(...arguments);
 
     this.dataKey = 'ip';
+  }
+
+  /**
+   * Reads the IP Intelligence part of the cloud response as the
+   * CloudEngine does, then gives each value in the form the on-premise
+   * engine gives it.
+   *
+   * @param {FlowData} flowData the flow data to process
+   * @returns {Promise<void>} resolves once the Element Data is set
+   */
+  processInternal (flowData) {
+    const engine = this;
+    return super.processInternal(flowData).then(function () {
+      // The CloudEngine has set the Element Data, empty where the response
+      // held no IP Intelligence part.
+      const data = flowData.get(engine.dataKey);
+      for (const value of Object.values(data.contents)) {
+        if (value !== null && typeof value === 'object' && value.hasValue) {
+          value.value = fromService(value.value);
+        }
+      }
+    });
   }
 }
 
