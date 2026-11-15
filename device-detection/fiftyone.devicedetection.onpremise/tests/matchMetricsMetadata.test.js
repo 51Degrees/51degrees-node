@@ -22,8 +22,9 @@
 
 // The Engine lists the match metric Properties after the Properties from the
 // data file, in the order of the specification's table, each with the
-// category "Device Metrics", every data file, the Metrics component and its
-// default value (device-detection-on-premise.md lines 448 to 475).
+// category "Device Metrics", every data file, the Metrics component, its
+// default value and its possible values, read as a data file Property's are
+// (device-detection-on-premise.md lines 448 to 475).
 
 const fs = require('fs');
 const path = require('path');
@@ -41,15 +42,17 @@ const Engine = require51('fiftyone.devicedetection.onpremise')
 const LITE = path.join(__dirname, '..', '..', '..', 'cxx', 'data',
   'device-detection', '51Degrees-LiteV4.1.hash');
 
-// The table, in its order: name, type and default value.
+// The table, in its order: name, type, default value and possible values,
+// none where the table gives n/a.
 const METRICS = [
-  ['MatchedNodes', 'int', 0],
-  ['Difference', 'int', 0],
-  ['Drift', 'int', 0],
-  ['DeviceId', 'string', '0-0-0-0'],
-  ['UserAgents', 'string[]', []],
-  ['Iterations', 'int', 0],
-  ['Method', 'string', 'NONE']
+  ['MatchedNodes', 'int', 0, []],
+  ['Difference', 'int', 0, []],
+  ['Drift', 'int', 0, []],
+  ['DeviceId', 'string', '0-0-0-0', []],
+  ['UserAgents', 'string[]', [], []],
+  ['Iterations', 'int', 0, []],
+  ['Method', 'string', 'NONE',
+    ['NONE', 'PERFORMANCE', 'COMBINED', 'PREDICTIVE']]
 ];
 
 // The data files every match metric Property is available with.
@@ -94,6 +97,17 @@ describe('match metric Properties', () => {
         component: 'Metrics',
         defaultValue
       });
+    });
+
+  test.each(METRICS)('%s lists the possible values of the table',
+    (name, type, defaultValue, values) => {
+      const property = Object.values(engine.properties)
+        .find((p) => p.name === name);
+      expect([...property.getValues()].map((value) => ({
+        name: value.getName(),
+        description: value.getDescription()
+      }))).toEqual(values.map((value) => ({ name: value, description: '' })));
+      expect(property.getNumberOfValues()).toBe(values.length);
     });
 
   test('the Metrics component is one of the Engine\'s components', () => {
