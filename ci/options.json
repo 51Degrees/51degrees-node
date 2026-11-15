@@ -46,21 +46,5 @@
     "LanguageVersion": "22",
     "RunPerformance": false,
     "PackageRequirement": true
-  },
-  {
-    "Name": "macOS_Node_24",
-    "Image": "macos-latest",
-    "Language": "node",
-    "LanguageVersion": "24",
-    "RunPerformance": true,
-    "PackageRequirement": true
-  },
-  {
-    "Name": "macOS_Node_22",
-    "Image": "macos-latest",
-    "Language": "node",
-    "LanguageVersion": "22",
-    "RunPerformance": false,
-    "PackageRequirement": true
   }
 ]
