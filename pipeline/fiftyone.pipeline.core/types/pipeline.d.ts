@@ -1,9 +1,5 @@
 export = Pipeline;
 /**
- * @typedef {import('./flowElement')} FlowElement
- * @typedef {any} DataFileUpdateService
- */
-/**
  * Pipeline holding a list of flowElements for processing, can create
  * flowData that will be passed through these, collecting elementData
  * Should be constructed through the PipelineBuilder class
