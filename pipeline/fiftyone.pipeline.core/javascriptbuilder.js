@@ -415,9 +415,14 @@ class JavaScriptBuilderElement extends FlowElement {
 
     let output = mustache.render(template, settings);
 
+    // uglify-js gives an error only when minifying failed, and the script
+    // is then given as it is.
     if (settings._minify) {
       const minified = uglifyJS.minify(output);
-      if (minified.error === null) {
+      if (minified.error) {
+        this._log('warn', 'The JavaScript could not be minified, so it is ' +
+          'given as it is. ' + minified.error);
+      } else {
         output = minified.code;
       }
     }
