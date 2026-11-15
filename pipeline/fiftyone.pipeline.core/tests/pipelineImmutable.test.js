@@ -112,4 +112,15 @@ describe('a built Pipeline', () => {
 
     expect([first.processed, later.processed]).toEqual([1, 0]);
   });
+
+  test('refuses a change to its map of elements by data key', () => {
+    const first = counter('first');
+    const later = counter('later');
+    const pipeline = new PipelineBuilder(SETTINGS).add(first).build();
+
+    expect(Reflect.set(pipeline.flowElements, 'later', later)).toBe(false);
+    expect(Reflect.deleteProperty(pipeline.flowElements, 'first')).toBe(false);
+    expect([pipeline.getElement('first'), pipeline.getElement('later')])
+      .toEqual([first, undefined]);
+  });
 });
