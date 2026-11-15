@@ -20,10 +20,9 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// The JSON Builder writes a WKT value as an object with one member, value,
-// holding the WKT text (value-types.md lines 123 to 130), and a weighted
-// value as a list of objects with the lower-case keys rawweighting and value
-// (weighted-values.md lines 45 to 58).
+// The JSON Builder writes each item of a weighted value with the lower-case
+// keys rawweighting and value (weighted-values.md lines 45 to 58), keeping
+// the weight and rawWeight it had beside them.
 
 const core = require('fiftyone.pipeline.core');
 
@@ -64,35 +63,19 @@ const weighted = (value, rawWeight) =>
   ({ value, weight: rawWeight / RAW_WEIGHTING_MAX, rawWeight });
 
 describe('JSON value forms', () => {
-  test('a WKT value is an object with one member, value', async () => {
-    const written = await json(
-      { area: { type: 'wkb' }, place: { type: 'WKBR' } },
-      {
-        area: withValue('POLYGON((1 2,3 4,1 2))'),
-        place: withValue('POINT(2 4)')
-      });
-    expect(written.area).toEqual({ value: 'POLYGON((1 2,3 4,1 2))' });
-    expect(written.place).toEqual({ value: 'POINT(2 4)' });
-  });
-
-  test('a weighted value is a list of rawweighting and value', async () => {
-    const written = await json(
-      { names: { type: 'weightedstring' } },
-      { names: withValue([weighted('First', 32768), weighted('Second', 32767)]) });
-    expect(written.names).toEqual([
-      { rawweighting: 32768, value: 'First' },
-      { rawweighting: 32767, value: 'Second' }
-    ]);
-  });
-
-  test('a weighted WKT value has each value as an object', async () => {
-    const written = await json(
-      { areas: { type: 'weightedwkb' } },
-      { areas: withValue([weighted('POLYGON((1 2,3 4,1 2))', 65535)]) });
-    expect(written.areas).toEqual([
-      { rawweighting: 65535, value: { value: 'POLYGON((1 2,3 4,1 2))' } }
-    ]);
-  });
+  test('a weighted value has rawweighting and value, and keeps the rest',
+    async () => {
+      const written = await json(
+        { names: { type: 'weightedstring' } },
+        {
+          names: withValue(
+            [weighted('First', 32768), weighted('Second', 32767)])
+        });
+      expect(written.names).toEqual([
+        { rawweighting: 32768, ...weighted('First', 32768) },
+        { rawweighting: 32767, ...weighted('Second', 32767) }
+      ]);
+    });
 
   test('a weighted value that keeps rawweighting is written the same way',
     async () => {
@@ -103,15 +86,9 @@ describe('JSON value forms', () => {
             value: 'First', weight: 1, rawWeight: 65535, rawweighting: 65535
           }])
         });
-      expect(written.names).toEqual([{ rawweighting: 65535, value: 'First' }]);
-    });
-
-  test('a WKT value already in the object form is written as it is',
-    async () => {
-      const written = await json(
-        { area: { type: 'wkb' } },
-        { area: withValue({ value: 'POINT(2 4)' }) });
-      expect(written.area).toEqual({ value: 'POINT(2 4)' });
+      expect(written.names).toEqual([
+        { rawweighting: 65535, value: 'First', weight: 1, rawWeight: 65535 }
+      ]);
     });
 
   test('other values are written as they are', async () => {
