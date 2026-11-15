@@ -320,9 +320,10 @@ class CloudRequestEngine extends Engine {
    * responses that are plain text. This function handles these cases.
    *
    * @param {string} responseBody the response data to process
+   * @param {string} url the address the request went to
    * @returns {Array} The error messages
    */
-  getErrorMessages (responseBody) {
+  getErrorMessages (responseBody, url) {
     let errors = [];
     try {
       errors = JSON.parse(responseBody).errors;
@@ -330,7 +331,7 @@ class CloudRequestEngine extends Engine {
       errors = ['Error parsing response - ' + responseBody];
     }
     if (responseBody.length === 0) {
-      errors = ['No data in response from cloud service'];
+      errors = [`No data in response from cloud service at '${url}'`];
     }
     return errors;
   }
@@ -360,9 +361,10 @@ class CloudRequestEngine extends Engine {
    * Used to handle errors from http requests
    *
    * @param {import('http').ServerResponse} response Responce to get errors from
+   * @param {string} url the address the request went to
    * @returns {Array<CloudRequestError>} Array of CloudRequestError from response
    */
-  getErrorsFromResponse (response) {
+  getErrorsFromResponse (response, url) {
     let content = response;
     if (response.content) {
       content = response.content;
@@ -371,7 +373,7 @@ class CloudRequestEngine extends Engine {
     // The cloud's errors can name the license key it was sent, so the key
     // is masked before the text goes into an error.
     const licenseKey = this.licenseKey;
-    const errors = this.getErrorMessages(content);
+    const errors = this.getErrorMessages(content, url);
     const cloudErrors = [];
     errors.forEach(function (errorText) {
       cloudErrors.push(new CloudRequestError(
@@ -382,8 +384,8 @@ class CloudRequestEngine extends Engine {
 
     if (cloudErrors.length === 0 &&
       response.statusCode > 299) {
-      const message = 'Cloud service returned status code ' +
-        response.statusCode + ' with content ' + content + '.';
+      const message = `Cloud service at '${url}' returned status code ` +
+        `'${response.statusCode}' with content ${content}`;
       cloudErrors.push(new CloudRequestError(
         LicenseKeys.mask(message, licenseKey),
         response.headers,
@@ -391,6 +393,35 @@ class CloudRequestEngine extends Engine {
     }
 
     return cloudErrors;
+  }
+
+  /**
+   * The errors an answer with a success status carries, being one for each
+   * entry of its errors array, with the license key masked, or one saying
+   * the answer is empty. An answer that is not JSON is left to its reader.
+   *
+   * @param {string} body the answer
+   * @param {string} url the address the request went to
+   * @returns {Array<CloudRequestError>} the errors, none for a good answer
+   */
+  answerErrors (body, url) {
+    if (typeof body !== 'string' || body.length === 0) {
+      return [new CloudRequestError(
+        `No data in response from cloud service at '${url}'`)];
+    }
+    let answer;
+    try {
+      answer = JSON.parse(body);
+    } catch (e) {
+      return [];
+    }
+    if (answer === null || typeof answer !== 'object' ||
+      Array.isArray(answer.errors) === false) {
+      return [];
+    }
+    const licenseKey = this.licenseKey;
+    return answer.errors.map((text) => new CloudRequestError(
+      LicenseKeys.mask(String(text), licenseKey)));
   }
 
   /**
@@ -425,6 +456,11 @@ class CloudRequestEngine extends Engine {
 
       request
         .then(function (properties) {
+          const failures = engine.answerErrors(properties, url);
+          if (failures.length > 0) {
+            reject(failures);
+            return;
+          }
           const propertiesOutput = {};
 
           properties = JSON.parse(properties);
@@ -440,7 +476,7 @@ class CloudRequestEngine extends Engine {
           engine.flowElementProperties = propertiesOutput;
           resolve(propertiesOutput);
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response));
+          reject(engine.getErrorsFromResponse(response, url));
         });
     });
   }
@@ -531,6 +567,12 @@ class CloudRequestEngine extends Engine {
             answer = undefined;
           }
           engine.logWarnings(answer, [flowData.pipeline]);
+          const failures = engine.answerErrors(body, url);
+          if (failures.length > 0) {
+            self.errors = failures;
+            reject(failures);
+            return;
+          }
 
           const data = new AspectDataDictionary({
             flowElement: engine,
@@ -545,7 +587,7 @@ class CloudRequestEngine extends Engine {
 
           resolve();
         }).catch(function (response) {
-          self.errors = engine.getErrorsFromResponse(response);
+          self.errors = engine.getErrorsFromResponse(response, url);
           reject(self.errors);
         });
     });
@@ -600,6 +642,11 @@ class CloudRequestEngine extends Engine {
     return new Promise(function (resolve, reject) {
       engine.requestClient.get(url, engine.cloudRequestOrigin)
         .then(function (body) {
+          const failures = engine.answerErrors(body, url);
+          if (failures.length > 0) {
+            reject(failures);
+            return;
+          }
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
@@ -607,7 +654,7 @@ class CloudRequestEngine extends Engine {
 
           resolve();
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response));
+          reject(engine.getErrorsFromResponse(response, url));
         });
     });
   }
