@@ -82,6 +82,54 @@ const listItem = function (item) {
 };
 
 /**
+ * Whether an item of a list is a weighted value, as the on-premise engines
+ * give one with rawWeight, or as the cloud service writes one with
+ * rawweighting.
+ *
+ * @param {*} item the item
+ * @returns {boolean} true when it is a weighted value
+ */
+const isWeightedItem = function (item) {
+  return item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false &&
+    Object.prototype.hasOwnProperty.call(item, 'value') &&
+    (typeof item.rawWeight === 'number' ||
+      typeof item.rawweighting === 'number');
+};
+
+/**
+ * A Property's value as the JSON carries it. Each item of a weighted value
+ * has the lower-case keys rawweighting and value, and keeps the weight and
+ * rawWeight it had beside them, which are deprecated and go in a later
+ * release. Each item of any other list is written as listItem writes it.
+ *
+ * @param {*} value the value
+ * @returns {*} the value as the JSON carries it
+ */
+const jsonValue = function (value) {
+  if (Array.isArray(value) === false) {
+    return value;
+  }
+  return value.map((item) => {
+    if (isWeightedItem(item) === false) {
+      return listItem(item);
+    }
+    const written = {
+      rawweighting: typeof item.rawWeight === 'number'
+        ? item.rawWeight
+        : item.rawweighting,
+      value: item.value
+    };
+    for (const name of ['weight', 'rawWeight']) {
+      if (name in item) {
+        written[name] = item[name];
+      }
+    }
+    return written;
+  });
+};
+
+/**
  * @typedef {import('./flowData')} FlowData
  */
 
@@ -251,11 +299,10 @@ class JSONBundlerElement extends FlowElement {
             value = valueContainer;
           }
 
-          // A list of Element Data, such as the hardware profiles, is a
-          // list of objects whose Properties follow the same rules.
-          if (Array.isArray(value)) {
-            value = value.map(listItem);
-          }
+          // Each item of a weighted value gets rawweighting and value, and
+          // each item of a list of Element Data, such as the hardware
+          // profiles, is written as that Element Data's own Properties are.
+          value = jsonValue(value);
         } catch (e) {
           // Catching missing property exceptions and other errors
 
