@@ -89,9 +89,10 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * responses that are plain text. This function handles these cases.
      *
      * @param {string} responseBody the response data to process
+     * @param {string} url the address the request went to
      * @returns {Array} The error messages
      */
-    getErrorMessages(responseBody: string): any[];
+    getErrorMessages(responseBody: string, url: string): any[];
     /**
      * Logs each entry of the warnings array of a cloud response as a warning,
      * with the license key masked as it is in the errors, because the cloud's
@@ -105,9 +106,20 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * Used to handle errors from http requests
      *
      * @param {import('http').ServerResponse} response Responce to get errors from
+     * @param {string} url the address the request went to
      * @returns {Array<CloudRequestError>} Array of CloudRequestError from response
      */
-    getErrorsFromResponse(response: import("http").ServerResponse): Array<CloudRequestError>;
+    getErrorsFromResponse(response: import("http").ServerResponse, url: string): Array<CloudRequestError>;
+    /**
+     * The errors an answer with a success status carries, being one for each
+     * entry of its errors array, with the license key masked, or one saying
+     * the answer is empty. An answer that is not JSON is left to its reader.
+     *
+     * @param {string} body the answer
+     * @param {string} url the address the request went to
+     * @returns {Array<CloudRequestError>} the errors, none for a good answer
+     */
+    answerErrors(body: string, url: string): Array<CloudRequestError>;
     /**
      * Internal process to fetch all the properties available under a resourcekey
      *

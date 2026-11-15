@@ -324,16 +324,19 @@ class CloudRequestEngine extends Engine {
    * @returns {Array} The error messages
    */
   getErrorMessages (responseBody, url) {
-    let errors = [];
+    if (typeof responseBody !== 'string' || responseBody.length === 0) {
+      return [`No data in response from cloud service at '${url}'`];
+    }
+    let parsed;
     try {
-      errors = JSON.parse(responseBody).errors;
+      parsed = JSON.parse(responseBody);
     } catch (parseError) {
-      errors = ['Error parsing response - ' + responseBody];
+      return ['Error parsing response - ' + responseBody];
     }
-    if (responseBody.length === 0) {
-      errors = [`No data in response from cloud service at '${url}'`];
-    }
-    return errors;
+    return parsed !== null && typeof parsed === 'object' &&
+      Array.isArray(parsed.errors)
+      ? parsed.errors
+      : [];
   }
 
   /**
@@ -366,7 +369,8 @@ class CloudRequestEngine extends Engine {
    */
   getErrorsFromResponse (response, url) {
     let content = response;
-    if (response.content) {
+    if (response !== null && typeof response === 'object' &&
+      Object.prototype.hasOwnProperty.call(response, 'content')) {
       content = response.content;
     }
 
