@@ -141,10 +141,10 @@ const refreshErrorText = function (dataFile, tries, error) {
  *
  * @param {DataFileUpdateService} service the update service, which logs
  * @param {DataFile} dataFile the data file to refresh
- * @param {function(boolean): void} callback given true if the refresh
+ * @param {function(boolean): void} whenRefreshed given true if the refresh
  * worked
  */
-const refreshFromFile = function (service, dataFile, callback) {
+const refreshFromFile = function (service, dataFile, whenRefreshed) {
   service.log('info', "Attempting to refresh Engine '" +
     engineName(dataFile) + "' with new data");
   let tries = 0;
@@ -157,11 +157,11 @@ const refreshFromFile = function (service, dataFile, callback) {
         setTimeout(attempt, RefreshRetryMilliseconds);
       } else {
         service.log('error', refreshErrorText(dataFile, tries, e));
-        callback(false);
+        whenRefreshed(false);
       }
       return;
     }
-    callback(true);
+    whenRefreshed(true);
   };
   attempt();
 };
@@ -173,20 +173,20 @@ const refreshFromFile = function (service, dataFile, callback) {
  * the watcher that starts them does not.
  *
  * @param {string} file the path of the file
- * @param {function(boolean): void} callback given true if the file opened
+ * @param {function(boolean): void} whenDone given true if the file opened
  */
-const whenReadable = function (file, callback) {
+const whenReadable = function (file, whenDone) {
   const end = Date.now() + WatchedFileWaitMilliseconds;
   const attempt = function () {
     fs.open(file, 'r', function (err, fd) {
       if (!err) {
         fs.close(fd, function () {
-          callback(true);
+          whenDone(true);
         });
         return;
       }
       if (Date.now() >= end) {
-        callback(false);
+        whenDone(false);
         return;
       }
       setTimeout(attempt, WatchedFileRetryMilliseconds).unref();
