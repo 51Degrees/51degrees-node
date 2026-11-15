@@ -37,9 +37,10 @@ const exampleEnvironment = () => {
   return env;
 };
 
-// Runs a console example to its end, from its own folder.
-const runExample = (file) => childProcess.spawnSync(
-  process.execPath, [path.basename(file)], {
+// Runs a console example to its end, from its own folder, with any
+// arguments given.
+const runExample = (file, args = []) => childProcess.spawnSync(
+  process.execPath, [path.basename(file), ...args], {
     cwd: path.dirname(file),
     env: exampleEnvironment(),
     encoding: 'utf8',
@@ -156,6 +157,22 @@ test('custom flowElements 1', () => {
   expectEndsWithFindOutMore(result.stdout);
 }, TIMEOUT_MS);
 
+// The days either side of the start of Cancer, which the cloud example's
+// service and the on-premise example's data file both put on 21 June.
+test.each([
+  ['2019-06-20', 'gemini'],
+  ['2019-06-21', 'cancer'],
+  ['2019-06-22', 'cancer']
+])('custom flowElements 1 gives %s the star sign %s', (date, sign) => {
+  const result = runExample(path.join(
+    __dirname, 'customFlowElements', 'simpleEvidenceFlowElement.js'), [date]);
+
+  expect({ status: result.status, stderr: result.stderr })
+    .toEqual({ status: 0, stderr: expect.any(String) });
+  const section = result.stdout.indexOf(RULE);
+  expect(result.stdout.slice(0, section).trim()).toBe(sign);
+}, TIMEOUT_MS);
+
 test('custom flowElements 2 asks for a date of birth', async () => {
   const page = await getFromExample(path.join(
     __dirname, 'customFlowElements', 'clientSideEvidenceFlowElement.js'), '/');
@@ -180,4 +197,16 @@ test('custom flowElements 2 gives the star sign', async () => {
   }).toEqual({ status: 200, output: '' });
   expect(page.body).toMatch(STAR_SIGN);
   expectPageEndsWithFindOutMore(page.body, 'Your starsign is');
+}, TIMEOUT_MS);
+
+test('custom flowElements 2 gives 21 June the star sign cancer', async () => {
+  const page = await getFromExample(path.join(
+    __dirname, 'customFlowElements', 'clientSideEvidenceFlowElement.js'),
+  '/?dateOfBirth=2019-06-21');
+
+  expect({
+    status: page.status,
+    output: page.status === 200 ? '' : page.output
+  }).toEqual({ status: 200, output: '' });
+  expect(page.body).toMatch(/Your starsign is cancer/i);
 }, TIMEOUT_MS);
