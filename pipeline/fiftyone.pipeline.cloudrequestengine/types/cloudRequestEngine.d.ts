@@ -84,9 +84,10 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     process(flowData: FlowData): Promise<any>;
     discovery: any;
     /**
-     * Typically, cloud will return errors as JSON.
-     * However, transport level errors or other failures can result in
-     * responses that are plain text. This function handles these cases.
+     * The error messages a failed answer's body gives, being each entry of
+     * its errors array, or the no data message when the body is empty. A body
+     * that is not JSON, or has no errors array, gives none, so that
+     * getErrorsFromResponse describes the failure by its status.
      *
      * @param {string} responseBody the response data to process
      * @param {string} url the address the request went to
