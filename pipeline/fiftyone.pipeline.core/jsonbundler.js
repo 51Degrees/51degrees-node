@@ -24,6 +24,13 @@ const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
 
+// The delayed execution Properties of each element by its data key, kept for
+// each Pipeline, because one JSON Builder can be added to several Pipelines
+// whose elements differ. An element's entry is made again once its
+// Properties are replaced, as a cloud engine's are when discovery succeeds
+// and an on-premise engine's when its data file is refreshed.
+const pipelineCaches = new WeakMap();
+
 /**
  * Whether a value is an Aspect Property Value, which carries hasValue.
  *
@@ -142,15 +149,18 @@ class JSONBundlerElement extends FlowElement {
       javascriptProperties: []
     };
 
-    // Check if property cache has already been set
+    // This Pipeline's property cache
 
-    let propertyCacheSet;
+    let cache = pipelineCaches.get(flowData.pipeline);
 
-    if (this.propertyCache) {
-      propertyCacheSet = true;
-    } else {
-      propertyCacheSet = false;
-      this.propertyCache = {};
+    if (cache === undefined) {
+      cache = {};
+      pipelineCaches.set(flowData.pipeline, cache);
+    }
+
+    // Holds the first Pipeline's, as it always has.
+    if (!this.propertyCache) {
+      this.propertyCache = /** @type {{}} */ (cache);
     }
 
     for (const flowElement in flowData.pipeline.flowElements) {
@@ -171,7 +181,8 @@ class JSONBundlerElement extends FlowElement {
 
       const properties = flowElementObject.getProperties();
 
-      if (!propertyCacheSet) {
+      if (cache[flowElement] === undefined ||
+        cache[flowElement].properties !== properties) {
         const delayExecutionList = [];
         const delayedEvidenceProperties = {};
 
@@ -204,13 +215,14 @@ class JSONBundlerElement extends FlowElement {
           }
         }
 
-        this.propertyCache[flowElement] = {
+        cache[flowElement] = {
+          properties,
           delayExecutionList,
           evidenceProperties: delayedEvidenceProperties
         };
       }
 
-      const propertyCache = this.propertyCache[flowElement];
+      const propertyCache = cache[flowElement];
 
       for (const property in properties) {
         // Get the value
