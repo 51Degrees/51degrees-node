@@ -94,3 +94,14 @@ describe('one JSON Builder in two Pipelines', () => {
         .toBeUndefined();
     });
 });
+
+test('marks delayed execution once an element\'s Properties are replaced',
+  async () => {
+    const device = element('device', 'one');
+    const pipeline = build(new JSONBundlerElement(), device);
+
+    expect((await json(pipeline)).device.answerdelayexecution)
+      .toBeUndefined();
+    device.properties = { answer: { type: 'string', delayexecution: true } };
+    expect((await json(pipeline)).device.answerdelayexecution).toBe(true);
+  });
