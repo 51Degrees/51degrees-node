@@ -227,9 +227,9 @@ describe('Sequence Element session id and sequence', () => {
     ['5', 6],
     ['00000000005', 6],
     ['0000000000000000000012', 13],
-    [5, 6],
+    [BigInt(5), 6],
     ['0', 1],
-    [0, 1],
+    [BigInt(0), 1],
     ['2147483646', 2147483647]
   ])('a sequence of %p with no session id counts up to %p and gets a new ' +
     'session id', async (given, expected) => {
@@ -257,7 +257,7 @@ describe('Sequence Element session id and sequence', () => {
   test.each([
     ['abc'], [''], ['-1'], ['+5'], [' 5'], ['5 '], ['1.5'], ['1e3'], [' 4'],
     ['2147483647'], ['00002147483647'],
-    ['99999999999'], [-1], [1.5], [NaN], [Infinity], [2147483647],
+    ['99999999999'], [5], [0], [-1], [1.5], [NaN], [Infinity], [2147483647],
     [[]], [['5']], [{}], [null], [true]
   ])('a sequence of %p counts as absent and gives 1', async (given) => {
     const flowData = await run({

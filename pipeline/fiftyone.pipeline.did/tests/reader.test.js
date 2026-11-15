@@ -223,13 +223,13 @@ describe('reader', () => {
 
   it('loads without the OWID library', () => {
     jest.isolateModules(() => {
-      jest.doMock('owid', () => {
+      jest.doMock('../owid-js/v1.js', () => {
         throw new Error('the reader must not load the OWID library');
       });
       const isolated = require('../reader');
       expect(isolated.read(envelopeBase64(withTerms(canonicalPayload(), 1))).terms)
         .toBe(MODEL_TERMS_2_URL);
     });
-    jest.dontMock('owid');
+    jest.dontMock('../owid-js/v1.js');
   });
 });

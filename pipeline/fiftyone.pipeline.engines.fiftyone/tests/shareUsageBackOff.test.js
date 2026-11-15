@@ -369,7 +369,7 @@ test('share usage back-off - full queue logs without a message per entry', async
   const full = logged.filter(entry => String(entry.message).includes('full'));
   expect(full.length).toBeGreaterThanOrEqual(1);
   expect(full.length).toBeLessThan(6);
-  expect(full[0].level).toBe('warning');
+  expect(full[0].level).toBe('warn');
 }, 30000);
 
 /**
@@ -384,10 +384,10 @@ test('share usage back-off - failed answer logs the status and content', async (
   await failSends(pipeline, 1);
 
   await waitFor(
-    () => logged.some(entry => entry.level === 'warning' &&
+    () => logged.some(entry => entry.level === 'warn' &&
       String(entry.message).includes('500')),
     () => `The status code was not logged. Logged: ${JSON.stringify(logged)}`);
-  const failed = logged.find(entry => entry.level === 'warning' &&
+  const failed = logged.find(entry => entry.level === 'warn' &&
     String(entry.message).includes('500'));
   expect(failed.message).toContain('the service says no');
 }, 30000);
@@ -576,3 +576,48 @@ describe('share usage back-off rules', () => {
     expect(backOff.failed(0)).toBe(3000);
   });
 });
+
+/**
+ * A pause is logged as a warning giving the delay, and the end of a pause as
+ * information, at the levels the Pipeline's listeners hear
+ * (usage-sharing-element.md line 366).
+ */
+test('share usage back-off - pause and resume reach the Pipeline as warn and info', async () => {
+  const pipeline = createPipeline();
+  const heard = [];
+  for (const level of ['warn', 'info']) {
+    pipeline.on(level, message => heard.push({ level, message: String(message) }));
+  }
+  holdClock();
+  await failSends(pipeline, 10);
+
+  await waitFor(
+    () => heard.some(entry => entry.level === 'warn' &&
+      entry.message.includes('paused for 2 ')),
+    () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+
+  const queued = await processUnique(pipeline);
+  status = 200;
+  moveClock(2000);
+  await waitFor(
+    () => clientIps().includes(queued) &&
+      heard.some(entry => entry.level === 'info' &&
+        entry.message.includes('resumed')),
+    () => `No information that sending resumed was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);
+
+/**
+ * The pause is heard at the deprecated level 'warning' as well, so that a
+ * listener on it still hears usage sharing's warnings in this release.
+ */
+test('share usage back-off - pause still reaches the deprecated warning level', async () => {
+  const pipeline = createPipeline();
+  const heard = [];
+  pipeline.on('warning', message => heard.push(String(message)));
+  holdClock();
+  await failSends(pipeline, 10);
+
+  await waitFor(
+    () => heard.some(message => message.includes('paused for 2 ')),
+    () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);

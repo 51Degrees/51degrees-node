@@ -101,7 +101,7 @@ test('sequence gives a sequence number', () => {
 const flowData2 = pipeline.createFlowData();
 
 flowData2.evidence.add('query.session-id', 'test');
-flowData2.evidence.add('query.sequence', 10);
+flowData2.evidence.add('query.sequence', '10');
 
 test('sequence number for same session id increments', (done) => {
   flowData2.process().then(function () {
@@ -138,7 +138,7 @@ const parameterPipeline = new core.PipelineBuilder({
 const flowData3 = parameterPipeline.createFlowData();
 
 flowData3.evidence.add('query.session-id', 'test-session');
-flowData3.evidence.add('query.sequence', 1);
+flowData3.evidence.add('query.sequence', '1');
 flowData3.evidence.add('query.mark', 'kept');
 
 test('the script parameters leave out the session id and the sequence',
