@@ -162,6 +162,17 @@ describe.each([
   });
 });
 
+test('a process that starts while a failing attempt is under way gives its ' +
+  'failure rather than asking again', async () => {
+  const client = new CountingClient(2, REFUSED);
+  const { pipeline } = pipelineFor(engineFor(client));
+  const flowData = await processOne(pipeline);
+  expect(Object.keys(flowData.errors)).toEqual(['cloud']);
+  expect(String(flowData.errors.cloud[0].errorMessage))
+    .toContain('The resource key is not valid.');
+  expect(client.requests.sort()).toEqual(DISCOVERY);
+});
+
 test('a failure that arrives before the engine is in a Pipeline is logged ' +
   'by its first process', async () => {
   const engine = engineFor(new CountingClient(2, UNAVAILABLE));
