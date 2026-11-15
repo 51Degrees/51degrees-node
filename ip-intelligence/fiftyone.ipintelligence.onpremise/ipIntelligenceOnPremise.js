@@ -329,10 +329,12 @@ class IpIntelligenceOnPremise extends Engine {
 
     // The data file's keys are read when the engine is initialised,
     // which waits for the download when updateOnStart is set and there
-    // is no file yet. Until then every key is kept, so evidence set
-    // before then is not lost, and initEngine replaces this with the
-    // keys the file lists.
-    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
+    // is no file yet. Until then the engine accepts no Evidence, as
+    // nothing can change its results, and keeps every key, so evidence
+    // set before then is not lost. initEngine replaces both with the keys
+    // the file lists.
+    this.evidenceKeyFilter = new EvidenceKeyFilter([]);
+    this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
 
     const current = this;
 
@@ -364,6 +366,7 @@ class IpIntelligenceOnPremise extends Engine {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
       current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
+      current.keptEvidenceKeyFilter = undefined;
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;

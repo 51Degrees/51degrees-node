@@ -281,10 +281,13 @@ class CloudRequestEngine extends Engine {
     this.baseURL = baseURL;
     this.evidenceKeys = [];
 
-    // Until the cloud service's keys arrive every key is kept, so evidence
-    // set before then is not lost, and getEvidenceKeys replaces this with
-    // the keys the service lists.
-    this.evidenceKeyFilter = new EvidenceKeyFilter();
+    // Until discovery gives the keys the cloud service accepts, the engine
+    // accepts none, as nothing can change its results
+    // (cloud-request-engine.md lines 296 and 297), and keeps every key, so
+    // evidence set before then is still sent and in the cache key.
+    // getEvidenceKeys replaces both.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.keptEvidenceKeyFilter = new EvidenceKeyFilter();
 
     // Set once the cloud service's evidence keys have arrived.
     this.evidenceKeysFetched = false;
@@ -763,6 +766,7 @@ class CloudRequestEngine extends Engine {
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
+          engine.keptEvidenceKeyFilter = undefined;
           engine.evidenceKeysFetched = true;
 
           resolve();
