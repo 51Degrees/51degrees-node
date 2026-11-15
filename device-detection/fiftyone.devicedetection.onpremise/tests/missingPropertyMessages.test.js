@@ -23,7 +23,7 @@
 // The message for a Property the on-premise engine does not have in its
 // results says whether the data file's tier lacks it, in the words of the
 // specification's table (properties.md lines 116 to 139), and decides the
-// reason in the order lines 141 to 175 give. The engine here stands in for
+// reason in the order lines 141 to 177 give. The engine here stands in for
 // the native one, so the test needs no data file.
 
 const path = require('path');

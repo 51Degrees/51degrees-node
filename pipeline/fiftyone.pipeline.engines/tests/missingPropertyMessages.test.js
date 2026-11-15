@@ -24,7 +24,7 @@
 // the reason in the words of the table in the specification's Missing
 // Properties section (properties.md lines 116 to 139), with the reason
 // decided in the order its Deciding the reason section gives (lines 141 to
-// 175). Names are compared ignoring case.
+// 177). Names are compared ignoring case.
 
 const path = require('path');
 
