@@ -35,6 +35,8 @@ declare class JavaScriptBuilderElement extends FlowElement {
      * be set per request, using the "query.fod-js-enable-cookies" evidence key.
      * For more details on personal data policy, see https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-javascriptbuilder.js&utm_term=constructor
      * @param {boolean} options.minify Whether to minify the JavaScript
+     * @throws {Error} when objName is not a valid name, or when protocol is
+     * given and is not http or https
      */
     constructor({ objName, protocol, host, endPoint, enableCookies, minify }?: {
         objName: string;
