@@ -105,6 +105,21 @@ const initComponents = function (metadata) {
   this.components = components;
 };
 
+// The possible values of a match metric Property, read as a data file
+// Property's are, each with a name and no description.
+const metricValues = function (names) {
+  const values = names.map((name) => ({
+    getName: () => name,
+    getDescription: () => ''
+  }));
+  return {
+    getValues: function * () {
+      yield * values;
+    },
+    getNumberOfValues: () => values.length
+  };
+};
+
 const initMatchMetrics = function () {
   // Add a component for Device Metrics
   const metricComponent = {
@@ -124,7 +139,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.matchedNodesDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.difference = {
@@ -134,7 +150,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.differenceDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.drift = {
@@ -144,7 +161,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.driftDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.deviceID = {
@@ -154,7 +172,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: '0-0-0-0',
     description: constants.deviceIdDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.userAgents = {
@@ -164,7 +183,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: [],
     description: constants.userAgentsDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.iterations = {
@@ -174,7 +194,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.iterationsDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.method = {
@@ -184,7 +205,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 'NONE',
     description: constants.methodDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues(['NONE', 'PERFORMANCE', 'COMBINED', 'PREDICTIVE'])
   };
 
   metricComponent.properties = [
