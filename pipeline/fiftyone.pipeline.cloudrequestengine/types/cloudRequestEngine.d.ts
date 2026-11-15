@@ -1,9 +1,5 @@
 export = CloudRequestEngine;
 declare const CloudRequestEngine_base: typeof import("fiftyone.pipeline.engines/types/engine");
-/**
- * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
- * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
- */
 declare class CloudRequestEngine extends CloudRequestEngine_base {
     /**
      * Constructor for CloudRequestEngine
@@ -86,33 +82,45 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * @returns {Promise} resolved once the FlowData is processed
      */
     process(flowData: FlowData): Promise<any>;
-    discovery: Promise<any>;
+    discovery: any;
     /**
-     * A response with a top level `fodid` member, in any case, holds a 51Did
-     * created for the one request, so it is neither stored in the cache nor
-     * served from it. The answer is worked out once for each element data,
-     * so a cache hit does not parse the response again.
-     *
-     * @param {object} data the element data of a response
-     * @returns {boolean} false if the response has a top level fodid member
-     */
-    isCacheable(data: object): boolean;
-    /**
-     * Typically, cloud will return errors as JSON.
-     * However, transport level errors or other failures can result in
-     * responses that are plain text. This function handles these cases.
+     * The error messages a failed answer's body gives, being each entry of
+     * its errors array, or the no data message when the body is empty. A body
+     * that is not JSON, or has no errors array, gives none, so that
+     * getErrorsFromResponse describes the failure by its status.
      *
      * @param {string} responseBody the response data to process
+     * @param {string} url the address the request went to
      * @returns {Array} The error messages
      */
-    getErrorMessages(responseBody: string): any[];
+    getErrorMessages(responseBody: string, url: string): any[];
+    /**
+     * Logs each entry of the warnings array of a cloud response as a warning,
+     * with the license key masked as it is in the errors, because the cloud's
+     * text can name the key it was sent.
+     *
+     * @param {*} answer the response, parsed from JSON
+     * @param {Array<object>} pipelines the pipelines to log to
+     */
+    logWarnings(answer: any, pipelines: Array<object>): void;
     /**
      * Used to handle errors from http requests
      *
      * @param {import('http').ServerResponse} response Responce to get errors from
+     * @param {string} url the address the request went to
      * @returns {Array<CloudRequestError>} Array of CloudRequestError from response
      */
-    getErrorsFromResponse(response: import("http").ServerResponse): Array<CloudRequestError>;
+    getErrorsFromResponse(response: import("http").ServerResponse, url: string): Array<CloudRequestError>;
+    /**
+     * The errors an answer with a success status carries, being one for each
+     * entry of its errors array, with the license key masked, or one saying
+     * the answer is empty. An answer that is not JSON is left to its reader.
+     *
+     * @param {string} body the answer
+     * @param {string} url the address the request went to
+     * @returns {Array<CloudRequestError>} the errors, none for a good answer
+     */
+    answerErrors(body: string, url: string): Array<CloudRequestError>;
     /**
      * Internal process to fetch all the properties available under a resourcekey
      *
@@ -219,7 +227,8 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getSelectedEvidence(evidence: Evidence, type: string): Evidence;
     /**
-     * Check that the key of a KeyValuePair has the given prefix.
+     * Check that the key of a KeyValuePair has the given prefix, ignoring
+     * letter case as evidence keys do.
      *
      * @param {string} itemKey Key to check
      * @param {string} prefix The prefix to check for.

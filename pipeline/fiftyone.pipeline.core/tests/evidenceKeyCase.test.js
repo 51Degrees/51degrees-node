@@ -67,7 +67,7 @@ describe('evidence key case', () => {
   test('an element reads evidence added in other letters', async () => {
     const data = flowData();
     data.evidence.add('QUERY.SESSION-ID', 'abc-123');
-    data.evidence.add('Query.Sequence', 5);
+    data.evidence.add('Query.Sequence', '5');
     await data.process();
     expect(data.evidence.get('query.sequence')).toBe(6);
   });

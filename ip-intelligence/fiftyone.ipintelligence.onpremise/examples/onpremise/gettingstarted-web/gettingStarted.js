@@ -116,10 +116,18 @@ const setPipeline = (options) => {
   // ordered country name lists that the page binds the dropdown to. The
   // browser language is taken from the request's Accept-Language header (a
   // 'translation' query parameter overrides it).
+  // Usage sharing is on when the configuration names the usage sharing
+  // element, as this example's 51d.json does and as it should be in
+  // production, because the usage data shared improves the data and the
+  // service for everyone. The console examples turn it off, as they run
+  // sample evidence only.
+  const shareUsage = options.PipelineOptions.Elements.some((element) =>
+    element.elementName.endsWith('shareUsage'));
+
   pipeline = new ipi.IpIntelligenceOnPremisePipelineBuilder({
     performanceProfile: 'Balanced',
     dataFile: dataFilePath,
-    shareUsage: false,
+    shareUsage,
     autoUpdate: false,
     updateOnStart: false,
     fileSystemWatcher: false,

@@ -1,5 +1,6 @@
 export = GeoLocationCloud;
-declare class GeoLocationCloud {
+declare const GeoLocationCloud_base: typeof import("fiftyone.pipeline.cloudrequestengine/types/cloudEngine");
+declare class GeoLocationCloud extends GeoLocationCloud_base {
     /**
      * Constructor for GeoLocationCloud
      *
@@ -9,5 +10,4 @@ declare class GeoLocationCloud {
     constructor({ locationProvider }: {
         locationProvider: string;
     }, ...args: any[]);
-    dataKey: string;
 }
