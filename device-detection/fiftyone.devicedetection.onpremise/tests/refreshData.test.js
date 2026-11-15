@@ -137,9 +137,12 @@ describe('refreshing the data', () => {
         }
         batch.push(processed(pipeline));
       }
+      // Collected before the next wait, so that a request that fails is a
+      // failure of this test rather than an unhandled rejection.
+      const all = Promise.all(batch);
       const late = await processed(pipeline);
 
-      for (const flowData of [early, ...(await Promise.all(batch)), late]) {
+      for (const flowData of [early, ...(await all), late]) {
         expect(flowData.errors).toEqual({});
         expect(valuesOf(flowData)).toEqual(expected);
       }
