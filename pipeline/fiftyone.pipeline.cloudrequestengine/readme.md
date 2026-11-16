@@ -34,6 +34,35 @@ no `resourceKey` or `requestedProperties`, because the cloud service refuses
 every request made that way. A license key is sent in the body of each
 request and never in a URL.
 
+## Discovery
+
+When it is built, the engine asks the cloud service which Evidence keys it
+accepts and which properties the keys in use give, and it is ready to
+process once both have answered. If the cloud service cannot be reached
+then, the engine logs a warning and asks again when it first processes.
+Until discovery has answered, the engine accepts no Evidence and keeps what
+is added, so nothing is lost.
+
+A host that starts often, or has to start with no network, can save what
+discovery fetched and give it to the next engine, which then makes no
+discovery request.
+
+```js
+const { CloudRequestEngine } = require('fiftyone.pipeline.cloudrequestengine');
+
+const engine = new CloudRequestEngine({ resourceKey });
+await engine.ready();
+const saved = engine.getDiscoveryState().toJson();
+
+// Later, with the same keys.
+const next = new CloudRequestEngine({ resourceKey, discoveryState: saved });
+```
+
+The copy holds the accepted Evidence keys and the accessible properties
+answer, which depend only on the keys, so keep one copy for each set of
+keys. A configuration file can give it as the `discoveryState` parameter of
+the engine, as that JSON. A blank value there is the option unset.
+
 ## Installation
 
 ```
