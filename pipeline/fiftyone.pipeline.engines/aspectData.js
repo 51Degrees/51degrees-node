@@ -99,7 +99,8 @@ class AspectData extends ElementData {
         this.flowElement.restrictedPropertyKeys = keys;
       }
       if (!keys.has(key) && !keys.has(key.toLowerCase())) {
-        throw util.format(errorMessages.propertyExcluded, key);
+        throw util.format(errorMessages.missingPropertyExcluded, key,
+          this.flowElement.dataKey);
       }
     }
 

@@ -19,16 +19,17 @@ declare class Engine extends Engine_base {
      * @param {DataFile} options.dataFile an optional datafile
      * to add to the engine
      * @param {DataKeyedCache} options.cache instance of a DataKeyedCache
-     * @param {Array} options.restrictedProperties specific list
-     * of properties to fetch elementData for
+     * @param {Array<string>|string} options.restrictedProperties specific
+     * list of properties to fetch elementData for, or one comma separated
+     * string of them, as a configuration file gives a list
      */
     constructor({ cache, restrictedProperties, dataFile }?: {
         dataFile: DataFile;
         cache: DataKeyedCache;
-        restrictedProperties: any[];
+        restrictedProperties: Array<string> | string;
     }, ...args: any[]);
     cache: import("./dataKeyedCache");
-    restrictedProperties: any[];
+    restrictedProperties: string[];
     /**
      * The restricted property names in lower case, because property
      * names are compared ignoring case.
@@ -47,13 +48,25 @@ declare class Engine extends Engine_base {
      */
     isCacheable(data: object): boolean;
     /**
+     * The key the cache keeps a result under, made from the evidence this
+     * engine accepts with each key in lower case and the keys in order, so
+     * the same evidence gives the same key whatever order it was added in and
+     * whatever the letters of its keys. Values keep their letters.
+     *
+     * @param {FlowData} flowData the flow data being processed
+     * @returns {string} the cache key
+     */
+    cacheKey(flowData: FlowData): string;
+    /**
      * Checks cache and returns cached result if found.
      *
      * @param {FlowData} flowData checks if a FlowData's evidence
      * is already in the cache and processing can be bypassed
+     * @param {string} [key] the flow data's cache key, made from it when not
+     * given
      * @returns {boolean} whether in cache
      */
-    inCache(flowData: FlowData): boolean;
+    inCache(flowData: FlowData, key?: string): boolean;
     /**
      * An engine's process function checks cache for an item
      * (calling inCache)

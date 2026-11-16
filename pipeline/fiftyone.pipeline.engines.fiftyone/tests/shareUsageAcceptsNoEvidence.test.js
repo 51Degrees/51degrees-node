@@ -254,7 +254,7 @@ describe('usage sharing accepts no evidence', () => {
     expect(received[0]).not.toContain('cookie value');
     expect(received[0]).not.toContain('Name="cookie"');
     expect(received[0]).not.toContain('http-request');
-    expect(received[0]).not.toContain('Name="other"');
+    expect(received[0]).toContain('<query Name="other">');
   });
 
   test('a value only in server.http-request is shared, and evidence wins ' +
@@ -316,7 +316,7 @@ describe('usage sharing accepts no evidence', () => {
     expect(received[0]).toContain('<query Name="51d_gethighentropyvalues">hev</query>');
     expect(received[0]).toContain('<ClientIP>1.2.3.4</ClientIP>');
     expect(received[0]).not.toContain('cookie value');
-    expect(received[0]).not.toContain('password value');
+    expect(received[0]).toContain('<query Name="password">password value</query>');
   });
 });
 

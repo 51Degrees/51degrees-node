@@ -36,9 +36,17 @@ const minToMs = (min) => min * 60000;
 // The longest delay setTimeout accepts. A longer one fires straight away.
 const MaximumTimerMilliseconds = 2147483647;
 
-// The number of times a refresh is tried before it is reported as failed.
-// The .NET service names the count in the message it writes.
-const RefreshTries = 1;
+// A refresh from a file that was written is tried this many times, this far
+// apart, before it is reported as failed, as the .NET service does, because
+// the file may not be ready straight away. The message names the tries.
+const RefreshTries = 10;
+const RefreshRetryMilliseconds = 200;
+
+// The file system watcher waits this long for a changed file to open for
+// reading before it refreshes, trying this often, as the .NET service does,
+// because the file may still be being copied.
+const WatchedFileWaitMilliseconds = minToMs(10);
+const WatchedFileRetryMilliseconds = 500;
 
 /**
  * The name of the engine a data file belongs to, for log messages.
@@ -110,6 +118,84 @@ const unhandledErrorText = function (dataFile, error) {
 };
 
 /**
+ * The message for a refresh that failed. Where the data came from a file
+ * that was written it names the tries, as the .NET service does.
+ *
+ * @param {DataFile} dataFile the data file that was refreshed
+ * @param {number | undefined} tries the tries made, or undefined where the
+ * data was held in memory
+ * @param {*} error the error the last try raised
+ * @returns {string} the message to log
+ */
+const refreshErrorText = function (dataFile, tries, error) {
+  return checkErrorText('An error occurred when applying a data update to ' +
+    "engine '" + engineName(dataFile) + "'" +
+    (tries === undefined ? '.' : ' after ' + tries + ' tries.'), error);
+};
+
+/**
+ * Refreshes the engine of a data file from the file just written to its
+ * path, trying up to RefreshTries times, RefreshRetryMilliseconds apart.
+ * Only the last failure is logged. A first try that works calls back before
+ * this returns.
+ *
+ * @param {DataFileUpdateService} service the update service, which logs
+ * @param {DataFile} dataFile the data file to refresh
+ * @param {function(boolean): void} whenRefreshed given true if the refresh
+ * worked
+ */
+const refreshFromFile = function (service, dataFile, whenRefreshed) {
+  service.log('info', "Attempting to refresh Engine '" +
+    engineName(dataFile) + "' with new data");
+  let tries = 0;
+  const attempt = function () {
+    tries++;
+    try {
+      dataFile.refresh();
+    } catch (e) {
+      if (tries < RefreshTries) {
+        setTimeout(attempt, RefreshRetryMilliseconds);
+      } else {
+        service.log('error', refreshErrorText(dataFile, tries, e));
+        whenRefreshed(false);
+      }
+      return;
+    }
+    whenRefreshed(true);
+  };
+  attempt();
+};
+
+/**
+ * Calls back once the file opens for reading, trying every
+ * WatchedFileRetryMilliseconds, or once WatchedFileWaitMilliseconds have
+ * passed without it opening. The waits do not keep the process running, as
+ * the watcher that starts them does not.
+ *
+ * @param {string} file the path of the file
+ * @param {function(boolean): void} whenDone given true if the file opened
+ */
+const whenReadable = function (file, whenDone) {
+  const end = Date.now() + WatchedFileWaitMilliseconds;
+  const attempt = function () {
+    fs.open(file, 'r', function (err, fd) {
+      if (!err) {
+        fs.close(fd, function () {
+          whenDone(true);
+        });
+        return;
+      }
+      if (Date.now() >= end) {
+        whenDone(false);
+        return;
+      }
+      setTimeout(attempt, WatchedFileRetryMilliseconds).unref();
+    });
+  };
+  attempt();
+};
+
+/**
  * The value for the If-Modified-Since header of a request for new data. It
  * is the published date of the data file, or the last time the file at its
  * path changed where the data file has no published date. The date is an
@@ -172,8 +258,41 @@ const scheduleUpdate = function (serviceRef, dataFileRef, interval) {
 };
 
 /**
+ * Refreshes the data file from a file the watcher saw change, once the file
+ * opens for reading, and reports how the change ended. A failed refresh is
+ * logged and reported as on the update route, because an error thrown from
+ * here ends the process. The wait holds the update service and the data
+ * file weakly, as the watcher does.
+ *
+ * @param {WeakRef} serviceRef the update service
+ * @param {WeakRef} dataFileRef the data file to refresh
+ * @param {string} file the path of the file that changed
+ */
+const applyWatchedChange = function (serviceRef, dataFileRef, file) {
+  whenReadable(file, function (readable) {
+    const service = serviceRef.deref();
+    const dataFile = dataFileRef.deref();
+    if (!service || !dataFile) {
+      return;
+    }
+    if (!readable) {
+      dataFile.updating = false;
+      service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_TIMEOUT);
+      return;
+    }
+    refreshFromFile(service, dataFile, function (refreshed) {
+      dataFile.updating = false;
+      service.complete(dataFile, refreshed
+        ? AutoUpdateStatus.AUTO_UPDATE_SUCCESS
+        : AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
+    });
+  });
+};
+
+/**
  * Refreshes the data file whenever the file at its path changes, until the
- * update service or the data file has been collected.
+ * update service or the data file has been collected. fs.watch goes on
+ * watching after a change that failed, so a later file is picked up.
  *
  * @param {WeakRef} serviceRef the update service
  * @param {WeakRef} dataFileRef the data file to refresh
@@ -191,16 +310,15 @@ const watchDataFile = function (serviceRef, dataFileRef) {
       return;
     }
     if (!dataFile.updating) {
-      // A failed refresh is logged and reported as on the update
-      // route, because an error thrown from here ends the process.
-      // fs.watch goes on watching, so a later file is picked up.
-      if (!service.refreshDataFile(dataFile)) {
-        service.complete(
-          dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
-        return;
-      }
-      service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      // One change raises several events, so the data file is updating
+      // until the change has been applied.
+      dataFile.updating = true;
+      applyWatchedChange(serviceRef, dataFileRef, dataFile.path);
+    } else {
+      // Every check is reported. One that finds an update already under
+      // way, the other events of a change being applied among them, has
+      // nothing left to do.
+      service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
     }
   });
   const service = serviceRef.deref();
@@ -338,9 +456,9 @@ class DataFileUpdateService {
     try {
       dataFile.refresh();
     } catch (e) {
-      this.log('error', checkErrorText('An error occurred when applying a ' +
-        "data update to engine '" + engineName(dataFile) + "'" +
-        (fromFile ? ' after ' + RefreshTries + ' tries.' : '.'), e));
+      // This tries once, which the message for a file says.
+      this.log('error',
+        refreshErrorText(dataFile, fromFile ? 1 : undefined, e));
       return false;
     }
     return true;
@@ -700,23 +818,24 @@ class DataFileUpdateService {
           return;
         }
 
-        const refreshed = dataFileUpdateService.refreshDataFile(dataFile);
-        dataFile.updating = false;
-        if (!refreshed) {
-          dataFileUpdateService.complete(
-            dataFile,
-            AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
-        }
-        dataFileUpdateService.checkNextUpdate(dataFile);
-
-        // Delete the temp file
-        removeDownload(function () {
-          // A failed refresh has been reported already.
-          if (refreshed) {
+        refreshFromFile(dataFileUpdateService, dataFile, function (refreshed) {
+          dataFile.updating = false;
+          if (!refreshed) {
             dataFileUpdateService.complete(
               dataFile,
-              AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+              AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
           }
+          dataFileUpdateService.checkNextUpdate(dataFile);
+
+          // Delete the temp file
+          removeDownload(function () {
+            // A failed refresh has been reported already.
+            if (refreshed) {
+              dataFileUpdateService.complete(
+                dataFile,
+                AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+            }
+          });
         });
       });
     });

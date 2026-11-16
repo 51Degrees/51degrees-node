@@ -67,6 +67,10 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
    * engine.
    * @param {Array<string>} [options.restrictedProperties] list of properties the engine
    * will be restricted to
+   * @param {Array<string>|string} [options.indexedProperties] list of
+   * Properties whose values the native code indexes to the profiles holding
+   * them, so the engine's profileIdsForPropertyValue finds them without
+   * reading every profile
    * @param {string} [options.performanceProfile] used to control the tradeoff
    * between performance and system memory usage (Only applies to on-premise,
    * not cloud) options are: LowMemory, MaxPerformance, Balanced,
@@ -128,6 +132,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       updateOnStart = false,
       cacheSize = null,
       restrictedProperties,
+      indexedProperties,
       performanceProfile = 'Balanced',
       concurrency = os.cpus().length,
       updateMatchedUserAgent,
@@ -172,6 +177,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
         updateTimeMaximumRandomisation,
         licenceKeys,
         restrictedProperties,
+        indexedProperties,
         performanceProfile,
         concurrency,
         updateMatchedUserAgent,

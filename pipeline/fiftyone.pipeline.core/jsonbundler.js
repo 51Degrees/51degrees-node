@@ -24,6 +24,111 @@ const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
 
+// The delayed execution Properties of each element by its data key, kept for
+// each Pipeline, because one JSON Builder can be added to several Pipelines
+// whose elements differ. An element's entry is made again once its
+// Properties are replaced, as a cloud engine's are when discovery succeeds
+// and an on-premise engine's when its data file is refreshed.
+const pipelineCaches = new WeakMap();
+
+/**
+ * Whether a value is an Aspect Property Value, which carries hasValue.
+ *
+ * @param {*} value the value
+ * @returns {boolean} true when it carries hasValue
+ */
+const isAspectValue = function (value) {
+  return value !== null && typeof value === 'object' &&
+    Object.prototype.hasOwnProperty.call(value, 'hasValue');
+};
+
+/**
+ * An item of a list Property as the JSON carries it. An item that is Element
+ * Data, or an object whose every value is an Aspect Property Value as each
+ * hardware profile is, is written as an object whose Properties follow the
+ * rules for the Element Data's own Properties, so a Property with no value
+ * is null with its nullreason, a plain null has no entry, and every key is
+ * in lower case. Any other item is written as it is.
+ *
+ * @param {*} item the item
+ * @returns {*} the item as the JSON carries it
+ */
+const listItem = function (item) {
+  let contents;
+  if (item instanceof ElementDataDictionary) {
+    contents = item.contents;
+  } else if (item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false && Object.keys(item).length > 0 &&
+    Object.values(item).every(isAspectValue)) {
+    contents = item;
+  } else {
+    return item;
+  }
+  const written = {};
+  for (const [key, value] of Object.entries(contents)) {
+    const name = key.toLowerCase();
+    if (isAspectValue(value)) {
+      if (value.hasValue) {
+        written[name] = value.value;
+      } else {
+        written[name] = null;
+        written[name + 'nullreason'] = value.noValueMessage;
+      }
+    } else if (value !== null && value !== undefined) {
+      written[name] = value;
+    }
+  }
+  return written;
+};
+
+/**
+ * Whether an item of a list is a weighted value, as the on-premise engines
+ * give one with rawWeight, or as the cloud service writes one with
+ * rawweighting.
+ *
+ * @param {*} item the item
+ * @returns {boolean} true when it is a weighted value
+ */
+const isWeightedItem = function (item) {
+  return item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false &&
+    Object.prototype.hasOwnProperty.call(item, 'value') &&
+    (typeof item.rawWeight === 'number' ||
+      typeof item.rawweighting === 'number');
+};
+
+/**
+ * A Property's value as the JSON carries it. Each item of a weighted value
+ * has the lower-case keys rawweighting and value, and keeps the weight and
+ * rawWeight it had beside them, which are deprecated and go in a later
+ * release. Each item of any other list is written as listItem writes it.
+ *
+ * @param {*} value the value
+ * @returns {*} the value as the JSON carries it
+ */
+const jsonValue = function (value) {
+  if (Array.isArray(value) === false) {
+    return value;
+  }
+  return value.map((item) => {
+    if (isWeightedItem(item) === false) {
+      return listItem(item);
+    }
+    const written = {
+      rawweighting: typeof item.rawWeight === 'number'
+        ? item.rawWeight
+        : item.rawweighting,
+      value: item.value
+    };
+    for (const name of ['weight', 'rawWeight']) {
+      if (name in item) {
+        written[name] = item[name];
+      }
+    }
+    return written;
+  });
+};
+
 /**
  * @typedef {import('./flowData')} FlowData
  */
@@ -51,6 +156,13 @@ class JSONBundlerElement extends FlowElement {
 
     this.dataKey = 'jsonbundler';
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.properties = {
+      json: {
+        name: 'json',
+        type: 'string',
+        description: 'The raw JSON produced by this element.'
+      }
+    };
     this.propertyCache = null;
   }
 
@@ -61,6 +173,8 @@ class JSONBundlerElement extends FlowElement {
    *
    * @param {FlowData} flowData the FlowData being processed
    * @returns {number} the sequence number
+   * @throws {Error} when there is no sequence number, which a Sequence
+   * Element placed before the JSON Builder gives
    */
   getSequence (flowData) {
     let sequence;
@@ -92,15 +206,18 @@ class JSONBundlerElement extends FlowElement {
       javascriptProperties: []
     };
 
-    // Check if property cache has already been set
+    // This Pipeline's property cache
 
-    let propertyCacheSet;
+    let cache = pipelineCaches.get(flowData.pipeline);
 
-    if (this.propertyCache) {
-      propertyCacheSet = true;
-    } else {
-      propertyCacheSet = false;
-      this.propertyCache = {};
+    if (cache === undefined) {
+      cache = {};
+      pipelineCaches.set(flowData.pipeline, cache);
+    }
+
+    // Holds the first Pipeline's, as it always has.
+    if (!this.propertyCache) {
+      this.propertyCache = /** @type {{}} */ (cache);
     }
 
     for (const flowElement in flowData.pipeline.flowElements) {
@@ -121,7 +238,8 @@ class JSONBundlerElement extends FlowElement {
 
       const properties = flowElementObject.getProperties();
 
-      if (!propertyCacheSet) {
+      if (cache[flowElement] === undefined ||
+        cache[flowElement].properties !== properties) {
         const delayExecutionList = [];
         const delayedEvidenceProperties = {};
 
@@ -154,13 +272,14 @@ class JSONBundlerElement extends FlowElement {
           }
         }
 
-        this.propertyCache[flowElement] = {
+        cache[flowElement] = {
+          properties,
           delayExecutionList,
           evidenceProperties: delayedEvidenceProperties
         };
       }
 
-      const propertyCache = this.propertyCache[flowElement];
+      const propertyCache = cache[flowElement];
 
       for (const property in properties) {
         // Get the value
@@ -188,6 +307,11 @@ class JSONBundlerElement extends FlowElement {
 
             value = valueContainer;
           }
+
+          // Each item of a weighted value gets rawweighting and value, and
+          // each item of a list of Element Data, such as the hardware
+          // profiles, is written as that Element Data's own Properties are.
+          value = jsonValue(value);
         } catch (e) {
           // Catching missing property exceptions and other errors
 

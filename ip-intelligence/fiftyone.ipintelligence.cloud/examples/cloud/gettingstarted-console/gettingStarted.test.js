@@ -72,6 +72,10 @@ describe('Examples', () => {
     expect(lines).toContain('Registered Country: CH');
     expect(lines).toContain('Registered Country: BE');
     expect(lines).toContain('Registered Country: AT');
+    // Each value is shown again with its weighting, as
+    // ip-intelligence required-examples.md lines 107 and 108 ask.
+    expect(lines.some((line) =>
+      /^Registered Country: CH, weighting (1|0\.\d+)$/.test(line))).toBe(true);
     expect(output.faults()).toEqual([]);
   });
 });

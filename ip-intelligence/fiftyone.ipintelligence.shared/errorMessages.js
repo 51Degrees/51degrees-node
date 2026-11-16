@@ -47,8 +47,15 @@ module.exports = {
     'wish to use a key then you can specify an empty string, but this will ' +
     'cause automatic updates to be disabled.',
   invalidPerformanceProfile: 'The performance profile \'%s\' is not valid',
+  /**
+   * @deprecated No longer used. The engines' missing property messages
+   * are in fiftyone.pipeline.engines' errorMessages.
+   */
   propertyKeyDataFiles: 'Property %s can be found in the following datafiles ' +
     '%s not %s',
+  /**
+   * @deprecated No longer used, as above.
+   */
   propertyNotFound: 'Property %s not found in %s',
   badDataUnsupportedVersion: 'The data %s is an unsupported version. Check ' +
     'you have the latest data and API.',

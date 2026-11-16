@@ -51,20 +51,37 @@ const expectEndsWithFindOutMore = (stdout) => {
   expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
 };
 
-test('the usage sharing example builds its Pipeline from 51d.json', () => {
+const EXAMPLE = path.join(__dirname, '..', 'examples', 'usageSharing');
+
+// Runs the example, from its own folder unless another is given.
+const run = (cwd) => {
   const env = Object.assign({}, process.env);
   delete env.JEST_WORKER_ID;
-  const result = childProcess.spawnSync(
-    process.execPath, ['usageSharing.js'], {
-      cwd: path.join(__dirname, '..', 'examples', 'usageSharing'),
+  return childProcess.spawnSync(
+    process.execPath,
+    [cwd ? path.join(EXAMPLE, 'usageSharing.js') : 'usageSharing.js'],
+    {
+      cwd: cwd || EXAMPLE,
       env,
       encoding: 'utf8',
       timeout: TIMEOUT_MS
     });
+};
 
+const expectBuiltAndFinished = (result) => {
   expect({ status: result.status, stderr: result.stderr })
     .toEqual({ status: 0, stderr: expect.any(String) });
   expect(result.stdout)
     .toContain('Pipeline created with share usage element.');
   expectEndsWithFindOutMore(result.stdout);
+};
+
+test('the usage sharing example builds its Pipeline from 51d.json', () => {
+  expectBuiltAndFinished(run());
+}, TIMEOUT_MS);
+
+// The example also runs from another folder, as it reads 51d.json from its
+// own folder and not the one it runs in.
+test('the usage sharing example runs from another folder', () => {
+  expectBuiltAndFinished(run(path.join(__dirname, '..', '..', '..')));
 }, TIMEOUT_MS);

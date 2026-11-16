@@ -69,21 +69,18 @@ class FlowData {
         // approach. For now, we work around this by only passing string keys
         // to the data getters.
         if (typeof key === 'string' || key === Symbol.iterator) {
-          try {
-            let value = data[key];
-            if (typeof value === 'undefined') {
-              value = data.get(key);
-            }
-            return value;
-          } catch (e) {
-            // If the key was 'then' and an error was thrown then we
-            // can ignore it. Otherwise, throw the error back up the stack.
-            // The key can be 'then' when using 'Promise.then(flowData)'.
-            // if (key !== 'then' && key !== 'stopped') {
-            if (key !== 'then') {
-              throw e;
-            }
+          // A promise reads 'then' from every value it resolves with, and
+          // the Pipeline resolves one with the Flow Data at each element.
+          // 'then' is never Element Data, so it is answered here rather
+          // than by a lookup that finds nothing.
+          if (key === 'then') {
+            return undefined;
           }
+          let value = data[key];
+          if (typeof value === 'undefined') {
+            value = data.get(key);
+          }
+          return value;
         }
       }
     });
@@ -96,22 +93,8 @@ class FlowData {
    * @returns {object} Evidence that is requested by flowElements
    */
   getEvidenceDataKey () {
-    // Get all evidence in flowData
-    const evidence = this.evidence.getAll();
-
-    // Evidence that is requested by flowElements
-    let keep = {};
-
-    Object.keys(this.pipeline.flowElements).forEach(function (key) {
-      const flowElement = this.pipeline.flowElements[key];
-      // merge in the filtered evidence for the flowElement
-      keep = Object.assign(
-        keep,
-        flowElement.evidenceKeyfilter.filterEvidence(evidence)
-      );
-    });
-
-    return keep;
+    return this.pipeline.evidenceKeyFilter.filterEvidence(
+      this.evidence.getAll());
   }
 
   /**
@@ -184,6 +167,8 @@ class FlowData {
    *
    * @param {string} flowElementDataKey the datakey of a FlowElement
    * @returns {ElementData} data from the FlowElement
+   * @throws {string} a message naming the data key and the data keys there
+   * are, when no element has given data under the key in any case
    */
   get (flowElementDataKey) {
     this.pipeline.log('debug', 'Getting flowElement ' + flowElementDataKey);

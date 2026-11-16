@@ -31,6 +31,23 @@ const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceK
 const ShareUsageTracker = require('./shareUsageTracker');
 const ShareUsageBackOff = require('./shareUsageBackOff');
 const packageVersions = require('./packageVersions');
+
+// Usage sharing's warnings are also emitted at 'warning', a deprecated
+// level, so that a listener on it still hears them until a later release
+// emits them at 'warn' alone.
+const DEPRECATED_WARNING_LEVEL = 'warning';
+
+/**
+ * Logs a warning from a usage sharing element at 'warn', and at the
+ * deprecated 'warning' as well.
+ *
+ * @param {object} element the usage sharing element
+ * @param {*} message the warning
+ */
+const warn = (element, message) => {
+  element._log('warn', message);
+  element._log(DEPRECATED_WARNING_LEVEL, message);
+};
 const zlib = require('zlib');
 const url = require('url');
 
@@ -103,26 +120,32 @@ class ShareUsage extends Engine {
    * For example, the 51Degrees cloud service uses a value of 2500.
    * @param {string} options.cookie The name of the cookie that holds the
    * session id. It has no effect unless trackSession is true. The cookie
-   * itself is not shared unless shareAll is true.
-   * @param {Array<string>|null} options.queryWhitelist By default query
-   * string and HTTP form parameters are not shared unless prefixed with
-   * '51D_'. If you need to share query string parameters, a list can be
-   * specified here. null shares every parameter.
-   * @param {Array<string>} options.headerBlacklist By default, all HTTP
-   * headers except Cookie are shared. Individual headers can
-   * be excluded from sharing by adding them to this list.
+   * itself is never shared unless its name starts with '51D_', as no other
+   * cookie is.
+   * @param {boolean} options.shareAllQueryStringParameters If true, every
+   * query string and HTTP form parameter is shared. True by default.
+   * @param {Array<string>|string|null} options.queryWhitelist When
+   * shareAllQueryStringParameters is false, query string and HTTP form
+   * parameters are not shared unless prefixed with '51D_' or given in this
+   * list, or in one comma separated string of them, as a configuration file
+   * gives a list. null is the same as an empty list.
+   * @param {Array<string>|string} options.headerBlacklist By default, all
+   * HTTP headers except Cookie are shared. Individual headers can be
+   * excluded from sharing by adding them to this list, or to one comma
+   * separated string of them, as a configuration file gives a list.
    * @param {number} options.sharePercentage approximate proportion of
    * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
    * @param {string} options.endpoint The target destination for usage
    * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
    * @param {boolean} options.shareAll If true, all evidence is shared apart
-   * from the email address, the salt used for hashed email identifiers, and
-   * the request's query string and path. False by default.
+   * from the email address, the salt used for hashed email identifiers, the
+   * request's query string and path, and every cookie whose name does not
+   * start with '51D_'. False by default.
    * @param {boolean} options.trackSession If true, the cookie named by
    * cookie is used to tell user sessions apart, so evidence already shared
    * is shared again when it comes from a new session. False by default. It
-   * needs cookie to be set, and has no effect when shareAll is true,
-   * because every cookie is then shared and used to find repeats.
+   * needs cookie to be set, and works the same whether or not shareAll is
+   * true.
    * @param {number} options.maximumQueueSize The most entries held while
    * waiting to be sent. When the queue is full, new entries are dropped. The
    * default is 1000, or ten times requestedPackageSize if that is larger.
@@ -146,6 +169,7 @@ class ShareUsage extends Engine {
       interval = 1200000,
       requestedPackageSize = 10,
       cookie,
+      shareAllQueryStringParameters = true,
       queryWhitelist,
       headerBlacklist,
       sharePercentage = 1,
@@ -170,12 +194,12 @@ class ShareUsage extends Engine {
 
     // The session id and sequence number are kept in evidence, as the usage
     // data carries them separately.
+    const queryList = core.listSetting(queryWhitelist);
     const options = {
       cookie,
-      queryWhitelist: queryWhitelist === null
-        ? null
-        : [...(queryWhitelist || []), 'session-id', 'sequence'],
-      headerBlacklist,
+      shareAllQueryStringParameters,
+      queryWhitelist: [...(queryList || []), 'session-id', 'sequence'],
+      headerBlacklist: core.listSetting(headerBlacklist),
       shareAll
     };
 
@@ -183,7 +207,7 @@ class ShareUsage extends Engine {
     // result, so caching, the ETag and the Vary header never depend on it.
     // The flow data still keeps the evidence it would share, and, when
     // sessions are tracked, the session cookie for the tracker. The data
-    // sent leaves the cookie out unless all evidence is shared.
+    // sent leaves out every cookie whose name does not start with 51D_.
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
     this.keptEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
       { ...options, includeSession: trackSession });
@@ -253,17 +277,24 @@ class ShareUsage extends Engine {
    * @param {FlowData} flowData flowData to process
    */
   processInternal (flowData) {
-    if (Math.random() <= this.sharePercentage) {
-      // The tracker compares the values that would be shared.
-      const cacheKey = this.trackerEvidenceKeyFilter
-        .filterEvidence(this.getFoundEvidence(flowData));
+    // Usage sharing never stops processing, so an error is logged here
+    // rather than passed to the Pipeline.
+    try {
+      if (Math.random() <= this.sharePercentage) {
+        // The tracker compares the values that would be shared.
+        const cacheKey = this.trackerEvidenceKeyFilter
+          .filterEvidence(this.getFoundEvidence(flowData));
 
-      const share = this.tracker.track(cacheKey);
-      if (share) {
-        this.tracker.put(cacheKey);
+        const share = this.tracker.track(cacheKey);
+        if (share) {
+          this.tracker.put(cacheKey);
 
-        this.addToShareUsage(this.getDataFromEvidence(flowData));
+          this.addToShareUsage(this.getDataFromEvidence(flowData));
+        }
       }
+    } catch (err) {
+      this._log('error', 'Usage sharing could not record a request. ' +
+        (err && err.stack ? err.stack : err));
     }
   }
 
@@ -397,7 +428,7 @@ class ShareUsage extends Engine {
     if (this.shareData.length >= this.maximumQueueSize) {
       this.dropped++;
       if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
-        this._log('warning', 'The usage sharing queue is full at ' +
+        warn(this, 'The usage sharing queue is full at ' +
           `${this.maximumQueueSize} entries, so usage data is being ` +
           `dropped. ${this.dropped} entries have been dropped since the ` +
           'queue last had room.');
@@ -526,7 +557,7 @@ class ShareUsage extends Engine {
       } else {
         pause = this.backOff.failed(ShareUsageBackOff.now());
         if (pause > 0) {
-          this._log('warning', `Usage sharing paused for ${pause / 1000} ` +
+          warn(this, `Usage sharing paused for ${pause / 1000} ` +
             'seconds after failed sends. Usage data is still queued, up to ' +
             'the maximum queue size, and sending starts again when the pause ' +
             'ends.');
@@ -569,7 +600,7 @@ class ShareUsage extends Engine {
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
-        usageEngine._log('warning', err);
+        warn(usageEngine, err);
         finish(false);
         return;
       }
@@ -590,7 +621,7 @@ class ShareUsage extends Engine {
             }
           });
           res.on('end', function () {
-            usageEngine._log('warning', 'Usage sharing sent a message and ' +
+            warn(usageEngine, 'Usage sharing sent a message and ' +
               `the service answered ${res.statusCode} with content ` +
               `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
             finish(false);
@@ -607,13 +638,13 @@ class ShareUsage extends Engine {
             `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
         });
         req.on('error', function (e) {
-          usageEngine._log('warning', e);
+          warn(usageEngine, e);
           finish(false);
         });
         req.write(buffer);
         req.end();
       } catch (e) {
-        usageEngine._log('warning', e);
+        warn(usageEngine, e);
         finish(false);
       }
     });

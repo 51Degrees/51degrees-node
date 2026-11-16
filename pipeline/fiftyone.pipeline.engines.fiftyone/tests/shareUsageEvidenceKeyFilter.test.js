@@ -21,11 +21,12 @@
  * ********************************************************************* */
 
 const ShareUsageEvidenceKeyFilter = require('../shareUsageEvidenceKeyFilter');
+const ShareUsage = require('../shareUsage');
 
 /**
- * Check that by default headers other than Cookie are shared, cookies,
- * session values and query string parameters only when their names start
- * with 51D_, and any other evidence.
+ * Check that by default headers other than Cookie are shared, cookies and
+ * session values only when their names start with 51D_, every query string
+ * parameter, and any other evidence.
  */
 test('share usage filter - default rules', () => {
   const filter = new ShareUsageEvidenceKeyFilter({});
@@ -39,7 +40,7 @@ test('share usage filter - default rules', () => {
   expect(filter.filterEvidenceKey('session.51d_value')).toBe(true);
   expect(filter.filterEvidenceKey('session.org.example.attribute')).toBe(false);
   expect(filter.filterEvidenceKey('query.51d_gethighentropyvalues')).toBe(true);
-  expect(filter.filterEvidenceKey('query.password')).toBe(false);
+  expect(filter.filterEvidenceKey('query.password')).toBe(true);
   expect(filter.filterEvidenceKey('query.id.email')).toBe(false);
   expect(filter.filterEvidenceKey('server.client-ip')).toBe(true);
   expect(filter.filterEvidenceKey('nodot')).toBe(true);
@@ -51,6 +52,7 @@ test('share usage filter - default rules', () => {
  */
 test('share usage filter - field is everything after the first dot', () => {
   const filter = new ShareUsageEvidenceKeyFilter({
+    shareAllQueryStringParameters: false,
     queryWhitelist: ['valid.email']
   });
 
@@ -65,6 +67,7 @@ test('share usage filter - field is everything after the first dot', () => {
  */
 test('share usage filter - lists ignore case', () => {
   const filter = new ShareUsageEvidenceKeyFilter({
+    shareAllQueryStringParameters: false,
     queryWhitelist: ['Campaign'],
     headerBlacklist: ['X-Secret']
   });
@@ -75,16 +78,45 @@ test('share usage filter - lists ignore case', () => {
 });
 
 /**
- * Check that null in place of the parameters to share shares every
- * parameter, and an empty list only those starting 51D_.
+ * Check that null in place of the parameters to share is an empty list.
+ * With every parameter shared, the default, it shares every parameter, and
+ * with that turned off it shares only those starting 51D_, as the
+ * specification's filter does for any parameter not in the list.
  */
-test('share usage filter - no parameter list shares every parameter', () => {
+test('share usage filter - no parameter list is an empty list', () => {
   const every = new ShareUsageEvidenceKeyFilter({ queryWhitelist: null });
-  const prefixed = new ShareUsageEvidenceKeyFilter({ queryWhitelist: [] });
+  const nullList = new ShareUsageEvidenceKeyFilter({
+    shareAllQueryStringParameters: false,
+    queryWhitelist: null
+  });
+  const emptyList = new ShareUsageEvidenceKeyFilter({
+    shareAllQueryStringParameters: false,
+    queryWhitelist: []
+  });
 
   expect(every.filterEvidenceKey('query.campaign')).toBe(true);
-  expect(prefixed.filterEvidenceKey('query.campaign')).toBe(false);
-  expect(prefixed.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  for (const prefixed of [nullList, emptyList]) {
+    expect(prefixed.filterEvidenceKey('query.campaign')).toBe(false);
+    expect(prefixed.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  }
+});
+
+/**
+ * Check that the usage sharing element given null in place of the
+ * parameters to share, with every parameter shared turned off, shares only
+ * the parameters starting 51D_ and the session values it always carries.
+ */
+test('share usage element - no parameter list is an empty list', () => {
+  const element = new ShareUsage({
+    shareAllQueryStringParameters: false,
+    queryWhitelist: null
+  });
+  const filter = element.dataEvidenceKeyFilter;
+
+  expect(filter.filterEvidenceKey('query.campaign')).toBe(false);
+  expect(filter.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  expect(filter.filterEvidenceKey('query.session-id')).toBe(true);
+  expect(filter.filterEvidenceKey('query.sequence')).toBe(true);
 });
 
 /**
@@ -106,13 +138,14 @@ test('share usage filter - session cookie', () => {
 
 /**
  * Check that sharing everything shares the evidence the other rules leave
- * out, apart from the evidence that is never shared.
+ * out, apart from the evidence that is never shared and the cookies whose
+ * names do not start with 51D_.
  */
 test('share usage filter - share all', () => {
   const filter = new ShareUsageEvidenceKeyFilter({ shareAll: true });
 
   expect(filter.filterEvidenceKey('header.cookie')).toBe(false);
-  expect(filter.filterEvidenceKey('cookie.sessionid')).toBe(true);
+  expect(filter.filterEvidenceKey('cookie.sessionid')).toBe(false);
   expect(filter.filterEvidenceKey('query.password')).toBe(true);
   expect(filter.filterEvidenceKey('query.id.usage')).toBe(true);
   expect(filter.filterEvidenceKey('server.request-method')).toBe(true);

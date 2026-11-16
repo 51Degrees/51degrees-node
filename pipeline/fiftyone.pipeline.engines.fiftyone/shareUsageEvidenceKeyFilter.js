@@ -45,9 +45,11 @@ const NEVER_SHARED_KEYS = [
 /**
  * The ShareUsageEvidenceKeyFilter decides which evidence the 51Degrees
  * ShareUsage service is sent. Headers are shared unless they are blocked,
- * cookies and session values only when their names start with 51D_, and
- * query string and form parameters only when their names start with 51D_ or
- * are on the list to share. Any other evidence is shared.
+ * cookies only when their names start with 51D_, whatever the settings,
+ * session values only when their names start with 51D_, and every query
+ * string and form parameter unless sharing them all is turned off, when only
+ * those whose names start with 51D_ or are on the list to share are. Any
+ * other evidence is shared.
  */
 class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
   /**
@@ -56,17 +58,22 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
    * @param {object} options options for filter
    * @param {string} options.cookie the name of the cookie that identifies
    * the session
+   * @param {boolean} options.shareAllQueryStringParameters whether every
+   * query string and form parameter is shared. True unless set to false.
    * @param {Array<string>|null} options.queryWhitelist query string and
-   * form parameters to share as well as those starting 51D_, or null to
-   * share every parameter
+   * form parameters to share as well as those starting 51D_ when
+   * shareAllQueryStringParameters is false. null is the same as an empty
+   * list.
    * @param {Array<string>} options.headerBlacklist headers not to share
    * @param {boolean} options.includeSession whether the session cookie is
    * included
    * @param {boolean} options.shareAll whether all evidence is shared, apart
-   * from the evidence that is never shared
+   * from the evidence that is never shared and the cookies whose names do
+   * not start with 51D_
    */
   constructor ({
     cookie,
+    shareAllQueryStringParameters = true,
     queryWhitelist = [],
     headerBlacklist = [],
     includeSession = false,
@@ -74,9 +81,10 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
   } = {}) {
     super(...arguments);
 
-    this.includedQueryStringParams = queryWhitelist === null
-      ? null
-      : queryWhitelist.map(parameter => parameter.toLowerCase());
+    this.shareAllQueryStringParameters =
+      shareAllQueryStringParameters !== false;
+    this.includedQueryStringParams = (queryWhitelist || [])
+      .map(parameter => parameter.toLowerCase());
     this.blockedHttpHeaders = (headerBlacklist || [])
       .map(header => header.toLowerCase());
     this.cookie = cookie ? cookie.toLowerCase() : undefined;
@@ -103,29 +111,28 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
       return false;
     }
 
-    if (this.shareAll) {
-      return true;
-    }
-
     // The prefix is everything before the first dot and the field
     // everything after it, so a field can itself contain dots.
     const separator = lowerKey.indexOf('.');
-    if (separator < 0) {
+    const prefix = separator < 0 ? '' : lowerKey.substring(0, separator);
+    const field = lowerKey.substring(separator + 1);
+
+    if (prefix === 'cookie') {
+      // Only cookies that start with the 51Degrees cookie prefix are
+      // shared, even when all evidence is, and the session cookie only
+      // where it is asked for.
+      return field.startsWith(FIFTYONE_PREFIX) ||
+        (this.includeSession && field === this.cookie);
+    }
+
+    if (this.shareAll || separator < 0) {
       return true;
     }
-    const prefix = lowerKey.substring(0, separator);
-    const field = lowerKey.substring(separator + 1);
 
     if (prefix === 'header') {
       // Add the header to the list if the header name does not
       // appear in the list of blocked headers.
       return this.blockedHttpHeaders.includes(field) === false;
-    }
-    if (prefix === 'cookie') {
-      // Only add cookies that start with the 51Degrees cookie
-      // prefix.
-      return field.startsWith(FIFTYONE_PREFIX) ||
-        (this.includeSession && field === this.cookie);
     }
     if (prefix === 'session') {
       // Only add session values that start with the 51Degrees
@@ -133,10 +140,10 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
       return field.startsWith(FIFTYONE_PREFIX);
     }
     if (prefix === 'query') {
-      // If no query string parameter list was given then share all of
-      // them. Otherwise, only include query string parameters that
-      // start with 51d_ or that are in the list.
-      return this.includedQueryStringParams === null ||
+      // Share every query string parameter unless that is turned off,
+      // when only those that start with 51d_ or are in the list are
+      // shared.
+      return this.shareAllQueryStringParameters ||
         field.startsWith(FIFTYONE_PREFIX) ||
         this.includedQueryStringParams.includes(field);
     }

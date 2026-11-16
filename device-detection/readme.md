@@ -237,8 +237,9 @@ Types are generated and exported automatically from JSDoc comments using [this s
 
 The TypeScript example with typechecking enabled is available under `onpremise/gettingstarted-console/gettingStarted.ts`.
 
-The example can be run as:
+In a clone of this repository, npm runs `npx` from the package folder, `device-detection/fiftyone.devicedetection.onpremise`, so the example is named from there. Build the native module first, as [AGENTS.md](../AGENTS.md) describes, then from the repository root run:
 
 ```
-npx ts-node gettingStarted.ts
+cd device-detection/fiftyone.devicedetection.onpremise
+npx ts-node examples/onpremise/gettingstarted-console/gettingStarted.ts
 ```

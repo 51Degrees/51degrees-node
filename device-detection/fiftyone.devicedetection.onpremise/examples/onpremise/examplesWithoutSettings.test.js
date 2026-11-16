@@ -29,26 +29,12 @@
 
 const childProcess = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const request = require('supertest');
 
-const require51 = (requestedPackage) => {
-  try {
-    return require(path.join(__dirname, '/../../node_modules/', requestedPackage));
-  } catch (e) {
-    return require(requestedPackage);
-  }
-};
-
-const optionsExtension =
-  require51('fiftyone.devicedetection.shared').optionsExtension;
-
-const { ExampleUtils, NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
+const { NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
   require(path.join(__dirname, 'exampleUtils'));
 
-const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
-const EVIDENCE = '20000 Evidence Records.yml';
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code';
 const NEEDS_LICENCE_KEY = 'which needs a licence key';
 const CHROME =
@@ -174,20 +160,21 @@ describe('Examples without settings', () => {
   }, TIMEOUT_MS);
 
   test('offline processing marks the Enterprise properties', () => {
-    // The files are the ones the example finds itself, named so that the
-    // output is not written into the data folder.
-    const output = path.join(os.tmpdir(), 'offline-processing-free.yml');
+    // The example finds its data file and evidence file itself, and writes
+    // its output beside the evidence file, where the example says it is.
+    // The test reads the output there and then removes it.
+    const result = runExample('offlineprocessing-console/offlineProcessing.js');
+    const written = /See results in: '([^']+)'/.exec(result.stdout);
     try {
-      expectOutput(runExample('offlineprocessing-console/offlineProcessing.js', [
-        ExampleUtils.findFile(LITE_V_4_1_HASH),
-        ExampleUtils.findFile(EVIDENCE),
-        output
-      ]), CONTACT_US);
-      const yaml = fs.readFileSync(output, 'utf8');
+      expectOutput(result, CONTACT_US);
+      expect(written).not.toBeNull();
+      const yaml = fs.readFileSync(written[1], 'utf8');
       expect(yaml).toContain('# Some of these properties need the Enterprise data file.');
       expect(yaml).toContain(`device.hardwarevendor: ${NEEDS_ENTERPRISE}`);
     } finally {
-      fs.rmSync(output, { force: true });
+      if (written) {
+        fs.rmSync(written[1], { force: true });
+      }
     }
   }, TIMEOUT_MS);
 
@@ -211,9 +198,15 @@ describe('Examples without settings', () => {
     // Usage sharing is removed, so that the test sends nothing to 51Degrees.
     options.PipelineOptions.Elements = options.PipelineOptions.Elements.filter(
       (element) => !element.elementName.includes('shareUsage'));
-    optionsExtension.setDataFilePath(options, ExampleUtils.findFile(LITE_V_4_1_HASH));
-    optionsExtension.updateElementPath(options, dir);
-    example.setPipeline(options);
+    // The Pipeline is built in the example's own folder, as a person runs
+    // it, so the data file is the one its 51d.json names.
+    const cwd = process.cwd();
+    process.chdir(dir);
+    try {
+      example.setPipeline(options);
+    } finally {
+      process.chdir(cwd);
+    }
     const response = await request(example.server).get('/').set('User-Agent', CHROME);
     expect(response.statusCode).toBe(200);
     expect(response.text).toContain(NEEDS_ENTERPRISE);

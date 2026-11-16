@@ -101,7 +101,7 @@ test('sequence gives a sequence number', () => {
 const flowData2 = pipeline.createFlowData();
 
 flowData2.evidence.add('query.session-id', 'test');
-flowData2.evidence.add('query.sequence', 10);
+flowData2.evidence.add('query.sequence', '10');
 
 test('sequence number for same session id increments', (done) => {
   flowData2.process().then(function () {
@@ -138,7 +138,7 @@ const parameterPipeline = new core.PipelineBuilder({
 const flowData3 = parameterPipeline.createFlowData();
 
 flowData3.evidence.add('query.session-id', 'test-session');
-flowData3.evidence.add('query.sequence', 1);
+flowData3.evidence.add('query.sequence', '1');
 flowData3.evidence.add('query.mark', 'kept');
 
 test('the script parameters leave out the session id and the sequence',
@@ -158,6 +158,31 @@ test('the script parameters leave out the session id and the sequence',
       expect(declaration[0]).not.toContain('session-id');
       expect(declaration[0]).not.toContain('sequence');
       // Present, or this would pass with no parameters at all.
+      expect(declaration[0]).toContain('kept');
+
+      done();
+    });
+  });
+
+// evidence.md line 10: "Keys MUST be case-insensitive". A query key spelled
+// in any case is a script parameter, and the session id and the sequence
+// are left out whatever their case.
+const flowData4 = parameterPipeline.createFlowData();
+
+flowData4.evidence.add('Query.Session-Id', 'test-session');
+flowData4.evidence.add('QUERY.SEQUENCE', 1);
+flowData4.evidence.add('Query.Mark', 'kept');
+
+test('query evidence in any letter case becomes a script parameter',
+  (done) => {
+    flowData4.process().then(function () {
+      const declaration = flowData4.javascriptbuilder.javascript
+        .split(/\r?\n/)
+        .filter(line => /parameters\s*=/i.test(line) && line.includes('{'));
+
+      expect(declaration.length).toBe(1);
+      expect(declaration[0]).not.toMatch(/session-id/i);
+      expect(declaration[0]).not.toMatch(/sequence/i);
       expect(declaration[0]).toContain('kept');
 
       done();

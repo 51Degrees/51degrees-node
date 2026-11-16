@@ -23,11 +23,42 @@
 const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
 const EventEmitter = require('events');
+const EvidenceKeyFilter = require('./evidenceKeyFilter');
 
 /**
  * @typedef {import('./flowElement')} FlowElement
  * @typedef {any} DataFileUpdateService
  */
+
+/**
+ * The Evidence a Pipeline accepts, being every key one of its FlowElements
+ * accepts. Each element's filter is read when a key is checked, as an
+ * element's list can change once its data or the cloud service's answer
+ * arrives.
+ */
+class PipelineEvidenceKeyFilter extends EvidenceKeyFilter {
+  /**
+   * Constructor for PipelineEvidenceKeyFilter
+   *
+   * @param {Pipeline} pipeline the Pipeline whose elements are asked
+   */
+  constructor (pipeline) {
+    super();
+    this.pipeline = pipeline;
+  }
+
+  /**
+   * Whether any of the Pipeline's elements accepts the key.
+   *
+   * @param {string} key the evidence key to check
+   * @returns {boolean} whether any element accepts the key
+   */
+  filterEvidenceKey (key) {
+    return Object.values(this.pipeline.flowElements).some(element =>
+      element.evidenceKeyFilter &&
+      element.evidenceKeyFilter.filterEvidenceKey(key));
+  }
+}
 
 /**
  * Pipeline holding a list of flowElements for processing, can create
@@ -47,8 +78,12 @@ class Pipeline {
   constructor (flowElements = [], suppressProcessExceptions = false, dataFileUpdateService = null) {
     const pipeline = this;
 
-    // The chain of flowElements to run, including arrays of parallel elements
-    this.flowElementsChain = flowElements;
+    // The chain of flowElements to run, including arrays of parallel
+    // elements. A frozen copy, so a built Pipeline cannot change whatever
+    // happens to the lists it was given.
+    this.flowElementsChain = /** @type {FlowElement[]} */ (Object.freeze(
+      flowElements.map((slot) =>
+        Array.isArray(slot) ? Object.freeze([...slot]) : slot)));
 
     // If true then pipeline will suppress exceptions added to FlowData.
     this.suppressProcessExceptions = suppressProcessExceptions;
@@ -59,7 +94,8 @@ class Pipeline {
      */
     this.eventEmitter = new EventEmitter();
 
-    // Flattened dictionary of flowElements the pipeline contains
+    // Flattened dictionary of flowElements the pipeline contains, frozen
+    // once the constructor has filled it
     /**
      * @type {object}
      */
@@ -90,7 +126,14 @@ class Pipeline {
       });
     };
 
-    storeInFlowElementList(flowElements);
+    storeInFlowElementList(this.flowElementsChain);
+    Object.freeze(this.flowElements);
+
+    // The Evidence the Pipeline accepts, from its elements' filters.
+    /**
+     * @type {EvidenceKeyFilter}
+     */
+    this.evidenceKeyFilter = new PipelineEvidenceKeyFilter(this);
 
     // Empty property database, later populated and possibly
     // updated by flowElements' property lists

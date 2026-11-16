@@ -86,6 +86,31 @@ const outputValue = function (name, value) {
   return `\n\t${name}: ${value}`;
 };
 
+/**
+ * Each value of a weighted property with its weighting, the share of the
+ * result the value applies to, which is 1 for a single answer.
+ *
+ * @param {string} name the name of the property to print
+ * @param {object} property the property's value from the Element Data
+ * @returns {string} a line for each value, or nothing where there is none
+ */
+const outputWeightings = function (name, property) {
+  if (!property || property.hasValue !== true) {
+    return '';
+  }
+  // A property gives a list of weighted values, or a single value, which
+  // is the one answer, so its weighting is 1.
+  const items = Array.isArray(property.value)
+    ? property.value
+    : [property.value];
+  return items
+    .map((item) => item !== null && typeof item === 'object' &&
+      item.weight !== undefined
+      ? `\n\t${name}: ${item.value}, weighting ${item.weight}`
+      : `\n\t${name}: ${item}, weighting 1`)
+    .join('');
+};
+
 const analyse = async function (evidence, pipeline, output) {
   // FlowData is a data structure that is used to convey
   // information required for detection and the results of the
@@ -139,6 +164,11 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Town', ExampleUtils.getEnterpriseValue(engine, ip, 'Town'));
   message += outputValue('Latitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Latitude'));
   message += outputValue('Longitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Longitude'));
+  // Each value comes with its weighting, so the Registered Country is shown
+  // again with the weighting of each of its values.
+  if (ExampleUtils.hasProperty(engine, 'RegisteredCountry')) {
+    message += outputWeightings('Registered Country', ip.registeredcountry);
+  }
   message += '\n\n';
   output.write(message);
   return message.includes(NEEDS_ENTERPRISE);

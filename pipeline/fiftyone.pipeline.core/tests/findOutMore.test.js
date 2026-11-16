@@ -37,9 +37,11 @@ const REPOSITORY =
 
 // Every file that holds a section. A web example holds it in its page.
 const EXAMPLES = [
+  'fiftyone.pipeline.cloudrequestengine/examples/cloudFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/clientSideEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/simpleEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/pipelines.js',
+  'fiftyone.pipeline.derivedproperty/examples/derivedProperty.js',
   'fiftyone.pipeline.did/examples/creator-context-web/page.html',
   'fiftyone.pipeline.did/examples/fodIdExample.js',
   'fiftyone.pipeline.engines/examples/caching.js',
@@ -48,13 +50,14 @@ const EXAMPLES = [
 ];
 
 // The other files in the examples folders. These are the flow elements
-// the pipelines example uses and the server of the 51Did demo, whose page
-// holds the section.
+// the pipelines and derived property examples use and the server of the
+// 51Did demo, whose page holds the section.
 const NOT_EXAMPLES = [
   'fiftyone.pipeline.core/examples/flowElementsForExamples/async.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/neverRun.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/stop.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/sync.js',
+  'fiftyone.pipeline.derivedproperty/examples/sessionElement.js',
   'fiftyone.pipeline.did/examples/creator-context-web/server.js'
 ];
 
@@ -103,7 +106,9 @@ const problems = (file) => {
 // templates submodule.
 const SKIPPED_FOLDERS = ['node_modules', 'javascript-templates'];
 
-// Every .js and .html file below an examples folder, other than tests.
+// Every .js, .ts and .html file below an examples folder, other than
+// tests. A TypeScript example is read as well, because the readme tells
+// people to run one.
 const exampleFiles = (dir, inExamples = false) => {
   let found = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -113,8 +118,8 @@ const exampleFiles = (dir, inExamples = false) => {
         found = found.concat(
           exampleFiles(full, inExamples || entry.name === 'examples'));
       }
-    } else if (inExamples && /\.(js|html)$/.test(entry.name) &&
-      !entry.name.endsWith('.test.js')) {
+    } else if (inExamples && /\.(js|ts|html)$/.test(entry.name) &&
+      !/\.test\.(js|ts)$/.test(entry.name)) {
       found.push(path.relative(PRODUCT, full).split(path.sep).join('/'));
     }
   }

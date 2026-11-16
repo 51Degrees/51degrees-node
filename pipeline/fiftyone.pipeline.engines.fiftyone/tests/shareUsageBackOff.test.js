@@ -20,7 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const {
+  PipelineBuilder, FlowElement, ElementDataDictionary,
+  BasicListEvidenceKeyFilter
+} = require('fiftyone.pipeline.core');
 const ShareUsage = require('../shareUsage');
 const ShareUsageBackOff = require('../shareUsageBackOff');
 const http = require('http');
@@ -168,15 +171,18 @@ const clientIps = () => received
  * A pipeline whose usage sharing element sends each entry on its own.
  *
  * @param {object} settings more settings for the element
+ * @param {Array<object>} after elements added after the usage sharing one
  * @returns {object} the pipeline
  */
-const createPipeline = (settings = {}) => {
+const createPipeline = (settings = {}, after = []) => {
   usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint,
     ...settings
   });
-  return new PipelineBuilder().add(usageEngine).build();
+  const builder = new PipelineBuilder().add(usageEngine);
+  after.forEach(element => builder.add(element));
+  return builder.build();
 };
 
 /**
@@ -369,7 +375,7 @@ test('share usage back-off - full queue logs without a message per entry', async
   const full = logged.filter(entry => String(entry.message).includes('full'));
   expect(full.length).toBeGreaterThanOrEqual(1);
   expect(full.length).toBeLessThan(6);
-  expect(full[0].level).toBe('warning');
+  expect(full[0].level).toBe('warn');
 }, 30000);
 
 /**
@@ -384,10 +390,10 @@ test('share usage back-off - failed answer logs the status and content', async (
   await failSends(pipeline, 1);
 
   await waitFor(
-    () => logged.some(entry => entry.level === 'warning' &&
+    () => logged.some(entry => entry.level === 'warn' &&
       String(entry.message).includes('500')),
     () => `The status code was not logged. Logged: ${JSON.stringify(logged)}`);
-  const failed = logged.find(entry => entry.level === 'warning' &&
+  const failed = logged.find(entry => entry.level === 'warn' &&
     String(entry.message).includes('500'));
   expect(failed.message).toContain('the service says no');
 }, 30000);
@@ -576,3 +582,103 @@ describe('share usage back-off rules', () => {
     expect(backOff.failed(0)).toBe(3000);
   });
 });
+
+/**
+ * A pause is logged as a warning giving the delay, and the end of a pause as
+ * information, at the levels the Pipeline's listeners hear
+ * (usage-sharing-element.md line 366).
+ */
+test('share usage back-off - pause and resume reach the Pipeline as warn and info', async () => {
+  const pipeline = createPipeline();
+  const heard = [];
+  for (const level of ['warn', 'info']) {
+    pipeline.on(level, message => heard.push({ level, message: String(message) }));
+  }
+  holdClock();
+  await failSends(pipeline, 10);
+
+  await waitFor(
+    () => heard.some(entry => entry.level === 'warn' &&
+      entry.message.includes('paused for 2 ')),
+    () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+
+  const queued = await processUnique(pipeline);
+  status = 200;
+  moveClock(2000);
+  await waitFor(
+    () => clientIps().includes(queued) &&
+      heard.some(entry => entry.level === 'info' &&
+        entry.message.includes('resumed')),
+    () => `No information that sending resumed was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);
+
+/**
+ * The pause is heard at the deprecated level 'warning' as well, so that a
+ * listener on it still hears usage sharing's warnings in this release.
+ */
+test('share usage back-off - pause still reaches the deprecated warning level', async () => {
+  const pipeline = createPipeline();
+  const heard = [];
+  pipeline.on('warning', message => heard.push(String(message)));
+  holdClock();
+  await failSends(pipeline, 10);
+
+  await waitFor(
+    () => heard.some(message => message.includes('paused for 2 ')),
+    () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);
+
+// Shows that processing ran to the end of the Pipeline, rather than
+// stopping where usage sharing paused.
+const marker = new FlowElement({
+  dataKey: 'marker',
+  evidenceKeyFilter: new BasicListEvidenceKeyFilter([]),
+  processInternal: function (flowData) {
+    flowData.setElementData(new ElementDataDictionary({
+      flowElement: this,
+      contents: { processed: true }
+    }));
+  },
+  properties: { processed: { type: 'bool' } }
+});
+
+/**
+ * Only sending pauses. Processing neither waits for the pause nor is
+ * stopped by it. The clock is held, so the pause cannot end, and the
+ * receiver never answers, so a process that waited for a send would never
+ * return. The queue is small, so processing is also shown to go on once
+ * sharing can keep nothing more.
+ */
+test('share usage back-off - processing is not stopped by the pause',
+  async () => {
+    const pipeline = createPipeline({
+      maximumQueueSize: 4,
+      failuresToEnterRecovery: 1,
+      initialRecoveryDelaySeconds: 600,
+      maxRecoveryDelaySeconds: 600
+    }, [marker]);
+    holdClock();
+    await failSends(pipeline, 1);
+    expect(usageEngine.backOff.backingOff).toBe(true);
+    hang = true;
+
+    // Each of these resolves while the pause is in force, with its Flow
+    // Data complete and no error. A rejection fails the test, because this
+    // Pipeline does not suppress process exceptions.
+    for (let i = 0; i < 25; i++) {
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.add('server.client-ip', `10.1.0.${i + 1}`);
+      await flowData.process();
+      expect(flowData.errors).toEqual({});
+      expect(flowData.get('marker').get('processed')).toBe(true);
+    }
+
+    // The queue filled and the rest were dropped, so processing went on
+    // past the point where sharing could keep anything. The pause is still
+    // in force and only the one failed send was ever attempted, so none of
+    // the 25 waited for the pause to end or for a send to answer.
+    expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
+    expect(usageEngine.dropped).toBeGreaterThan(0);
+    expect(usageEngine.backOff.backingOff).toBe(true);
+    expect(attempts.length).toBe(1);
+  }, 30000);

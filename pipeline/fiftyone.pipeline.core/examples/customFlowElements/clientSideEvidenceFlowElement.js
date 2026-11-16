@@ -69,7 +69,7 @@ const getStarSign = (month, day) => {
     return 'taurus';
   } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
     return 'gemini';
-  } else if ((month === 6 && day >= 22) || (month === 7 && day <= 22)) {
+  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
     return 'cancer';
   } else if ((month === 7 && day >= 23) || (month === 8 && day <= 23)) {
     return 'leo';
@@ -303,5 +303,7 @@ const server = http.createServer((req, res) => {
 
 const portNum = process.env.PORT || 3000;
 console.info('To test this example, browse to http://localhost:' + portNum);
-server.listen(portNum);
+// Only the machine the example runs on, at 127.0.0.1 rather than
+// localhost, which can resolve to the IPv6 loopback alone.
+server.listen(portNum, '127.0.0.1');
 //! [usage]
