@@ -162,7 +162,10 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const resourceKey = args.length > 0 ? args[0] : ExampleUtils.getResourceKeyFromEnv();
 
   // Load the configuration from a config file to a JSON object.
-  const options = JSON.parse(fs.readFileSync('51d.json'), 'utf8');
+  // From the example's own folder, so that the example runs from any
+  // working folder.
+  const options = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '51d.json'), 'utf8'));
 
   const resourceKeyFromConfig = OptionsExtension.getResourceKey(options);
   if (!resourceKeyFromConfig || resourceKeyFromConfig.startsWith('!!')) {
