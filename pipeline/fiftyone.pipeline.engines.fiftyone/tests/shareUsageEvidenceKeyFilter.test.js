@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const ShareUsageEvidenceKeyFilter = require('../shareUsageEvidenceKeyFilter');
+const ShareUsage = require('../shareUsage');
 
 /**
  * Check that by default headers other than Cookie are shared, cookies and
@@ -77,19 +78,45 @@ test('share usage filter - lists ignore case', () => {
 });
 
 /**
- * Check that null in place of the parameters to share shares every
- * parameter, and an empty list only those starting 51D_.
+ * Check that null in place of the parameters to share is an empty list.
+ * With every parameter shared, the default, it shares every parameter, and
+ * with that turned off it shares only those starting 51D_, as the
+ * specification's filter does for any parameter not in the list.
  */
-test('share usage filter - no parameter list shares every parameter', () => {
+test('share usage filter - no parameter list is an empty list', () => {
   const every = new ShareUsageEvidenceKeyFilter({ queryWhitelist: null });
-  const prefixed = new ShareUsageEvidenceKeyFilter({
+  const nullList = new ShareUsageEvidenceKeyFilter({
+    shareAllQueryStringParameters: false,
+    queryWhitelist: null
+  });
+  const emptyList = new ShareUsageEvidenceKeyFilter({
     shareAllQueryStringParameters: false,
     queryWhitelist: []
   });
 
   expect(every.filterEvidenceKey('query.campaign')).toBe(true);
-  expect(prefixed.filterEvidenceKey('query.campaign')).toBe(false);
-  expect(prefixed.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  for (const prefixed of [nullList, emptyList]) {
+    expect(prefixed.filterEvidenceKey('query.campaign')).toBe(false);
+    expect(prefixed.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  }
+});
+
+/**
+ * Check that the usage sharing element given null in place of the
+ * parameters to share, with every parameter shared turned off, shares only
+ * the parameters starting 51D_ and the session values it always carries.
+ */
+test('share usage element - no parameter list is an empty list', () => {
+  const element = new ShareUsage({
+    shareAllQueryStringParameters: false,
+    queryWhitelist: null
+  });
+  const filter = element.dataEvidenceKeyFilter;
+
+  expect(filter.filterEvidenceKey('query.campaign')).toBe(false);
+  expect(filter.filterEvidenceKey('query.51d_campaign')).toBe(true);
+  expect(filter.filterEvidenceKey('query.session-id')).toBe(true);
+  expect(filter.filterEvidenceKey('query.sequence')).toBe(true);
 });
 
 /**

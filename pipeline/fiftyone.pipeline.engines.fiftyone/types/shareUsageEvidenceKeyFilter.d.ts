@@ -20,8 +20,8 @@ declare class ShareUsageEvidenceKeyFilter extends ShareUsageEvidenceKeyFilter_ba
      * query string and form parameter is shared. True unless set to false.
      * @param {Array<string>|null} options.queryWhitelist query string and
      * form parameters to share as well as those starting 51D_ when
-     * shareAllQueryStringParameters is false, or null to share every
-     * parameter
+     * shareAllQueryStringParameters is false. null is the same as an empty
+     * list.
      * @param {Array<string>} options.headerBlacklist headers not to share
      * @param {boolean} options.includeSession whether the session cookie is
      * included

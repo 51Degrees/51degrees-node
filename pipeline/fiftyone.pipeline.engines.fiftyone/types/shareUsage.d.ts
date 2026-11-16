@@ -33,7 +33,7 @@ declare class ShareUsage extends ShareUsage_base {
      * shareAllQueryStringParameters is false, query string and HTTP form
      * parameters are not shared unless prefixed with '51D_' or given in this
      * list, or in one comma separated string of them, as a configuration file
-     * gives a list. null shares every parameter.
+     * gives a list. null is the same as an empty list.
      * @param {Array<string>|string} options.headerBlacklist By default, all
      * HTTP headers except Cookie are shared. Individual headers can be
      * excluded from sharing by adding them to this list, or to one comma
