@@ -80,7 +80,9 @@ class SwigData extends AspectData {
    * IP intelligence properties are usually lists of weighted values
    * where the weight indicates the proportion of the result that
    * the value applies to. These are returned as JavaScript arrays of
-   * objects with 'value', 'weight' and 'rawWeight' entries.
+   * objects with 'value', 'weight' and 'rawWeight' entries, and
+   * 'rawweighting', which the cloud engine also gives and is deprecated in
+   * favour of 'rawWeight'.
    *
    * @param {string} key the property key to retrieve
    * @returns {AspectPropertyValue} value property value

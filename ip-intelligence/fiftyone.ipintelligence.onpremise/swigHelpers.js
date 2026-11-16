@@ -43,7 +43,9 @@ module.exports = {
    * entries. The weight is a number between 0 and 1 indicating the
    * proportion of the result that the value applies to. The raw weight
    * is the integer form of the weight where 65535 indicates a weight
-   * of 1.
+   * of 1. Each also has 'rawweighting', the raw weight under the name the
+   * cloud service writes, which the cloud engine keeps, so the two engines
+   * give the same values. It is deprecated in favour of 'rawWeight'.
    *
    * @param {object} vector vector of weighted values from swig
    * @returns {Array} converted array of plain weighted value objects
@@ -53,10 +55,12 @@ module.exports = {
 
     for (let i = 0; i < vector.size(); i++) {
       const item = vector.get(i);
+      const rawWeight = item.getShortRawWeight();
       output.push({
         value: item.getValue(),
         weight: item.getWeight(),
-        rawWeight: item.getShortRawWeight()
+        rawWeight,
+        rawweighting: rawWeight
       });
     }
 
