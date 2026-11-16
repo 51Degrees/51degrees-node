@@ -53,6 +53,7 @@ const url = require('url');
 
 const os = require('os');
 const { performance } = require('perf_hooks');
+const crypto = require('crypto');
 
 // The version of the Pipeline, read from the package that provides it, so
 // that the usage shared names the release that is running.
@@ -262,6 +263,11 @@ class ShareUsage extends Engine {
     // Starts sending again when a pause ends.
     this.resumeTimer = null;
 
+    // A version 4 UUID that names this element in every record it writes,
+    // created when it is built and never stored, so a process that starts
+    // again, or a second element, has its own.
+    this.processId = crypto.randomUUID();
+
     // When, by ShareUsage.now, the values that do not change while the
     // element lives were last written to a record, or null before the first.
     this.invariantWrittenAt = null;
@@ -462,6 +468,10 @@ class ShareUsage extends Engine {
     let xml = '';
 
     xml += '<Device>';
+
+    // The process identifier, in every record, which ties a record that
+    // leaves out the invariant data to the record that carries it
+    xml += `<ProcessId>${this.processId}</ProcessId>`;
 
     // --- write invariant data, to the first record and again to the first
     // once an hour has passed since they were last written

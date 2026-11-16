@@ -113,6 +113,7 @@ declare class ShareUsage extends ShareUsage_base {
     backOff: ShareUsageBackOff;
     sending: boolean;
     resumeTimer: any;
+    processId: `${string}-${string}-${string}-${string}-${string}`;
     invariantWrittenAt: number;
     endpoint: url.URL;
     http: typeof import("http") | typeof import("https");
