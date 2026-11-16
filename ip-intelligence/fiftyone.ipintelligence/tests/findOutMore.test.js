@@ -140,8 +140,9 @@ const problems = (file) => {
 // loads and the JavaScript templates submodule.
 const SKIPPED_FOLDERS = ['node_modules', 'public', 'javascript-templates'];
 
-// Every .js, .pug and .html file below an examples folder, other than
-// tests.
+// Every .js, .ts, .pug and .html file below an examples folder, other
+// than tests. A TypeScript example is read as well, because the readme
+// tells people to run one.
 const exampleFiles = (dir, inExamples = false) => {
   let found = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -151,8 +152,8 @@ const exampleFiles = (dir, inExamples = false) => {
         found = found.concat(
           exampleFiles(full, inExamples || entry.name === 'examples'));
       }
-    } else if (inExamples && /\.(js|pug|html)$/.test(entry.name) &&
-      !entry.name.endsWith('.test.js')) {
+    } else if (inExamples && /\.(js|ts|pug|html)$/.test(entry.name) &&
+      !/\.test\.(js|ts)$/.test(entry.name)) {
       found.push(path.relative(PRODUCT, full).split(path.sep).join('/'));
     }
   }
