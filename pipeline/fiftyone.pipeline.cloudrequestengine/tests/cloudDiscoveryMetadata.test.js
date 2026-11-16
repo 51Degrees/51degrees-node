@@ -116,7 +116,11 @@ test('metadata is absent while discovery fails and arrives once it succeeds',
     expect(Object.keys(failed.errors).length).toBeGreaterThan(0);
     expect(request.flowElementProperties).toEqual({});
     expect(device.properties).toEqual({});
-    expect(request.evidenceKeyFilter.filterEvidenceKey('header.anything'))
+    // Accepted Evidence is empty until discovery succeeds, and every key
+    // is kept meanwhile (cloud-request-engine.md lines 296 and 297).
+    expect(request.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeFalsy();
+    expect(request.keptEvidenceKeyFilter.filterEvidenceKey('header.anything'))
       .toBe(true);
 
     client.down = false;
@@ -128,6 +132,7 @@ test('metadata is absent while discovery fails and arrives once it succeeds',
       .toBeFalsy();
     expect(request.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
       .toBeTruthy();
+    expect(request.keptEvidenceKeyFilter).toBeUndefined();
   });
 
 test('a Cloud Aspect Engine accepts no Evidence', async () => {
