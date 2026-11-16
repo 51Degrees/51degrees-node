@@ -313,8 +313,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
     console.log(`IP intelligence data file: ${ipDataFile}`);
     setPipeline(deviceDataFile, ipDataFile);
     // Only the machine the example runs on, because the example serves
-    // the data file in use and the message below names localhost.
-    server.listen(PORT, 'localhost');
+    // the data file in use, at 127.0.0.1 rather than localhost, which
+    // can resolve to the IPv6 loopback alone.
+    server.listen(PORT, '127.0.0.1');
     console.log(`Local cloud API listening on: http://localhost:${PORT}`);
     reportEnterpriseProperties();
   } else {

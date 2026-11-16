@@ -303,7 +303,7 @@ const server = http.createServer((req, res) => {
 
 const portNum = process.env.PORT || 3000;
 console.info('To test this example, browse to http://localhost:' + portNum);
-// Only the machine the example runs on, which is what the message above
-// names.
-server.listen(portNum, 'localhost');
+// Only the machine the example runs on, at 127.0.0.1 rather than
+// localhost, which can resolve to the IPv6 loopback alone.
+server.listen(portNum, '127.0.0.1');
 //! [usage]

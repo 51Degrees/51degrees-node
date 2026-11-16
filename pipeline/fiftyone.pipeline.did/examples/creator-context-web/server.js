@@ -304,9 +304,9 @@ function main () {
     }
     response.writeHead(404);
     response.end();
-  // Only the machine the example runs on, which is what the message
-  // below names.
-  }).listen(port, 'localhost', () =>
+  // Only the machine the example runs on, at 127.0.0.1 rather than
+  // localhost, which can resolve to the IPv6 loopback alone.
+  }).listen(port, '127.0.0.1', () =>
     console.log(`51Did demo on http://localhost:${port}/`));
 }
 
