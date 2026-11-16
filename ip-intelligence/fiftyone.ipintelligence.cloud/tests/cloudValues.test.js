@@ -24,8 +24,11 @@
 // on-premise engine gives it. ip-intelligence-cloud.md line 60 asks for the
 // weighted values the service sends to be parsed into the weighted value
 // type. Each weighted value keeps the rawweighting the service sent, beside
-// rawWeight, and a WKT value stays as the service writes it, {"value": ...},
-// so no name or form a caller reads is removed. No key or network is used.
+// rawWeight, so no name a caller reads is removed. A WKT value, which the
+// service writes as {"value": "POINT(2 4)"}, is read into its WKT text,
+// which is what the on-premise engine gives for the same Property
+// (ip-intelligence/fiftyone.ipintelligence.onpremise/swigData.js lines 123
+// to 126 and 148 to 153). No key or network is used.
 
 const core = require('fiftyone.pipeline.core');
 const { CloudRequestEngine } = require('fiftyone.pipeline.cloudrequestengine');
@@ -103,25 +106,56 @@ describe('IP Intelligence cloud values', () => {
       ]);
     });
 
-  test('a WKT value is given as the service writes it',
-    async () => {
-      const { ip } = await run({
-        ip: {
-          areas: [{
-            rawweighting: 65535,
-            value: { value: 'POLYGON((1 2,3 4,1 2))' }
-          }],
-          location: { value: 'POINT(2 4)' }
-        }
-      });
-      expect(ip.areas.value).toEqual([{
-        value: { value: 'POLYGON((1 2,3 4,1 2))' },
-        weight: 1,
-        rawWeight: 65535,
-        rawweighting: 65535
-      }]);
-      expect(ip.location.value).toEqual({ value: 'POINT(2 4)' });
+  test('a WKT value is read into its WKT text, on its own and as a ' +
+    'weighted value', async () => {
+    const { ip } = await run({
+      ip: {
+        areas: [{
+          rawweighting: 65535,
+          value: { value: 'POLYGON((1 2,3 4,1 2))' }
+        }],
+        location: { value: 'POINT(2 4)' }
+      }
     });
+    expect(ip.areas.value).toEqual([{
+      value: 'POLYGON((1 2,3 4,1 2))',
+      weight: 1,
+      rawWeight: 65535,
+      rawweighting: 65535
+    }]);
+    expect(ip.location.value).toBe('POINT(2 4)');
+  });
+
+  // A reader MAY also accept the WKT text alone, which is the form the
+  // on-premise engine gives, so text passes through untouched.
+  test('WKT text the service sends on its own is left as it is', async () => {
+    const { ip } = await run({
+      ip: {
+        areas: [{ rawweighting: 32768, value: 'POINT(1 1)' }],
+        location: 'POINT(2 4)'
+      }
+    });
+    expect(ip.areas.value).toEqual([{
+      value: 'POINT(1 1)',
+      weight: 32768 / 65535,
+      rawWeight: 32768,
+      rawweighting: 32768
+    }]);
+    expect(ip.location.value).toBe('POINT(2 4)');
+  });
+
+  // Only an object whose one member is a text value is a WKT value, so an
+  // object the service sends for anything else is not unwrapped.
+  test('an object with more than one member is left as it is', async () => {
+    const { ip } = await run({
+      ip: {
+        location: { value: 'POINT(2 4)', srid: 4326 },
+        registeredname: { name: 'Example' }
+      }
+    });
+    expect(ip.location.value).toEqual({ value: 'POINT(2 4)', srid: 4326 });
+    expect(ip.registeredname.value).toEqual({ name: 'Example' });
+  });
 
   test('other values, and a property with no value, are as the service ' +
     'gave them', async () => {

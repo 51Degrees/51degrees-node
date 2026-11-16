@@ -43,11 +43,32 @@ const isWeighted = function (item) {
 };
 
 /**
+ * The WKT text of a value the service sent as an object with one member,
+ * value, which is the form value-types.md requires a WKT value to be
+ * written in and asks this engine to read. A value sent as text is already
+ * the form the on-premise engine gives, and anything else is left alone.
+ *
+ * @param {*} value the value the service sent
+ * @returns {*} the WKT text, or the value unchanged
+ */
+const fromWkt = function (value) {
+  if (value !== null && typeof value === 'object' &&
+    Array.isArray(value) === false &&
+    Object.keys(value).length === 1 &&
+    typeof value.value === 'string') {
+    return value.value;
+  }
+  return value;
+};
+
+/**
  * A value in the form the on-premise engine gives it. A list of weighted
  * values becomes objects with value, weight and rawWeight, where weight is
  * the raw weighting as a proportion of 65535. Each keeps rawweighting, the
- * name the service writes, which is deprecated in favour of rawWeight. Any
- * other value, a WKT value among them, is returned as the service sent it.
+ * name the service writes, which is deprecated in favour of rawWeight. A
+ * WKT value, on its own or as a weighted value, is read into its WKT text,
+ * which is what the on-premise engine gives. Any other value is returned as
+ * the service sent it.
  *
  * @param {*} value the value the service sent
  * @returns {*} the value as the Element Data gives it
@@ -55,13 +76,13 @@ const isWeighted = function (item) {
 const fromService = function (value) {
   if (Array.isArray(value) && value.length > 0 && value.every(isWeighted)) {
     return value.map((item) => ({
-      value: item.value,
+      value: fromWkt(item.value),
       weight: item.rawweighting / RAW_WEIGHTING_MAX,
       rawWeight: item.rawweighting,
       rawweighting: item.rawweighting
     }));
   }
-  return value;
+  return fromWkt(value);
 };
 
 /**
@@ -72,8 +93,9 @@ const fromService = function (value) {
  * of properties. Properties that have weighted values are returned
  * as arrays of objects with 'value', 'weight' and 'rawWeight' entries, as
  * the on-premise engine returns them, each keeping 'rawweighting', which is
- * deprecated in favour of 'rawWeight'. A WKT value is as the service sends
- * it, an object whose 'value' is the WKT text.
+ * deprecated in favour of 'rawWeight'. A WKT value, which the service sends
+ * as an object whose one member 'value' is the WKT text, is read into that
+ * text, which is what the on-premise engine gives.
  **/
 class IpIntelligenceCloud extends CloudEngine {
   /**
