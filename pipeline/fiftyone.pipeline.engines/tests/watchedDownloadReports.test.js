@@ -97,7 +97,7 @@ const watchedDownload = async () => {
       return watch(watchedPath, options, listener);
     });
   const loaded = [];
-  const dataFile = Object.assign({
+  const dataFile = {
     autoUpdate: false,
     updateOnStart: false,
     fileSystemWatcher: true,
@@ -111,10 +111,16 @@ const watchedDownload = async () => {
     path: file,
     updateUrl: served.url,
     refresh: () => loaded.push(fs.readFileSync(file, 'utf8'))
-  });
+  };
   service.registerDataFile(dataFile);
   return {
-    dataFile, service, statuses, logs, loaded, spy, file,
+    dataFile,
+    service,
+    statuses,
+    logs,
+    loaded,
+    spy,
+    file,
     server: served.server,
     // Raises one event on every watcher the service made for this file.
     raiseWatcherEvent: () => watchers.forEach((listener) => listener('change'))
@@ -142,7 +148,12 @@ describe('a watcher event while the service is downloading', () => {
     if (watched) {
       watched.spy.mockRestore();
       stop(watched.server);
-      fs.rmSync(path.dirname(watched.file), { recursive: true, force: true });
+      try {
+        fs.unlinkSync(watched.file);
+      } catch (e) {
+        // The folder is left in place, as the watcher may still hold the
+        // file, and the file may already have gone.
+      }
       watched = undefined;
     }
   });
