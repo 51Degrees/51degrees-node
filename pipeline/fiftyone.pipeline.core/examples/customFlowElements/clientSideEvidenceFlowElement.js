@@ -303,5 +303,7 @@ const server = http.createServer((req, res) => {
 
 const portNum = process.env.PORT || 3000;
 console.info('To test this example, browse to http://localhost:' + portNum);
-server.listen(portNum);
+// Only the machine the example runs on, which is what the message above
+// names.
+server.listen(portNum, 'localhost');
 //! [usage]

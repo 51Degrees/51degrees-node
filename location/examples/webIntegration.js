@@ -231,6 +231,8 @@ if (myResourceKey.substring(0, 2) === '!!') {
   });
 
   const port = 3000;
-  server.listen(port);
+  // Only the machine the example runs on, which is what the message
+  // below names.
+  server.listen(port, 'localhost');
   console.log('Server listening on port: ' + port);
 }

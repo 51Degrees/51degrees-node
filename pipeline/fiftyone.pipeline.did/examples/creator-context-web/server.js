@@ -304,7 +304,9 @@ function main () {
     }
     response.writeHead(404);
     response.end();
-  }).listen(port, () =>
+  // Only the machine the example runs on, which is what the message
+  // below names.
+  }).listen(port, 'localhost', () =>
     console.log(`51Did demo on http://localhost:${port}/`));
 }
 
