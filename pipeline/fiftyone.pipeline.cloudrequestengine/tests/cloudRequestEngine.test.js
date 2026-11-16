@@ -48,6 +48,10 @@ afterEach(() => { // eslint-disable-line
   delete process.env[oldEndpointVariable];
 });
 
+// The endpoint tests give each engine a stand-in client, because an engine
+// asks the cloud service at its endpoint when it is built, and these tests
+// only read which endpoint it chose.
+
 // Check that explicitly setting of the baseURL will take precedence over
 // environment variable setting.
 test('custom end point - config precedence', done => {
@@ -55,7 +59,8 @@ test('custom end point - config precedence', done => {
   const testEndPoint = 'testEndPoint/';
   const testCloudRequestEngine = new CloudRequestEngine({
     resourceKey: testResourceKey,
-    baseURL: testEndPoint
+    baseURL: testEndPoint,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testEndPoint);
@@ -68,7 +73,8 @@ test('custom end point - config precedence', done => {
 test('custom end point - environment precedence', done => {
   process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
@@ -82,7 +88,8 @@ test('custom end point - old variable name read', () => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
   process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
@@ -93,7 +100,8 @@ test('custom end point - old variable name read, new name empty', () => {
   process.env._51DEGREES_CLOUD_ENDPOINT = '';
   process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
@@ -104,7 +112,8 @@ test('custom end point - new variable name wins', () => {
   process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
   process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
@@ -114,7 +123,8 @@ test('custom end point - new variable name wins', () => {
 test('custom end point - default value', done => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
@@ -127,7 +137,8 @@ test('custom end point - default value, old name empty', () => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
   process.env[oldEndpointVariable] = '';
   const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
   });
 
   expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
