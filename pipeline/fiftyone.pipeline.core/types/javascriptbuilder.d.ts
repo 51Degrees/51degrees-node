@@ -55,6 +55,13 @@ declare class JavaScriptBuilderElement extends FlowElement {
         minify: boolean;
     };
     evidenceKeyFilter: JSEvidenceKeyFilter;
+    properties: {
+        javascript: {
+            name: string;
+            type: string;
+            description: string;
+        };
+    };
     _invalidUrlLogged: boolean;
     /**
      * Internal process function of the JavaScript builder
