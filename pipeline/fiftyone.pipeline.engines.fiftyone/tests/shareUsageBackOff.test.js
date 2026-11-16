@@ -20,7 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const { PipelineBuilder, FlowElement, ElementDataDictionary,
+  BasicListEvidenceKeyFilter } = require('fiftyone.pipeline.core');
 const ShareUsage = require('../shareUsage');
 const ShareUsageBackOff = require('../shareUsageBackOff');
 const http = require('http');
@@ -168,15 +169,18 @@ const clientIps = () => received
  * A pipeline whose usage sharing element sends each entry on its own.
  *
  * @param {object} settings more settings for the element
+ * @param {Array<object>} after elements added after the usage sharing one
  * @returns {object} the pipeline
  */
-const createPipeline = (settings = {}) => {
+const createPipeline = (settings = {}, after = []) => {
   usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint,
     ...settings
   });
-  return new PipelineBuilder().add(usageEngine).build();
+  const builder = new PipelineBuilder().add(usageEngine);
+  after.forEach(element => builder.add(element));
+  return builder.build();
 };
 
 /**
@@ -620,4 +624,64 @@ test('share usage back-off - pause still reaches the deprecated warning level', 
   await waitFor(
     () => heard.some(message => message.includes('paused for 2 ')),
     () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
+}, 30000);
+
+// Shows that processing ran to the end, rather than stopping where usage
+// sharing paused.
+const marker = new FlowElement({
+  dataKey: 'marker',
+  evidenceKeyFilter: new BasicListEvidenceKeyFilter([]),
+  processInternal: function (flowData) {
+    flowData.setElementData(new ElementDataDictionary({
+      flowElement: this,
+      contents: { processed: true }
+    }));
+  },
+  properties: { processed: { type: 'bool' } }
+});
+
+/**
+ * Only sending pauses. Each request processed during a pause of a minute
+ * returns in a fraction of it, with its Flow Data complete and no error,
+ * and processing goes on after the queue has filled and entries are being
+ * dropped (usage-sharing-element.md line 373).
+ */
+test('share usage back-off - processing neither waits for nor is stopped ' +
+  'by the pause', async () => {
+  const pipeline = createPipeline({
+    maximumQueueSize: 4,
+    failuresToEnterRecovery: 1,
+    initialRecoveryDelaySeconds: 60,
+    maxRecoveryDelaySeconds: 60
+  }, [marker]);
+  holdClock();
+  await failSends(pipeline, 1);
+  expect(usageEngine.backOff.backingOff).toBe(true);
+
+  const startedAt = Date.now();
+  const took = [];
+  for (let i = 0; i < 20; i++) {
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('server.client-ip', `10.1.0.${i + 1}`);
+    const started = Date.now();
+    await flowData.process();
+    took.push(Date.now() - started);
+    expect(flowData.errors).toEqual({});
+    expect(flowData.get('marker').get('processed')).toBe(true);
+  }
+  const elapsed = Date.now() - startedAt;
+
+  // The queue filled and the rest were dropped, so processing went on past
+  // the point where sharing could keep anything. The pause is still on and
+  // nothing more was sent, so every request above was processed during it.
+  expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
+  expect(usageEngine.dropped).toBeGreaterThan(0);
+  expect(usageEngine.backOff.backingOff).toBe(true);
+  expect(attempts.length).toBe(1);
+
+  // A request that waited for the pause would take a minute, so these
+  // limits are a fraction of it. A slow runner cannot fail them, and a
+  // process that waited for the pause cannot pass them.
+  expect(Math.max(...took)).toBeLessThan(2000);
+  expect(elapsed).toBeLessThan(10000);
 }, 30000);
