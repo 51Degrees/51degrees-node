@@ -382,6 +382,9 @@ describe('deviceDetectionOnPremise', () => {
           dataUpdateVerifyMd5: false,
           dataUpdateUseUrlFormatter: false,
           createTempDataCopy: true,
+          // The test is not about the file system watcher, and it removes
+          // its folder at the end, which a watcher reports as an error.
+          fileSystemWatcher: false,
           tempDataDir: tempDir
         }).build();
         pipeline.on('error', console.error);
@@ -416,6 +419,8 @@ describe('deviceDetectionOnPremise', () => {
         dataUpdateVerifyMd5: false,
         dataUpdateUseUrlFormatter: false,
         createTempDataCopy: true,
+        // The test is not about the file system watcher.
+        fileSystemWatcher: false,
         tempDataDir
       }).build();
 
