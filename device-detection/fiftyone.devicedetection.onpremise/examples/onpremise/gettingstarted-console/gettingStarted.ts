@@ -186,7 +186,12 @@ const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_
 if (dataFile !== undefined) {
   // Every end of the example prints where to go next, a failure included.
   run(dataFile)
-    .catch((e: unknown) => console.error(String(e)))
+    .catch((e: unknown) => {
+      // Printed and the process still fails, so a broken example is not
+      // hidden by the section below.
+      console.error(String(e));
+      process.exitCode = 1;
+    })
     .then(() => console.log(FIND_OUT_MORE));
 } else {
   console.error('Failed to find a device detection ' +
