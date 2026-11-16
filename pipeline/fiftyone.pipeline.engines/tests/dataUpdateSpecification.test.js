@@ -1233,8 +1233,12 @@ describe('every update reports one status', () => {
     }
   });
 
-  test('a download that cannot be read is an error reported once',
-    async () => {
+  // Reading the download has no row of its own in the specification's
+  // table, so it is the last row, any other error, with that row's status,
+  // whether or not the download is compressed.
+  test.each([false, true])(
+    'a download that cannot be read is an unknown error reported once, ' +
+    'compressed %s', async (decompress) => {
       const remote = await serve(200, 'version 2');
       const readFile = fs.readFile;
       const failing = jest.spyOn(fs, 'readFile').mockImplementation(
@@ -1251,14 +1255,15 @@ describe('every update reports one status', () => {
         const dataFile = standInDataFile({
           updateUrl: remote.url,
           tempDataDirectory: folder,
-          path: file
+          path: file,
+          decompress
         });
         const seen = record(service, dataFile);
         service.updateDataFile(dataFile);
         await sleep(1000);
         expect(seen).toEqual([
           {
-            status: AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME,
+            status: AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR,
             updating: false
           }
         ]);
