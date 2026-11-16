@@ -155,9 +155,11 @@ const exampleFiles = (dir, inExamples = false) => {
   return found;
 };
 
-// Runs an example from its own folder with no resource key and returns
-// what it printed.
-const printedWithoutKey = (file) => {
+// Runs an example with no resource key and returns what it printed. The
+// folder it runs from is its own unless another is given, because an
+// example reads every file it needs from its own folder and so runs the
+// same from anywhere.
+const printedWithoutKey = (file, cwd) => {
   const remove = new Set(RESOURCE_KEY_NAMES.concat(['JEST_WORKER_ID'])
     .map((name) => name.toUpperCase()));
   const env = Object.assign({}, process.env);
@@ -168,8 +170,8 @@ const printedWithoutKey = (file) => {
   }
   const full = path.join(PRODUCT, file);
   const result = childProcess.spawnSync(
-    process.execPath, [path.basename(full)], {
-      cwd: path.dirname(full),
+    process.execPath, [cwd ? full : path.basename(full)], {
+      cwd: cwd || path.dirname(full),
       env,
       encoding: 'utf8',
       timeout: TIMEOUT_MS
@@ -213,6 +215,17 @@ describe('Find out more', () => {
   for (const file of CLOUD_EXAMPLES) {
     test(`${file} ends with the section when it has no resource key`, () => {
       expectEndsWithSection(printedWithoutKey(file), file);
+    }, TIMEOUT_MS);
+  }
+
+  // An example that read a file by a bare name took it from the folder it
+  // was run from, so it threw before it could say that no resource key was
+  // set.
+  for (const file of CLOUD_EXAMPLES) {
+    test(`${file} ends with the section when it is run from another ` +
+      'folder', () => {
+      expectEndsWithSection(
+        printedWithoutKey(file, path.join(PRODUCT, '..')), file);
     }, TIMEOUT_MS);
   }
 });
