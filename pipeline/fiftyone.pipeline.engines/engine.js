@@ -23,6 +23,7 @@
 const { FlowElement, listSetting } = require('fiftyone.pipeline.core');
 
 const DataFileUpdateService = require('./dataFileUpdateService');
+const DataKeyedCacheClass = require('./dataKeyedCache');
 
 /**
  * @typedef {import('./dataFile')} DataFile
@@ -59,7 +60,7 @@ class Engine extends FlowElement {
       this.registerDataFile(dataFile);
     }
 
-    if (cache) {
+    if (cache instanceof DataKeyedCacheClass) {
       this.cache = cache;
     }
 
