@@ -69,6 +69,103 @@ function reportOldEndpointVariable (engine, flowData) {
   }
 }
 
+// The discovery attempt each engine is making, shared by the build and every
+// process that starts while it is under way.
+const discoveryAttempts = new WeakMap();
+
+// The failures to a discovery request that got no answer or a 5xx, which
+// cloud-request-engine.md lines 258 to 263 treat as transient.
+const transientFailures = new WeakSet();
+
+// For an engine in no Pipeline when its build attempt failed, what the
+// first process logs.
+const unloggedBuildFailures = new WeakMap();
+
+/**
+ * Makes both discovery requests, or gives the attempt the engine is already
+ * making, so that one attempt is made at a time. An attempt that has ended
+ * is forgotten, so the next one asks again.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @returns {Promise<CloudRequestEngine>} the engine, once both are answered
+ */
+function discover (engine) {
+  let attempt = discoveryAttempts.get(engine);
+  if (attempt === undefined) {
+    attempt = Promise.all([engine.getEvidenceKeys(), engine.fetchProperties()])
+      .then(() => engine)
+      .finally(() => discoveryAttempts.delete(engine));
+    discoveryAttempts.set(engine, attempt);
+  }
+  return attempt;
+}
+
+/**
+ * The errors for a discovery request that failed before its answer could be
+ * read, marked as transient when there was no answer or a 5xx.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {*} response what the request client rejected with
+ * @param {string} url the address the request went to
+ * @returns {Array<CloudRequestError>} the errors
+ */
+function requestFailure (engine, response, url) {
+  const errors = engine.getErrorsFromResponse(response, url);
+  const status = response !== null && typeof response === 'object'
+    ? response.statusCode
+    : undefined;
+  if (status === undefined || status >= 500) {
+    transientFailures.add(errors);
+  }
+  return errors;
+}
+
+/**
+ * Logs a failure of the discovery attempt made when the engine was built, to
+ * each Pipeline the engine is in, or by the first process when it is in
+ * none yet. A transient failure is a warning, because the first process
+ * tries again. Any other failure is an error, as it is when a process meets
+ * it.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {Array<CloudRequestError>} errors the failure
+ */
+function reportBuildFailure (engine, errors) {
+  engine.errors = errors;
+  const report = transientFailures.has(errors)
+    ? {
+        level: 'warn',
+        message: util.format(errorMessages.discoveryTriedAgain,
+          errors.map((error) => error.message).join(' '))
+      }
+    : {
+        level: 'error',
+        message: { source: 'CloudRequestEngine', message: errors }
+      };
+  if (engine.pipelines.length === 0) {
+    unloggedBuildFailures.set(engine, report);
+    return;
+  }
+  for (const pipeline of engine.pipelines) {
+    pipeline.log(report.level, report.message);
+  }
+}
+
+/**
+ * Logs, on the first process, a build attempt's failure that arrived while
+ * the engine was in no Pipeline.
+ *
+ * @param {CloudRequestEngine} engine the engine processing
+ * @param {FlowData} flowData the flow data whose pipeline is logged to
+ */
+function reportUnloggedBuildFailure (engine, flowData) {
+  const report = unloggedBuildFailures.get(engine);
+  if (report !== undefined) {
+    unloggedBuildFailures.delete(engine);
+    flowData.pipeline.log(report.level, report.message);
+  }
+}
+
 // The key a web integration gives the web request itself. It is a view of
 // the whole request and not a value to send, so it is left out.
 const webRequestKey = 'server.http-request';
@@ -184,16 +281,25 @@ class CloudRequestEngine extends Engine {
     this.baseURL = baseURL;
     this.evidenceKeys = [];
 
-    // The cloud service's keys are fetched when the Pipeline first processes.
-    // Until then every key is kept, so evidence set before then is not lost,
-    // and getEvidenceKeys replaces this with the keys the service lists.
-    this.evidenceKeyFilter = new EvidenceKeyFilter();
+    // Until discovery gives the keys the cloud service accepts, the engine
+    // accepts none, as nothing can change its results
+    // (cloud-request-engine.md lines 296 and 297), and keeps every key, so
+    // evidence set before then is still sent and in the cache key.
+    // getEvidenceKeys replaces both.
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
+      new BasicListEvidenceKeyFilter([]));
+    this.keptEvidenceKeyFilter = new EvidenceKeyFilter();
 
     // Set once the cloud service's evidence keys have arrived.
     this.evidenceKeysFetched = false;
 
     // Properties of connected FlowElements
     this.flowElementProperties = {};
+
+    // Both discovery requests are made now, so that in the normal case the
+    // engine is ready to process once it is built
+    // (cloud-request-engine.md line 241).
+    discover(this).catch((errors) => reportBuildFailure(this, errors));
   }
 
   /**
@@ -224,7 +330,7 @@ class CloudRequestEngine extends Engine {
    */
   fetchEvidenceKeysAndProperties (resolveCallback, rejectCallback) {
     const self = this;
-    Promise.all([this.getEvidenceKeys(), this.fetchProperties()]).then(function () {
+    discover(this).then(function () {
       resolveCallback(self);
     }).catch(function (errors) {
       self.errors = errors;
@@ -271,16 +377,19 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Fetches the evidence keys and properties before the first process,
-   * whatever else is in the pipeline, because the cache key is built from
-   * the evidence keys. A fetch that fails is tried again on the next
-   * process, and its error is the process error.
+   * Has the evidence keys and properties before processing, whatever else
+   * is in the pipeline, because the cache key is built from the evidence
+   * keys. A process that starts while a discovery attempt is under way,
+   * such as the one made when the engine was built, shares its answer. A
+   * process that starts after discovery failed tries again, and a failure
+   * is the process error.
    *
    * @param {FlowData} flowData FlowData to process
    * @returns {Promise} resolved once the FlowData is processed
    */
   process (flowData) {
     reportOldEndpointVariable(this, flowData);
+    reportUnloggedBuildFailure(this, flowData);
     if (this.keysAndPropertiesFetched) {
       return super.process(flowData);
     }
@@ -484,7 +593,7 @@ class CloudRequestEngine extends Engine {
           engine.flowElementProperties = propertiesOutput;
           resolve(propertiesOutput);
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response, url));
+          reject(requestFailure(engine, response, url));
         });
     });
   }
@@ -658,11 +767,12 @@ class CloudRequestEngine extends Engine {
           engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
             JSON.parse(body)
           );
+          engine.keptEvidenceKeyFilter = undefined;
           engine.evidenceKeysFetched = true;
 
           resolve();
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response, url));
+          reject(requestFailure(engine, response, url));
         });
     });
   }
