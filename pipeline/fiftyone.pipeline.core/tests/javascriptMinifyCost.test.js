@@ -27,8 +27,13 @@
 
 const PipelineBuilder = require('../pipelineBuilder');
 
-// The most minifying may add to one request, in milliseconds, about three
-// times the median of the slowest runner the builds use.
+// The most minifying may add to the median request, in milliseconds. It
+// sits between the highest median measured with minifying as it is, 70.5 ms
+// on macOS with Node.js 22, and the lowest median measured with minifying
+// made eight times dearer, 186 ms. macOS runs about twice as fast or slow
+// from one run to the next, so the limit leaves 2.3 times the highest
+// median seen rather than three times, and a median of 21 rounds would
+// have to more than double to reach it.
 const ADDED_LIMIT_MS = 160;
 // Rounds of requests, each timing a few requests with minify off and on.
 const ROUNDS = 21;
@@ -55,7 +60,7 @@ const median = (values) => {
   return sorted[Math.floor(sorted.length / 2)];
 };
 
-test('minifying adds less than the limit to each request', async () => {
+test('minifying adds less than the limit to the median request', async () => {
   const plain = pipelineWith(false);
   const minified = pipelineWith(true);
   await msPerRequest(plain);
