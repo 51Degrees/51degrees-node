@@ -231,6 +231,8 @@ if (myResourceKey.substring(0, 2) === '!!') {
   });
 
   const port = 3000;
-  server.listen(port);
+  // Only the machine the example runs on, at 127.0.0.1 rather than
+  // localhost, which can resolve to the IPv6 loopback alone.
+  server.listen(port, '127.0.0.1');
   console.log('Server listening on port: ' + port);
 }
