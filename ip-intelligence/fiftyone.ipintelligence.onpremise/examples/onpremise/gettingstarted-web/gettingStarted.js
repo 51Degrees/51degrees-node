@@ -259,7 +259,7 @@ const server = http.createServer((req, res) => {
         longitude,
         mapLatitude: located(latitude),
         mapLongitude: located(longitude),
-        accuracyRadius:
+        accuracyRadiusMin:
           ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'accuracyradiusmin'),
         timeZoneOffset:
           ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'timezoneoffset')
