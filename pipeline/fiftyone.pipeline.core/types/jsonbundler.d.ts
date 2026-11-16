@@ -11,6 +11,13 @@ export = JSONBundlerElement;
 declare class JSONBundlerElement extends FlowElement {
     constructor(...args: any[]);
     evidenceKeyFilter: BasicListEvidenceKeyFilter;
+    properties: {
+        json: {
+            name: string;
+            type: string;
+            description: string;
+        };
+    };
     propertyCache: {};
     /**
      * The sequence number the Sequence Element produced, which is its Element
