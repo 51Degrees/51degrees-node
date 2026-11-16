@@ -1256,9 +1256,11 @@ describe('every update reports one status', () => {
         const seen = record(service, dataFile);
         service.updateDataFile(dataFile);
         await sleep(1000);
+        // The error has no row of its own, so it has the last row's status
+        // (data-updates.md line 515).
         expect(seen).toEqual([
           {
-            status: AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME,
+            status: AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR,
             updating: false
           }
         ]);
