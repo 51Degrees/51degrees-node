@@ -20,8 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { PipelineBuilder, FlowElement, ElementDataDictionary,
-  BasicListEvidenceKeyFilter } = require('fiftyone.pipeline.core');
+const {
+  PipelineBuilder, FlowElement, ElementDataDictionary,
+  BasicListEvidenceKeyFilter
+} = require('fiftyone.pipeline.core');
 const ShareUsage = require('../shareUsage');
 const ShareUsageBackOff = require('../shareUsageBackOff');
 const http = require('http');
