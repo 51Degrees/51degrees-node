@@ -218,9 +218,8 @@ describe('Find out more', () => {
     }, TIMEOUT_MS);
   }
 
-  // An example that read a file by a bare name took it from the folder it
-  // was run from, so it threw before it could say that no resource key was
-  // set.
+  // Each cloud example also runs from another folder, as it reads its files
+  // from its own folder and not the one it runs in.
   for (const file of CLOUD_EXAMPLES) {
     test(`${file} ends with the section when it is run from another ` +
       'folder', () => {

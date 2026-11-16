@@ -80,8 +80,8 @@ test('the usage sharing example builds its Pipeline from 51d.json', () => {
   expectBuiltAndFinished(run());
 }, TIMEOUT_MS);
 
-// It read the file by a bare name, so it took it from the folder it was run
-// from and threw when that folder had no 51d.json.
+// The example also runs from another folder, as it reads 51d.json from its
+// own folder and not the one it runs in.
 test('the usage sharing example runs from another folder', () => {
   expectBuiltAndFinished(run(path.join(__dirname, '..', '..', '..')));
 }, TIMEOUT_MS);
