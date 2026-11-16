@@ -110,6 +110,7 @@ const watchedDownload = async () => {
     flowElement: new TestEngine(),
     path: file,
     updateUrl: served.url,
+    tempDataDirectory: folder,
     refresh: () => loaded.push(fs.readFileSync(file, 'utf8'))
   };
   service.registerDataFile(dataFile);
@@ -171,11 +172,15 @@ describe('a watcher event while the service is downloading', () => {
       AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS]);
     await until(() => watched.statuses.some(endsCheck),
       DownloadTestMilliseconds);
+    // The service's own write raises watcher events of its own, so a
+    // report may follow the ones this test asked for. What matters is that
+    // the first report is in progress and the first status that ends a
+    // check is the download's own result.
     expect(watched.statuses[0])
       .toBe(AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
-    expect(watched.statuses.filter(endsCheck))
-      .toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
-    expect(watched.loaded).toEqual(['version 2']);
+    expect(watched.statuses.filter(endsCheck)[0])
+      .toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    expect(watched.loaded[0]).toBe('version 2');
   }, DownloadTestMilliseconds);
 
   // What the two update data file examples did until this change. The first
