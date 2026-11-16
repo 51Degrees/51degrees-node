@@ -79,7 +79,7 @@ console.log();
 // Create a new pipeline from the supplied config file.
 // The file is read from the example's own folder, so that the example
 // runs from any working folder.
-const pipeline = new core.PipelineBuilder()
+const pipeline = new core.PipelineBuilder() // eslint-disable-line no-unused-vars
   .buildFromConfigurationFile(path.join(__dirname, '51d.json'));
 
 // Alternatively, the commented code below shows how to
