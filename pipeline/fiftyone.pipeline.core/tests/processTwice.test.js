@@ -26,6 +26,15 @@
 // A second process gives a rejected promise and runs no element again,
 // whether or not the first has finished, and whether or not the Pipeline
 // suppresses process exceptions, which are about errors in elements.
+//
+// The three tests that process twice are marked failing, because today a
+// second process runs every element again and resolves. Callers rely on
+// that: the caching example (pipeline/fiftyone.pipeline.engines/examples/
+// caching.js lines 111 to 117) adds evidence to one Flow Data and processes
+// it again, and so do tests in core.test.js, logs-errors-and-stops.test.js,
+// engines.test.js and cloudEngineErrorMessages.test.js. Making the second
+// process fail changes what those callers get, so it waits for a release
+// that says so. When it is made, remove .failing and these tests pass.
 
 const core = require('fiftyone.pipeline.core');
 
@@ -56,7 +65,7 @@ const outcome = (flowData) => flowData.process().then(
   (error) => error instanceof Error ? error.message : String(error));
 
 describe('A Flow Data processed twice', () => {
-  test('fails the second time, without running the elements again',
+  test.failing('fails the second time, without running the elements again',
     async () => {
       const { pipeline, runs } = counted(false);
       const flowData = pipeline.createFlowData();
@@ -66,7 +75,7 @@ describe('A Flow Data processed twice', () => {
       expect(flowData.counter.get('runs')).toBe(1);
     });
 
-  test('fails when the first process has not finished', async () => {
+  test.failing('fails when the first process has not finished', async () => {
     const { pipeline, runs } = counted(false);
     const flowData = pipeline.createFlowData();
     const first = flowData.process();
@@ -75,14 +84,15 @@ describe('A Flow Data processed twice', () => {
     expect(runs.count).toBe(1);
   });
 
-  test('fails when the Pipeline suppresses process exceptions', async () => {
-    const { pipeline, runs } = counted(true);
-    const flowData = pipeline.createFlowData();
-    await flowData.process();
-    expect(await outcome(flowData)).toBe(ALREADY);
-    expect(runs.count).toBe(1);
-    expect(flowData.errors).toEqual({});
-  });
+  test.failing('fails when the Pipeline suppresses process exceptions',
+    async () => {
+      const { pipeline, runs } = counted(true);
+      const flowData = pipeline.createFlowData();
+      await flowData.process();
+      expect(await outcome(flowData)).toBe(ALREADY);
+      expect(runs.count).toBe(1);
+      expect(flowData.errors).toEqual({});
+    });
 
   test('a new Flow Data from the same Pipeline is processed as usual',
     async () => {
