@@ -1,0 +1,52 @@
+name: Any cache tests
+
+# Throwaway. Runs the engines package tests
+# on the pushed commit, which need no native module, and lints the test file.
+# The branch is deleted after.
+
+on:
+  push:
+    branches:
+      - 'tmp/cn2-cache-*'
+
+jobs:
+  Test:
+    name: Tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: 24
+          - os: ubuntu-latest
+            node: 22
+          - os: windows-latest
+            node: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install Runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install
+        run: |
+          git log --oneline -3
+          npm install
+
+      - name: Lint
+        if: always()
+        run: npx eslint pipeline/fiftyone.pipeline.engines/tests/anyCache.test.js pipeline/fiftyone.pipeline.engines/engine.js
+
+      - name: Engines tests
+        if: always()
+        run: >
+          node --expose-gc node_modules/jest/bin/jest.js --ci --runInBand --forceExit --verbose
+          --testPathPattern "fiftyone.pipeline.engines/tests"
+          --testPathIgnorePatterns "(examples/|performance\.test\.js|integration)"
