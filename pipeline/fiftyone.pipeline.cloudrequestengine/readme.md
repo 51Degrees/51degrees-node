@@ -61,7 +61,7 @@ const next = new CloudRequestEngine({ resourceKey, discoveryState: saved });
 The copy holds the accepted Evidence keys and the accessible properties
 answer, which depend only on the keys, so keep one copy for each set of
 keys. A configuration file can give it as the `discoveryState` parameter of
-the engine, as that JSON.
+the engine, as that JSON. A blank value there is the option unset.
 
 ## Installation
 

@@ -26,6 +26,8 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * saved copy of discovery for the same keys, from getDiscoveryState, as
      * the copy, its JSON text or that JSON parsed. The engine then makes no
      * discovery request.
+     * A blank value is the option unset, so the engine discovers for
+     * itself, and text that is not the copy's JSON is refused.
      */
     constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient, discoveryState }: {
         resourceKey: string;

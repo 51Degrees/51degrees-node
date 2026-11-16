@@ -12,7 +12,7 @@ declare class CloudDiscoveryState {
      *
      * @param {string|object} json the copy's JSON
      * @returns {CloudDiscoveryState} the copy
-     * @throws {TypeError} when either part is missing
+     * @throws {TypeError} when the text is not JSON, or either part is missing
      */
     static fromJson(json: string | object): CloudDiscoveryState;
     /**
@@ -22,8 +22,8 @@ declare class CloudDiscoveryState {
      * accepts, as its evidencekeys answer lists them
      * @param {string|object} accessibleProperties the cloud service's
      * accessibleproperties answer, as JSON text or parsed
-     * @throws {TypeError} when the evidence keys are not a list, or the answer
-     * has no Products member
+     * @throws {TypeError} when the evidence keys are not a list, the answer is
+     * not JSON, or it has no Products member
      */
     constructor(evidenceKeys: Array<string>, accessibleProperties: string | object);
     /**

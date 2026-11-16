@@ -105,6 +105,18 @@ function productProperties (engine, answer) {
 }
 
 /**
+ * Whether a discoveryState option was given, a blank value being what a
+ * configuration file holding the option unset gives.
+ *
+ * @param {CloudDiscoveryState|string|object} state the option's value
+ * @returns {boolean} true when a copy was given
+ */
+function discoveryStateGiven (state) {
+  return state !== undefined && state !== null &&
+    !(typeof state === 'string' && state.trim() === '');
+}
+
+/**
  * Takes the evidence keys and properties from a saved copy of discovery,
  * as discovery would set them.
  *
@@ -261,6 +273,8 @@ class CloudRequestEngine extends Engine {
    * saved copy of discovery for the same keys, from getDiscoveryState, as
    * the copy, its JSON text or that JSON parsed. The engine then makes no
    * discovery request.
+   * A blank value is the option unset, so the engine discovers for
+   * itself, and text that is not the copy's JSON is refused.
    */
   constructor (
     {
@@ -342,7 +356,7 @@ class CloudRequestEngine extends Engine {
     // Properties of connected FlowElements
     this.flowElementProperties = {};
 
-    if (discoveryState !== undefined && discoveryState !== null) {
+    if (discoveryStateGiven(discoveryState)) {
       // A saved copy is used in place of the discovery requests
       // (cloud-request-engine.md lines 307 to 314).
       useDiscoveryState(this, discoveryState instanceof CloudDiscoveryState

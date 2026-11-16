@@ -21,6 +21,23 @@
  * ********************************************************************* */
 
 /**
+ * Reads the JSON of a discovery copy, refusing text that is not JSON with
+ * the refusal given rather than with a bare parse failure.
+ *
+ * @param {string} text the JSON
+ * @param {string} refusal what to say when the text is not JSON
+ * @returns {object} the JSON parsed
+ * @throws {TypeError} when the text is not JSON
+ */
+function readJson (text, refusal) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new TypeError(refusal);
+  }
+}
+
+/**
  * A copy of what the Cloud Request Engine's discovery fetched, being the
  * evidence keys the cloud service accepts and its answer listing the
  * accessible properties, which depend only on the keys in use. An engine
@@ -35,8 +52,8 @@ class CloudDiscoveryState {
    * accepts, as its evidencekeys answer lists them
    * @param {string|object} accessibleProperties the cloud service's
    * accessibleproperties answer, as JSON text or parsed
-   * @throws {TypeError} when the evidence keys are not a list, or the answer
-   * has no Products member
+   * @throws {TypeError} when the evidence keys are not a list, the answer is
+   * not JSON, or it has no Products member
    */
   constructor (evidenceKeys, accessibleProperties) {
     if (!Array.isArray(evidenceKeys)) {
@@ -44,7 +61,9 @@ class CloudDiscoveryState {
         'the cloud service accepts.');
     }
     const answer = typeof accessibleProperties === 'string'
-      ? JSON.parse(accessibleProperties)
+      ? readJson(accessibleProperties, "A discovery copy's accessible " +
+        "properties answer is not JSON. An engine's discoveryState takes " +
+        'the JSON toJson writes, or that JSON parsed.')
       : accessibleProperties;
     if (answer === null || typeof answer !== 'object' ||
       answer.Products === null || typeof answer.Products !== 'object') {
@@ -83,10 +102,13 @@ class CloudDiscoveryState {
    *
    * @param {string|object} json the copy's JSON
    * @returns {CloudDiscoveryState} the copy
-   * @throws {TypeError} when either part is missing
+   * @throws {TypeError} when the text is not JSON, or either part is missing
    */
   static fromJson (json) {
-    const document = typeof json === 'string' ? JSON.parse(json) : json;
+    const document = typeof json === 'string'
+      ? readJson(json, "A discovery copy is not JSON. An engine's " +
+        'discoveryState takes the JSON toJson writes, or that JSON parsed.')
+      : json;
     if (document === null || typeof document !== 'object') {
       throw new TypeError('A discovery copy is an object with evidenceKeys ' +
         'and accessibleProperties.');
