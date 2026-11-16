@@ -589,9 +589,13 @@ class DataFileUpdateService {
               AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS);
             break;
           case (304):
+            // The message names the date of the data, as .NET's does,
+            // whether or not the request carried it.
             dataFileUpdateService.log(
               'info',
-              'No data newer than ' + (modifiedSince || 'the current data') +
+              'No data newer than ' +
+              (modifiedSince || ifModifiedSince(dataFile) ||
+                'the current data') +
               " found at '" + dataFile.updateUrl +
               "' for Engine '" + engineName(dataFile) + "'");
             dataFileUpdateService.fail(
@@ -640,10 +644,12 @@ class DataFileUpdateService {
           return;
         }
         written = false;
+        // Writing the download has no row of its own, so it is the last
+        // row, with that row's message and status.
         dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
+          AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
       });
       response.pipe(output);
 
@@ -796,10 +802,12 @@ class DataFileUpdateService {
 
     fs.readFile(filename, function (err, data) {
       if (err) {
+        // Reading the download has no row of its own, so it is the last
+        // row, with that row's message and status.
         dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME);
+          AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
         return;
       }
 
@@ -854,10 +862,11 @@ class DataFileUpdateService {
     if (dataFile.decompress) {
       fs.readFile(filename, function (err, buffer) {
         if (err) {
+          // As above, reading the download is the last row.
           dataFileUpdateService.unhandled(dataFile, err);
           dataFileUpdateService.fail(
             dataFile,
-            AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+            AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
           return;
         }
 
@@ -877,10 +886,12 @@ class DataFileUpdateService {
 
           fs.writeFile(doneFileName, data, function (err) {
             if (err) {
+              // Writing the unpacked download is not the copy over the
+              // data file, so it is the last row too.
               dataFileUpdateService.unhandled(dataFile, err);
               dataFileUpdateService.fail(
                 dataFile,
-                AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME);
+                AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
               return;
             }
             dataFileUpdateService.fileReady(dataFile, doneFileName);
