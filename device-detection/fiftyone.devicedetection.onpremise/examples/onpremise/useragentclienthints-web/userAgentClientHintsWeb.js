@@ -105,10 +105,11 @@ const tryServeStatic = (req, res) => {
   return true;
 };
 
-// Load in a datafile, which is downloaded into the cxx/data submodule if
+// Load in a datafile, named by the _51DEGREES_DD_PATH environment
+// variable when it is set, or downloaded into the cxx/data submodule if
 // it is missing.
 
-const datafile = ExampleUtils.findFile('51Degrees-LiteV4.1.hash');
+const datafile = ExampleUtils.findDataFile('51Degrees-LiteV4.1.hash');
 
 if (datafile === undefined) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched.");
