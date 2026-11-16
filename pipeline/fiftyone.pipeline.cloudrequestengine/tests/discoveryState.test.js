@@ -161,3 +161,33 @@ test('a copy without the evidence keys or the accessible properties answer ' +
   expect(() => CloudDiscoveryState.fromJson('{"evidenceKeys": []}'))
     .toThrow(TypeError);
 });
+
+test('a blank discoveryState is the option left unset, and text that is ' +
+  'not the copy JSON is refused by name', async () => {
+  // A configuration file that leaves the option blank is the easy mistake
+  // to make, so a blank value is the option unset and the engine discovers
+  // for itself.
+  for (const discoveryState of ['', '   ']) {
+    const client = new CountingClient();
+    const engine = engineFor(client, discoveryState);
+    await settle();
+    expect(client.requests.sort())
+      .toEqual(['accessibleproperties', 'evidencekeys']);
+    expect(engine.keysAndPropertiesFetched).toBe(true);
+  }
+
+  // Other text that is not the copy's JSON is refused with a sentence
+  // naming the option, rather than with a bare parse failure.
+  for (const text of ['not json', '{']) {
+    expect(() => engineFor(new CountingClient(), text))
+      .toThrow(TypeError);
+    expect(() => engineFor(new CountingClient(), text))
+      .toThrow(/discoveryState/);
+    expect(() => CloudDiscoveryState.fromJson(text)).toThrow(TypeError);
+    expect(() => CloudDiscoveryState.fromJson(text))
+      .toThrow(/discoveryState/);
+  }
+  expect(() => CloudDiscoveryState.fromJson('')).toThrow(TypeError);
+  expect(() => new CloudDiscoveryState(['header.user-agent'], 'not json'))
+    .toThrow(TypeError);
+});
