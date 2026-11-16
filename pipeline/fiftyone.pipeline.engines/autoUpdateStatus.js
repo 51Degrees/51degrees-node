@@ -29,13 +29,15 @@ const autoUpdateStatus = {
   AUTO_UPDATE_NOT_NEEDED: 'Update Not Needed',
   // Update currently under way.
   AUTO_UPDATE_IN_PROGRESS: 'In Progress',
-  // Path to master file is directory not file
+  // Deprecated. The data update service does not report this. A download
+  // that cannot be read is AUTO_UPDATE_UNKNOWN_ERROR.
   AUTO_UPDATE_MASTER_FILE_CANT_RENAME: 'Cannot Rename Master File',
   // 51Degrees server responded with 429: too many attempts.
   AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS: '429 Too Many Attempts',
   // 51Degrees server responded with 403 meaning key is blacklisted.
   AUTO_UPDATE_ERR_403_FORBIDDEN: '403 Forbidden',
-  // Used when IO operations with input or output stream failed.
+  // Deprecated. The data update service does not report this. A download
+  // that cannot be read is AUTO_UPDATE_UNKNOWN_ERROR.
   AUTO_UPDATE_ERR_READING_STREAM: 'Error Reading Stream',
   // MD5 validation failed
   AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED: 'MD5 Validation Failed',
