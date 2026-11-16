@@ -73,17 +73,31 @@ const files = exampleFiles();
 const showingAccuracyRadiusMin = files
   .filter((file) => /accuracyradiusmin/i.test(text(file)));
 
+// The files about where an IP address points, being every example of the
+// IP Intelligence and location packages and any other that reads Areas or
+// an accuracy radius. AccuracyRadiusMin and AccuracyRadiusMax are distances
+// from the point returned to the nearest and the furthest edge of the area,
+// so neither is a circle drawn from the point. Other examples may say
+// circle.
+const aboutIpLocation = files.filter((file) =>
+  /^(ip-intelligence|location)\//.test(file) ||
+  /\bareas\b|accuracyradius/i.test(text(file)));
+
 describe('how the examples describe an area', () => {
   test('the examples are found', () => {
     expect(files.length).toBeGreaterThan(0);
     expect(showingAccuracyRadiusMin.length).toBeGreaterThan(0);
+    expect(aboutIpLocation.length).toBeGreaterThan(0);
+    expect(aboutIpLocation.length).toBeLessThan(files.length);
   });
 
-  describe.each(files)('%s', (file) => {
+  describe.each(aboutIpLocation)('%s', (file) => {
     test('does not call an area a circle', () => {
       expect(text(file)).not.toMatch(/circle/i);
     });
+  });
 
+  describe.each(files)('%s', (file) => {
     test('writes no distance worked out from an area', () => {
       expect(text(file)).not.toMatch(/equivalent\s*radius/i);
     });
