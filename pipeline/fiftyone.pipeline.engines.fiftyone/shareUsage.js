@@ -52,6 +52,7 @@ const zlib = require('zlib');
 const url = require('url');
 
 const os = require('os');
+const { performance } = require('perf_hooks');
 
 // The version of the Pipeline, read from the package that provides it, so
 // that the usage shared names the release that is running.
@@ -93,6 +94,12 @@ const REQUEST_TIMEOUT_DEFAULT = 60000;
  * parts, as a timer cannot wait longer than about 24 days.
  */
 const LONGEST_WAIT_MILLIS = 86400000;
+
+/**
+ * How long after the values that do not change while the element lives are
+ * written that they are written again, in milliseconds.
+ */
+const INVARIANT_INTERVAL_MILLIS = 60 * 60 * 1000;
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
@@ -255,6 +262,10 @@ class ShareUsage extends Engine {
     // Starts sending again when a pause ends.
     this.resumeTimer = null;
 
+    // When, by ShareUsage.now, the values that do not change while the
+    // element lives were last written to a record, or null before the first.
+    this.invariantWrittenAt = null;
+
     if (endpoint.includes('https://') === false &&
       endpoint.includes('http://') === false) {
       endpoint = 'https://' + endpoint;
@@ -268,6 +279,17 @@ class ShareUsage extends Engine {
         this.http = require('https');
         break;
     }
+  }
+
+  /**
+   * The time in milliseconds, from a clock that only goes forward, which
+   * decides when the values that do not change while the element lives are
+   * written again. Tests replace it to move time on.
+   *
+   * @returns {number} the time now in milliseconds
+   */
+  static now () {
+    return performance.now();
   }
 
   /**
@@ -441,8 +463,14 @@ class ShareUsage extends Engine {
 
     xml += '<Device>';
 
-    // --- write invariant data
-    xml += this.getConstantXml();
+    // --- write invariant data, to the first record and again to the first
+    // once an hour has passed since they were last written
+    const now = ShareUsage.now();
+    if (this.invariantWrittenAt === null ||
+      now - this.invariantWrittenAt >= INVARIANT_INTERVAL_MILLIS) {
+      xml += this.getConstantXml();
+      this.invariantWrittenAt = now;
+    }
 
     // --- write variable data
     // The SessionID used to track a series of requests

@@ -130,7 +130,7 @@ test('the records after the first carry no invariant value within the hour',
     expect(invariantsIn(usageEngine.shareData[1])).toEqual([]);
     expect(invariantsIn(usageEngine.shareData[2])).toEqual([]);
     // The rest of the record is still written.
-    expect(usageEngine.shareData[1]).toContain('<Header Name="user-agent">');
+    expect(usageEngine.shareData[1]).toContain('<header Name="user-agent">');
     expect(usageEngine.shareData[1]).toContain('<DateSent>');
   });
 
