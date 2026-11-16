@@ -22,7 +22,7 @@
 
 // Any cache that meets the simple interface, being get and put, can be used
 // by an engine, whatever class it is and whatever it keeps
-// (caching.md line 86).
+// (caching.md lines 86 and 87).
 
 const path = require('path');
 
