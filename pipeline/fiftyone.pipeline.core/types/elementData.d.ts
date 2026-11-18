@@ -83,6 +83,13 @@ declare class ElementData {
      */
     lazySettled(): Promise<boolean>;
     /**
+     * Whether the data has a lazy property, whether or not its task has
+     * finished.
+     *
+     * @returns {boolean} true once addLazyProperty has added a property
+     */
+    hasLazyProperties(): boolean;
+    /**
      * Whether a lazy property's task has not yet finished.
      *
      * @returns {boolean} true while a task is running
