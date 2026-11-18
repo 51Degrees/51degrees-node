@@ -261,12 +261,14 @@ class Pipeline {
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
-        }, Promise.resolve(flowData)).then(function () {
-          // Processing has finished, so the flow data and every element
-          // data in it, including any the caller added, are read only.
+        }, Promise.resolve(flowData)).finally(function () {
+          // Processing has finished, whether or not it rejected, so the flow
+          // data and every element data in it, including any the caller
+          // added, are read only.
           flowData.processed = true;
           flowData.listElementData().forEach((data) =>
             setFinished(data, true));
+        }).then(function () {
           // Every error has been recorded.
           const errors = Object.values(flowData.errors);
           if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
