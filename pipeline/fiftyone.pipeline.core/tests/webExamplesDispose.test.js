@@ -22,7 +22,10 @@
 
 // The web examples are this package's web integration. Each creates a Flow
 // Data for each request and disposes of it when the request ends, so its
-// Element Data goes back to the pools.
+// Element Data goes back to the pools. They dispose on the response's finish
+// event, which comes after the example has read every value it sends. The
+// close event also comes when a client goes away while the Flow Data is
+// still processing, and the example would then read a disposed Flow Data.
 
 const fs = require('fs');
 const path = require('path');
@@ -70,7 +73,7 @@ const nextCode = (lines, index) => {
 };
 
 test('every web example disposes of the Flow Data it creates for a ' +
-  'request when the response closes', () => {
+  'request once the response has been sent', () => {
   const examples = webExamples();
   expect(examples.length).toBeGreaterThan(10);
   for (const example of examples) {
@@ -87,7 +90,7 @@ test('every web example disposes of the Flow Data it creates for a ' +
     for (const { match, index } of creates) {
       expect([path.relative(root, example), nextCode(lines, index)])
         .toEqual([path.relative(root, example),
-          `res.on('close', () => ${match[1]}.dispose());`]);
+          `res.on('finish', () => ${match[1]}.dispose());`]);
     }
   }
 });
