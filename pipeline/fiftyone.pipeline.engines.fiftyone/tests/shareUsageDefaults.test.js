@@ -110,13 +110,11 @@ describe('usage sharing by default', () => {
       expect(filter.filterEvidenceKey('query.id.email')).toBe(false);
     });
 
-  // The JavaScript Builder in this Pipeline accepts every query string
-  // parameter, so every one is Evidence the Pipeline uses.
-  test('the message has every parameter and only the 51D_ cookies',
+  test('the message has only the 51D_ parameters and cookies',
     async () => {
       const message = await messageFor({});
 
-      expect(message).toContain('campaign value');
+      expect(message).not.toContain('campaign value');
       expect(message).toContain('width value');
       expect(message).toContain('profile value');
       expect(message).not.toContain('session value');
@@ -140,7 +138,7 @@ describe('usage sharing with the deprecated parameter settings', () => {
   test('the message is the one shared by default', async () => {
     const message = await messageFor({ shareAllQueryStringParameters: false });
 
-    expect(message).toContain('campaign value');
+    expect(message).not.toContain('campaign value');
     expect(message).toContain('width value');
   }, SEND_TIMEOUT_MS + 5000);
 });
@@ -168,7 +166,7 @@ describe('usage sharing with all Evidence shared', () => {
         trackSession
       });
 
-      expect(message).toContain('campaign value');
+      expect(message).not.toContain('campaign value');
       expect(message).toContain('profile value');
       expect(message).not.toContain('session value');
       expect(message).not.toContain('analytics value');

@@ -122,4 +122,18 @@ describe('The usage sharing element', () => {
         .toEqual([options, 'agent']);
     }
   });
+
+  test('shares, in a web Pipeline, only the parameters the JavaScript ' +
+    'Builder specification lists, not every one its filter accepts',
+  () => {
+    const sharing = usage();
+    const pipeline = new PipelineBuilder().add(sharing).build();
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('query.fod-js-object-name', 'named');
+    flowData.evidence.add('query.password', 'secret');
+    flowData.evidence.add('query.51D_ScreenPixelsWidth', '1080');
+    const data = sharing.getDataFromEvidence(flowData);
+    expect(Object.keys(data.evidenceData.query).sort())
+      .toEqual(['51D_ScreenPixelsWidth', 'fod-js-object-name']);
+  });
 });
