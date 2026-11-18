@@ -137,7 +137,8 @@ declare class ShareUsage extends ShareUsage_base {
     /**
      * Whether a key is shared. A query string or form parameter the filter
      * leaves out is still shared when a Flow Element of the Pipeline accepts
-     * it, being Evidence the Pipeline uses.
+     * it, being Evidence the Pipeline uses, as the element's specification
+     * lists it where the element gives that list.
      *
      * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
      * @param {string} key the evidence key
