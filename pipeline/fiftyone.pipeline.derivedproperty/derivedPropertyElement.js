@@ -171,7 +171,7 @@ class DerivedPropertyElement extends FlowElement {
   processInternal (flowData) {
     // Every derived property element in a pipeline writes one element
     // data, as the properties of all of them are under `derived`.
-    let data = flowData.data[DATA_KEY];
+    let data = flowData.tryGet(DATA_KEY);
     if (!(data instanceof DerivedPropertyData)) {
       data = new DerivedPropertyData({ flowElement: this, contents: {} });
       flowData.setElementData(data);
@@ -597,10 +597,7 @@ function supplies (element, name) {
  * @returns {object|undefined} the element data.
  */
 function findElementData (flowData, key) {
-  const data = flowData.data;
-  if (data[key] !== undefined) return data[key];
-  const found = Object.keys(data).find(dataKey => sameKey(dataKey, key));
-  return found === undefined ? undefined : data[found];
+  return flowData.tryGet(key);
 }
 
 /**
