@@ -95,6 +95,25 @@ describe('The Element Data of a Flow Data', () => {
       expect(keys(flowData)).toEqual(['same', 'after']);
     });
 
+  test('found by a key in another letter case is the data under the key ' +
+    'added first that matches it', async () => {
+    const first = member('device', 0);
+    const second = member('DEVICE', 0);
+    const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
+      .add(first).add(second).build();
+    const flowData = pipeline.createFlowData();
+    await flowData.process();
+    expect(flowData.tryGet('Device').get('name')).toBe('device');
+    expect(flowData.get('Device').get('name')).toBe('device');
+    // Data added again under the first key is the data found.
+    const replacement = new core.ElementDataDictionary({
+      flowElement: first,
+      contents: { name: 'replaced' }
+    });
+    flowData.setElementData(replacement);
+    expect(flowData.tryGet('Device')).toBe(replacement);
+  });
+
   test('not there is undefined from tryGet and an error from get, naming ' +
     'the keys there are in Pipeline order', async () => {
     const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
