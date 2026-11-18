@@ -28,6 +28,10 @@ declare class Pipeline {
     flowElements: object;
     dataFileUpdateService: any;
     /**
+     * @type {Map<string, number>}
+     */
+    dataKeyOrder: Map<string, number>;
+    /**
      * @type {EvidenceKeyFilter}
      */
     evidenceKeyFilter: EvidenceKeyFilter;
