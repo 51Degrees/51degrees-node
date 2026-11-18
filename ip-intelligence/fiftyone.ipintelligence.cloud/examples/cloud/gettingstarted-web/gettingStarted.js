@@ -140,6 +140,9 @@ const server = http.createServer((req, res) => {
   // Information required for detection is called "evidence".
   // For IP intelligence the IP address of the requesting client
   // is used. This is added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
   const flowData = pipeline.createFlowData();
 
   // Extract required evidence from the Http request.

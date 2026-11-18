@@ -184,6 +184,9 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
       return;
     }
 
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
     const flowData = pipeline.createFlowData();
 
     // Add any information from the request

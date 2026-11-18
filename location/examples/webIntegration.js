@@ -104,6 +104,9 @@ if (myResourceKey.substring(0, 2) === '!!') {
   const core = require('fiftyone.pipeline.core');
 
   server = http.createServer((req, res) => {
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
     const flowData = pipeline.createFlowData();
 
     // Add any information from the request
