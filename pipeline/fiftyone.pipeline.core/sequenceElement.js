@@ -102,10 +102,12 @@ class SequenceElement extends FlowElement {
     flowData.evidence.add('query.session-id', sessionId);
     flowData.evidence.add('query.sequence', sequence);
 
-    flowData.setElementData(new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { 'session-id': sessionId, sequence }
+      contents: {}
     }));
+    data.contents = { 'session-id': sessionId, sequence };
+    flowData.setElementData(data);
   }
 }
 

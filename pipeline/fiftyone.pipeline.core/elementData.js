@@ -34,6 +34,11 @@ const errorMessages = require('./errorMessages');
  * provides it, or the flow elements that share it, and only while they
  * process. Once they have finished, a write through the element data
  * throws.
+ *
+ * Element data may come from a pool, and go back to it when the flow data
+ * that holds it is disposed. Keeping a reference to element data after its
+ * flow data is disposed is not supported, because the pool may give the
+ * instance to another request. Nothing checks for that on a read.
  */
 class ElementData {
   /**
@@ -59,6 +64,12 @@ class ElementData {
     // writes.
     Object.defineProperty(this, '_writes', {
       value: { finished: false }
+    });
+
+    // The pool the data came from, if any, and whether it is shared with
+    // other requests, as data a cache holds is, so it never goes back.
+    Object.defineProperty(this, '_pooling', {
+      value: { pool: null, shared: false }
     });
 
     // Returns a proxy so that we can use flowData.flowElementDataKey
@@ -96,6 +107,16 @@ class ElementData {
         return true;
       }
     });
+  }
+
+  /**
+   * Returns the data to the state of a new instance, with no values and
+   * open for writing, before a pool gives it to another request. Classes
+   * inheriting from elementData that hold values override this and call
+   * it.
+   */
+  reset () {
+    this._writes.finished = false;
   }
 
   /**

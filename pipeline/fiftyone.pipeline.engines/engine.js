@@ -20,7 +20,9 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const { FlowElement, listSetting } = require('fiftyone.pipeline.core');
+const {
+  FlowElement, listSetting, ElementDataPool
+} = require('fiftyone.pipeline.core');
 
 const DataFileUpdateService = require('./dataFileUpdateService');
 
@@ -122,6 +124,7 @@ class Engine extends FlowElement {
     const cached = this.cache.get(key);
 
     if (cached && this.isCacheable(cached)) {
+      ElementDataPool.share(cached);
       flowData.setElementData(cached);
 
       return true;
@@ -158,6 +161,9 @@ class Engine extends FlowElement {
       if (engine.cache) {
         const data = flowData.get(engine.dataKey);
         if (engine.isCacheable(data)) {
+          // The cache shares the data with other requests, so it never
+          // goes back to a pool.
+          ElementDataPool.share(data);
           engine.cache.put(key, data);
         }
       }

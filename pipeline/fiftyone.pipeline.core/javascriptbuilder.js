@@ -437,10 +437,11 @@ class JavaScriptBuilderElement extends FlowElement {
       }
     }
 
-    const data = new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { javascript: output }
-    });
+      contents: {}
+    }));
+    data.contents = { javascript: output };
 
     flowData.setElementData(data);
   }

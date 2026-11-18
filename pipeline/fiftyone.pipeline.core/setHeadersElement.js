@@ -141,10 +141,13 @@ class SetHeadersElement extends FlowElement {
    * @param {FlowData} flowData the FlowData being processed
    */
   processInternal (flowData) {
-    const data = new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { responseheadersdictionary: this.getResponseHeaders(flowData) }
-    });
+      contents: {}
+    }));
+    data.contents = {
+      responseheadersdictionary: this.getResponseHeaders(flowData)
+    };
 
     flowData.setElementData(data);
   }

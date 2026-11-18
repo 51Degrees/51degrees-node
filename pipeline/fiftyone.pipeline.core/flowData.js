@@ -24,6 +24,7 @@ const util = require('util');
 const errorMessages = require('./errorMessages');
 const Evidence = require('./evidence');
 const LicenseKeys = require('./licenseKeys');
+const ElementDataPool = require('./elementDataPool');
 
 /**
  * @typedef {import('./pipeline')} Pipeline
@@ -98,6 +99,9 @@ class FlowData {
     // only, apart from lazy properties, and a write to it throws. A test of
     // this field, never a lock.
     this.processed = false;
+
+    // Set by dispose, when the Element Data goes back to its pools.
+    this.disposed = false;
 
     // The Element Data, as a list whose head is the newest node. A node
     // holds the data key, the Element Data and the next node, and never
@@ -200,6 +204,32 @@ class FlowData {
     this.pipeline.log('info', 'Pipeline processing started');
 
     return this.pipeline.processMethod(this);
+  }
+
+  /**
+   * Disposes the flow data once the caller has finished with it, giving its
+   * element data back to the pools it came from. Element data a cache holds
+   * stays with the cache. A flow data disposed while it processes gives its
+   * element data back once processing has finished. Keeping a reference to
+   * the flow data or to its element data after this is not supported,
+   * because a pool may give the instance to another request. Nothing checks
+   * for that on a read. A flow data that is never disposed is collected as
+   * garbage, and its element data goes back to no pool.
+   */
+  dispose () {
+    this.disposed = true;
+    if (this.processing && !this.processed) {
+      // The Pipeline calls this again once processing has finished.
+      return;
+    }
+    const released = new Set();
+    for (let node = this.elementDataHead; node !== null; node = node.next) {
+      if (!released.has(node.data)) {
+        released.add(node.data);
+        ElementDataPool.release(node.data);
+      }
+    }
+    this.elementDataHead = null;
   }
 
   /**

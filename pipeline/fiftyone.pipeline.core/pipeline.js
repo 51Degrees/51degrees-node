@@ -267,6 +267,11 @@ class Pipeline {
           flowData.processed = true;
           flowData.listElementData().forEach((data) =>
             setFinished(data, true));
+          // A flow data disposed while it processed gives its element data
+          // back to the pools now that nothing writes it.
+          if (flowData.disposed) {
+            flowData.dispose();
+          }
           // Every error has been recorded.
           const errors = Object.values(flowData.errors);
           if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
