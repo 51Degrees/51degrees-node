@@ -52,6 +52,22 @@ const writer = (dataKey, target) => new core.FlowElement({
   }
 });
 
+// A Flow Element that writes a value into another's Element Data contents.
+const contentsWriter = (dataKey, target) => new core.FlowElement({
+  dataKey,
+  processInternal: function (flowData) {
+    flowData.get(target).contents.written = dataKey;
+  }
+});
+
+// A Flow Element that throws while it processes.
+const failing = (dataKey) => new core.FlowElement({
+  dataKey,
+  processInternal: function () {
+    throw new Error('failed in ' + dataKey);
+  }
+});
+
 const build = (...elements) => {
   const builder = new core.PipelineBuilder({ addJavaScriptBuilder: false });
   for (const element of elements) {
@@ -88,6 +104,31 @@ describe('A finished Flow Data', () => {
       expect(Object.keys(flowData.errors)).toEqual([]);
     });
 
+  // A listener that throws while the error of a failing Flow Element is
+  // recorded makes processing reject, alone or in a parallel group.
+  test.each([
+    ['a Flow Element', (element) => element],
+    ['a parallel group', (element) => [adder('member'), element]]
+  ])('is finished when an error in %s makes processing reject',
+    async (name, place) => {
+      const pipeline = build(adder('first'), place(failing('failing')));
+      pipeline.on('error', () => { throw new Error('listener failed'); });
+      const flowData = pipeline.createFlowData();
+      const data = new core.ElementDataDictionary({
+        flowElement: adder('caller'),
+        contents: {}
+      });
+      flowData.setElementData(data);
+      await expect(flowData.process()).rejects.toThrow('listener failed');
+      expect(() => flowData.evidence.add('header.user-agent', 'after'))
+        .toThrow(FINISHED);
+      expect(() => flowData.setError(new Error('late'), data.flowElement))
+        .toThrow(FINISHED);
+      expect(() => { data.after = true; }).toThrow(ELEMENT_FINISHED);
+      await expect(flowData.process()).rejects.toThrow(
+        'The flow data has already been processed.');
+    });
+
   test('is not processed again', async () => {
     const flowData = build(adder('first')).createFlowData();
     await flowData.process();
@@ -104,6 +145,39 @@ describe('Element Data', () => {
     expect(() => { flowData.first.written = 'after'; })
       .toThrow(ELEMENT_FINISHED);
     expect('written' in flowData.first).toBe(false);
+  });
+
+  test('throws when its contents are written or deleted once it has ' +
+    'finished', async () => {
+    const flowData = build(adder('first')).createFlowData();
+    await flowData.process();
+    expect(() => { flowData.first.contents.written = 'after'; })
+      .toThrow(ELEMENT_FINISHED);
+    expect(() => { flowData.first.contents.value = 'after'; })
+      .toThrow(ELEMENT_FINISHED);
+    expect(() => { delete flowData.first.contents.value; })
+      .toThrow(ELEMENT_FINISHED);
+    expect(flowData.first.value).toBe('first');
+    expect(Object.keys(flowData.first.contents)).toEqual(['value']);
+  });
+
+  test('whose contents a later Flow Element writes is that element\'s ' +
+    'error', async () => {
+    const flowData = build(adder('first'), contentsWriter('later', 'first'))
+      .createFlowData();
+    await flowData.process();
+    expect(Object.keys(flowData.errors)).toEqual(['later']);
+    expect(String(flowData.errors.later)).toContain(ELEMENT_FINISHED);
+    expect(Object.keys(flowData.first.contents)).toEqual(['value']);
+  });
+
+  test('shared by two Flow Elements has its contents written by each in ' +
+    'turn', async () => {
+    const flowData = build(adder('shared'),
+      contentsWriter('shared', 'shared')).createFlowData();
+    await flowData.process();
+    expect(flowData.errors).toEqual({});
+    expect(flowData.shared.written).toBe('shared');
   });
 
   test('written by a later Flow Element is that element\'s error',
