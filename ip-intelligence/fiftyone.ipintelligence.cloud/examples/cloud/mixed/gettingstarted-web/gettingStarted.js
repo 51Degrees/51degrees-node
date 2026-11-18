@@ -178,9 +178,10 @@ const server = http.createServer(async (req, res) => {
   // added automatically from the request.
   const flowData = pipeline.createFlowData();
   // Gives the Flow Data's Element Data back to the pools once the
-  // response has been sent or the connection has closed, so read
-  // nothing from the Flow Data after that.
-  res.on('close', () => flowData.dispose());
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Extract required evidence from the Http request, being its headers,
   // cookies and query string. The client-side script posts the evidence
