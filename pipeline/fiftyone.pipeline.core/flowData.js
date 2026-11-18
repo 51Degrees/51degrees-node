@@ -239,26 +239,35 @@ class FlowData {
    * The ElementData under a FlowElement's data key, or undefined if there
    * is none. Data added later under the same key replaces the earlier, and
    * a key that finds nothing as given is looked for again ignoring its
-   * letter case.
+   * letter case. Ignoring case, the key added first that matches is used.
    *
    * @param {string} flowElementDataKey the datakey of a FlowElement
    * @returns {ElementData|undefined} data from the FlowElement
    */
   tryGet (flowElementDataKey) {
-    for (let node = this.elementDataHead; node !== null; node = node.next) {
-      if (node.key === flowElementDataKey) {
-        return node.data;
-      }
-    }
-    if (typeof flowElementDataKey === 'string') {
-      const lower = flowElementDataKey.toLowerCase();
-      for (let node = this.elementDataHead; node !== null; node = node.next) {
-        if (typeof node.key === 'string' && node.key.toLowerCase() === lower) {
+    const exact = (key) => {
+      for (let node = this.elementDataHead; node !== null;
+        node = node.next) {
+        if (node.key === key) {
           return node.data;
         }
       }
+      return undefined;
+    };
+    const data = exact(flowElementDataKey);
+    if (data !== undefined || typeof flowElementDataKey !== 'string') {
+      return data;
     }
-    return undefined;
+    // The list holds the newest first, so the last match is the key added
+    // first, and its newest data is then found by that key.
+    const lower = flowElementDataKey.toLowerCase();
+    let first;
+    for (let node = this.elementDataHead; node !== null; node = node.next) {
+      if (typeof node.key === 'string' && node.key.toLowerCase() === lower) {
+        first = node.key;
+      }
+    }
+    return first === undefined ? undefined : exact(first);
   }
 
   /**
