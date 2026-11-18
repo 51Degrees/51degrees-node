@@ -29,11 +29,52 @@ const errorMessages = require('./errorMessages');
  */
 
 /**
+ * Throws if the flow elements that write the data have finished.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {string|symbol} key the name being written
+ * @throws {Error} once they have finished
+ */
+function refuseFinished (data, key) {
+  if (data._writes.finished) {
+    throw new Error(util.format(errorMessages.elementDataFinished,
+      String(key), data.flowElement.dataKey));
+  }
+}
+
+/**
+ * Wraps the object a dictionary keeps its values in, so that setting or
+ * deleting a value through it once the data has finished throws, as a
+ * write to the data itself does.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {*} contents the values
+ * @returns {*} the values, wrapped if they are an object
+ */
+function guardContents (data, contents) {
+  if (contents === null || typeof contents !== 'object') {
+    return contents;
+  }
+  return new Proxy(contents, {
+    set: (values, key, value) => {
+      refuseFinished(data, key);
+      values[key] = value;
+      return true;
+    },
+    deleteProperty: (values, key) => {
+      refuseFinished(data, key);
+      delete values[key];
+      return true;
+    }
+  });
+}
+
+/**
  * Stores information created by a flowElement based on flowData.
  * Stored in flowData. Element data is written only by the flow element that
  * provides it, or the flow elements that share it, and only while they
- * process. Once they have finished, a write through the element data
- * throws.
+ * process. Once they have finished, a write through the element data, or
+ * into the contents object a dictionary keeps its values in, throws.
  */
 class ElementData {
   /**
@@ -85,14 +126,14 @@ class ElementData {
         }
       },
       // Element data is written only by the flow elements that write it,
-      // while they process, so a write once they have finished throws.
+      // while they process, so a write once they have finished throws. A
+      // dictionary's contents are wrapped when set, so a write into them is
+      // checked too.
       set: (data, key, value) => {
-        if (data._writes.finished && !(typeof key === 'string' &&
-          key.startsWith('_'))) {
-          throw new Error(util.format(errorMessages.elementDataFinished,
-            String(key), data.flowElement.dataKey));
+        if (!(typeof key === 'string' && key.startsWith('_'))) {
+          refuseFinished(data, key);
         }
-        data[key] = value;
+        data[key] = key === 'contents' ? guardContents(data, value) : value;
         return true;
       }
     });
