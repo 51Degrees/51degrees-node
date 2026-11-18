@@ -126,6 +126,7 @@ describe('The Cloud Request Engine response', () => {
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('header.user-agent', 'iPhone');
     await engine.process(flowData);
+    const cloud = flowData.get('cloud');
     // Every read of the Flow Data from now on fails.
     for (const name of ['pipeline', 'evidence', 'data', 'errors']) {
       Object.defineProperty(flowData, name, {
@@ -133,8 +134,7 @@ describe('The Cloud Request Engine response', () => {
       });
     }
     client.answer();
-    expect(JSON.parse(await flowData.get('cloud').getAsync('cloud')))
-      .toEqual(client.json);
+    expect(JSON.parse(await cloud.getAsync('cloud'))).toEqual(client.json);
     expect(warnings).toContain('a warning');
   });
 
