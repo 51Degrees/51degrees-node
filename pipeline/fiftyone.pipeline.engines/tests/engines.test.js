@@ -70,9 +70,11 @@ const testEngine = new Engine(
   }
 );
 
-const flowData = new PipelineBuilder().add(testEngine).build().createFlowData();
+// A flow data is processed once, so each test processes one of its own.
+const pipeline = new PipelineBuilder().add(testEngine).build();
 
 test('engine process', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     expect(flowData.get('testEngine').get('one')).toBe(1);
 
@@ -81,6 +83,7 @@ test('engine process', done => {
 });
 
 test('restricted properties', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('two');
@@ -128,6 +131,7 @@ test('restricted properties are compared ignoring case', async () => {
 });
 
 test('missing property service', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('three');
@@ -142,6 +146,7 @@ test('missing property service', done => {
 });
 
 test('cache', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     expect(flowData.get('testEngine').get('noCache')).toBe(false);
 

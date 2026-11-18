@@ -31,7 +31,7 @@ const syncPipeline = new PipelineBuilder()
   .add(setup.sync)
   .build();
 
-const syncFlowData = syncPipeline.createFlowData();
+// A flow data is processed once, so each test processes one of its own.
 
 setup.sync.properties = {
   integer: {
@@ -66,6 +66,7 @@ test('Update property list on flowElement', done => {
  * return the expected values.
  */
 test('get', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.get('sync').get('integer')).toBe(5);
 
@@ -78,6 +79,7 @@ test('get', done => {
  * data key will result in an exception with correct message
  */
 test('get invalid data key', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     try {
       syncFlowData.invalid; // eslint-disable-line
@@ -99,6 +101,7 @@ test('get invalid data key', done => {
  * way as the 'get' function used above.
  */
 test('get from flowElement property', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.sync.get('integer')).toBe(5);
 
@@ -112,6 +115,7 @@ test('get from flowElement property', done => {
  * 'get' function used above.
  */
 test('get from flowElement property as property', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.sync.integer).toBe(5);
 
@@ -130,6 +134,7 @@ test('get from flowElement property as property', done => {
  * correctly.
  */
 test('get for formatting', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(() => {
       return syncFlowData.sync;
@@ -144,6 +149,7 @@ test('get for formatting', done => {
  * access element data instances.
  */
 test('getFromElement', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.getFromElement(setup.sync).get('integer')).toBe(5);
 
@@ -156,6 +162,7 @@ test('getFromElement', done => {
  * properties on an elementData instance.
  */
 test('for of', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     const keys = [];
     for (const key of syncFlowData.sync) {
@@ -171,6 +178,7 @@ test('for of', done => {
  * properties matching a supplied filter.
  */
 test('getWhere', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.getWhere('type', 'int').integer).toBe(5);
 
@@ -183,6 +191,7 @@ test('getWhere', done => {
  * properties matching a supplied function filter.
  */
 test('getWhere function version', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.getWhere('type', function (value) {
       return value === 'int';
@@ -196,6 +205,7 @@ test('getWhere function version', done => {
  * Verify that engines run one after the other by default.
  */
 test('engines run in series', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.get('sync').get('boolean')).toBe(true);
 

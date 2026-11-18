@@ -76,19 +76,19 @@ const testEngine = new TestCloudEngine('testEngine',
   { one: { meta: { type: 'int' } }, two: { meta: { type: 'int' } } },
   { one: 1, two: 2 });
 
-// Create flow data for testing
-const flowData = new PipelineBuilder()
+// A flow data is processed once, so each test processes one of its own.
+const pipeline = new PipelineBuilder()
   .add(testEngineNoProperties)
   .add(testEngineMissingContents)
   .add(testEngine)
-  .build()
-  .createFlowData();
+  .build();
 
 // Check that in the scenario where attempting to access a property value under
 // a cloud engine, the resource key does not have any properties under that
 // product (e.g. the key has no location properties and the caller is trying
 // to get the value of location.country), a correct error message is returned.
 test('missing property service - no properties for resource key', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngineNoProperties').get('one');
@@ -109,6 +109,7 @@ test('missing property service - no properties for resource key', done => {
 // property, but does include other properties under the same engine, a
 // correct error message is returned.
 test('missing property service - property not included in resource key', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('three');
@@ -129,6 +130,7 @@ test('missing property service - property not included in resource key', done =>
 // hold it, the property is said to be excluded, as properties.md line 159
 // says for any engine whose metadata lists the property.
 test('missing property service - listed but not in the results', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngineMissingContents').get('two');
