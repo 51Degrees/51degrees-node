@@ -42,6 +42,7 @@ class CountedData extends core.ElementDataDictionary {
 // values the instance held when taken, then writes its own.
 const pooled = (dataKey, wait, held) => new core.FlowElement({
   dataKey,
+  evidenceKeyFilter: new core.BasicListEvidenceKeyFilter(['query.request']),
   processInternal: function (flowData) {
     const data = this.pooledElementData(
       () => new CountedData({ flowElement: this, contents: {} }));
@@ -67,12 +68,14 @@ const build = (held) => new core.PipelineBuilder()
   .addParallel([pooled('slow', 5), pooled('fast', 0)])
   .build();
 
-// Processes one request and checks its own values are read.
-const request = async (pipeline, index) => {
+// Processes one request and checks the values of each pooled Flow Element
+// are its own.
+const request = async (pipeline, index,
+  keys = ['alone', 'slow', 'fast']) => {
   const flowData = pipeline.createFlowData();
   flowData.evidence.add('query.request', String(index));
   await flowData.process();
-  for (const key of ['alone', 'slow', 'fast']) {
+  for (const key of keys) {
     expect(flowData.get(key).get('request')).toBe(String(index));
   }
   return flowData;
@@ -128,14 +131,14 @@ describe('Element Data pools', () => {
     // Held as a value, so a failure is seen by the expect below.
     const firstDone = first.process().then(() => undefined, (e) => e);
     first.dispose();
-    const second = await request(pipeline, 2);
+    const second = await request(pipeline, 2, ['slow']);
     expect(await firstDone).toBeUndefined();
     // The first instance was still being written, so the second request
     // made its own.
     expect(made).toBe(2);
     second.dispose();
-    (await request(pipeline, 3)).dispose();
-    (await request(pipeline, 4)).dispose();
+    (await request(pipeline, 3, ['slow'])).dispose();
+    (await request(pipeline, 4, ['slow'])).dispose();
     expect(made).toBe(2);
   });
 
@@ -161,7 +164,7 @@ describe('Element Data pools', () => {
     const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
       .add(pooled('one', 0))
       .build();
-    const flowData = await request(pipeline, 1);
+    const flowData = await request(pipeline, 1, ['one']);
     const data = flowData.get('one');
     // A finished instance refuses a write.
     expect(() => { data.contents = {}; }).toThrow();
