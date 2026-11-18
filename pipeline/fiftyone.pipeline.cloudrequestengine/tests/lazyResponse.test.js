@@ -57,6 +57,20 @@ class HeldClient extends MockRequestClient {
   }
 }
 
+// Answers the evidence keys and properties, and throws at once when asked
+// for a result, before it gives a promise.
+class ThrowingClient extends MockRequestClient {
+  constructor () {
+    super();
+    this.posts = 0;
+  }
+
+  post (url, headers, data) {
+    this.posts++;
+    throw new URIError('URI malformed');
+  }
+}
+
 // A cloud engine for the device part of the response.
 const deviceEngine = (dataKey = 'device') => {
   const engine = new CloudEngine();
@@ -191,4 +205,33 @@ describe('The Cloud Request Engine response', () => {
     expect(await process(() => client.answer())).toBe('ok');
     expect(client.posts).toBe(2);
   });
+
+  test('that fails before the engine returns is recorded and not cached',
+    async () => {
+      const client = new ThrowingClient();
+      const engine = new CloudRequestEngine({
+        resourceKey: 'AAAAAAAAAAAA',
+        requestClient: client,
+        cache: new LruCache({ size: 10 })
+      });
+      const pipeline = new PipelineBuilder({ addJavaScriptBuilder: false })
+        .add(engine).build();
+      pipeline.suppressProcessExceptions = true;
+      pipeline.on('error', () => {});
+      await engine.ready();
+      const process = async () => {
+        const flowData = pipeline.createFlowData();
+        flowData.evidence.add('header.user-agent', 'iPhone');
+        await flowData.process();
+        return flowData;
+      };
+      const first = await process();
+      expect(Object.keys(first.errors)).toEqual(['cloud']);
+      expect(String(first.errors.cloud)).toContain('URI malformed');
+      // The same Evidence is sent again, not served from the cache.
+      const second = await process();
+      expect(Object.keys(second.errors)).toEqual(['cloud']);
+      expect(String(second.errors.cloud)).toContain('URI malformed');
+      expect(client.posts).toBe(2);
+    });
 });
