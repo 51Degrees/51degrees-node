@@ -107,6 +107,8 @@ if (myResourceKey.substring(0, 2) === '!!') {
     // A Flow Data holds the evidence and results of this one request. It
     // must not be used by two threads at once, so each request creates its
     // own, and any value handed to other work is read from it first.
+    // Code that shares one Flow Data between tasks is responsible for any
+    // locking.
     const flowData = pipeline.createFlowData();
 
     // Add any information from the request
