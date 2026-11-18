@@ -16,12 +16,13 @@ declare class ShareUsageEvidenceKeyFilter extends ShareUsageEvidenceKeyFilter_ba
      * @param {object} options options for filter
      * @param {string} options.cookie the name of the cookie that identifies
      * the session
-     * @param {boolean} options.shareAllQueryStringParameters whether every
-     * query string and form parameter is shared. True unless set to false.
-     * @param {Array<string>|null} options.queryWhitelist query string and
-     * form parameters to share as well as those starting 51D_ when
-     * shareAllQueryStringParameters is false. null is the same as an empty
-     * list.
+     * @param {boolean} options.shareAllQueryStringParameters deprecated, and
+     * has no effect
+     * @param {Array<string>|null} options.queryWhitelist deprecated, and has
+     * no effect
+     * @param {Array<string>} [options.keptQueryParameters] query string
+     * parameters kept for the usage sharing element's own use, being the
+     * session id and sequence it reads, which are not otherwise shared
      * @param {Array<string>} options.headerBlacklist headers not to share
      * @param {boolean} options.includeSession whether the session cookie is
      * included
@@ -29,18 +30,29 @@ declare class ShareUsageEvidenceKeyFilter extends ShareUsageEvidenceKeyFilter_ba
      * from the evidence that is never shared and the cookies whose names do
      * not start with 51D_
      */
-    constructor({ cookie, shareAllQueryStringParameters, queryWhitelist, headerBlacklist, includeSession, shareAll }?: {
+    constructor({ cookie, shareAllQueryStringParameters, queryWhitelist, keptQueryParameters, headerBlacklist, includeSession, shareAll }?: {
         cookie: string;
         shareAllQueryStringParameters: boolean;
         queryWhitelist: Array<string> | null;
+        keptQueryParameters?: Array<string>;
         headerBlacklist: Array<string>;
         includeSession: boolean;
         shareAll: boolean;
     }, ...args: any[]);
-    shareAllQueryStringParameters: boolean;
-    includedQueryStringParams: string[];
+    keptQueryParameters: string[];
     blockedHttpHeaders: string[];
     cookie: string;
     includeSession: boolean;
     shareAll: boolean;
+}
+declare namespace ShareUsageEvidenceKeyFilter {
+    /**
+     * Whether a key is a query string or form parameter that may be shared when
+     * a Flow Element of the Pipeline accepts it, being any 'query.' key that is
+     * not one that is never shared.
+     *
+     * @param {string} key evidence key
+     * @returns {boolean} true for such a key
+     */
+    function isParameter(key: string): boolean;
 }

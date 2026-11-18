@@ -5,6 +5,7 @@ export let ErrorMessages: {
     noElementData: string;
     genericMissingProperties: string;
     noReasonUnknown: string;
+    usageSharingNotLast: string;
 };
 export let Constants: {
     evidenceEnableCookies: string;

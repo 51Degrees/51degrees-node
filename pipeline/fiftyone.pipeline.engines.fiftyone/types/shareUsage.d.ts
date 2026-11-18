@@ -27,13 +27,12 @@ declare class ShareUsage extends ShareUsage_base {
      * session id. It has no effect unless trackSession is true. The cookie
      * itself is never shared unless its name starts with '51D_', as no other
      * cookie is.
-     * @param {boolean} options.shareAllQueryStringParameters If true, every
-     * query string and HTTP form parameter is shared. True by default.
-     * @param {Array<string>|string|null} options.queryWhitelist When
-     * shareAllQueryStringParameters is false, query string and HTTP form
-     * parameters are not shared unless prefixed with '51D_' or given in this
-     * list, or in one comma separated string of them, as a configuration file
-     * gives a list. null is the same as an empty list.
+     * @param {boolean} options.shareAllQueryStringParameters Deprecated, and
+     * has no effect. A query string or HTTP form parameter is shared when its
+     * name starts with '51D_' or a Flow Element of the Pipeline accepts it,
+     * whatever the settings.
+     * @param {Array<string>|string|null} options.queryWhitelist Deprecated,
+     * and has no effect, as shareAllQueryStringParameters says.
      * @param {Array<string>|string} options.headerBlacklist By default, all
      * HTTP headers except Cookie are shared. Individual headers can be
      * excluded from sharing by adding them to this list, or to one comma
@@ -135,6 +134,25 @@ declare class ShareUsage extends ShareUsage_base {
      * provided
      */
     getDataFromEvidence(flowData: FlowData): ShareUsageData;
+    /**
+     * Whether a key is shared. A query string or form parameter the filter
+     * leaves out is still shared when a Flow Element of the Pipeline accepts
+     * it, being Evidence the Pipeline uses.
+     *
+     * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
+     * @param {string} key the evidence key
+     * @param {FlowData} flowData the flow data being processed
+     * @returns {boolean} true if the key is shared
+     */
+    shares(filter: ShareUsageEvidenceKeyFilter, key: string, flowData: FlowData): boolean;
+    /**
+     * Marks the usage sharing element, which a Pipeline builder puts after
+     * every other Flow Element, outside any parallel group, and refuses
+     * anywhere else.
+     *
+     * @returns {boolean} true
+     */
+    get isUsageSharing(): boolean;
     getConstantXml(): string;
     constantXml: string;
     /**
