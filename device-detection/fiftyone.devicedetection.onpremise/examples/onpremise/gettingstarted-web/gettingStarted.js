@@ -53,6 +53,10 @@
  * var hardwareVendor = deviceData.hardwarevendor;
  * ```
  *
+ * A Flow Data holds the evidence and results of one request. It must not be
+ * used by two threads at once, so the example creates one for each request
+ * and reads any value it hands to other work into its own variables first.
+ *
  * Results can also be accessed in client-side code by using the `fod` object. See the
  * [JavaScriptBuilderElement](/documentation/4.5/apis/pipeline-node/class_java_script_builder_element.html)
  * for details on available settings such as changing the `fod` name.
@@ -214,6 +218,11 @@ const server = http.createServer(async (req, res) => {
   // and usually consists of a number of HTTP Header field
   // values, in this case represented by a
   // Object of header name/value entries.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Extract required evidence from the Http request. The client script

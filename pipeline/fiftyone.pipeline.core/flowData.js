@@ -69,6 +69,11 @@ function orderedNodes (flowData) {
  * It collects evidence set by the user
  * It passes evidence to flowElements in the pipeline
  * These elements can return ElementData or populate an errors object
+ *
+ * A flow data is not safe to use from several threads at once. Create one
+ * for each request and use it from one task at a time. A caller that shares
+ * one between asynchronous tasks or worker threads is responsible for any
+ * locking.
  */
 class FlowData {
   /**
