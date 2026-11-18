@@ -80,18 +80,23 @@ describe('The Element Data of a Flow Data', () => {
 
   test('added again under one key replaces the earlier, in its place',
     async () => {
-      const element = member('same', 0);
+      // A second Flow Element with the same key adds its own Element Data.
+      const replacer = new core.FlowElement({
+        dataKey: 'same',
+        processInternal: function (flowData) {
+          flowData.setElementData(new core.ElementDataDictionary({
+            flowElement: this,
+            contents: { name: 'replaced' }
+          }));
+        }
+      });
       const pipeline = new core.PipelineBuilder({
         addJavaScriptBuilder: false
-      }).add(element).add(member('after', 0)).build();
+      }).add(member('same', 0)).add(member('after', 0)).add(replacer)
+        .build();
       const flowData = pipeline.createFlowData();
       await flowData.process();
-      const replacement = new core.ElementDataDictionary({
-        flowElement: element,
-        contents: { name: 'replaced' }
-      });
-      flowData.setElementData(replacement);
-      expect(flowData.get('same')).toBe(replacement);
+      expect(flowData.get('same').get('name')).toBe('replaced');
       expect(keys(flowData)).toEqual(['same', 'after']);
     });
 
