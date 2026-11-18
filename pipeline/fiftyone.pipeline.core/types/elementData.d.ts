@@ -5,7 +5,10 @@ export = ElementData;
  */
 /**
  * Stores information created by a flowElement based on flowData.
- * Stored in flowData
+ * Stored in flowData. Element data is written only by the flow element that
+ * provides it, or the flow elements that share it, and only while they
+ * process. Once they have finished, a write through the element data
+ * throws.
  */
 declare class ElementData {
     /**

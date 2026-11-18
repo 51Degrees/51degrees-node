@@ -17,6 +17,8 @@ declare class FlowData {
     evidence: Evidence;
     errors: {};
     stopped: boolean;
+    processing: boolean;
+    processed: boolean;
     elementDataHead: any;
     /**
      * Get back an object that lists all evidence that will be
@@ -35,6 +37,7 @@ declare class FlowData {
      *
      * @param {*} error the error to throw
      * @param {FlowElement} flowElement the FlowElement the error is thrown on
+     * @throws {Error} once the flow data has finished processing
      */
     setError(error: any, flowElement: FlowElement): void;
     /**
@@ -46,11 +49,20 @@ declare class FlowData {
      */
     process(): Promise<any>;
     /**
+     * Throws once processing has finished, because a finished flow data is
+     * read only. Every method that writes to the flow data calls this first.
+     *
+     * @param {string} what what is being added, for the message
+     * @throws {Error} once processing has finished
+     */
+    checkNotFinished(what: string): void;
+    /**
      * Add to the flowData object with a class derived from ElementData
      *
      * @param {ElementData} data instance of ElementData to
      * set for the FlowElement's datakey
      * @returns {FlowData} the FlowData object
+     * @throws {Error} once the flow data has finished processing
      */
     setElementData(data: ElementData): FlowData;
     /**

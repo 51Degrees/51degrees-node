@@ -5,6 +5,9 @@ export let ErrorMessages: {
     noElementData: string;
     genericMissingProperties: string;
     noReasonUnknown: string;
+    flowDataFinished: string;
+    flowDataProcessed: string;
+    elementDataFinished: string;
 };
 export let Constants: {
     evidenceEnableCookies: string;
