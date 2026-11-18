@@ -29,6 +29,11 @@ const path = require('path');
 
 const SENTENCE = 'must not be used by two threads at once';
 
+// What the code comment on the FlowData class says, in the source and in
+// the type declarations an editor shows.
+const NOT_SAFE = 'is not safe to use from several threads at once';
+const LOCKING = 'responsible for any locking';
+
 const root = path.resolve(__dirname, '..', '..', '..');
 
 // Every example that serves web requests, reads the evidence from a request
@@ -61,6 +66,19 @@ const webExamples = () => {
   return found;
 };
 
+// The comment block directly above the line that declares a class, joined
+// into one sentence.
+const classComment = (file, declaration) => {
+  const text = fs.readFileSync(file, 'utf8');
+  const end = text.indexOf(declaration);
+  const start = text.lastIndexOf('/**', end);
+  return text.slice(start, end)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(\/\*\*|\*\/|\*)\s?/, ''))
+    .join(' ')
+    .replace(/\s+/g, ' ');
+};
+
 // The comment lines directly above a line, joined into one sentence.
 const commentAbove = (lines, index) => {
   const comment = [];
@@ -78,7 +96,23 @@ describe('Flow Data and threads', () => {
         .replace(/\s+/g, ' ');
       expect(readme).toContain('## Flow Data and threads');
       expect(readme).toContain(SENTENCE);
+      expect(readme).toContain(LOCKING);
     });
+
+  test('the FlowData class comment says a Flow Data is not safe to use ' +
+    'from several threads at once and the caller locks', () => {
+    const core = path.resolve(__dirname, '..');
+    for (const [file, declaration] of [
+      [path.join(core, 'flowData.js'), 'class FlowData '],
+      [path.join(core, 'types', 'flowData.d.ts'), 'declare class FlowData ']
+    ]) {
+      const comment = classComment(file, declaration);
+      expect([path.basename(file), comment.includes(NOT_SAFE)])
+        .toEqual([path.basename(file), true]);
+      expect([path.basename(file), comment.includes(LOCKING)])
+        .toEqual([path.basename(file), true]);
+    }
+  });
 
   test('every web example says so where it creates the Flow Data for ' +
     'each request', () => {
