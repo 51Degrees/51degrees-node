@@ -114,8 +114,8 @@ describe('Flow Data and threads', () => {
     }
   });
 
-  test('every web example says so where it creates the Flow Data for ' +
-    'each request', () => {
+  test('every web example says so, and that the caller locks, where it ' +
+    'creates the Flow Data for each request', () => {
     const examples = webExamples();
     expect(examples.length).toBeGreaterThan(10);
     for (const example of examples) {
@@ -126,8 +126,10 @@ describe('Flow Data and threads', () => {
           .test(line));
       expect(creates.length).toBeGreaterThan(0);
       for (const { index } of creates) {
-        expect([path.relative(root, example),
-          commentAbove(lines, index).includes(SENTENCE)])
+        const comment = commentAbove(lines, index);
+        expect([path.relative(root, example), comment.includes(SENTENCE)])
+          .toEqual([path.relative(root, example), true]);
+        expect([path.relative(root, example), comment.includes(LOCKING)])
           .toEqual([path.relative(root, example), true]);
       }
     }
