@@ -25,5 +25,7 @@ module.exports = {
     'data. Available element data keys are: %s.',
   genericMissingProperties: 'Property "%s" not found',
   noReasonUnknown: ' Please check that the element and property names ' +
-  'are correct.'
+  'are correct.',
+  usageSharingNotLast: 'The usage sharing element must be the last Flow ' +
+    'Element in a Pipeline, and outside any parallel group.'
 };
