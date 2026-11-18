@@ -41,4 +41,9 @@ test('an Engine\'s Element Data is read only once processed', async () => {
   await flowData.process();
   expect(() => { flowData.engine.probe = 1; })
     .toThrow('has finished processing');
+  expect(() => { flowData.engine.contents.one = 2; })
+    .toThrow('has finished processing');
+  expect(() => { delete flowData.engine.contents.one; })
+    .toThrow('has finished processing');
+  expect(flowData.engine.one).toBe(1);
 });
