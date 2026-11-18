@@ -157,7 +157,16 @@ class Engine extends FlowElement {
     return Promise.resolve(this.processInternal(flowData)).then(function () {
       if (engine.cache) {
         const data = flowData.get(engine.dataKey);
-        if (engine.isCacheable(data)) {
+        if (typeof data.hasPendingLazyProperties === 'function' &&
+          data.hasPendingLazyProperties()) {
+          // Data with a lazy property is cached once its tasks have given
+          // their values, so a failed task is never served from the cache.
+          data.lazySettled().then(function (succeeded) {
+            if (succeeded && engine.isCacheable(data)) {
+              engine.cache.put(key, data);
+            }
+          });
+        } else if (engine.isCacheable(data)) {
           engine.cache.put(key, data);
         }
       }

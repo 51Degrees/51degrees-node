@@ -61,6 +61,29 @@ class PipelineEvidenceKeyFilter extends EvidenceKeyFilter {
 }
 
 /**
+ * Waits for the task of every lazy property in the Flow Data, then records
+ * each failed task as an error of the Flow Element whose data holds it,
+ * unless a reader has already. A JavaScript read cannot wait, so processing
+ * finishes only once every task has, and a read after that has the value.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @returns {Promise|undefined} resolved once every task has finished
+ */
+function settleLazyProperties (flowData) {
+  const all = [...new Set(Object.values(flowData.data))].filter((data) =>
+    data !== null && typeof data === 'object' &&
+    typeof data.lazySettled === 'function');
+  const pending = all.filter((data) => data.hasPendingLazyProperties());
+  const record = () => all.forEach((data) =>
+    data.recordLazyFailures(flowData));
+  if (pending.length === 0) {
+    record();
+    return undefined;
+  }
+  return Promise.all(pending.map((data) => data.lazySettled())).then(record);
+}
+
+/**
  * Pipeline holding a list of flowElements for processing, can create
  * flowData that will be passed through these, collecting elementData
  * Should be constructed through the PipelineBuilder class
@@ -219,6 +242,8 @@ class Pipeline {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
         }, Promise.resolve(flowData)).then(function () {
+          return settleLazyProperties(flowData);
+        }).then(function () {
           // Processing has finished, so every error has been recorded.
           const errors = Object.values(flowData.errors);
           if (errors.length > 0 && !pipeline.suppressProcessExceptions) {

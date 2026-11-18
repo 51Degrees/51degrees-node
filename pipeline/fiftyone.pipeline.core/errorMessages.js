@@ -25,5 +25,7 @@ module.exports = {
     'data. Available element data keys are: %s.',
   genericMissingProperties: 'Property "%s" not found',
   noReasonUnknown: ' Please check that the element and property names ' +
-  'are correct.'
+  'are correct.',
+  lazyPending: 'Property "%s" in data for element "%s" is worked out by a ' +
+    'task that has not finished. Use getAsync("%s") to wait for it.'
 };

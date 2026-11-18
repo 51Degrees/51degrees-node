@@ -119,13 +119,27 @@ class HardwareProfileCloudEngine extends CloudEngine {
    * set them as FlowData elements
    *
    * @param {FlowData} flowData The FlowData object
+   * @returns {Promise<void>} resolves once the Element Data is set
    */
   processInternal (flowData) {
     const engine = this;
 
-    let cloudData = flowData.get('cloud').get('cloud');
+    return engine.readResponse(flowData).then(function (response) {
+      if (response !== undefined) {
+        engine.setProfiles(flowData, JSON.parse(response));
+      }
+    });
+  }
 
-    cloudData = JSON.parse(cloudData);
+  /**
+   * Adds the hardware profiles in the cloud response as this engine's
+   * Element Data.
+   *
+   * @param {FlowData} flowData The FlowData object
+   * @param {object} cloudData the cloud response, parsed from JSON
+   */
+  setProfiles (flowData, cloudData) {
+    const engine = this;
 
     const hardware = (cloudData && cloudData.hardware) || {};
 
