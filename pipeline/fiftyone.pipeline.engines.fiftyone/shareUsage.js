@@ -384,7 +384,8 @@ class ShareUsage extends Engine {
   /**
    * Whether a key is shared. A query string or form parameter the filter
    * leaves out is still shared when a Flow Element of the Pipeline accepts
-   * it, being Evidence the Pipeline uses.
+   * it, being Evidence the Pipeline uses, as the element's specification
+   * lists it where the element gives that list.
    *
    * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
    * @param {string} key the evidence key
@@ -401,7 +402,14 @@ class ShareUsage extends Engine {
       return false;
     }
     return ShareUsageEvidenceKeyFilter.isParameter(key) &&
-      flowData.pipeline.evidenceKeyFilter.filterEvidenceKey(key);
+      Object.values(flowData.pipeline.flowElements).some((element) => {
+        // An element whose filter accepts more than its specification
+        // lists, as the JavaScript Builder's does, is asked about the
+        // keys its specification lists.
+        const filter = element.specifiedEvidenceKeyFilter ||
+          element.evidenceKeyFilter;
+        return filter !== undefined && filter.filterEvidenceKey(key);
+      });
   }
 
   /**
