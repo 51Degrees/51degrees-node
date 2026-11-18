@@ -119,16 +119,35 @@ class HardwareProfileCloudEngine extends CloudEngine {
    * set them as FlowData elements
    *
    * @param {FlowData} flowData The FlowData object
-   * @returns {Promise<void>} resolves once the Element Data is set
+   * @returns {Promise<void>|void} resolves once the Element Data is set,
+   * where the response has not yet arrived
    */
   processInternal (flowData) {
     const engine = this;
+    const cloud = flowData.get('cloud');
 
-    return engine.readResponse(flowData).then(function (response) {
-      if (response !== undefined) {
-        engine.setProfiles(flowData, JSON.parse(response));
+    if (typeof cloud.hasPendingLazyProperties === 'function' &&
+      cloud.hasPendingLazyProperties()) {
+      return engine.readResponse(flowData).then(function (response) {
+        if (response !== undefined) {
+          engine.setProfiles(flowData, JSON.parse(response));
+        }
+      });
+    }
+
+    // The response has arrived, or the request failed, so it is read now.
+    let response;
+    try {
+      response = cloud.get('cloud');
+    } catch (e) {
+      if (typeof cloud.isLazyProperty === 'function' &&
+        cloud.isLazyProperty('cloud')) {
+        cloud.recordLazyFailures(flowData);
+        return;
       }
-    });
+      throw e;
+    }
+    engine.setProfiles(flowData, JSON.parse(response));
   }
 
   /**
