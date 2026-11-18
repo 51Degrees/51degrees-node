@@ -177,6 +177,10 @@ const server = http.createServer(async (req, res) => {
   // The User-Agent and IP address of the requesting client are
   // added automatically from the request.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent or the connection has closed, so read
+  // nothing from the Flow Data after that.
+  res.on('close', () => flowData.dispose());
 
   // Extract required evidence from the Http request, being its headers,
   // cookies and query string. The client-side script posts the evidence

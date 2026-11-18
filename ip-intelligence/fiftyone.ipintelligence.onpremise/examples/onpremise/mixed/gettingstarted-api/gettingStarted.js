@@ -201,6 +201,10 @@ const evidenceKeys = function (res) {
 // response produced by the JSON bundler element.
 const processEvidence = function (req, res, query, body) {
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent or the connection has closed, so read
+  // nothing from the Flow Data after that.
+  res.on('close', () => flowData.dispose());
 
   // Add the query string parameters and any form body values as query
   // evidence, and the headers and cookies from the request.

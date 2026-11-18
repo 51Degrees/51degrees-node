@@ -185,6 +185,10 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
     }
 
     const flowData = pipeline.createFlowData();
+    // Gives the Flow Data's Element Data back to the pools once the
+    // response has been sent or the connection has closed, so read
+    // nothing from the Flow Data after that.
+    res.on('close', () => flowData.dispose());
 
     // Add any information from the request
     // (headers, cookies and additional client side provided information,

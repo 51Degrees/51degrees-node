@@ -215,6 +215,10 @@ const server = http.createServer(async (req, res) => {
   // values, in this case represented by a
   // Object of header name/value entries.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent or the connection has closed, so read
+  // nothing from the Flow Data after that.
+  res.on('close', () => flowData.dispose());
 
   // Extract required evidence from the Http request. The client script
   // sends the results of its snippets, the session id and the sequence as

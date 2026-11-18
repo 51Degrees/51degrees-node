@@ -141,6 +141,10 @@ const server = http.createServer((req, res) => {
   // For IP intelligence the IP address of the requesting client
   // is used. This is added automatically from the request.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent or the connection has closed, so read
+  // nothing from the Flow Data after that.
+  res.on('close', () => flowData.dispose());
 
   // Extract required evidence from the Http request.
   flowData.evidence.addFromRequest(req);
