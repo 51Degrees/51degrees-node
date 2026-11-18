@@ -111,7 +111,9 @@ describe('usage sharing built from a configuration', () => {
     expect(shared).toContain('campaign value');
     expect(shared).toContain('source value');
     expect(shared).toContain('kept value');
-    expect(shared).not.toContain('other value');
+    // The parameter list changes nothing, and the JavaScript Builder in
+    // this Pipeline accepts every parameter, so every one is shared.
+    expect(shared).toContain('other value');
     expect(shared).not.toContain('blocked value');
   }, TEST_TIMEOUT_MS);
 
@@ -122,7 +124,9 @@ describe('usage sharing built from a configuration', () => {
     expect(shared).toContain('campaign value');
     expect(shared).toContain('source value');
     expect(shared).toContain('kept value');
-    expect(shared).not.toContain('other value');
+    // The parameter list changes nothing, and the JavaScript Builder in
+    // this Pipeline accepts every parameter, so every one is shared.
+    expect(shared).toContain('other value');
     expect(shared).not.toContain('blocked value');
   }, TEST_TIMEOUT_MS);
 });

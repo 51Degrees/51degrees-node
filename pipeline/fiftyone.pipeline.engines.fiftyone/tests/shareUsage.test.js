@@ -844,8 +844,10 @@ test('share usage - parameter names with dots', done => {
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
+      // The JavaScript Builder in this Pipeline accepts every parameter,
+      // so both are shared, each under everything after the first dot.
       expect(received[0]).toContain('<query Name="valid.email">valid value</query>');
-      expect(received[0]).not.toContain('first part value');
+      expect(received[0]).toContain('<query Name="valid">first part value</query>');
       done();
     }, 2000);
   });

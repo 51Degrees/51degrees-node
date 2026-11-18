@@ -99,15 +99,19 @@ const messageFor = async (options) => {
 };
 
 describe('usage sharing by default', () => {
-  test('the filter keeps every query string and form parameter', () => {
-    const filter = new ShareUsageEvidenceKeyFilter({});
+  test('the filter keeps only the 51D_ query string and form parameters',
+    () => {
+      const filter = new ShareUsageEvidenceKeyFilter({});
 
-    expect(filter.filterEvidenceKey('query.campaign')).toBe(true);
-    expect(filter.filterEvidenceKey('query.Password')).toBe(true);
-    expect(filter.filterEvidenceKey('query.51d_screenpixelswidth')).toBe(true);
-    expect(filter.filterEvidenceKey('query.id.email')).toBe(false);
-  });
+      expect(filter.filterEvidenceKey('query.campaign')).toBe(false);
+      expect(filter.filterEvidenceKey('query.Password')).toBe(false);
+      expect(filter.filterEvidenceKey('query.51d_screenpixelswidth'))
+        .toBe(true);
+      expect(filter.filterEvidenceKey('query.id.email')).toBe(false);
+    });
 
+  // The JavaScript Builder in this Pipeline accepts every query string
+  // parameter, so every one is Evidence the Pipeline uses.
   test('the message has every parameter and only the 51D_ cookies',
     async () => {
       const message = await messageFor({});
@@ -120,22 +124,23 @@ describe('usage sharing by default', () => {
     }, SEND_TIMEOUT_MS + 5000);
 });
 
-describe('usage sharing with share all query string parameters off', () => {
-  test('the filter keeps only 51D_ parameters and those listed', () => {
+describe('usage sharing with the deprecated parameter settings', () => {
+  test('the filter keeps only 51D_ parameters, as the settings change ' +
+    'nothing', () => {
     const filter = new ShareUsageEvidenceKeyFilter({
       shareAllQueryStringParameters: false,
       queryWhitelist: ['Listed']
     });
 
     expect(filter.filterEvidenceKey('query.campaign')).toBe(false);
-    expect(filter.filterEvidenceKey('query.listed')).toBe(true);
+    expect(filter.filterEvidenceKey('query.listed')).toBe(false);
     expect(filter.filterEvidenceKey('query.51d_screenpixelswidth')).toBe(true);
   });
 
-  test('the message has only the 51D_ parameters', async () => {
+  test('the message is the one shared by default', async () => {
     const message = await messageFor({ shareAllQueryStringParameters: false });
 
-    expect(message).not.toContain('campaign value');
+    expect(message).toContain('campaign value');
     expect(message).toContain('width value');
   }, SEND_TIMEOUT_MS + 5000);
 });
