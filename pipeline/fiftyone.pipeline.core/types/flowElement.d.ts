@@ -1,5 +1,6 @@
 export = FlowElement;
 /**
+ * @typedef {import('./elementData')} ElementData
  * @typedef {import('./flowData')} FlowData
  * @typedef {import('./pipeline')} Pipeline
  * @typedef {import('./evidenceKeyFilter')} EvidenceKeyFilter
@@ -79,6 +80,23 @@ declare class FlowElement {
      * */
     ready(): Promise<any>;
     /**
+     * Element data for this flow element from its pool, with no values and
+     * open for writing, or a new instance from create when the pool has none.
+     * The instance goes back to the pool when the flow data that holds it is
+     * disposed, unless a cache holds it. Keeping a reference to it after that
+     * is not supported.
+     *
+     * @param {function(): ElementData} create makes a new instance
+     * @returns {ElementData} the instance
+     */
+    pooledElementData(create: () => ElementData): ElementData;
+    /**
+     * The pool of this flow element's element data, made on first use.
+     *
+     * @type {ElementDataPool|undefined}
+     */
+    elementDataPool: ElementDataPool | undefined;
+    /**
      * To allow actions to take place before and after a
      * FlowElement's processInternal function runs, a process
      * wrapper is run first
@@ -111,8 +129,10 @@ declare class FlowElement {
     _log(type: string, message: any): void;
 }
 declare namespace FlowElement {
-    export { FlowData, Pipeline, EvidenceKeyFilter };
+    export { ElementData, FlowData, Pipeline, EvidenceKeyFilter };
 }
+import ElementDataPool = require("./elementDataPool");
+type ElementData = import("./elementData");
 type FlowData = import("./flowData");
 type Pipeline = import("./pipeline");
 type EvidenceKeyFilter = import("./evidenceKeyFilter");
