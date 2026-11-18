@@ -25,5 +25,10 @@ module.exports = {
     'data. Available element data keys are: %s.',
   genericMissingProperties: 'Property "%s" not found',
   noReasonUnknown: ' Please check that the element and property names ' +
-  'are correct.'
+  'are correct.',
+  flowDataFinished: 'Cannot add %s: the flow data has finished processing.',
+  flowDataProcessed: 'The flow data has already been processed. A flow ' +
+    'data is processed once.',
+  elementDataFinished: 'Cannot set "%s": the flow element that writes the ' +
+    'data for element "%s" has finished processing.'
 };

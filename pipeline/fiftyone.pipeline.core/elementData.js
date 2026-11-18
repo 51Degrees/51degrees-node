@@ -30,7 +30,10 @@ const errorMessages = require('./errorMessages');
 
 /**
  * Stores information created by a flowElement based on flowData.
- * Stored in flowData
+ * Stored in flowData. Element data is written only by the flow element that
+ * provides it, or the flow elements that share it, and only while they
+ * process. Once they have finished, a write through the element data
+ * throws.
  */
 class ElementData {
   /**
@@ -48,6 +51,15 @@ class ElementData {
     }
 
     this.flowElement = flowElement;
+
+    // Whether the flow elements that write the data have finished
+    // processing, when a write through the data throws. An object, as the
+    // proxy takes a field that reads as false for a property name. Names
+    // starting with an underscore hold the data's own state and are not
+    // writes.
+    Object.defineProperty(this, '_writes', {
+      value: { finished: false }
+    });
 
     // Returns a proxy so that we can use flowData.flowElementDataKey
     // As a shortcut to flowData.get("flowElementDataKey")
@@ -71,6 +83,17 @@ class ElementData {
             }
           }
         }
+      },
+      // Element data is written only by the flow elements that write it,
+      // while they process, so a write once they have finished throws.
+      set: (data, key, value) => {
+        if (data._writes.finished && !(typeof key === 'string' &&
+          key.startsWith('_'))) {
+          throw new Error(util.format(errorMessages.elementDataFinished,
+            String(key), data.flowElement.dataKey));
+        }
+        data[key] = value;
+        return true;
       }
     });
   }

@@ -168,8 +168,11 @@ class Evidence {
    *
    * @param {string} key evidence key to add
    * @param {*} value value of evidence key
+   * @throws {Error} once the flow data has finished processing
    */
   add (key, value) {
+    this.flowData.checkNotFinished('evidence');
+
     const folded = String(key).toLowerCase();
     if (folded === Constants.evidenceHttpRequest) {
       this.httpRequest = value;
