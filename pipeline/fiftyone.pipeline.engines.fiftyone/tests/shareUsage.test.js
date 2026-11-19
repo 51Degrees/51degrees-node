@@ -747,7 +747,7 @@ test('share usage - default shares only accepted evidence', done => {
       expect(received[0]).toContain('<query Name="51d_gethighentropyvalues">hev</query>');
       expect(received[0]).not.toContain('cookie value');
       expect(received[0]).not.toContain('header value');
-      expect(received[0]).toContain('<query Name="password">password value</query>');
+      expect(received[0]).not.toContain('password value');
       expect(received[0]).not.toContain('email value');
       done();
     }, 2000);
@@ -814,7 +814,9 @@ test('share usage - share all', done => {
     setTimeout(() => {
       expect(received.length).toBe(1);
       expect(received[0]).not.toContain('cookie value');
-      expect(received[0]).toContain('<query Name="campaign">campaign value</query>');
+      // A parameter is shared only when its name starts with 51D_ or the
+      // Pipeline uses it, even when all Evidence is shared.
+      expect(received[0]).not.toContain('campaign value');
       expect(received[0]).not.toContain('email value');
       done();
     }, 2000);
@@ -844,7 +846,8 @@ test('share usage - parameter names with dots', done => {
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).toContain('<query Name="valid.email">valid value</query>');
+      // The parameter list changes nothing, so neither is shared.
+      expect(received[0]).not.toContain('valid value');
       expect(received[0]).not.toContain('first part value');
       done();
     }, 2000);

@@ -108,9 +108,11 @@ describe('usage sharing built from a configuration', () => {
     const shared = await sharedFor(
       'campaign, utm_source', 'x-blocked, x-also-blocked');
 
-    expect(shared).toContain('campaign value');
-    expect(shared).toContain('source value');
+    expect(shared).not.toContain('campaign value');
+    expect(shared).not.toContain('source value');
     expect(shared).toContain('kept value');
+    // The parameter list changes nothing, so no parameter named in it is
+    // shared.
     expect(shared).not.toContain('other value');
     expect(shared).not.toContain('blocked value');
   }, TEST_TIMEOUT_MS);
@@ -119,9 +121,11 @@ describe('usage sharing built from a configuration', () => {
     const shared = await sharedFor(
       ['campaign', 'utm_source'], ['x-blocked', 'x-also-blocked']);
 
-    expect(shared).toContain('campaign value');
-    expect(shared).toContain('source value');
+    expect(shared).not.toContain('campaign value');
+    expect(shared).not.toContain('source value');
     expect(shared).toContain('kept value');
+    // The parameter list changes nothing, so no parameter named in it is
+    // shared.
     expect(shared).not.toContain('other value');
     expect(shared).not.toContain('blocked value');
   }, TEST_TIMEOUT_MS);

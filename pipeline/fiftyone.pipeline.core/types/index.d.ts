@@ -8,6 +8,7 @@ export let ErrorMessages: {
     flowDataFinished: string;
     flowDataProcessed: string;
     elementDataFinished: string;
+    usageSharingNotLast: string;
 };
 export let Constants: {
     evidenceEnableCookies: string;

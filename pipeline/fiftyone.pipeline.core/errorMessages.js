@@ -30,5 +30,7 @@ module.exports = {
   flowDataProcessed: 'The flow data has already been processed. A flow ' +
     'data is processed once.',
   elementDataFinished: 'Cannot set "%s": the flow element that writes the ' +
-    'data for element "%s" has finished processing.'
+    'data for element "%s" has finished processing.',
+  usageSharingNotLast: 'The usage sharing element must be the last Flow ' +
+    'Element in a Pipeline, and outside any parallel group.'
 };

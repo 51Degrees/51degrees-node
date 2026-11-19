@@ -55,6 +55,16 @@ declare class JavaScriptBuilderElement extends FlowElement {
         minify: boolean;
     };
     evidenceKeyFilter: JSEvidenceKeyFilter;
+    /**
+     * The Evidence the element's specification lists as accepted, which
+     * usage sharing counts as Evidence the Pipeline uses. The filter above
+     * also accepts every query string parameter, because the element writes
+     * each one into its script, and it decides the cache key, the ETag and
+     * the Vary header.
+     *
+     * @type {EvidenceKeyFilter}
+     */
+    specifiedEvidenceKeyFilter: EvidenceKeyFilter;
     properties: {
         javascript: {
             name: string;
@@ -87,5 +97,5 @@ import FlowElement = require("./flowElement.js");
 declare class JSEvidenceKeyFilter extends EvidenceKeyFilter {
     filterEvidenceKey(key: any): boolean;
 }
-type FlowData = import("./flowData");
 import EvidenceKeyFilter = require("./evidenceKeyFilter.js");
+type FlowData = import("./flowData");

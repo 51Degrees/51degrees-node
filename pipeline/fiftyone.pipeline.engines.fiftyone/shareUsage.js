@@ -30,6 +30,7 @@ const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
 const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
 const ShareUsageBackOff = require('./shareUsageBackOff');
+const packageVersions = require('./packageVersions');
 
 // Usage sharing's warnings are also emitted at 'warning', a deprecated
 // level, so that a listener on it still hears them until a later release
@@ -51,6 +52,8 @@ const zlib = require('zlib');
 const url = require('url');
 
 const os = require('os');
+const { performance } = require('perf_hooks');
+const crypto = require('crypto');
 
 // The version of the Pipeline, read from the package that provides it, so
 // that the usage shared names the release that is running.
@@ -94,6 +97,12 @@ const REQUEST_TIMEOUT_DEFAULT = 60000;
 const LONGEST_WAIT_MILLIS = 86400000;
 
 /**
+ * How long after the values that do not change while the element lives are
+ * written that they are written again, in milliseconds.
+ */
+const INVARIANT_INTERVAL_MILLIS = 60 * 60 * 1000;
+
+/**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
  */
@@ -121,13 +130,12 @@ class ShareUsage extends Engine {
    * session id. It has no effect unless trackSession is true. The cookie
    * itself is never shared unless its name starts with '51D_', as no other
    * cookie is.
-   * @param {boolean} options.shareAllQueryStringParameters If true, every
-   * query string and HTTP form parameter is shared. True by default.
-   * @param {Array<string>|string|null} options.queryWhitelist When
-   * shareAllQueryStringParameters is false, query string and HTTP form
-   * parameters are not shared unless prefixed with '51D_' or given in this
-   * list, or in one comma separated string of them, as a configuration file
-   * gives a list. null is the same as an empty list.
+   * @param {boolean} options.shareAllQueryStringParameters Deprecated, and
+   * has no effect. A query string or HTTP form parameter is shared when its
+   * name starts with '51D_' or a Flow Element of the Pipeline accepts it,
+   * whatever the settings.
+   * @param {Array<string>|string|null} options.queryWhitelist Deprecated,
+   * and has no effect, as shareAllQueryStringParameters says.
    * @param {Array<string>|string} options.headerBlacklist By default, all
    * HTTP headers except Cookie are shared. Individual headers can be
    * excluded from sharing by adding them to this list, or to one comma
@@ -192,12 +200,11 @@ class ShareUsage extends Engine {
     this.trackSession = trackSession;
 
     // The session id and sequence number are kept in evidence, as the usage
-    // data carries them separately.
-    const queryList = core.listSetting(queryWhitelist);
+    // data carries them separately. The deprecated query string settings
+    // change nothing.
     const options = {
       cookie,
-      shareAllQueryStringParameters,
-      queryWhitelist: [...(queryList || []), 'session-id', 'sequence'],
+      keptQueryParameters: ['session-id', 'sequence'],
       headerBlacklist: core.listSetting(headerBlacklist),
       shareAll
     };
@@ -254,6 +261,15 @@ class ShareUsage extends Engine {
     // Starts sending again when a pause ends.
     this.resumeTimer = null;
 
+    // A version 4 UUID that names this element in every record it writes,
+    // created when it is built and never stored, so a process that starts
+    // again, or a second element, has its own.
+    this.processId = crypto.randomUUID();
+
+    // When, by ShareUsage.now, the values that do not change while the
+    // element lives were last written to a record, or null before the first.
+    this.invariantWrittenAt = null;
+
     if (endpoint.includes('https://') === false &&
       endpoint.includes('http://') === false) {
       endpoint = 'https://' + endpoint;
@@ -270,6 +286,17 @@ class ShareUsage extends Engine {
   }
 
   /**
+   * The time in milliseconds, from a clock that only goes forward, which
+   * decides when the values that do not change while the element lives are
+   * written again. Tests replace it to move time on.
+   *
+   * @returns {number} the time now in milliseconds
+   */
+  static now () {
+    return performance.now();
+  }
+
+  /**
    * Internal process method which uses the ShareUsageTracker
    * to determine whether to add usage data to a batch and adds it if necessary.
    *
@@ -281,8 +308,13 @@ class ShareUsage extends Engine {
     try {
       if (Math.random() <= this.sharePercentage) {
         // The tracker compares the values that would be shared.
-        const cacheKey = this.trackerEvidenceKeyFilter
-          .filterEvidence(this.getFoundEvidence(flowData));
+        const found = this.getFoundEvidence(flowData);
+        const cacheKey = {};
+        for (const key of Object.keys(found)) {
+          if (this.shares(this.trackerEvidenceKeyFilter, key, flowData)) {
+            cacheKey[key] = found[key];
+          }
+        }
 
         const share = this.tracker.track(cacheKey);
         if (share) {
@@ -370,12 +402,54 @@ class ShareUsage extends Engine {
         }
       } else {
         // Check if we can send this piece of evidence
-        if (this.dataEvidenceKeyFilter.filterEvidenceKey(key)) {
+        if (this.shares(this.dataEvidenceKeyFilter, key, flowData)) {
           data.tryAddToData(key, value);
         }
       }
     });
     return data;
+  }
+
+  /**
+   * Whether a key is shared. A query string or form parameter the filter
+   * leaves out is still shared when a Flow Element of the Pipeline accepts
+   * it, being Evidence the Pipeline uses, as the element's specification
+   * lists it where the element gives that list.
+   *
+   * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
+   * @param {string} key the evidence key
+   * @param {FlowData} flowData the flow data being processed
+   * @returns {boolean} true if the key is shared
+   */
+  shares (filter, key, flowData) {
+    if (filter.filterEvidenceKey(key)) {
+      return true;
+    }
+    // The session id and sequence are carried separately, never as values.
+    const lowerKey = key.toLowerCase();
+    if (lowerKey === 'query.session-id' || lowerKey === 'query.sequence') {
+      return false;
+    }
+    return ShareUsageEvidenceKeyFilter.isParameter(key) &&
+      Object.values(flowData.pipeline.flowElements).some((element) => {
+        // An element whose filter accepts more than its specification
+        // lists, as the JavaScript Builder's does, is asked about the
+        // keys its specification lists.
+        const filter = element.specifiedEvidenceKeyFilter ||
+          element.evidenceKeyFilter;
+        return filter !== undefined && filter.filterEvidenceKey(key);
+      });
+  }
+
+  /**
+   * Marks the usage sharing element, which a Pipeline builder puts after
+   * every other Flow Element, outside any parallel group, and refuses
+   * anywhere else.
+   *
+   * @returns {boolean} true
+   */
+  get isUsageSharing () {
+    return true;
   }
 
   getConstantXml () {
@@ -393,6 +467,15 @@ class ShareUsage extends Engine {
       // The flow elements in the current pipeline
       this.getFlowElements().forEach(element => {
         xml += `<FlowElement>${element}</FlowElement>`;
+      });
+      // Every 51Degrees package in use, with its version, so that the
+      // spread of each package's releases can be measured
+      const elements = this.pipelines.length === 1
+        ? Object.values(this.pipelines[0].flowElements)
+        : [];
+      packageVersions(elements).forEach(({ name, version }) => {
+        xml += `<Package Name="${new ReplacedString(name).result}">` +
+          `${new ReplacedString(version).result}</Package>`;
       });
       xml += '<Language>Node.JS</Language>';
       // The software language version
@@ -431,8 +514,18 @@ class ShareUsage extends Engine {
 
     xml += '<Device>';
 
-    // --- write invariant data
-    xml += this.getConstantXml();
+    // The process identifier, in every record, which ties a record that
+    // leaves out the invariant data to the record that carries it
+    xml += `<ProcessId>${this.processId}</ProcessId>`;
+
+    // --- write invariant data, to the first record and again to the first
+    // once an hour has passed since they were last written
+    const now = ShareUsage.now();
+    if (this.invariantWrittenAt === null ||
+      now - this.invariantWrittenAt >= INVARIANT_INTERVAL_MILLIS) {
+      xml += this.getConstantXml();
+      this.invariantWrittenAt = now;
+    }
 
     // --- write variable data
     // The SessionID used to track a series of requests
