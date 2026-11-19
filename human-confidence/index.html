@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="See the Human Confidence value for your own visit, High, Medium, or Low, then add the 51Degrees script to your page to get it for every visit."
+    />
+    <title>51Degrees Human Confidence</title>
+    <link rel="icon" type="image/png" href="../assets/51degrees-logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/demo.css" />
+    <script src="demo.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="container">
+          <a href="https://51degrees.com/?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=body"
+            ><img src="../assets/51degrees-logo.png" alt="51Degrees" width="164" height="31"
+          /></a>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="container">
+          <div class="inner">
+            <span class="kicker">Human Confidence for JavaScript</span>
+            <h1>51Degrees <b>Human Confidence</b></h1>
+            <p>
+              How likely is it that a person is looking at your page?
+              <a href="https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=51degrees-human-confidence"
+                >Human Confidence</a
+              >
+              answers High, Medium, or Low for each visit, straight from the
+              51Degrees cloud service.
+            </p>
+            <p>
+              Add the 51Degrees script to your page and read the value in the
+              browser, for your analytics. Or ask the cloud service from your
+              Node.js server and decide what each visit gets before you send
+              the page. Human Confidence needs the Pro plan.
+            </p>
+            <a class="button" href="https://51degrees.com/documentation/_human_confidence__quickstart.html?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=51degrees-human-confidence"
+              >Read the quick start</a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="playground" id="playground">
+        <div class="container">
+          <h2>Human Confidence playground</h2>
+          <div class="inner">
+            <div class="ask">
+              <span class="label">This visit</span>
+              <p class="hint">
+                When the page opens, it loads the 51Degrees script with the
+                page's Resource Key and shows the value for your visit.
+              </p>
+              <span class="label">Use your own Resource Key</span>
+              <form id="key-form">
+                <input
+                  type="text"
+                  id="resource-key"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Your Resource Key"
+                  aria-label="Resource Key"
+                />
+                <button class="button" type="submit">Use key</button>
+              </form>
+              <p class="hint">
+                The key stays in this page and goes only to the cloud service.
+                It needs a License Key for the Pro plan, and no domain list or
+                one that includes this page's address.
+              </p>
+            </div>
+            <div class="result" aria-live="polite">
+              <span class="label">Human Confidence for this visit:</span>
+              <p class="big" id="value">&nbsp;</p>
+              <p id="meaning"></p>
+              <p class="note" id="result-note" hidden></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cards">
+        <div class="container">
+          <h2>What the values mean</h2>
+          <table class="values">
+            <thead>
+              <tr>
+                <th scope="col">Value</th>
+                <th scope="col">Meaning</th>
+                <th scope="col">What websites usually do</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>High</td>
+                <td>High confidence that a person is reading the page.</td>
+                <td>Let the request through.</td>
+              </tr>
+              <tr>
+                <td>Medium</td>
+                <td>Mixed signals. Could be a person, could be a script.</td>
+                <td>Serve the page, or challenge with a CAPTCHA or a sign-in first.</td>
+              </tr>
+              <tr>
+                <td>Low</td>
+                <td>Almost certainly no person is reading it.</td>
+                <td>Refuse the request, or serve a version of the page made for machines.</td>
+              </tr>
+              <tr>
+                <td>Unknown</td>
+                <td>Not measured, usually because the script didn't run.</td>
+                <td>Treat it as Medium.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="getstarted">
+        <div class="container">
+          <div class="inner">
+            <h2>Getting started</h2>
+            <ol>
+              <li>
+                <a href="https://51degrees.com/configure/AQRVdgJ-fPDE5gU130g?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=getting-started"
+                  >Create a Resource Key from this link</a
+                >. It opens with the properties Human Confidence needs already
+                ticked. Add the License Key from your
+                <a href="https://51degrees.com/pricing?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=getting-started"
+                  >Pro plan</a
+                >
+                and create the key.
+              </li>
+              <li>
+                Add the script to a page, with your Resource Key in place of
+                <code>YOUR_RESOURCE_KEY</code>, and read the value once the
+                script has finished.
+                <pre><code>&lt;script src="https://cloud.51degrees.com/api/v4/YOUR_RESOURCE_KEY.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  fod.complete(function (data) {
+    console.log(data.derived.humanconfidence);
+  });
+&lt;/script&gt;</code></pre>
+              </li>
+              <li>
+                To decide on your server what each visit gets, follow
+                <a href="https://51degrees.com/documentation/_services__cloud__human_confidence.html?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=getting-started"
+                  >Deploy Human Confidence with the cloud</a
+                >, which has the Node.js, PHP, and Python code.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="find-out-more" id="find-out-more">
+        <div class="container">
+          <div class="inner">
+            <h2>Find out more</h2>
+            <div class="columns">
+              <div>
+                <p class="list-title">On 51degrees.com</p>
+                <ul>
+                  <li><a href="https://51degrees.com/bots-and-humans?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=find-out-more">Bot detection and Human Confidence</a> product page</li>
+                  <li><a href="https://51degrees.com/documentation/_human_confidence__overview.html?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=find-out-more">Human Confidence documentation</a></li>
+                  <li><a href="https://51degrees.com/pricing?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=find-out-more">Pricing</a>, for the Pro plan</li>
+                  <li><a href="https://51degrees.com/contact-us?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=human-confidence-index.html&utm_term=find-out-more">Contact us</a> about running it on your own servers</li>
+                </ul>
+              </div>
+              <div>
+                <p class="list-title">Source code</p>
+                <ul class="repos">
+                  <li><a href="https://github.com/51Degrees/51degrees-node">https://github.com/51Degrees/51degrees-node</a></li>
+                  <li><a href="https://github.com/51Degrees/javascript-templates">https://github.com/51Degrees/javascript-templates</a></li>
+                  <li><a href="https://github.com/51Degrees/51degrees-cxx">https://github.com/51Degrees/51degrees-cxx</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <img src="../assets/51degrees-logo.png" alt="51Degrees" width="164" height="31" />
+        <p>© Copyright 2010–2026 51Degrees.mobi Limited</p>
+      </div>
+    </footer>
+  </body>
+</html>

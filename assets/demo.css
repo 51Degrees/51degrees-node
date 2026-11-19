@@ -1,0 +1,372 @@
+/* Shared styles for the 51Degrees cloud demo pages. */
+
+html {
+  overflow-y: scroll;
+}
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #222628;
+  font-family: Verdana, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.container {
+  width: calc(100% - 32px);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+a {
+  color: #1c5ca1;
+}
+
+header {
+  padding: 24px 0;
+}
+header img {
+  display: block;
+  width: 164px;
+  height: auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 32px;
+  background: #1c5ca1;
+  border: none;
+  border-radius: 3px;
+  font-family: Verdana, sans-serif;
+  font-size: 16px;
+  line-height: 19px;
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button:hover,
+.button:focus {
+  background: #2a65a6;
+}
+
+/* Hero: one column of text on a grey panel. */
+.hero {
+  margin-bottom: 64px;
+}
+.hero .inner {
+  background: #f2f2f2;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 48px) 100%, 0 calc(100% - 32px));
+  padding: 48px 40px 72px;
+}
+.hero .kicker {
+  display: block;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 22px;
+  margin-bottom: 10px;
+}
+.hero h1 {
+  font-family: "Lilita One", Verdana, sans-serif;
+  font-weight: 400;
+  font-size: 52px;
+  line-height: 59px;
+  letter-spacing: 0.03em;
+  color: #e62d39;
+  margin: 0 0 23px;
+}
+.hero h1 b {
+  color: #222628;
+  font-weight: 400;
+}
+.hero p {
+  max-width: 720px;
+  margin: 0 0 20px;
+}
+.hero .button {
+  margin-top: 16px;
+}
+
+h2 {
+  font-family: "Lilita One", Verdana, sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 34px;
+  letter-spacing: 0.03em;
+  color: #222628;
+  margin: 0 0 23px;
+}
+
+/* Playground: what the cloud service returned, on a dark panel. */
+.playground {
+  margin-bottom: 80px;
+}
+.playground .inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: #2b2a29;
+}
+.playground .ask {
+  background: #f2f2f2;
+  padding: 24px 32px;
+}
+.playground .ask > * + * {
+  margin-top: 16px;
+}
+.playground .label {
+  display: block;
+  font-family: "Roboto", Verdana, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 23px;
+}
+.playground .hint {
+  font-family: "Roboto", Verdana, sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  color: #555857;
+  margin: 0;
+}
+.playground form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.playground input[type="text"] {
+  flex: 1 1 200px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #c9c9c9;
+  border-radius: 3px;
+  font-family: "Roboto", Verdana, sans-serif;
+  font-size: 15px;
+}
+.playground .button {
+  padding: 12px 20px;
+  font-size: 15px;
+}
+.playground .result {
+  padding: 24px 32px;
+  color: #ffffff;
+  font-family: "Roboto", Verdana, sans-serif;
+}
+.playground .result > .label {
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+.playground dl {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 8px 24px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+.playground dt {
+  font-weight: 700;
+}
+.playground dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.playground dd span {
+  display: inline-block;
+  padding: 0 12px;
+  border-radius: 40px;
+  background: #ebf3ff;
+  color: #2b6dcf;
+  font-weight: 700;
+}
+.playground dd span.paid,
+.playground dd span.missing {
+  background: rgba(230, 45, 57, 0.25);
+  color: #ffffff;
+  font-weight: 400;
+}
+.playground dd span.missing {
+  background: rgba(241, 241, 241, 0.15);
+}
+.playground .big {
+  font-family: "Lilita One", Verdana, sans-serif;
+  font-size: 56px;
+  line-height: 64px;
+  letter-spacing: 0.03em;
+  margin: 0 0 8px;
+}
+.playground .big.High {
+  color: #6fd39b;
+}
+.playground .big.Medium {
+  color: #f6a118;
+}
+.playground .big.Low {
+  color: #ff7a82;
+}
+.playground .note {
+  font-size: 14px;
+  line-height: 22px;
+  margin: 20px 0 0;
+}
+.playground .note a {
+  color: #8fbaf0;
+}
+.playground .error {
+  color: #ffb3b8;
+}
+
+/* Cards. */
+.cards {
+  margin-bottom: 80px;
+}
+.cards .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 32px;
+}
+.cards article {
+  padding: 28px 32px;
+  background: #ffffff;
+  box-shadow: 0 16px 32px rgba(50, 50, 50, 0.1);
+}
+.cards h3 {
+  font-family: "Lilita One", Verdana, sans-serif;
+  font-weight: 400;
+  font-size: 23px;
+  line-height: 26px;
+  letter-spacing: 0.03em;
+  color: #2a65a6;
+  margin: 0 0 14px;
+}
+.cards p {
+  font-size: 14px;
+  line-height: 22px;
+  color: #373a3a;
+  margin: 0;
+}
+
+table.values {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 22px;
+}
+table.values th,
+table.values td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e3e3e3;
+}
+table.values th {
+  background: #f2f2f2;
+}
+
+/* Getting started. */
+.getstarted {
+  margin-bottom: 80px;
+}
+.getstarted .inner {
+  background: #f2f2f2;
+  padding: 48px 40px;
+  clip-path: polygon(0 0, 100% 24px, 100% calc(100% - 24px), 0 100%);
+}
+.getstarted h2 {
+  font-size: 40px;
+  line-height: 46px;
+  color: #e62d39;
+}
+.getstarted ol {
+  margin: 0;
+  padding-left: 24px;
+}
+.getstarted li {
+  margin-bottom: 16px;
+}
+pre {
+  margin: 12px 0 0;
+  padding: 16px;
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 3px;
+  font-size: 13px;
+  line-height: 20px;
+}
+code {
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+}
+
+/* Find out more. */
+.find-out-more {
+  margin-bottom: 80px;
+}
+.find-out-more .inner {
+  border-top: 4px solid #e62d39;
+  padding-top: 32px;
+}
+.find-out-more .columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 16px 48px;
+}
+.find-out-more .list-title {
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+.find-out-more ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.find-out-more li {
+  font-size: 14px;
+  line-height: 22px;
+  margin-bottom: 10px;
+}
+.find-out-more .repos a {
+  overflow-wrap: anywhere;
+}
+
+footer {
+  background: #f2f2f2;
+  padding: 40px 0;
+}
+footer .container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+footer img {
+  width: 164px;
+  height: auto;
+}
+footer p {
+  margin: 0;
+  font-size: 14px;
+  color: #373a3a;
+}
+
+@media only screen and (max-width: 760px) {
+  .hero .inner {
+    padding: 32px 20px 56px;
+    clip-path: none;
+  }
+  .hero h1 {
+    font-size: 40px;
+    line-height: 46px;
+  }
+  .playground .inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .playground .ask,
+  .playground .result {
+    padding: 20px;
+  }
+  .getstarted .inner {
+    padding: 32px 20px;
+    clip-path: none;
+  }
+  .cards article {
+    padding: 24px 20px;
+  }
+}
