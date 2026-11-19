@@ -22,7 +22,7 @@ before its examples can run. The cloud examples need no native module.
 ### Prerequisites
 
 - Git.
-- Node.js 22 or 24, with npm. CI tests these two (`ci/options.json`), and
+- Node.js 22, 24 or 26, with npm. CI tests these three (`ci/options.json`), and
   `ip-intelligence/ensure-native-module.js` refuses to build for any other.
   The build uses node-gyp 12, which needs Node.js 22.9 or later on the 22 line.
 - A C and C++ toolchain for [node-gyp](https://github.com/nodejs/node-gyp).
@@ -353,7 +353,8 @@ packages published to npm.
 
 `ci/select-options.ps1` chooses the entries a pull request runs. The standard
 set is Node 24 and Node 22 on Linux, with the Selenium contract on Node 24
-alone. A native change adds Node 24 on Windows and on Linux ARM, and a
+alone. Node 26 is in no smaller set, so it runs only where every entry
+does. A native change adds Node 24 on Windows and on Linux ARM, and a
 change outside the package folders adds every entry but macOS. macOS and performance run only
 when `rc` itself or the release pull request is built, which
 `.github/workflows/release-pull-request.yml` does on every entry.
