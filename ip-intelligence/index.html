@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="See what 51Degrees IP Intelligence says about your IP address, then get the same answer in Node.js with the fiftyone.ipintelligence package."
+    />
+    <title>51Degrees IP Intelligence</title>
+    <link rel="icon" type="image/png" href="../assets/51degrees-logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/demo.css" />
+    <script src="demo.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="container">
+          <a href="https://51degrees.com/?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=body"
+            ><img src="../assets/51degrees-logo.png" alt="51Degrees" width="164" height="31"
+          /></a>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="container">
+          <div class="inner">
+            <span class="kicker">IP Intelligence for JavaScript</span>
+            <h1>51Degrees <b>IP Intelligence</b></h1>
+            <p>
+              Find out where an IP address is, and who owns the network it's
+              on.
+              <a href="https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=51degrees-ip-intelligence"
+                >51Degrees IP Intelligence</a
+              >
+              looks the address up in the 51Degrees cloud service and sends
+              back the answer.
+            </p>
+            <p>
+              Call the cloud service from the browser, as this page does, or
+              from Node.js with the fiftyone.ipintelligence package. A free
+              Resource Key returns the country and how confident the cloud
+              service is about the location. A paid plan adds the region, the
+              town, the latitude and longitude, and the network's registered
+              owner. This page's key is on a paid plan, so the playground
+              shows them all.
+            </p>
+            <a class="button" href="https://www.npmjs.com/package/fiftyone.ipintelligence"
+              >Install from npm</a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="playground" id="playground">
+        <div class="container">
+          <h2>IP address playground</h2>
+          <div class="inner">
+            <div class="ask">
+              <span class="label">Your IP address</span>
+              <p class="hint">
+                When the page opens, it asks about the address your browser
+                connects from.
+              </p>
+              <span class="label">Look up another address</span>
+              <form id="address-form">
+                <input
+                  type="text"
+                  id="address"
+                  inputmode="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="An IPv4 or IPv6 address"
+                  aria-label="IP address"
+                />
+                <button class="button" type="submit">Look up</button>
+              </form>
+            </div>
+            <div class="result" aria-live="polite">
+              <span class="label" id="result-title">What the cloud service returned:</span>
+              <dl id="result"></dl>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cards">
+        <div class="container">
+          <h2>What you get</h2>
+          <div class="grid">
+            <article>
+              <h3>Country for free</h3>
+              <p>
+                A free Resource Key returns the country, how confident the
+                cloud service is about the location, and the IP address
+                itself.
+              </p>
+            </article>
+            <article>
+              <h3>More on a paid plan</h3>
+              <p>
+                Paid plans add the region, town, latitude and longitude, the
+                network's registered owner, and more. See them all in the
+                <a href="https://51degrees.com/developers/property-dictionary?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=more-on-a-paid-plan"
+                  >property dictionary</a
+                >.
+              </p>
+            </article>
+            <article>
+              <h3>Cloud or your own servers</h3>
+              <p>
+                The Node.js packages use the cloud service, or an IP
+                Intelligence data file on your own servers, with almost all the
+                same properties.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="getstarted">
+        <div class="container">
+          <div class="inner">
+            <h2>Getting started</h2>
+            <ol>
+              <li>
+                <a href="https://51degrees.com/configure/AQRVdgJ-m5wBBHBG30g?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=getting-started"
+                  >Create a Resource Key</a
+                >. The link opens with the properties on this page ticked. The
+                country and location confidence are free, and the others need a
+                <a href="https://51degrees.com/pricing?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=getting-started"
+                  >paid plan</a
+                >.
+              </li>
+              <li>
+                Install the package.
+                <pre><code>npm install fiftyone.ipintelligence</code></pre>
+              </li>
+              <li>
+                Look up an address.
+                <pre><code>const IpIntelligencePipelineBuilder =
+  require('fiftyone.ipintelligence').IpIntelligencePipelineBuilder;
+
+const pipeline = new IpIntelligencePipelineBuilder({
+  resourceKey: 'your-resource-key'
+}).build();
+
+const flowData = pipeline.createFlowData();
+flowData.evidence.add('query.client-ip', '81.2.69.142');
+flowData.process().then(function () {
+  console.log(flowData.ip.country.value);
+});</code></pre>
+              </li>
+              <li>
+                See the
+                <a href="https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=getting-started"
+                  >IP Intelligence quick start</a
+                >
+                for the on-premise data file and more examples.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="find-out-more" id="find-out-more">
+        <div class="container">
+          <div class="inner">
+            <h2>Find out more</h2>
+            <div class="columns">
+              <div>
+                <p class="list-title">On 51degrees.com</p>
+                <ul>
+                  <li><a href="https://51degrees.com/ip-intelligence?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=find-out-more">IP Intelligence</a> product page</li>
+                  <li><a href="https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=find-out-more">IP tester</a>, to look up any address</li>
+                  <li><a href="https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=find-out-more">IP Intelligence documentation</a></li>
+                  <li><a href="https://51degrees.com/pricing?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=find-out-more">Pricing</a>, for the location and network properties</li>
+                  <li><a href="https://51degrees.com/contact-us?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=find-out-more">Contact us</a> about the properties you need</li>
+                </ul>
+              </div>
+              <div>
+                <p class="list-title">Source code</p>
+                <ul class="repos">
+                  <li><a href="https://github.com/51Degrees/51degrees-node">https://github.com/51Degrees/51degrees-node</a></li>
+                  <li><a href="https://github.com/51Degrees/51degrees-cxx">https://github.com/51Degrees/51degrees-cxx</a></li>
+                  <li><a href="https://github.com/51Degrees/data">https://github.com/51Degrees/data</a></li>
+                  <li><a href="https://www.npmjs.com/package/fiftyone.ipintelligence">https://www.npmjs.com/package/fiftyone.ipintelligence</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <img src="../assets/51degrees-logo.png" alt="51Degrees" width="164" height="31" />
+        <p>© Copyright 2010–2026 51Degrees.mobi Limited</p>
+      </div>
+    </footer>
+  </body>
+</html>
