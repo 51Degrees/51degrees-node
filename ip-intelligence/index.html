@@ -48,7 +48,8 @@
               Resource Key returns the country and how confident the cloud
               service is about the location. A paid plan adds the region, the
               town, the latitude and longitude, and the network's registered
-              owner.
+              owner. This page's key is on a paid plan, so the playground
+              shows them all.
             </p>
             <a class="button" href="https://www.npmjs.com/package/fiftyone.ipintelligence"
               >Install from npm</a
@@ -80,26 +81,10 @@
                 />
                 <button class="button" type="submit">Look up</button>
               </form>
-              <span class="label">Use your own Resource Key</span>
-              <form id="key-form">
-                <input
-                  type="text"
-                  id="resource-key"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Your Resource Key"
-                  aria-label="Resource Key"
-                />
-                <button class="button" type="submit">Use key</button>
-              </form>
-              <p class="hint">
-                The key stays in this page and goes only to the cloud service.
-              </p>
             </div>
             <div class="result" aria-live="polite">
               <span class="label" id="result-title">What the cloud service returned:</span>
               <dl id="result"></dl>
-              <p class="note" id="result-note" hidden></p>
             </div>
           </div>
         </div>
@@ -145,7 +130,7 @@
             <h2>Getting started</h2>
             <ol>
               <li>
-                <a href="https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=getting-started"
+                <a href="https://51degrees.com/configure/AQRVdgJ-m5wBBHBG30g?utm_source=github&utm_medium=example&utm_campaign=51degrees-node&utm_content=ip-intelligence-index.html&utm_term=getting-started"
                   >Create a Resource Key</a
                 >. The link opens with the properties on this page ticked. The
                 country and location confidence are free, and the others need a

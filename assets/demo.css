@@ -177,14 +177,10 @@ h2 {
   color: #2b6dcf;
   font-weight: 700;
 }
-.playground dd span.paid,
-.playground dd span.missing {
-  background: rgba(230, 45, 57, 0.25);
-  color: #ffffff;
-  font-weight: 400;
-}
 .playground dd span.missing {
   background: rgba(241, 241, 241, 0.15);
+  color: #ffffff;
+  font-weight: 400;
 }
 .playground .big {
   font-family: "Lilita One", Verdana, sans-serif;
@@ -201,14 +197,6 @@ h2 {
 }
 .playground .big.Low {
   color: #ff7a82;
-}
-.playground .note {
-  font-size: 14px;
-  line-height: 22px;
-  margin: 20px 0 0;
-}
-.playground .note a {
-  color: #8fbaf0;
 }
 .playground .error {
   color: #ffb3b8;
