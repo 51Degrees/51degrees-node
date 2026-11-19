@@ -112,6 +112,10 @@ const fixDataFilePaths = (options) => {
 
 const setPipeline = (options) => {
   fixDataFilePaths(options);
+  // Usage sharing is on, as this example's 51d.json names the usage sharing
+  // element and as it should be in production, because the usage data shared
+  // improves the data and the service for everyone. The console examples
+  // turn it off, as they run sample evidence only.
   pipeline = new core.PipelineBuilder().buildFromConfiguration(options);
 
   // Logging of errors and other messages.
@@ -139,6 +143,11 @@ const server = http.createServer((req, res) => {
   // Information required for detection is called "evidence".
   // The User-Agent and IP address of the requesting client are
   // added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Extract required evidence from the Http request.

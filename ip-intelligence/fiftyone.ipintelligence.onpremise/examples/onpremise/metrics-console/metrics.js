@@ -25,8 +25,12 @@
  *
  * This example takes all public IP addresses and passes them to the IP
  * intelligence service, recording the average geographic area in square
- * kilometers, the number of polygons that form the area, and the
- * equivalent radius if the area can be represented as a circle.
+ * kilometers and the number of polygons that form the area.
+ *
+ * The area is the shape the data file gives, which the data model holds
+ * as a WKT shape of one or more polygons, so no single distance stands
+ * for it and none is written here. AccuracyRadius is a property of its
+ * own for anyone who wants a distance.
  *
  * The example can take a long time to complete. The sample of IP
  * addresses used in the metrics can be adjusted as a parameter. The
@@ -115,7 +119,6 @@ const OUTPUT_FIELDS = KEY_PROPERTIES.concat([
   'IpCount',
   'AreaCount',
   'AverageAreaKm',
-  'EquivalentRadiusKm',
   'AveragePolygons'
 ]);
 
@@ -326,8 +329,6 @@ const writeToCsv = function (output, groups) {
     const averageAreaKm = metric.areaCount > 0
       ? Math.floor(metric.totalAreaKm / metric.areaCount)
       : 0;
-    const equivalentRadiusKm =
-      Math.floor(Math.sqrt(averageAreaKm / Math.PI));
     let averagePolygons = 0;
     if (metric.polygons.size > 0) {
       let weightedSum = 0;
@@ -346,7 +347,6 @@ const writeToCsv = function (output, groups) {
       metric.ipCount,
       metric.areaCount,
       averageAreaKm,
-      equivalentRadiusKm,
       averagePolygons.toFixed(2)
     ]);
     output.write(values.join(',') + '\n');

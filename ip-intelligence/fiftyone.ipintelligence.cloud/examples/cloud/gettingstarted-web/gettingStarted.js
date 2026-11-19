@@ -109,11 +109,17 @@ const setPipeline = (options) => {
     throw NO_RESOURCE_KEY_MESSAGE;
   }
 
+  // Usage sharing is on, as this example's 51d.json names the usage sharing
+  // element and as it should be in production, because the usage data shared
+  // improves the data and the service for everyone. The console examples
+  // turn it off, as they run sample evidence only.
   pipeline = new core.PipelineBuilder().buildFromConfiguration(options);
 
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
@@ -134,6 +140,11 @@ const server = http.createServer((req, res) => {
   // Information required for detection is called "evidence".
   // For IP intelligence the IP address of the requesting client
   // is used. This is added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Extract required evidence from the Http request.

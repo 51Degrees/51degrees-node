@@ -181,8 +181,10 @@ RegisteredCountry, RegisteredName and RegisteredOwner. The example reads each
 value through `getValueHelper` in
 `ip-intelligence/fiftyone.ipintelligence.shared/lib/dataExtension.js`,
 which catches the error a missing property raises, so the lines for the other
-properties read `Unknown (...)` and the example carries on. It ends with the
-same two lines about the data file.
+properties read `Unknown (...)` and the example carries on. It then gives each
+value of Registered Country again with its weighting, which is 1 for a single
+answer, as `Registered Country: CH, weighting 1`. It ends with the same two
+lines about the data file.
 
 The paid data files have many more properties, as the
 [pricing page](https://51degrees.com/pricing?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=correct-output)
@@ -198,9 +200,9 @@ and one that adds the paid properties they show
 [here](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
 as `device-detection/readme.md` and `ip-intelligence/readme.md` say.
 
-The Device Detection cloud example reads `51d.json` from the folder it runs
-in, so run it from its own folder. It takes the key as its first argument, or
-from `_51DEGREES_RESOURCE_KEY`.
+The Device Detection cloud example reads `51d.json` from its own folder, so it
+runs from any folder. It takes the key as its first argument, or from
+`_51DEGREES_RESOURCE_KEY`.
 
 ```
 cd device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-console

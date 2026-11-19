@@ -39,6 +39,8 @@ class ElementData {
    * @param {object} options the options object
    * @param {FlowElement} options.flowElement the FlowElement this data
    * is part of
+   * @throws {string} 'flowElement dataKey not found', when the FlowElement
+   * has no data key
    */
   constructor ({ flowElement }) {
     if (!flowElement.dataKey) {
@@ -105,6 +107,8 @@ class ElementData {
    *
    * @param {string} key the key to retrieve a property value for
    * @returns {FlowData} value
+   * @throws {string} a message naming the property and the element, when
+   * the data has no value for the key in any case
    */
   get (key) {
     let value = this.getInternal(key);

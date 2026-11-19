@@ -54,8 +54,15 @@ module.exports = {
     'system watcher needs no license key. A key can be obtained from the ' +
     '51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.shared-errormessages.js&utm_term=licensekeyrequiredforupdates.',
   invalidPerformanceProfile: 'The performance profile \'%s\' is not valid',
+  /**
+   * @deprecated No longer used. The engines' missing property messages
+   * are in fiftyone.pipeline.engines' errorMessages.
+   */
   propertyKeyDataFiles: 'Property %s can be found in the following datafiles ' +
     '%s not %s',
+  /**
+   * @deprecated No longer used, as above.
+   */
   propertyNotFound: 'Property %s not found in %s',
   badDataUnsupportedVersion: 'The data %s is an unsupported version. Check ' +
     'you have the latest data and API.',

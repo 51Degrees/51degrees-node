@@ -164,6 +164,31 @@ test('the script parameters leave out the session id and the sequence',
     });
   });
 
+// evidence.md line 10: "Keys MUST be case-insensitive". A query key spelled
+// in any case is a script parameter, and the session id and the sequence
+// are left out whatever their case.
+const flowData4 = parameterPipeline.createFlowData();
+
+flowData4.evidence.add('Query.Session-Id', 'test-session');
+flowData4.evidence.add('QUERY.SEQUENCE', 1);
+flowData4.evidence.add('Query.Mark', 'kept');
+
+test('query evidence in any letter case becomes a script parameter',
+  (done) => {
+    flowData4.process().then(function () {
+      const declaration = flowData4.javascriptbuilder.javascript
+        .split(/\r?\n/)
+        .filter(line => /parameters\s*=/i.test(line) && line.includes('{'));
+
+      expect(declaration.length).toBe(1);
+      expect(declaration[0]).not.toMatch(/session-id/i);
+      expect(declaration[0]).not.toMatch(/sequence/i);
+      expect(declaration[0]).toContain('kept');
+
+      done();
+    });
+  });
+
 test('JSON bundler - Verify output where delayed execution = false', (done) => {
   const delayExecutionEngine1 = new core.FlowElement({
     dataKey: 'jsontestengine',

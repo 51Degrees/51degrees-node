@@ -53,6 +53,38 @@ const USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) ' +
 const READ = ['ismobile', 'platformname', 'browsername'];
 const TIMEOUT_MS = 300000;
 
+// The product of the data file at the path, which is 'Lite' for the free
+// data file.
+const productOf = (file) => new Engine({
+  dataFilePath: file,
+  performanceProfile: 'LowMemory',
+  autoUpdate: false,
+  fileSystemWatcher: false,
+  licenceKeys: ''
+}).engine.getProduct();
+
+// Why the test cannot run here, if it cannot. It needs the free Lite data
+// file and a data file that is not Lite at ENTERPRISE, which CI links in
+// only when it has a Device Detection licence, so with the free data files
+// alone it is skipped rather than failed.
+const skipReason = (() => {
+  if (!fs.existsSync(LITE)) {
+    return `there is no free Lite data file at '${LITE}'`;
+  }
+  if (!fs.existsSync(ENTERPRISE)) {
+    return `there is no Enterprise data file at '${ENTERPRISE}'`;
+  }
+  if (productOf(ENTERPRISE) === 'Lite') {
+    return `the data file at '${ENTERPRISE}' is the free Lite data file`;
+  }
+  return undefined;
+})();
+if (skipReason) {
+  console.warn('The reload test of an engine built with no Property names ' +
+    `is skipped because ${skipReason}.`);
+}
+const testWithEnterprise = skipReason ? test.skip : test;
+
 // The values of READ the pipeline gives for USER_AGENT.
 const values = async (pipeline) => {
   const flowData = pipeline.createFlowData();
@@ -72,13 +104,9 @@ describe('an engine built with no Property names', () => {
     fs.rmSync(folder, { recursive: true, force: true });
   });
 
-  test('keeps its Property list and reads it from the reloaded data file',
+  testWithEnterprise(
+    'keeps its Property list and reads it from the reloaded data file',
     async () => {
-      for (const file of [LITE, ENTERPRISE]) {
-        if (!fs.existsSync(file)) {
-          throw new Error(`No data file at '${file}'.`);
-        }
-      }
       const file = path.join(folder, path.basename(LITE));
       fs.copyFileSync(LITE, file);
 

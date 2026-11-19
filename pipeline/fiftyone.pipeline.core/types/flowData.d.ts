@@ -1,14 +1,14 @@
 export = FlowData;
 /**
- * @typedef {import('./pipeline')} Pipeline
- * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('./elementData')} ElementData
- */
-/**
  * FlowData is created by a specific pipeline
  * It collects evidence set by the user
  * It passes evidence to flowElements in the pipeline
  * These elements can return ElementData or populate an errors object
+ *
+ * A flow data is not safe to use from several threads at once. Create one
+ * for each request and use it from one task at a time. A caller that shares
+ * one between asynchronous tasks or worker threads is responsible for any
+ * locking.
  */
 declare class FlowData {
     /**
@@ -22,7 +22,7 @@ declare class FlowData {
     evidence: Evidence;
     errors: {};
     stopped: boolean;
-    data: {};
+    elementDataHead: any;
     /**
      * Get back an object that lists all evidence that will be
      * used by any flowElements in the flowData's parent pipeline
@@ -59,10 +59,41 @@ declare class FlowData {
      */
     setElementData(data: ElementData): FlowData;
     /**
+     * The ElementData under a FlowElement's data key, or undefined if there
+     * is none. Data added later under the same key replaces the earlier, and
+     * a key that finds nothing as given is looked for again ignoring its
+     * letter case. Ignoring case, the key added first that matches is used.
+     *
+     * @param {string} flowElementDataKey the datakey of a FlowElement
+     * @returns {ElementData|undefined} data from the FlowElement
+     */
+    tryGet(flowElementDataKey: string): ElementData | undefined;
+    /**
+     * Every ElementData in the FlowData, in Pipeline order, being the order
+     * the FlowElements were added to the Pipeline, with the members of a
+     * parallel group in the group's place. Data under a key no FlowElement
+     * of the Pipeline has comes last, in the order it was added.
+     *
+     * @returns {ElementData[]} the ElementData
+     */
+    listElementData(): ElementData[];
+    /**
+     * The ElementData by data key, in Pipeline order. Deprecated, as the
+     * FlowData keeps its ElementData in a list, and this object is made
+     * from the list each time it is read. Use get, tryGet or
+     * listElementData instead.
+     *
+     * @deprecated
+     * @returns {object} the ElementData by data key
+     */
+    get data(): object;
+    /**
      * Get ElementData by a flowElement's data key
      *
      * @param {string} flowElementDataKey the datakey of a FlowElement
      * @returns {ElementData} data from the FlowElement
+     * @throws {string} a message naming the data key and the data keys there
+     * are, when no element has given data under the key in any case
      */
     get(flowElementDataKey: string): ElementData;
     /**

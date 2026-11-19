@@ -82,6 +82,8 @@ declare class PipelineBuilder {
      *
      * @param {string} configPath path to a JSON configuration file
      * @returns {Pipeline} the constructed pipeline
+     * @throws {Error|string} an Error when the file cannot be read or does not
+     * hold JSON, and whatever buildFromConfiguration throws
      */
     buildFromConfigurationFile(configPath: string): Pipeline;
     /**
@@ -89,6 +91,9 @@ declare class PipelineBuilder {
      *
      * @param {object} config a JSON configuration object
      * @returns {Pipeline} the constructed pipeline
+     * @throws {string|Error} "Can't find" and the name, when an element the
+     * configuration names cannot be required by that name or as a path from
+     * the working folder, and the error an element's constructor throws
      */
     buildFromConfiguration(config: object): Pipeline;
     /**

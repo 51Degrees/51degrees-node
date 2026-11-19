@@ -44,6 +44,19 @@ const Property = require('./property');
 const Profile = require('./profile');
 
 /**
+ * The key with the part before its first dot in lower case.
+ *
+ * @param {string} key an evidence key, such as Header.User-Agent
+ * @returns {string} the key with a lower case prefix
+ */
+const lowerCasePrefix = (key) => {
+  const dot = key.indexOf('.');
+  return dot === -1
+    ? key
+    : key.substring(0, dot).toLowerCase() + key.substring(dot);
+};
+
+/**
  * @typedef {import('fiftyone.pipeline.engines').DataKeyedCache} DataKeyedCache
  */
 
@@ -92,6 +105,21 @@ const initComponents = function (metadata) {
   this.components = components;
 };
 
+// The possible values of a match metric Property, read as a data file
+// Property's are, each with a name and no description.
+const metricValues = function (names) {
+  const values = names.map((name) => ({
+    getName: () => name,
+    getDescription: () => ''
+  }));
+  return {
+    getValues: function * () {
+      yield * values;
+    },
+    getNumberOfValues: () => values.length
+  };
+};
+
 const initMatchMetrics = function () {
   // Add a component for Device Metrics
   const metricComponent = {
@@ -111,7 +139,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.matchedNodesDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.difference = {
@@ -121,7 +150,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.differenceDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.drift = {
@@ -131,7 +161,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.driftDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.deviceID = {
@@ -141,7 +172,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: '0-0-0-0',
     description: constants.deviceIdDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.userAgents = {
@@ -151,7 +183,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: [],
     description: constants.userAgentsDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.iterations = {
@@ -161,7 +194,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 0,
     description: constants.iterationsDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.method = {
@@ -171,7 +205,8 @@ const initMatchMetrics = function () {
     dataFiles: metricDataFiles.slice(),
     defaultValue: 'NONE',
     description: constants.methodDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues(['NONE', 'PERFORMANCE', 'COMBINED', 'PREDICTIVE'])
   };
 
   metricComponent.properties = [
@@ -229,6 +264,12 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {Array<string>|string} options.restrictedProperties list of
    * properties the engine will be restricted to, or one comma separated
    * string of them, as a configuration file gives a list
+   * @param {Array<string>|string} [options.indexedProperties] list of
+   * Properties, such as TAC and NativeModel, whose values the native code
+   * indexes to the profiles holding them when the data file loads, or one
+   * comma separated string of them. profileIdsForPropertyValue then finds
+   * the profiles for a value of one of them without reading every profile.
+   * Names are matched exactly. None by default.
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
@@ -284,6 +325,7 @@ class DeviceDetectionOnPremise extends Engine {
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
       restrictedProperties,
+      indexedProperties,
       licenceKeys,
       download,
       performanceProfile = 'Balanced',
@@ -484,16 +526,30 @@ class DeviceDetectionOnPremise extends Engine {
     // This should always be set to 'false' for on-premise
     config.setUseUpperPrefixHeaders(false);
 
+    // The Properties whose values the native code indexes to their
+    // profiles.
+    const indexed = core.listSetting(indexedProperties);
+    if (indexed && indexed.length > 0) {
+      const indexedList = new swigWrapper.VectorStringSwig();
+      indexed.forEach(function (property) {
+        indexedList.add(property);
+      });
+      config.setIndexedProperties(indexedList);
+    }
+
     super(...arguments);
 
     this.dataKey = 'device';
 
     // The data file's keys are read when the engine is initialised,
     // which waits for the download when updateOnStart is set and there
-    // is no file yet. Until then every key is kept, so evidence set
-    // before then is not lost, and initEngine replaces this with the
-    // keys the file lists.
-    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
+    // is no file yet. Until then the engine accepts no Evidence, as
+    // nothing can change its results, and keeps every key, so evidence
+    // set before then is not lost. initEngine replaces both with the keys
+    // the file lists.
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
+      new EvidenceKeyFilter([]));
+    this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
 
     const current = this;
 
@@ -525,6 +581,7 @@ class DeviceDetectionOnPremise extends Engine {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
       current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
+      current.keptEvidenceKeyFilter = undefined;
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;
@@ -627,6 +684,28 @@ class DeviceDetectionOnPremise extends Engine {
   }
 
   /**
+   * The ids of the profiles that hold a value of a Property, from the
+   * native code, in ascending order with each id once. The name and the
+   * value are matched exactly, as the data file holds them. A Property
+   * named in the indexedProperties option is found through the native
+   * index, and any other by reading every profile, which gives the same
+   * ids more slowly.
+   *
+   * @param {string} propertyName the name of the Property
+   * @param {string} value the value of the Property
+   * @returns {Array<number>} the ids of the profiles holding the value
+   */
+  profileIdsForPropertyValue (propertyName, value) {
+    const ids = this.engine.getProfileIdsForPropertyValue(
+      propertyName, value);
+    const result = [];
+    for (let i = 0; i < ids.size(); i++) {
+      result.push(ids.get(i));
+    }
+    return result;
+  }
+
+  /**
    * Internal process method for Device Detection On Premise engine
    * Fetches the results from the SWIG wrapper into an instance of
    * the SwigData class which can be used to retrieve results from
@@ -648,8 +727,10 @@ class DeviceDetectionOnPremise extends Engine {
       const accepted = dd.evidenceKeyFilter.filterEvidence(
         flowData.evidence.getAll());
 
+      // Evidence keys ignore case, but the native evidence matches a key's
+      // prefix with case, so the prefix is given in lower case.
       Object.entries(accepted).forEach(function ([key, value]) {
-        evidence.set(key, value);
+        evidence.set(lowerCasePrefix(key), value);
       });
 
       const result = dd.engine.process(evidence);

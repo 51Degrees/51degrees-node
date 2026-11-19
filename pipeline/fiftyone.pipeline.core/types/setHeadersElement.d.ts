@@ -17,6 +17,7 @@ declare class SetHeadersElement extends FlowElement {
             type: string;
         };
     };
+    /** @type {object} */
     headers: object;
     /**
      * Get the name of the header which the property relates to.

@@ -156,6 +156,13 @@ class JSONBundlerElement extends FlowElement {
 
     this.dataKey = 'jsonbundler';
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.properties = {
+      json: {
+        name: 'json',
+        type: 'string',
+        description: 'The raw JSON produced by this element.'
+      }
+    };
     this.propertyCache = null;
   }
 
@@ -166,6 +173,8 @@ class JSONBundlerElement extends FlowElement {
    *
    * @param {FlowData} flowData the FlowData being processed
    * @returns {number} the sequence number
+   * @throws {Error} when there is no sequence number, which a Sequence
+   * Element placed before the JSON Builder gives
    */
   getSequence (flowData) {
     let sequence;

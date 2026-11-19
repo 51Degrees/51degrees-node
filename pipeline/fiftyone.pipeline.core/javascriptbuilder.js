@@ -231,6 +231,8 @@ class JavaScriptBuilderElement extends FlowElement {
    * be set per request, using the "query.fod-js-enable-cookies" evidence key.
    * For more details on personal data policy, see https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-javascriptbuilder.js&utm_term=constructor
    * @param {boolean} options.minify Whether to minify the JavaScript
+   * @throws {Error} when objName is not a valid name, or when protocol is
+   * given and is not http or https
    */
   constructor ({
     objName = defaultObjectName,
@@ -273,6 +275,13 @@ class JavaScriptBuilderElement extends FlowElement {
 
     this.dataKey = 'javascriptbuilder';
     this.evidenceKeyFilter = new JSEvidenceKeyFilter();
+    this.properties = {
+      javascript: {
+        name: 'javascript',
+        type: 'string',
+        description: 'The raw JavaScript produced by this Element.'
+      }
+    };
 
     // Set once a callback URL that is not valid has been logged, because a
     // misconfigured element would otherwise log on every request.
@@ -348,9 +357,10 @@ class JavaScriptBuilderElement extends FlowElement {
     );
     const scriptParameters = {};
     for (const key in evidence) {
-      if (key.startsWith('query.')) {
+      // Evidence keys ignore case, so the prefix and the excluded names do.
+      if (key.toLowerCase().startsWith('query.')) {
         const name = key.substring('query.'.length);
-        if (excludedParameters.indexOf(name) === -1) {
+        if (excludedParameters.indexOf(name.toLowerCase()) === -1) {
           scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
         }
       }

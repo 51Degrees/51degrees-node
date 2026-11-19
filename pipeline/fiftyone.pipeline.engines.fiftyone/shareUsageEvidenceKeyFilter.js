@@ -62,8 +62,8 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
    * query string and form parameter is shared. True unless set to false.
    * @param {Array<string>|null} options.queryWhitelist query string and
    * form parameters to share as well as those starting 51D_ when
-   * shareAllQueryStringParameters is false, or null to share every
-   * parameter
+   * shareAllQueryStringParameters is false. null is the same as an empty
+   * list.
    * @param {Array<string>} options.headerBlacklist headers not to share
    * @param {boolean} options.includeSession whether the session cookie is
    * included
@@ -83,9 +83,8 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
 
     this.shareAllQueryStringParameters =
       shareAllQueryStringParameters !== false;
-    this.includedQueryStringParams = queryWhitelist === null
-      ? null
-      : queryWhitelist.map(parameter => parameter.toLowerCase());
+    this.includedQueryStringParams = (queryWhitelist || [])
+      .map(parameter => parameter.toLowerCase());
     this.blockedHttpHeaders = (headerBlacklist || [])
       .map(header => header.toLowerCase());
     this.cookie = cookie ? cookie.toLowerCase() : undefined;
@@ -143,9 +142,8 @@ class ShareUsageEvidenceKeyFilter extends EvidenceKeyFilter {
     if (prefix === 'query') {
       // Share every query string parameter unless that is turned off,
       // when only those that start with 51d_ or are in the list are
-      // shared. A list of null shares them all.
+      // shared.
       return this.shareAllQueryStringParameters ||
-        this.includedQueryStringParams === null ||
         field.startsWith(FIFTYONE_PREFIX) ||
         this.includedQueryStringParams.includes(field);
     }

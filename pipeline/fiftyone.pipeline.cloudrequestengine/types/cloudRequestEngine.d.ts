@@ -22,14 +22,21 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * For more detail, see the 'Request Headers' section in the
      * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
      * @param {RequestClient} options.requestClient Set predefined RequestClient.
+     * @param {CloudDiscoveryState|string|object} [options.discoveryState] a
+     * saved copy of discovery for the same keys, from getDiscoveryState, as
+     * the copy, its JSON text or that JSON parsed. The engine then makes no
+     * discovery request.
+     * A blank value is the option unset, so the engine discovers for
+     * itself, and text that is not the copy's JSON is refused.
      */
-    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient }: {
+    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient, discoveryState }: {
         resourceKey: string;
         licenseKey: string;
         requestedProperties: Array<string> | string;
         baseURL: string;
         cloudRequestOrigin: string;
         requestClient: RequestClient;
+        discoveryState?: CloudDiscoveryState | string | object;
     }, ...args: any[]);
     resourceKey: string;
     licenseKey: string;
@@ -41,6 +48,16 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     evidenceKeys: any[];
     evidenceKeysFetched: boolean;
     flowElementProperties: {};
+    /**
+     * A copy of what discovery fetched, which a later engine for the same keys
+     * can be given as its discoveryState so that it makes no discovery
+     * request. There is a copy once both discovery requests have answered,
+     * for example once ready() has resolved, or when the engine was given one.
+     *
+     * @returns {CloudDiscoveryState|undefined} the copy, or undefined before
+     * then
+     */
+    getDiscoveryState(): CloudDiscoveryState | undefined;
     /**
      * Check if the keys and properties have been fetched.
      *
@@ -73,10 +90,12 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     processInternal(flowData: FlowData): Promise<any>;
     /**
-     * Fetches the evidence keys and properties before the first process,
-     * whatever else is in the pipeline, because the cache key is built from
-     * the evidence keys. A fetch that fails is tried again on the next
-     * process, and its error is the process error.
+     * Has the evidence keys and properties before processing, whatever else
+     * is in the pipeline, because the cache key is built from the evidence
+     * keys. A process that starts while a discovery attempt is under way,
+     * such as the one made when the engine was built, shares its answer. A
+     * process that starts after discovery failed tries again, and a failure
+     * is the process error.
      *
      * @param {FlowData} flowData FlowData to process
      * @returns {Promise} resolved once the FlowData is processed
@@ -240,6 +259,7 @@ declare namespace CloudRequestEngine {
     export { FlowData, Evidence };
 }
 import RequestClient = require("./requestClient");
+import CloudDiscoveryState = require("./cloudDiscoveryState");
 import CloudRequestError = require("./cloudRequestError");
 type FlowData = import("fiftyone.pipeline.core/types/flowData");
 type Evidence = import("fiftyone.pipeline.core/types/evidence");

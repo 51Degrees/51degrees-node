@@ -105,10 +105,11 @@ const tryServeStatic = (req, res) => {
   return true;
 };
 
-// Load in a datafile, which is downloaded into the cxx/data submodule if
+// Load in a datafile, named by the _51DEGREES_DD_PATH environment
+// variable when it is set, or downloaded into the cxx/data submodule if
 // it is missing.
 
-const datafile = ExampleUtils.findFile('51Degrees-LiteV4.1.hash');
+const datafile = ExampleUtils.findDataFile('51Degrees-LiteV4.1.hash');
 
 if (datafile === undefined) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched.");
@@ -163,6 +164,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Add any information from the request

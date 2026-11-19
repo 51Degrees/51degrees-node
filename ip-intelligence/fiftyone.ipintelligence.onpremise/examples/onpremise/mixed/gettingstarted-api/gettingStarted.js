@@ -200,6 +200,11 @@ const evidenceKeys = function (res) {
 // Processes the evidence provided in the request and returns the JSON
 // response produced by the JSON bundler element.
 const processEvidence = function (req, res, query, body) {
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Add the query string parameters and any form body values as query
@@ -312,7 +317,10 @@ if (process.env.JEST_WORKER_ID === undefined) {
     console.log(`Device detection data file: ${deviceDataFile}`);
     console.log(`IP intelligence data file: ${ipDataFile}`);
     setPipeline(deviceDataFile, ipDataFile);
-    server.listen(PORT, '0.0.0.0');
+    // Only the machine the example runs on, because the example serves
+    // the data file in use, at 127.0.0.1 rather than localhost, which
+    // can resolve to the IPv6 loopback alone.
+    server.listen(PORT, '127.0.0.1');
     console.log(`Local cloud API listening on: http://localhost:${PORT}`);
     reportEnterpriseProperties();
   } else {

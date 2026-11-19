@@ -37,7 +37,13 @@ const constants = require(path.join(__dirname, '/../constants'));
 const fs = require('fs');
 
 const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
-const DataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
+const EnterpriseDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
+// The Enterprise data file where CI has linked it in, otherwise the free
+// Lite one. Nothing is written under the Enterprise name, so another test
+// never takes a copy of the Lite file for the Enterprise one.
+const DataFile = fs.existsSync(EnterpriseDataFile)
+  ? EnterpriseDataFile
+  : LiteDataFile;
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
@@ -48,14 +54,6 @@ const ChromeUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 describe('deviceDetectionOnPremise', () => {
-  beforeAll(async () => {
-    // Copy the Lite data file to the name the tests read if that file does
-    // not exist, waiting for the copy because the first test opens it.
-    if (!fs.existsSync(DataFile)) {
-      await fs.promises.copyFile(LiteDataFile, DataFile);
-    }
-  });
-
   // Check that for a successful detection, all properties loaded by the engine
   // are accessible in the results.
   test('Available Properties', async () => {
