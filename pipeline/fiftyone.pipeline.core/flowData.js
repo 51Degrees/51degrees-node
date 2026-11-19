@@ -32,10 +32,48 @@ const LicenseKeys = require('./licenseKeys');
  */
 
 /**
+ * The newest node for each data key, in Pipeline order, being the order the
+ * FlowElements were added to the Pipeline with the members of a parallel
+ * group in the group's place. A key no FlowElement of the Pipeline has comes
+ * last, in the order its data was added.
+ *
+ * @param {FlowData} flowData the FlowData
+ * @returns {Array<{key: string, data: ElementData}>} the nodes
+ */
+function orderedNodes (flowData) {
+  const nodes = [];
+  const seen = new Set();
+  for (let node = flowData.elementDataHead; node !== null;
+    node = node.next) {
+    if (!seen.has(node.key)) {
+      seen.add(node.key);
+      nodes.push(node);
+    }
+  }
+  // The list holds the newest first, so it is reversed into the order the
+  // data was added before it is sorted.
+  nodes.reverse();
+  const order = flowData.pipeline.dataKeyOrder;
+  const position = (node) => order !== undefined && order.has(node.key)
+    ? order.get(node.key)
+    : Number.MAX_SAFE_INTEGER;
+  return nodes
+    .map((node, added) => ({ node, added }))
+    .sort((a, b) => (position(a.node) - position(b.node)) ||
+      (a.added - b.added))
+    .map(({ node }) => node);
+}
+
+/**
  * FlowData is created by a specific pipeline
  * It collects evidence set by the user
  * It passes evidence to flowElements in the pipeline
  * These elements can return ElementData or populate an errors object
+ *
+ * A flow data is not safe to use from several threads at once. Create one
+ * for each request and use it from one task at a time. A caller that shares
+ * one between asynchronous tasks or worker threads is responsible for any
+ * locking.
  */
 class FlowData {
   /**
@@ -58,8 +96,12 @@ class FlowData {
     // flowElements are processed
     this.stopped = false;
 
-    // Store of data by flowElement dataKey
-    this.data = {};
+    // The Element Data, as a list whose head is the newest node. A node
+    // holds the data key, the Element Data and the next node, and never
+    // changes once added, so a reader follows the links with no lock. One
+    // thread runs JavaScript, so a plain write adds a node even while the
+    // members of a parallel group run.
+    this.elementDataHead = null;
 
     return new Proxy(this, {
       get: (data, key) => {
@@ -157,9 +199,77 @@ class FlowData {
    * @returns {FlowData} the FlowData object
    */
   setElementData (data) {
-    this.data[data.flowElement.dataKey] = data;
+    this.elementDataHead = {
+      key: data.flowElement.dataKey,
+      data,
+      next: this.elementDataHead
+    };
 
     return this;
+  }
+
+  /**
+   * The ElementData under a FlowElement's data key, or undefined if there
+   * is none. Data added later under the same key replaces the earlier, and
+   * a key that finds nothing as given is looked for again ignoring its
+   * letter case. Ignoring case, the key added first that matches is used.
+   *
+   * @param {string} flowElementDataKey the datakey of a FlowElement
+   * @returns {ElementData|undefined} data from the FlowElement
+   */
+  tryGet (flowElementDataKey) {
+    const exact = (key) => {
+      for (let node = this.elementDataHead; node !== null;
+        node = node.next) {
+        if (node.key === key) {
+          return node.data;
+        }
+      }
+      return undefined;
+    };
+    const data = exact(flowElementDataKey);
+    if (data !== undefined || typeof flowElementDataKey !== 'string') {
+      return data;
+    }
+    // The list holds the newest first, so the last match is the key added
+    // first, and its newest data is then found by that key.
+    const lower = flowElementDataKey.toLowerCase();
+    let first;
+    for (let node = this.elementDataHead; node !== null; node = node.next) {
+      if (typeof node.key === 'string' && node.key.toLowerCase() === lower) {
+        first = node.key;
+      }
+    }
+    return first === undefined ? undefined : exact(first);
+  }
+
+  /**
+   * Every ElementData in the FlowData, in Pipeline order, being the order
+   * the FlowElements were added to the Pipeline, with the members of a
+   * parallel group in the group's place. Data under a key no FlowElement
+   * of the Pipeline has comes last, in the order it was added.
+   *
+   * @returns {ElementData[]} the ElementData
+   */
+  listElementData () {
+    return orderedNodes(this).map((node) => node.data);
+  }
+
+  /**
+   * The ElementData by data key, in Pipeline order. Deprecated, as the
+   * FlowData keeps its ElementData in a list, and this object is made
+   * from the list each time it is read. Use get, tryGet or
+   * listElementData instead.
+   *
+   * @deprecated
+   * @returns {object} the ElementData by data key
+   */
+  get data () {
+    const byKey = {};
+    for (const node of orderedNodes(this)) {
+      byKey[node.key] = node.data;
+    }
+    return byKey;
   }
 
   /**
@@ -173,21 +283,11 @@ class FlowData {
   get (flowElementDataKey) {
     this.pipeline.log('debug', 'Getting flowElement ' + flowElementDataKey);
 
-    let elementData = this.data[flowElementDataKey];
-    if (typeof elementData === 'undefined' &&
-      typeof flowElementDataKey === 'string') {
-      // A key is compared ignoring its letter case, so a key that finds
-      // nothing as given is looked for again that way.
-      const lower = flowElementDataKey.toLowerCase();
-      const key = Object.keys(this.data)
-        .find((dataKey) => dataKey.toLowerCase() === lower);
-      if (key !== undefined) {
-        elementData = this.data[key];
-      }
-    }
+    const elementData = this.tryGet(flowElementDataKey);
     if (typeof elementData === 'undefined') {
       const message = util.format(errorMessages.noElementData,
-        flowElementDataKey, Object.keys(this.data).join(', '));
+        flowElementDataKey, orderedNodes(this)
+          .map((node) => node.key).join(', '));
       throw message;
     }
     return elementData;

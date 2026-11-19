@@ -6,6 +6,7 @@ export let ErrorMessages: {
     genericMissingProperties: string;
     noReasonUnknown: string;
     lazyPending: string;
+    usageSharingNotLast: string;
 };
 export let Constants: {
     evidenceEnableCookies: string;
