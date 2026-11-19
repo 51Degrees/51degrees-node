@@ -41,7 +41,8 @@ let server;
 const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 describe('deviceDetectionOnPremise', () => {
-  // data-updates.md lines 107 to 109 and 392: a license key is needed
+  // As data-updates.md says at specifications d79bbe3b, lines 114 to 116
+  // and 399, a license key is needed
   // only by polling (autoUpdate) and the update on start-up, which
   // download from the Distributor, and the build fails naming the option
   // to turn off when one of them is on with no key. The file system
