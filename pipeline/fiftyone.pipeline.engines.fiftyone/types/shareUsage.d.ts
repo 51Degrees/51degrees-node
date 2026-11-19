@@ -9,6 +9,14 @@ declare const ShareUsage_base: typeof import("fiftyone.pipeline.engines/types/en
  */
 declare class ShareUsage extends ShareUsage_base {
     /**
+     * The time in milliseconds, from a clock that only goes forward, which
+     * decides when the values that do not change while the element lives are
+     * written again. Tests replace it to move time on.
+     *
+     * @returns {number} the time now in milliseconds
+     */
+    static now(): number;
+    /**
      * Constructor for ShareUsage engine
      *
      * @param {object} options settings object for share usage.
@@ -105,6 +113,8 @@ declare class ShareUsage extends ShareUsage_base {
     backOff: ShareUsageBackOff;
     sending: boolean;
     resumeTimer: any;
+    processId: `${string}-${string}-${string}-${string}-${string}`;
+    invariantWrittenAt: number;
     endpoint: url.URL;
     http: typeof import("http") | typeof import("https");
     /**
