@@ -35,17 +35,9 @@ const testResourceKey = 'AAAAAAAAAAAA';
 
 const testEnvVarEndPoint = 'https://testhost/';
 
-const testOldEnvVarEndPoint = 'https://oldtesthost/';
-
-// The name the endpoint variable had before, which is still read when the
-// new name is not set. Built in two parts so the environment variable name
-// check does not find it here.
-const oldEndpointVariable = 'FOD' + '_CLOUD_API_URL';
-
 afterEach(() => { // eslint-disable-line
-  // Reset the endpoint environment variable, and the old name
+  // Reset the endpoint environment variable
   process.env._51DEGREES_CLOUD_ENDPOINT = '';
-  delete process.env[oldEndpointVariable];
 });
 
 // The endpoint tests give each engine a stand-in client, because an engine
@@ -82,43 +74,6 @@ test('custom end point - environment precedence', done => {
   done();
 });
 
-// Check that the old name of the endpoint variable is still read when the
-// new name is not set
-test('custom end point - old variable name read', () => {
-  delete process.env._51DEGREES_CLOUD_ENDPOINT;
-  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
-  const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey,
-    requestClient: new MockRequestClient()
-  });
-
-  expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
-});
-
-// Check that an empty new name counts as not set, so the old name is read
-test('custom end point - old variable name read, new name empty', () => {
-  process.env._51DEGREES_CLOUD_ENDPOINT = '';
-  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
-  const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey,
-    requestClient: new MockRequestClient()
-  });
-
-  expect(testCloudRequestEngine.baseURL).toBe(testOldEnvVarEndPoint);
-});
-
-// Check that the new name wins when both names are set
-test('custom end point - new variable name wins', () => {
-  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
-  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
-  const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey,
-    requestClient: new MockRequestClient()
-  });
-
-  expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
-});
-
 // Check that default setting is used if nothing else is set
 test('custom end point - default value', done => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
@@ -130,18 +85,6 @@ test('custom end point - default value', done => {
   expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
 
   done();
-});
-
-// Check that an empty old name counts as not set
-test('custom end point - default value, old name empty', () => {
-  delete process.env._51DEGREES_CLOUD_ENDPOINT;
-  process.env[oldEndpointVariable] = '';
-  const testCloudRequestEngine = new CloudRequestEngine({
-    resourceKey: testResourceKey,
-    requestClient: new MockRequestClient()
-  });
-
-  expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
 });
 
 /**
@@ -166,35 +109,7 @@ const warningsFromTwoProcesses = async (options = {}) => {
   return warnings;
 };
 
-// Check that reading the old name is logged as deprecated, once for the
-// engine, naming the name that replaces it
-test('custom end point - old variable name logged once', async () => {
-  delete process.env._51DEGREES_CLOUD_ENDPOINT;
-  process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
-
-  const warnings = await warningsFromTwoProcesses();
-
-  expect(warnings).toHaveLength(1);
-  expect(warnings[0]).toContain(oldEndpointVariable);
-  expect(warnings[0]).toContain('deprecated');
-  expect(warnings[0]).toContain('_51DEGREES_CLOUD_ENDPOINT');
-});
-
-// Check that nothing is logged when the old name is set and not used,
-// because the new name or the baseURL option is set
-test('custom end point - old variable name not logged when not used',
-  async () => {
-    process.env[oldEndpointVariable] = testOldEnvVarEndPoint;
-
-    process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
-    expect(await warningsFromTwoProcesses()).toEqual([]);
-
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    expect(await warningsFromTwoProcesses({ baseURL: 'https://mine/' }))
-      .toEqual([]);
-  });
-
-// Check that nothing is logged when neither name is set
+// Check that nothing is logged when the variable is not set
 test('custom end point - nothing logged for the default', async () => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
 

@@ -74,7 +74,7 @@ const DATA_FILE_PATH_VARIABLE = '_51DEGREES_DD_PATH';
  * The name the variable had when it began with the digit.
  *
  * @deprecated Set the variable DATA_FILE_PATH_VARIABLE names. This name
- * is read only when that variable is unset or empty.
+ * is no longer read.
  */
 const DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
 
@@ -84,45 +84,6 @@ const DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
  * @deprecated Use DATA_FILE_PATH_VARIABLE, which holds the same name.
  */
 const LEGACY_DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
-
-// The old names already said to be deprecated, so each is said once.
-const reportedOldNames = new Set();
-
-/**
- * Prints, once for each old name, that the name is deprecated and which
- * name replaces it.
- *
- * @param {string} oldName the deprecated environment variable name
- * @param {string} name the name that replaces it
- */
-const reportOldName = function (oldName, name) {
-  if (reportedOldNames.has(oldName) === false) {
-    reportedOldNames.add(oldName);
-    console.warn(`The ${oldName} environment variable is deprecated and ` +
-      `${name} replaces it. Set ${name} instead.`);
-  }
-};
-
-/**
- * Reads an environment variable under its name and, when that is unset or
- * empty, under the deprecated names it had before, in order.
- *
- * @param {string} name the environment variable name
- * @param {...string} oldNames the deprecated names it had before
- * @returns {string|undefined} the value, or undefined when none is set
- */
-const readVariable = function (name, ...oldNames) {
-  if (process.env[name]) {
-    return process.env[name];
-  }
-  for (const oldName of oldNames) {
-    if (process.env[oldName]) {
-      reportOldName(oldName, name);
-      return process.env[oldName];
-    }
-  }
-  return undefined;
-};
 
 /**
  * Get the command that downloads one of the data submodule's files.
@@ -203,11 +164,10 @@ class ExampleUtils {
   }
 
   // Get the explicit data file path from the environment, read from the
-  // variable named by DATA_FILE_PATH_VARIABLE, then from the deprecated
-  // name when that is unset or empty. Returns undefined when neither is
-  // set.
+  // variable named by DATA_FILE_PATH_VARIABLE. Returns undefined when it is
+  // not set.
   static getDataFilePathFromEnv () {
-    return readVariable(DATA_FILE_PATH_VARIABLE, DATA_FILE_PATH_ENV_VAR);
+    return process.env[DATA_FILE_PATH_VARIABLE] || undefined;
   }
 
   // Get the path to a device detection data file. The environment is

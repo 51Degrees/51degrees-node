@@ -52,24 +52,6 @@ const hasOwn = (object, name) =>
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
 
-// The engines that read their endpoint from the deprecated variable name
-// and have not yet logged that they did.
-const oldEndpointVariableUnreported = new WeakSet();
-
-/**
- * Logs, once for an engine, that its endpoint came from the deprecated
- * variable name. An engine has no Pipeline to log to when it is built, so
- * the first FlowData it processes carries the message.
- *
- * @param {CloudRequestEngine} engine the engine processing
- * @param {FlowData} flowData the flow data whose pipeline is logged to
- */
-function reportOldEndpointVariable (engine, flowData) {
-  if (oldEndpointVariableUnreported.delete(engine)) {
-    flowData.pipeline.log('warn', errorMessages.oldEndpointVariable);
-  }
-}
-
 // The discovery attempt each engine is making, shared by the build and every
 // process that starts while it is under way.
 const discoveryAttempts = new WeakMap();
@@ -317,18 +299,8 @@ class CloudRequestEngine extends Engine {
     // everything built on this engine works unchanged once
     // _51DEGREES_CLOUD_ENDPOINT names the other host's API base including the
     // /api/v4/ segment.
-    //
-    // FOD_CLOUD_API_URL is the deprecated name of the same variable. It is
-    // read only when _51DEGREES_CLOUD_ENDPOINT is unset or empty, and the
-    // first process logs that it was.
     if (!baseURL) {
       baseURL = process.env._51DEGREES_CLOUD_ENDPOINT;
-      if (!baseURL) {
-        baseURL = process.env.FOD_CLOUD_API_URL;
-        if (baseURL) {
-          oldEndpointVariableUnreported.add(this);
-        }
-      }
       if (!baseURL) {
         baseURL = sharedValues.baseURLDefault;
       }
@@ -473,7 +445,6 @@ class CloudRequestEngine extends Engine {
    * @returns {Promise} resolved once the FlowData is processed
    */
   process (flowData) {
-    reportOldEndpointVariable(this, flowData);
     reportUnloggedBuildFailure(this, flowData);
     if (this.keysAndPropertiesFetched) {
       return super.process(flowData);

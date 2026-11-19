@@ -32,7 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
 
-const { NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
+const { NEEDS_ENTERPRISE } =
   require(path.join(__dirname, 'exampleUtils'));
 
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code';
@@ -53,10 +53,7 @@ const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
 // none of them.
 const SETTINGS = [
   '_51DEGREES_DD_PATH',
-  DATA_FILE_PATH_ENV_VAR,
-  '_51DEGREES_LICENSE_KEY',
-  'LICENSE_KEY',
-  'LICENSEKEY'
+  '_51DEGREES_LICENSE_KEY'
 ];
 
 // Runs an example in its own process, from its own folder, as a person

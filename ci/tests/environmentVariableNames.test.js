@@ -34,29 +34,23 @@ const REPOSITORY_ROOT = path.join(__dirname, '..', '..');
 // every 51Degrees name carries a leading underscore. This matches the old
 // digit-initial form, and only where no word character runs before it, so
 // the correct '_51DEGREES_' form and a name holding the text inside a
-// longer word are both left alone. The old form is deprecated, and is read
-// only when the name that replaced it is not set, so it must not appear
-// outside the files listed below.
+// longer word are both left alone. The old form is no longer read, and it
+// appears only in the deprecated constants that hold it, in the files listed
+// below.
 const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
 
-// The files that read a digit-initial name behind the name that replaced
-// it.
+// The files that keep a deprecated constant holding a digit-initial name.
 const DIGIT_INITIAL_NAME_FILES = new Set([
   path.join('device-detection', 'fiftyone.devicedetection.onpremise',
     'examples', 'onpremise', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence', 'examples',
-    'gettingStarted.js'),
   path.join('ip-intelligence', 'fiftyone.ipintelligence.cloud', 'examples',
     'cloud', 'exampleUtils.js'),
   path.join('ip-intelligence', 'fiftyone.ipintelligence.onpremise',
-    'examples', 'onpremise', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence.shared', 'lib',
-    'keyUtils.js')
+    'examples', 'onpremise', 'exampleUtils.js')
 ]);
 
-// The bare RESOURCE_KEY and LICENSE_KEY names are deprecated, and each is
-// read only when the name that replaced it is not set, so a read of one
-// must not appear outside the files listed below. Only a read is matched,
+// The bare RESOURCE_KEY and LICENSE_KEY names are no longer read, so a read
+// of one must not appear anywhere. Only a read is matched,
 // being the two forms Node offers and the two PowerShell forms, so the
 // same text in a placeholder such as '!!YOUR_RESOURCE_KEY!!' or in a
 // longer name such as TEST_SUPER_RESOURCE_KEY is left alone. A read is
@@ -64,52 +58,18 @@ const DIGIT_INITIAL_NAME_FILES = new Set([
 const FALLBACK_NAME =
   /(?:process\.env\.|process\.env\[\s*['"]|\$env:|\$\{env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
 
-// The three examples that keep a data file up to date, in one product.
-const automaticUpdates = (family, product) => [
-  'dataFileSystemWatcher.js', 'updateOnStartUp.js', 'updatePollingInterval.js'
-].map((file) => path.join(family, product, 'examples', 'onpremise',
-  'automaticupdates', file));
-
-// The files that read a bare name behind the name that replaced it.
-const FALLBACK_NAME_FILES = new Set([
-  path.join('device-detection', 'fiftyone.devicedetection', 'examples',
-    'gettingStarted.js'),
-  path.join('device-detection', 'fiftyone.devicedetection', 'tests',
-    'deviceDetectionCloud.test.js'),
-  path.join('device-detection', 'fiftyone.devicedetection.cloud', 'tests',
-    'deviceDetectionCloud.test.js'),
-  ...automaticUpdates('device-detection',
-    'fiftyone.devicedetection.onpremise'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence', 'examples',
-    'gettingStarted.js'),
-  ...automaticUpdates('ip-intelligence', 'fiftyone.ipintelligence.onpremise'),
-  path.join('location', 'examples', 'combiningServices.js'),
-  path.join('location', 'examples', 'configureFromFile.js'),
-  path.join('location', 'examples', 'gettingStarted.js'),
-  path.join('location', 'examples', 'webIntegration.js'),
-  path.join('location', 'tests', 'geoLocationCloud.test.js'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'examples',
-    'creator-context-web', 'server.js')
-]);
-
 // The cloud endpoint is _51DEGREES_CLOUD_ENDPOINT, as in every other
-// 51Degrees language. The name it had before is deprecated, and is read
-// only when the new name is not set, so it must not appear outside the
-// files listed below, whether read, set or described. Only the whole name
+// 51Degrees language. The name it had before is no longer read, so it must
+// not appear outside the files listed below, whether read, set or
+// described. Only the whole name
 // is matched, so a longer name holding it is left alone.
 const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
 
-// The files that read the old cloud endpoint name behind the new one, word
-// the deprecation message or document that the old name is still read.
+// The files that document that the old cloud endpoint name is no longer
+// read.
 const OLD_NAME_FILES = new Set([
-  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
-    'cloudRequestEngine.js'),
-  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
-    'errorMessages.js'),
   path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine', 'readme.md'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'didClient.js'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'readme.md'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'types', 'didClient.d.ts')
+  path.join('pipeline', 'fiftyone.pipeline.did', 'readme.md')
 ]);
 
 // Reading a binary file as text yields no useful name and wastes time, so
@@ -207,18 +167,11 @@ describe('environment variable names', () => {
       .toEqual([]);
   });
 
-  it('reads a bare resource key or licence key name only where listed',
-    () => {
-      expect(namesInRepository(FALLBACK_NAME, FALLBACK_NAME_FILES))
-        .toEqual([]);
-    });
+  it('reads no bare resource key or licence key name', () => {
+    expect(namesInRepository(FALLBACK_NAME)).toEqual([]);
+  });
 
-  it('lists no file that reads no bare resource key or licence key name',
-    () => {
-      expect(unusedFiles(FALLBACK_NAME_FILES, FALLBACK_NAME)).toEqual([]);
-    });
-
-  it('names the old cloud endpoint variable only where read or documented',
+  it('names the old cloud endpoint variable only where documented',
     () => {
       expect(namesInRepository(OLD_NAME, OLD_NAME_FILES)).toEqual([]);
     });
