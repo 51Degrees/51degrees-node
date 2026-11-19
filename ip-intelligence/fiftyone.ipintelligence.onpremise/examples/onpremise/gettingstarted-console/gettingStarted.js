@@ -44,19 +44,36 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
-const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../exampleUtils'));
 const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleConstants;
 
 // In this example, by default, the 51degrees "Lite" file needs to be in the
-// cxx/ip-intelligence-data,
-// directory or you may specify another file as a command line parameter.
+// cxx/data/ip-intelligence folder, where it is downloaded if missing,
+// or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// limited accuracy and capabilities.
-// Find out about the Enterprise data file on our pricing page:
-// https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=lite_v_4_1_ipi
+// a small number of Properties. Each property the example asks for
+// that only the Enterprise data file has is shown as needing it, with a
+// link to ask for a copy.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
 
 const outputValue = function (name, value) {
   // Individual result values have a wrapper called
@@ -67,6 +84,31 @@ const outputValue = function (name, value) {
   // `AspectPropertyValue` also includes the `noValueMessage`
   // property, which describes why the value has not been set.
   return `\n\t${name}: ${value}`;
+};
+
+/**
+ * Each value of a weighted property with its weighting, the share of the
+ * result the value applies to, which is 1 for a single answer.
+ *
+ * @param {string} name the name of the property to print
+ * @param {object} property the property's value from the Element Data
+ * @returns {string} a line for each value, or nothing where there is none
+ */
+const outputWeightings = function (name, property) {
+  if (!property || property.hasValue !== true) {
+    return '';
+  }
+  // A property gives a list of weighted values, or a single value, which
+  // is the one answer, so its weighting is 1.
+  const items = Array.isArray(property.value)
+    ? property.value
+    : [property.value];
+  return items
+    .map((item) => item !== null && typeof item === 'object' &&
+      item.weight !== undefined
+      ? `\n\t${name}: ${item.value}, weighting ${item.weight}`
+      : `\n\t${name}: ${item}, weighting 1`)
+    .join('');
 };
 
 const analyse = async function (evidence, pipeline, output) {
@@ -108,32 +150,42 @@ const analyse = async function (evidence, pipeline, output) {
   // Most IP intelligence values are lists of weighted values
   // where the weight indicates the proportion of the result
   // that the value applies to.
-  message += outputValue('Registered Name', DataExtension.getValueHelper(ip, 'registeredname'));
-  message += outputValue('Registered Owner', DataExtension.getValueHelper(ip, 'registeredowner'));
-  message += outputValue('Registered Country', DataExtension.getValueHelper(ip, 'registeredcountry'));
-  message += outputValue('IP Range Start', DataExtension.getValueHelper(ip, 'iprangestart'));
-  message += outputValue('IP Range End', DataExtension.getValueHelper(ip, 'iprangeend'));
-  message += outputValue('Country', DataExtension.getValueHelper(ip, 'country'));
-  message += outputValue('Country Code', DataExtension.getValueHelper(ip, 'countrycode'));
-  message += outputValue('Town', DataExtension.getValueHelper(ip, 'town'));
-  message += outputValue('Latitude', DataExtension.getValueHelper(ip, 'latitude'));
-  message += outputValue('Longitude', DataExtension.getValueHelper(ip, 'longitude'));
+  // A property that the data file does not have is shown as needing the
+  // Enterprise data file. The free Lite data file has the registration
+  // properties.
+  const engine = pipeline.getElement('ip');
+  message += outputValue('Registered Name', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredName'));
+  message += outputValue('Registered Owner', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredOwner'));
+  message += outputValue('Registered Country', ExampleUtils.getEnterpriseValue(engine, ip, 'RegisteredCountry'));
+  message += outputValue('IP Range Start', ExampleUtils.getEnterpriseValue(engine, ip, 'IpRangeStart'));
+  message += outputValue('IP Range End', ExampleUtils.getEnterpriseValue(engine, ip, 'IpRangeEnd'));
+  message += outputValue('Country', ExampleUtils.getEnterpriseValue(engine, ip, 'Country'));
+  message += outputValue('Country Code', ExampleUtils.getEnterpriseValue(engine, ip, 'CountryCode'));
+  message += outputValue('Town', ExampleUtils.getEnterpriseValue(engine, ip, 'Town'));
+  message += outputValue('Latitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Latitude'));
+  message += outputValue('Longitude', ExampleUtils.getEnterpriseValue(engine, ip, 'Longitude'));
+  // Each value comes with its weighting, so the Registered Country is shown
+  // again with the weighting of each of its values.
+  if (ExampleUtils.hasProperty(engine, 'RegisteredCountry')) {
+    message += outputWeightings('Registered Country', ip.registeredcountry);
+  }
   message += '\n\n';
   output.write(message);
+  return message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (dataFile, output) {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
     // We use the balanced profile as its performance is
     // sufficient for this example. See the documentation for
     // more detail on this and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.js&utm_term=run
     performanceProfile: 'Balanced',
     // inhibit sharing usage for this test, usually this
     // should be set 'true'
@@ -145,8 +197,12 @@ const run = async function (dataFile, output) {
   }).build();
 
   // carry out some sample lookups
+  let needsEnterprise = false;
   for (const values of exampleConstants.defaultEvidenceValues) {
-    await analyse(values, pipeline, output);
+    needsEnterprise = await analyse(values, pipeline, output) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    output.write(`${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
   }
 
   ExampleUtils.checkDataFile(pipeline, dataFile);
@@ -156,17 +212,18 @@ const run = async function (dataFile, output) {
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the lite
+  // _51DEGREES_IPI_PATH environment variable, or find the lite
   // file that is included in the repository.
   const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (dataFile !== undefined) {
-    run(dataFile, process.stdout);
+    run(dataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`.');
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`.');
+    console.log(FIND_OUT_MORE);
   }
 };
 

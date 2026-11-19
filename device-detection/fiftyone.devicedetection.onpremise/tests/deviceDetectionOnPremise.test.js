@@ -34,12 +34,11 @@ const EngineBuilder = require51('fiftyone.devicedetection.onpremise').DeviceDete
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const zlib = require('zlib');
 let server;
 
-const HTTP_PORT = 8080;
-const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash');
-const DataFileEnterprise = path.resolve((process.env.directory || __dirname) + '/../../../cxx/device-detection-data/Enterprise-HashV41.hash');
+const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 describe('deviceDetectionOnPremise', () => {
   // Check that an exception is thrown if license key is not
@@ -233,7 +232,7 @@ describe('deviceDetectionOnPremise', () => {
   // Check if dataUpdateUseUrlFormatter property does not append query params to update url - default value = true
 
   // test('Properties for on-premise engine - Data File Update', done => {
-  //   const DataFileOutput = path.resolve(process.env.directory || __dirname + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.gz');
+  //   const DataFileOutput = path.resolve(process.env.directory || __dirname + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.gz');
   //
   //   let requestReceived = false;
   //   let requestUrl = '';
@@ -321,22 +320,16 @@ describe('deviceDetectionOnPremise', () => {
   // }, 20000);
 
   test('Temporary files clean up - OnUpdate', done => {
-    const DataFileOutput = path.resolve((process.env.directory || __dirname) + '/51Degrees-LiteV4.1.hash.gz');
-    const DataFileCopy = path.resolve((process.env.directory || __dirname) + '/51Degrees-LiteV4.1.hash');
+    // A copy of the free Lite data file, which the update replaces with the
+    // same file served gzipped by the server below.
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'temp-clean-up-'));
+    const DataFileOutput = path.join(folder, '51Degrees-LiteV4.1.hash.gz');
+    const DataFileCopy = path.join(folder, '51Degrees-LiteV4.1.hash');
+    fs.copyFileSync(DataFile, DataFileCopy);
     const tempDir = './tests/tmp';
 
     fs.mkdir(tempDir, { recursive: true }, (err) => {
       if (err) return console.error(err);
-      const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFileCopy,
-        updateOnStart: true,
-        autoUpdate: false,
-        dataUpdateUrl: `http://localhost:${HTTP_PORT}/temp`,
-        dataUpdateVerifyMd5: false,
-        dataUpdateUseUrlFormatter: false,
-        createTempDataCopy: true,
-        tempDataDir: tempDir
-      }).build();
 
       server = http.createServer((req, res) => {
         if (req.url === '/temp') {
@@ -369,13 +362,34 @@ describe('deviceDetectionOnPremise', () => {
               const doneFiles = files.filter(file => file.includes('_done'));
               expect(doneFiles.length).toBe(0);
               server.close();
+              fs.rmSync(folder, { recursive: true, force: true });
               done();
             });
           }, 5000);
         }
-      }).listen(HTTP_PORT);
-      pipeline.on('error', console.error);
-      pipeline.on('info', console.info);
+      });
+
+      // The Pipeline is built once the server is listening, so the update
+      // made on start is not refused. The server takes a port the system
+      // gives on the IPv4 loopback, which the update address names, so no
+      // other service on a fixed port can take the request.
+      server.listen(0, '127.0.0.1', () => {
+        const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
+          dataFile: DataFileCopy,
+          updateOnStart: true,
+          autoUpdate: false,
+          dataUpdateUrl: `http://127.0.0.1:${server.address().port}/temp`,
+          dataUpdateVerifyMd5: false,
+          dataUpdateUseUrlFormatter: false,
+          createTempDataCopy: true,
+          // The test is not about the file system watcher, and it removes
+          // its folder at the end, which a watcher reports as an error.
+          fileSystemWatcher: false,
+          tempDataDir: tempDir
+        }).build();
+        pipeline.on('error', console.error);
+        pipeline.on('info', console.info);
+      });
     });
   }, 20000);
 
@@ -384,35 +398,45 @@ describe('deviceDetectionOnPremise', () => {
   test('Initialise engine with updateOnStart and 304 status code', done => {
     let requestsMade = 0;
 
+    const tempDataDir = path.join(__dirname, 'tmp');
+    fs.mkdirSync(tempDataDir, { recursive: true });
+
     server = http.createServer((req, res) => {
       requestsMade++;
       res.writeHead(304);
       res.end();
-    }).listen(HTTP_PORT);
+    });
 
-    const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
-      dataFile: DataFileEnterprise,
-      updateOnStart: true,
-      autoUpdate: true,
-      dataUpdateUrl: `http://localhost:${HTTP_PORT}/temp`,
-      dataUpdateVerifyMd5: false,
-      dataUpdateUseUrlFormatter: false,
-      createTempDataCopy: true,
-      tempDataDir: './tests/tmp'
-    }).build();
+    // As above, the Pipeline is built once the server is listening, on a
+    // port the system gives on the IPv4 loopback. The free Lite data file
+    // is the valid data file, and a 304 leaves it unchanged.
+    server.listen(0, '127.0.0.1', () => {
+      const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
+        dataFile: DataFile,
+        updateOnStart: true,
+        autoUpdate: true,
+        dataUpdateUrl: `http://127.0.0.1:${server.address().port}/temp`,
+        dataUpdateVerifyMd5: false,
+        dataUpdateUseUrlFormatter: false,
+        createTempDataCopy: true,
+        // The test is not about the file system watcher.
+        fileSystemWatcher: false,
+        tempDataDir
+      }).build();
 
-    pipeline.on('error', console.error);
-    pipeline.on('info', console.info);
+      pipeline.on('error', console.error);
+      pipeline.on('info', console.info);
 
-    const tryForRequestInterval = setInterval(() => {
-      if (requestsMade > 0) {
-        clearInterval(tryForRequestInterval);
-        setTimeout(() => {
-          expect(pipeline.flowElements.device.engine).toBeDefined();
-          done();
-        }, 200);
-      }
-    }, 100);
+      const tryForRequestInterval = setInterval(() => {
+        if (requestsMade > 0) {
+          clearInterval(tryForRequestInterval);
+          setTimeout(() => {
+            expect(pipeline.flowElements.device.engine).toBeDefined();
+            done();
+          }, 200);
+        }
+      }, 100);
+    });
   }, 10000);
 });
 

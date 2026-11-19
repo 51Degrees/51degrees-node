@@ -72,6 +72,10 @@ test('jsonbuilder contents', done => {
     expect(json).toBe(
       JSON.stringify({
         javascriptProperties: ['testengine.three'],
+        sequence: {
+          'session-id': flowData.evidence.get('query.session-id'),
+          sequence: 1
+        },
         testengine: {
           one: 1,
           two: 2,
@@ -97,7 +101,7 @@ test('sequence gives a sequence number', () => {
 const flowData2 = pipeline.createFlowData();
 
 flowData2.evidence.add('query.session-id', 'test');
-flowData2.evidence.add('query.sequence', 10);
+flowData2.evidence.add('query.sequence', '10');
 
 test('sequence number for same session id increments', (done) => {
   flowData2.process().then(function () {
@@ -134,7 +138,7 @@ const parameterPipeline = new core.PipelineBuilder({
 const flowData3 = parameterPipeline.createFlowData();
 
 flowData3.evidence.add('query.session-id', 'test-session');
-flowData3.evidence.add('query.sequence', 1);
+flowData3.evidence.add('query.sequence', '1');
 flowData3.evidence.add('query.mark', 'kept');
 
 test('the script parameters leave out the session id and the sequence',
@@ -154,6 +158,31 @@ test('the script parameters leave out the session id and the sequence',
       expect(declaration[0]).not.toContain('session-id');
       expect(declaration[0]).not.toContain('sequence');
       // Present, or this would pass with no parameters at all.
+      expect(declaration[0]).toContain('kept');
+
+      done();
+    });
+  });
+
+// evidence.md line 10: "Keys MUST be case-insensitive". A query key spelled
+// in any case is a script parameter, and the session id and the sequence
+// are left out whatever their case.
+const flowData4 = parameterPipeline.createFlowData();
+
+flowData4.evidence.add('Query.Session-Id', 'test-session');
+flowData4.evidence.add('QUERY.SEQUENCE', 1);
+flowData4.evidence.add('Query.Mark', 'kept');
+
+test('query evidence in any letter case becomes a script parameter',
+  (done) => {
+    flowData4.process().then(function () {
+      const declaration = flowData4.javascriptbuilder.javascript
+        .split(/\r?\n/)
+        .filter(line => /parameters\s*=/i.test(line) && line.includes('{'));
+
+      expect(declaration.length).toBe(1);
+      expect(declaration[0]).not.toMatch(/session-id/i);
+      expect(declaration[0]).not.toMatch(/sequence/i);
       expect(declaration[0]).toContain('kept');
 
       done();
@@ -239,6 +268,82 @@ test('JSON bundler - Verify output where delayed execution = true', (done) => {
     expect(actual).toBe(expected);
     done();
   });
+});
+
+// The JSON Builder page says delayexecution is added for each property that
+// has a value and whose delay execution flag is true.
+test('JSON bundler - delayexecution only for a property with a value',
+  async () => {
+    const engine = new core.FlowElement({
+      dataKey: 'jsontestengine',
+      properties: {
+        one: { delayexecution: true },
+        two: { delayexecution: true },
+        three: { delayexecution: true }
+      },
+      processInternal: function (flowData) {
+        flowData.setElementData(new core.ElementDataDictionary({
+          flowElement: this,
+          contents: {
+            one: new core.AspectPropertyValue(null, 'script'),
+            two: new core.AspectPropertyValue('No script on this request.'),
+            three: null
+          }
+        }));
+      }
+    });
+    const flowData = new core.PipelineBuilder().add(engine).build()
+      .createFlowData();
+
+    await flowData.process();
+
+    const json = flowData.jsonbundler.json.jsontestengine;
+    expect(json.onedelayexecution).toBe(true);
+    expect(json.one).toBe('script');
+    expect(json).not.toHaveProperty('twodelayexecution');
+    expect(json.two).toBeNull();
+    expect(json.twonullreason).toBe('No script on this request.');
+    expect(json).not.toHaveProperty('threedelayexecution');
+  });
+
+// The bundler keeps each element's delayed properties after the first
+// request, so every later request must still mark each element's own.
+test('JSON bundler - each element keeps its own delayed properties on ' +
+  'later requests', async () => {
+  // Each element names its properties after its own key, so reading
+  // another element's list loses them.
+  const element = (dataKey) => new core.FlowElement({
+    dataKey,
+    properties: {
+      [dataKey + 'script']: { delayexecution: true },
+      [dataKey + 'result']: { evidenceproperties: [dataKey + 'script'] }
+    },
+    processInternal: function (flowData) {
+      flowData.setElementData(new core.ElementDataDictionary({
+        flowElement: this,
+        contents: {
+          [dataKey + 'script']: 'run()',
+          [dataKey + 'result']: 'value'
+        }
+      }));
+    }
+  });
+  const pipeline = new core.PipelineBuilder()
+    .add(element('first'))
+    .add(element('second'))
+    .build();
+
+  for (let request = 1; request <= 2; request++) {
+    const flowData = pipeline.createFlowData();
+    await flowData.process();
+    for (const dataKey of ['first', 'second']) {
+      const json = flowData.jsonbundler.json[dataKey];
+      expect([request, dataKey, json[dataKey + 'scriptdelayexecution']])
+        .toEqual([request, dataKey, true]);
+      expect([request, dataKey, json[dataKey + 'resultevidenceproperties']])
+        .toEqual([request, dataKey, [dataKey + '.' + dataKey + 'script']]);
+    }
+  }
 });
 
 test('JSON bundler - Verify output where a property has multiple evidence properties', (done) => {
@@ -420,3 +525,148 @@ test('only query evidence becomes a parameter', async () => {
   });
   expect(renderedParameters(script)).toStrictEqual({ mark: 'kept' });
 });
+
+// Renders one script for each host given, all through the same element, and
+// returns them with the errors the pipeline logged.
+const renderScripts = async (hosts) => {
+  const renderPipeline = new core.PipelineBuilder({
+    javascriptBuilderSettings: { endPoint: '/json' }
+  })
+    .add(testEngine)
+    .build();
+  const errors = [];
+  renderPipeline.on('error', message => errors.push(message));
+  const scripts = [];
+  for (const host of hosts) {
+    const renderData = renderPipeline.createFlowData();
+    renderData.evidence.add('header.host', host);
+    await renderData.process();
+    scripts.push(renderData.javascriptbuilder.javascript);
+  }
+  return { scripts, errors };
+};
+
+// A host the check refuses gives a script with no callback, and the refusal
+// is logged as an error the first time only, whatever the requests in
+// between.
+test('a refused URL is left out and logged once', async () => {
+  const { scripts, errors } = await renderScripts(
+    ['exa mple.com', 'exa mple.com', 'localhost', 'exa mple.com']);
+  scripts.forEach((script, i) => {
+    expect(script).toContain('new fiftyoneDegreesManager()');
+    if (i === 2) {
+      expect(requestUrls(script)).toContain('https://localhost/json');
+    } else {
+      expect(requestUrls(script)).toStrictEqual([]);
+      expect(script).not.toContain('exa mple.com');
+    }
+  });
+  expect(errors.length).toBe(1);
+  expect(errors[0]).toContain('"https://exa mple.com/json"');
+});
+
+// The URL is quoted and escaped in the log, so a line break in it cannot
+// start a new log line.
+test('a refused URL is logged on one line', async () => {
+  const { errors } = await renderScripts(['a\nb.com\r\u2028']);
+  expect(errors.length).toBe(1);
+  expect(errors[0]).not.toMatch(/[\n\r\u2028]/);
+  expect(errors[0]).toContain('a\\nb.com\\r\\u2028');
+});
+
+// The log never holds what comes before the last '@' of the host value,
+// whether the host is configured or comes from the request. Each host has an
+// element of its own because a refusal is logged once per element.
+test.each([
+  ['user:secret@example.com', 'https://***@example.com/json'],
+  ['a@b@example.com', 'https://***@example.com/json'],
+  ['u@[::1]:80x', 'https://***@[::1]:80x/json'],
+  ['user:pa/ss@example.com', 'https://***@example.com/json'],
+  ['user:pa?ss@example.com', 'https://***@example.com/json'],
+  ['exa mple.com/a@b', 'https://***@b/json']
+])('a refused host %j is logged without its user information',
+  async (host, logged) => {
+    const { scripts, errors } = await renderScripts([host]);
+    expect(requestUrls(scripts[0])).toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"' + logged + '"');
+    expect(errors[0]).not.toContain('secret');
+    expect(errors[0]).not.toMatch(/\bpa\b/);
+  });
+
+// A host from the configuration is refused and logged the same way.
+test('a configured host is logged without its user information',
+  async () => {
+    const configured = new core.PipelineBuilder({
+      javascriptBuilderSettings: {
+        host: 'user:secret@example.com',
+        endPoint: '/json'
+      }
+    })
+      .add(testEngine)
+      .build();
+    const errors = [];
+    configured.on('error', message => errors.push(message));
+    const configuredData = configured.createFlowData();
+    await configuredData.process();
+    expect(requestUrls(configuredData.javascriptbuilder.javascript))
+      .toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"https://***@example.com/json"');
+    expect(errors[0]).not.toContain('secret');
+  });
+
+// A host made only of whitespace is not set, so the script has no callback
+// and nothing is logged.
+test('a blank host gives no callback and is not logged', async () => {
+  const { scripts, errors } = await renderScripts(['  ']);
+  expect(requestUrls(scripts[0])).toStrictEqual([]);
+  expect(errors).toStrictEqual([]);
+});
+
+// A host from the request reaches the script as the check writes it, in
+// lower case and with anything that could end the string the script holds
+// it in percent-encoded.
+test('a host from the request is written as checked', async () => {
+  const { scripts } = await renderScripts(["EXAMPLE.com/');alert(1);//"]);
+  const urls = requestUrls(scripts[0]);
+  expect(urls.length).toBeGreaterThan(0);
+  for (const url of urls) {
+    expect(url).toBe('https://example.com/%27);alert(1);//json');
+  }
+  expect(scripts[0]).not.toContain("');alert(1)");
+});
+
+// A protocol given to the builder is used for every request, so one the
+// script cannot send its request with is refused when the element is made.
+test.each(['ftp', 'ws', 'javascript', 'https ', 'http\u017f'])(
+  'a configured protocol %j is refused', protocol => {
+    expect(() => new core.JavascriptBuilder({ protocol }))
+      .toThrow('protocol is invalid');
+  });
+
+test.each(['http', 'https', 'HTTPS'])(
+  'a configured protocol %j is accepted', protocol => {
+    expect(() => new core.JavascriptBuilder({ protocol })).not.toThrow();
+  });
+
+// A protocol from the request that is neither http nor https gives a script
+// with no callback, and is logged once like any other URL that is not valid.
+test('a refused protocol from the request is left out and logged once',
+  async () => {
+    const renderPipeline = new core.PipelineBuilder({
+      javascriptBuilderSettings: { endPoint: '/json' }
+    })
+      .add(testEngine)
+      .build();
+    const errors = [];
+    renderPipeline.on('error', message => errors.push(message));
+    const renderData = renderPipeline.createFlowData();
+    renderData.evidence.add('header.host', 'example.com');
+    renderData.evidence.add('header.protocol', 'ftp');
+    await renderData.process();
+    expect(requestUrls(renderData.javascriptbuilder.javascript))
+      .toStrictEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('"ftp://example.com/json"');
+  });

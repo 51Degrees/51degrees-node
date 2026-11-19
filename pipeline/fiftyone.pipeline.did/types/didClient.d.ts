@@ -62,8 +62,9 @@ export type DidClientOptions = {
     licenceKey?: string;
     /**
      * the API base including the `/api/v4/`
-     * segment. Defaults to the FOD_CLOUD_API_URL environment variable where
-     * the runtime has environment variables, then to the public cloud. A value
+     * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
+     * the runtime has environment variables, then to FOD_CLOUD_API_URL, the
+     * deprecated name of the same variable, then to the public cloud. A value
      * without a trailing slash gains one.
      */
     endpoint?: string;
@@ -118,8 +119,9 @@ export type DidClientOptions = {
  * side only. Needed to redeem where the account holds licence keys, and
  * sent only in the body of the redeem request, never in a URL.
  * @property {string} [endpoint] the API base including the `/api/v4/`
- * segment. Defaults to the FOD_CLOUD_API_URL environment variable where
- * the runtime has environment variables, then to the public cloud. A value
+ * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
+ * the runtime has environment variables, then to FOD_CLOUD_API_URL, the
+ * deprecated name of the same variable, then to the public cloud. A value
  * without a trailing slash gains one.
  * @property {FetchFunction} [fetch] the HTTP transport. Defaults to the
  * global `fetch`, on Node and in a browser alike.
@@ -257,7 +259,8 @@ export class DidClient {
      * A 200 and a 503 both produce a result, the 503 being the `unconfirmed`
      * outcome the caller may retry. Every cryptographic failure comes back as
      * the one word `unreadable` by design, so the client does not try to
-     * tell them apart either.
+     * tell them apart either. The licence key is shown only by its last 4
+     * characters in the message and body of each error.
      * @param {FodId | string} fodId the identifier the caller knows
      * independently, or its base64 in either alphabet
      * @param {string} result the sealed result exactly as the verify endpoint
@@ -378,13 +381,15 @@ export class RedeemResult {
     signature: string;
     /**
      * @type {object | undefined} {@link Factor} name to
-     * {@link FactorResult} value (or null where nothing was compared),
-     * present only when the cloud sent `factors`, which it does where there
-     * is something to diagnose, being a mismatch or a misconfigured result
-     * that still compared some factors. Every name is kept exactly as the
-     * cloud sent it, including one this package does not list in
-     * {@link Factor}, so a factor the cloud adds later reaches the caller
-     * without a new release of this package.
+     * {@link FactorResult} value, present only when the cloud sent
+     * `factors`, which it does where there is something to diagnose, being
+     * a mismatch or a misconfigured result that still compared some
+     * factors. Every name is kept as the cloud sent it, including one this
+     * package does not list in {@link Factor}. Each word is read ignoring
+     * case, and a value this package does not know, null included, is a
+     * mismatch, so an unexpected value never reads as a factor that matched
+     * or one that could not be compared. {@link RedeemResult#raw} has the
+     * words as sent.
      */
     factors: object | undefined;
     /**
@@ -458,8 +463,7 @@ export const SignatureResult: Readonly<{
     UNKNOWN: "unknown";
 }>;
 /**
- * The outcome of one factor in a mismatch. The cloud reports `null` for a
- * factor that was not compared, which is passed through unchanged.
+ * The outcome of one factor in a mismatch.
  */
 export const FactorResult: Readonly<{
     VERIFIED: "verified";
@@ -544,8 +548,9 @@ export class DidArgumentError extends DidClientError {
 export class DidNotSupportedError extends DidClientError {
 }
 /**
- * The public cloud API base, used when neither the endpoint option nor the
- * FOD_CLOUD_API_URL environment variable is set.
+ * The public cloud API base, used when the endpoint option, the
+ * _51DEGREES_CLOUD_ENDPOINT environment variable and FOD_CLOUD_API_URL, the
+ * deprecated name of that variable, are all unset.
  */
 export const DEFAULT_ENDPOINT: "https://cloud.51degrees.com/api/v4/";
 import FodId = require("./fodId");

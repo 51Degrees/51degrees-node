@@ -9,7 +9,7 @@
                 }
             },
             {
-                "elementName": "../../../hardwareProfileCloudEngine"
+                "elementName": "fiftyone.devicedetection.cloud/hardwareProfileCloudEngine"
             }
         ]
     }

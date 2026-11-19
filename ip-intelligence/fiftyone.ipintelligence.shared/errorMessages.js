@@ -29,6 +29,8 @@ module.exports = {
     '\'server.client-ip\' or \'query.client-ip\'.',
   dataFilePathRequired: 'dataFilePath is required',
   fileNotFound: 'There is no file at \'%s\'',
+  fileNotFoundNotDownloaded: 'There is no file at \'%s\' and the ' +
+    'download of a new one ended with the status \'%s\'',
   moduleDirNotFound: 'There is no directory at \'%s\'. This is ' +
     'expected to contain the native modules for the IP intelligence ' +
     'engine. For example, %s',
@@ -45,8 +47,15 @@ module.exports = {
     'wish to use a key then you can specify an empty string, but this will ' +
     'cause automatic updates to be disabled.',
   invalidPerformanceProfile: 'The performance profile \'%s\' is not valid',
+  /**
+   * @deprecated No longer used. The engines' missing property messages
+   * are in fiftyone.pipeline.engines' errorMessages.
+   */
   propertyKeyDataFiles: 'Property %s can be found in the following datafiles ' +
     '%s not %s',
+  /**
+   * @deprecated No longer used, as above.
+   */
   propertyNotFound: 'Property %s not found in %s',
   badDataUnsupportedVersion: 'The data %s is an unsupported version. Check ' +
     'you have the latest data and API.',

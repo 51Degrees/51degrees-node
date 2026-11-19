@@ -9,3 +9,6 @@ export let AUTO_UPDATE_ERR_READING_STREAM: string;
 export let AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED: string;
 export let AUTO_UPDATE_NEW_FILE_CANT_RENAME: string;
 export let AUTO_UPDATE_REFRESH_FAILED: string;
+export let AUTO_UPDATE_TEMP_PATH_NOT_SET: string;
+export let AUTO_UPDATE_TIMEOUT: string;
+export let AUTO_UPDATE_UNKNOWN_ERROR: string;

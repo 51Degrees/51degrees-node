@@ -1,27 +1,46 @@
 export = ShareUsageEvidenceKeyFilter;
 declare const ShareUsageEvidenceKeyFilter_base: typeof import("fiftyone.pipeline.core/types/evidenceKeyFilter");
 /**
- * The ShareUsageEvidenceKeyFilter filters out all evidence
- * not needed by the 51Degrees ShareUsage service.
- * It allows for a specific whitelist of query strings,
- * a blacklist of headers and a specific cookie used for session information
+ * The ShareUsageEvidenceKeyFilter decides which evidence the 51Degrees
+ * ShareUsage service is sent. Headers are shared unless they are blocked,
+ * cookies only when their names start with 51D_, whatever the settings,
+ * session values only when their names start with 51D_, and every query
+ * string and form parameter unless sharing them all is turned off, when only
+ * those whose names start with 51D_ or are on the list to share are. Any
+ * other evidence is shared.
  */
 declare class ShareUsageEvidenceKeyFilter extends ShareUsageEvidenceKeyFilter_base {
     /**
      * Constructor for ShareUsageEvidenceKeyFilter
      *
      * @param {object} options options for filter
-     * @param {string} options.cookie cookie used for session data
-     * @param {Array} options.queryWhitelist whitelist of query string data
-     * @param {Array} options.headerBlacklist blacklist of headers to remove
+     * @param {string} options.cookie the name of the cookie that identifies
+     * the session
+     * @param {boolean} options.shareAllQueryStringParameters whether every
+     * query string and form parameter is shared. True unless set to false.
+     * @param {Array<string>|null} options.queryWhitelist query string and
+     * form parameters to share as well as those starting 51D_ when
+     * shareAllQueryStringParameters is false. null is the same as an empty
+     * list.
+     * @param {Array<string>} options.headerBlacklist headers not to share
+     * @param {boolean} options.includeSession whether the session cookie is
+     * included
+     * @param {boolean} options.shareAll whether all evidence is shared, apart
+     * from the evidence that is never shared and the cookies whose names do
+     * not start with 51D_
      */
-    constructor({ cookie, queryWhitelist, headerBlacklist }: {
+    constructor({ cookie, shareAllQueryStringParameters, queryWhitelist, headerBlacklist, includeSession, shareAll }?: {
         cookie: string;
-        queryWhitelist: any[];
-        headerBlacklist: any[];
+        shareAllQueryStringParameters: boolean;
+        queryWhitelist: Array<string> | null;
+        headerBlacklist: Array<string>;
+        includeSession: boolean;
+        shareAll: boolean;
     }, ...args: any[]);
-    includedQueryStringParams: any[];
-    blockedHttpHeaders: any[];
+    shareAllQueryStringParameters: boolean;
+    includedQueryStringParams: string[];
+    blockedHttpHeaders: string[];
     cookie: string;
+    includeSession: boolean;
     shareAll: boolean;
 }

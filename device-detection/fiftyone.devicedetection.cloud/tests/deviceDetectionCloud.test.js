@@ -49,8 +49,15 @@ const MobileUserAgent =
   'AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile' +
   '/11D167 Safari/9537.53';
 
-// The aligned '_51DEGREES_RESOURCE_KEY' environment variable is checked
-// first, followed by the legacy 'RESOURCE_KEY' variable.
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// environment variable.
+// RESOURCE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_RESOURCE_KEY is unset or empty.
+if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+    'instead.');
+}
 const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
   process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 
@@ -256,9 +263,8 @@ describe('Origin Header', () => {
     ['test.com', true],
     ['51degrees.com', false]
   ]).test('origin header set to "%s"', async (origin, expectError) => {
-    let error = false;
-    let message = '';
     const expectErrorMessage = `This resource key is not authorised for the domain '${origin}'`;
+    const text = (error) => String(error && error.message ? error.message : error);
 
     const pipeline = new DeviceDetectionCloudPipelineBuilder({
       // Resource key configured with '51degrees.com' as allowed domains.
@@ -267,21 +273,25 @@ describe('Origin Header', () => {
     }).build();
 
     // We want to monitor for the expected error message
+    const messages = [];
     pipeline.on('error', (err) => {
-      error = true;
-      message = err;
+      messages.push(text(err));
     });
 
     const flowData = pipeline.createFlowData();
-    // Catch error so test does not fail on expected error.
-    await flowData.process().catch(e => {
-      expect(e.length).toBe(1);
-      expect(e[0].message).toContain(expectErrorMessage);
-    });
+    const rejection = await flowData.process().then(
+      () => undefined, (e) => e);
 
-    expect(error).toBe(expectError);
-    if (error) {
-      expect(message).toContain(expectErrorMessage);
+    expect(messages.length > 0).toBe(expectError);
+    if (expectError) {
+      expect(messages.some((m) => m.includes(expectErrorMessage))).toBe(true);
+      // Every recorded error is in the rejection. The cloud request engine
+      // records its errors as one array.
+      expect(rejection).toHaveProperty('name', 'AggregateError');
+      expect(rejection.errors.flat().some(
+        (e) => text(e).includes(expectErrorMessage))).toBe(true);
+    } else {
+      expect(rejection).toBeUndefined();
     }
   });
 });

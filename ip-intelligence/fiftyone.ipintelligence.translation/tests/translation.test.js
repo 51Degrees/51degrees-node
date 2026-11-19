@@ -42,7 +42,7 @@ const createComparer = require('..').createComparer;
 
 // The translation YAML files, read from the cxx submodule.
 const translationsDir = path.join(__dirname, '..', '..', '..', 'cxx',
-  'ip-intelligence-data', 'Translations');
+  'data', 'ip-intelligence', 'Translations');
 const codeToEnglish = yaml.load(fs.readFileSync(
   path.join(translationsDir, 'countrycodes.en_GB.yml'), 'utf8'));
 const frenchNames = yaml.load(fs.readFileSync(

@@ -36,8 +36,14 @@ const EngineBuilder = require51('fiftyone.devicedetection.onpremise').DeviceDete
 const constants = require(path.join(__dirname, '/../constants'));
 const fs = require('fs');
 
-const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/device-detection-data/51Degrees-LiteV4.1.hash';
-const DataFile = (process.env.directory || __dirname) + '/../../../cxx/device-detection-data/Enterprise-HashV41.hash';
+const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
+const EnterpriseDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
+// The Enterprise data file where CI has linked it in, otherwise the free
+// Lite one. Nothing is written under the Enterprise name, so another test
+// never takes a copy of the Lite file for the Enterprise one.
+const DataFile = fs.existsSync(EnterpriseDataFile)
+  ? EnterpriseDataFile
+  : LiteDataFile;
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
@@ -48,19 +54,6 @@ const ChromeUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 describe('deviceDetectionOnPremise', () => {
-  beforeAll(() => {
-    // Copy data file to test directory if one does not exist.
-    try {
-      if (!fs.existsSync(DataFile)) {
-        fs.copyFile(LiteDataFile, DataFile, (err) => {
-          if (err) throw err;
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  });
-
   // Check that for a successful detection, all properties loaded by the engine
   // are accessible in the results.
   test('Available Properties', async () => {
@@ -226,7 +219,8 @@ describe('deviceDetectionOnPremise', () => {
       matchedUa.split(/[_{}]/g).forEach(substring => {
         expect(MobileUserAgent.includes(substring)).toBeTruthy();
         const index = matchedUa.indexOf(substring);
-        const original = MobileUserAgent.substring(index, substring.length);
+        const original = MobileUserAgent.substring(
+          index, index + substring.length);
         expect(substring).toEqual(original);
       });
     });

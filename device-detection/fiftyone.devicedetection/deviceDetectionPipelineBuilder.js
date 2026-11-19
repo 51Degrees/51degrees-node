@@ -45,6 +45,9 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
    * If you do not wish to use a key then you can specify
    * an empty string, but this will cause automatic updates
    * to be disabled.
+   * @param {Array<string>|string} options.requestedProperties the fully
+   * qualified names of the properties to ask the cloud service for, such
+   * as device.ismobile. Required with a license key and no resource key.
    * @param {string} options.resourceKey resourceKey, if using the
    * cloud engine
    * @param {string} options.dataFile dataFile path for the on premise engine
@@ -68,11 +71,14 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
    * @param {string} options.performanceProfile used to control the tradeoff
    * between performance and system memory usage (Only applies to on-premise,
    * not cloud) options are: LowMemory, MaxPerformance, Balanced,
-   * BalancedTemp, HighPerformance
+   * BalancedTemp, HighPerformance. Balanced by default, as in the native
+   * code.
    * @param {boolean} options.updateMatchedUserAgent This setting only affects
    * on-premise engines, not cloud.
    * True if the detection should record the matched characters from the
-   * target User-Agent
+   * target User-Agent, which the UserAgents property returns. On by default,
+   * as the native code sets it. Set it to false where UserAgents is not
+   * needed, which saves recording the characters.
    * @param {number} options.maxMatchedUserAgentLength This setting only affects
    * on-premise engines, not cloud.
    * Number of characters to consider in the matched User-Agent. Ignored
@@ -113,10 +119,11 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
       updateTimeMaximumRandomisation = 10,
       shareUsage = true,
       resourceKey = null,
+      requestedProperties = null,
       cacheSize = null,
       restrictedProperties,
-      performanceProfile = 'LowMemory',
-      updateMatchedUserAgent = false,
+      performanceProfile = 'Balanced',
+      updateMatchedUserAgent,
       maxMatchedUserAgentLength,
       drift,
       difference,
@@ -176,6 +183,7 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
         {
           resourceKey,
           licenseKey: licenceKeys,
+          requestedProperties,
           baseURL: cloudEndPoint,
           cloudRequestOrigin,
           cache

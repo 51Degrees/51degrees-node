@@ -27,6 +27,12 @@ const EvidenceKeyFilter = require('./evidenceKeyFilter');
  * Evidence not using these keys is filtered out
  */
 class BasicListEvidenceKeyFilter extends EvidenceKeyFilter {
+  // The keys in lower case, and a copy of the list they were made from.
+  // Every detection checks its evidence here at least twice, so the list is
+  // put in lower case once, and again only when it changes.
+  #folded = new Set();
+  #foldedFrom = [];
+
   /**
    * constructor for basicListEvidenceKeyFilter
    *
@@ -45,15 +51,40 @@ class BasicListEvidenceKeyFilter extends EvidenceKeyFilter {
    * @returns {boolean} is this key in the filter's keys list?
    */
   filterEvidenceKey (key) {
-    let keep;
+    if (!this.#isFolded()) {
+      const folded = new Set();
+      this.list.forEach(function (element) {
+        folded.add(element.toLowerCase());
+      });
+      this.#folded = folded;
+      this.#foldedFrom = Array.from(this.list);
+    }
 
-    this.list.forEach(function (element) {
-      if (element.toLowerCase() === key.toLowerCase()) {
-        keep = true;
+    if (this.#folded.size === 0) {
+      return undefined;
+    }
+
+    return this.#folded.has(key.toLowerCase()) ? true : undefined;
+  }
+
+  /**
+   * Whether the keys in lower case were made from the list as it is now,
+   * holding the same keys in the same order.
+   *
+   * @returns {boolean} true if the list has not changed since
+   */
+  #isFolded () {
+    const list = this.list;
+    const from = this.#foldedFrom;
+    if (list.length !== from.length) {
+      return false;
+    }
+    for (let i = 0; i < from.length; i++) {
+      if (list[i] !== from[i]) {
+        return false;
       }
-    });
-
-    return keep;
+    }
+    return true;
   }
 }
 

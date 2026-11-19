@@ -21,5 +21,8 @@
  * ********************************************************************* */
 
 module.exports = {
-  baseURLDefault: 'https://cloud.51degrees.com/api/v4/'
+  baseURLDefault: 'https://cloud.51degrees.com/api/v4/',
+  // The path below the base URL of the data route that takes no resource
+  // key, used when the engine authenticates on a license key alone.
+  licenseDataPath: 'json'
 };

@@ -31,6 +31,11 @@ class GeoLocationPipelineBuilder extends PipelineBuilder {
      * @param {Object} options
      * @param {Boolean} options.shareUsage // include share usage element?
      * @param {String} options.resourceKey // resourceKey for cloud
+     * @param {String} options.licenceKeys // license key for cloud, beside
+     * a resourceKey or on its own
+     * @param {Array<string>|string} options.requestedProperties // the
+     * fully qualified names of the properties to ask the cloud service for.
+     * Required with a license key and no resource key.
      * @param {String} options.locationProvider // the provider to request data from. Either "fiftyonedegrees" or "digitalelement".
      * @param {string} options.cloudRequestOrigin The value to set the
      * Origin header to when making requests to the cloud service
@@ -40,6 +45,8 @@ class GeoLocationPipelineBuilder extends PipelineBuilder {
   constructor ({
     shareUsage = true,
     resourceKey = null,
+    licenceKeys = null,
+    requestedProperties = null,
     locationProvider = 'fiftyonedegrees',
     baseURL = null,
     cloudRequestOrigin = null
@@ -56,6 +63,8 @@ class GeoLocationPipelineBuilder extends PipelineBuilder {
 
     const cloudRequestEngineOptions = {
       resourceKey,
+      licenseKey: licenceKeys,
+      requestedProperties,
       cloudRequestOrigin
     };
     if (baseURL !== null) {

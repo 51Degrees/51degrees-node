@@ -30,13 +30,47 @@ This example is available in full on [GitHub](https://github.com/51Degrees/51deg
 @include{doc} example-require-resourcekey.txt
  */
 
-const FiftyOneDegreesLocation = require((process.env.directory || __dirname) + '/../');
+const FiftyOneDegreesLocation = require('fiftyone.geolocation');
+
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE_HTML = `
+<h3>Find out more</h3>
+<ul>
+    <li>This API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/location">https://github.com/51Degrees/51degrees-node/tree/main/location</a></li>
+    <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+    <li><a href="https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-documentation">Reverse geocoding documentation</a></li>
+    <li><a href="https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-resource-keys">Resource keys</a></li>
+    <li><a href="https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-pricing">Pricing</a></li>
+    <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-contact">Contact us</a></li>
+</ul>`;
+
+// The same links, printed when the example stops early for want of a
+// resource key.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // Obtain a resource key with the properties required to test this
-// example for free: https://configure.51degrees.com/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+// example for free: https://51degrees.com/configure/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
-const myResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// RESOURCE_KEY is the deprecated name of the same variable, read only
+// when _51DEGREES_RESOURCE_KEY is unset or empty.
+if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+    'instead.');
+}
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
 // We need 'server' to be defined here so that, when this example
 // is executed as part of a unit test, the server can be closed
 // once the test is complete.
@@ -44,11 +78,12 @@ let server;
 
 if (myResourceKey.substring(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and paste it into the code, ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the code, ' +
         'replacing !!YOUR_RESOURCE_KEY!!');
+  console.log(FIND_OUT_MORE);
 } else {
   // Create a new pipeline and set the config.
-  // You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
+  // You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
   // and paste it into the code.
   // The JavaScriptBuilderSettings allow you to provide an endpoint
   // which will be requested by the client side JavaScript.
@@ -66,23 +101,34 @@ if (myResourceKey.substring(0, 2) === '!!') {
   pipeline.on('error', console.error);
 
   const http = require('http');
+  const core = require('fiftyone.pipeline.core');
 
   server = http.createServer((req, res) => {
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
+    // Code that shares one Flow Data between tasks is responsible for any
+    // locking.
     const flowData = pipeline.createFlowData();
 
     // Add any information from the request
     // (headers, cookies and additional client side provided information)
     flowData.evidence.addFromRequest(req);
 
+    // A matching If-None-Match on the JSON endpoint gets its 304 without
+    // processing.
+    if (req.url.startsWith('/json') &&
+      core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
+
     flowData.process().then(function () {
-      res.statusCode = 200;
-
       if (req.url.startsWith('/json')) {
-        // Return the json to the client.
-        res.setHeader('Content-Type', 'application/json');
-
-        res.end(JSON.stringify(flowData.jsonbundler.json));
+        // Return the json to the client, with the caching headers.
+        core.Helpers.writeClientSideResponse(req, res, flowData,
+          'application/json', JSON.stringify(flowData.jsonbundler.json));
       } else {
+        res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
 
         let output = '';
@@ -178,6 +224,9 @@ if (myResourceKey.substring(0, 2) === '!!') {
     }
 </script>`;
 
+        // Where to go next.
+        output += FIND_OUT_MORE_HTML;
+
         // Get JavaScript to put inside the page to gather extra evidence
         const js = `<script>${flowData.javascriptbuilder.javascript}</script>`;
 
@@ -187,6 +236,8 @@ if (myResourceKey.substring(0, 2) === '!!') {
   });
 
   const port = 3000;
-  server.listen(port);
+  // Only the machine the example runs on, at 127.0.0.1 rather than
+  // localhost, which can resolve to the IPv6 loopback alone.
+  server.listen(port, '127.0.0.1');
   console.log('Server listening on port: ' + port);
 }

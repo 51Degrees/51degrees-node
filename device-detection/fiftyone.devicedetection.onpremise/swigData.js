@@ -173,6 +173,26 @@ class SwigData extends AspectData {
       return result;
     }
   }
+
+  /**
+   * Looks for a key again as the engine's own key for that name, ignoring
+   * letter case. The engine maps each key in lower case to its own key when
+   * the data file loads, because the match metric keys are not all in lower
+   * case.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {AspectPropertyValue} value property value
+   */
+  getInternalIgnoringCase (key) {
+    const keys = this.flowElement.propertyKeys;
+    if (keys === undefined || typeof key !== 'string') {
+      return undefined;
+    }
+    const engineKey = keys[key.toLowerCase()];
+    return engineKey === undefined || engineKey === key
+      ? undefined
+      : this.getInternal(engineKey);
+  }
 }
 
 module.exports = SwigData;

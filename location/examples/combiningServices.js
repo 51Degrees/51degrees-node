@@ -35,11 +35,24 @@ that entitle you to increased request limits and/or paid-for properties.
 You will also need to install the fiftyone.devicedetection package with
 `npm install fiftyone.devicedetection`.
 
-You can create a resource key using the 51Degrees [Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
+You can create a resource key using the 51Degrees [configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top).
 
 */
 
-const FiftyOneDegreesGeoLocation = require((process.env.directory || __dirname) + '/../');
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=find-out-more-contact'
+].join('\n');
+
+const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 let FiftyOneDegreesDeviceDetection = null;
 try {
   FiftyOneDegreesDeviceDetection = require('fiftyone.devicedetection');
@@ -49,31 +62,30 @@ try {
     'then execute "npm install fiftyone.devicedetection" and try again.');
 }
 
-let localResourceKey;
-// Check if there is a resource key in the global variable and use it if
-// there is one.
-try {
-  localResourceKey = resourceKey;
-} catch (e) {
-  if (e instanceof ReferenceError) {
-    console.log(e);
-  }
-}
-// You need to create a resource key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top-2 and
+// You need to create a resource key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=top-2 and
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 // Make sure to include the isMobile and country properties as they
 // are used by this example.
-if (typeof localResourceKey === 'undefined' ||
-  localResourceKey.substr(0, 2) === '!!') {
-  localResourceKey = process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+let localResourceKey = '!!YOUR_RESOURCE_KEY!!';
+if (localResourceKey.substr(0, 2) === '!!') {
+  // RESOURCE_KEY is the deprecated name of the same variable, read only
+  // when _51DEGREES_RESOURCE_KEY is unset or empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
+  }
+  localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+    process.env.RESOURCE_KEY || localResourceKey;
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {
   console.log('You need to create a resource key at ' +
-    'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=resource-key-required and paste it into the code, ' +
+    'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-combiningservices.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the code, ' +
     'replacing !!YOUR_RESOURCE_KEY!!.');
   console.log('Make sure to include the ismobile property ' +
     'as it is used by this example.');
+  console.log(FIND_OUT_MORE);
 } else if (FiftyOneDegreesDeviceDetection) {
   const pipeline = new FiftyOneDegreesDeviceDetection.DeviceDetectionPipelineBuilder({
     resourceKey: localResourceKey
@@ -118,5 +130,8 @@ if (localResourceKey.substr(0, 2) === '!!') {
 
   const mobileUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) Mobile/15C114';
 
-  getProperties('51.458048', '-0.9822207999999999', mobileUserAgent);
+  getProperties('51.458048', '-0.9822207999999999', mobileUserAgent)
+    .then(() => console.log(FIND_OUT_MORE));
+} else {
+  console.log(FIND_OUT_MORE);
 }

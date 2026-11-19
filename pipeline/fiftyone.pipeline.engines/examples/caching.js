@@ -44,6 +44,17 @@ const pipeline = require('fiftyone.pipeline.core');
 const engine = require('..');
 // const engine = require("fiftyone.pipeline.engines");
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tResult caching: https://51degrees.com/documentation/_pipeline_api__features__result_caching.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-caching.js&utm_term=find-out-more-caching',
+  '\tPipeline API documentation: https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-caching.js&utm_term=find-out-more-documentation',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-caching.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // This is a very simple cache that uses an in memory JavaScript object
 class MyCustomCache extends engine.DataKeyedCache {
   constructor (size) {
@@ -107,4 +118,6 @@ const processFlowDataWithUserId = function (userID) {
 
 // Run the same evidence through the pipeline twice,
 // second time should be fetched from the cache
-processFlowDataWithUserId('112').then(() => processFlowDataWithUserId('112'));
+processFlowDataWithUserId('112')
+  .then(() => processFlowDataWithUserId('112'))
+  .then(() => console.log(FIND_OUT_MORE));

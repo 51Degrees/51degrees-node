@@ -20,38 +20,5 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-module.exports = {
-  /**
-   * Get a key value from the environment, trying both the
-   * supplied name and the upper-case form.
-   *
-   * @param {string} keyName name of the environment variable
-   * @returns {string} the value of the environment variable
-   */
-  getNamedKey: function (keyName) {
-    let value = process.env[keyName];
-    if (!value) {
-      value = process.env[keyName.toUpperCase()];
-    }
-    return value;
-  },
-
-  /**
-   * Check if a key is invalid. Keys are base64 encoded and must
-   * be of a minimum length.
-   *
-   * @param {string} keyValue value of the key to check
-   * @returns {boolean} true if the key is invalid
-   */
-  isInvalidKey: function (keyValue) {
-    try {
-      const buff = Buffer.from(keyValue, 'base64');
-      const decoded = buff.toString('ascii');
-      return !keyValue ||
-        keyValue.trim().length < 19 ||
-        decoded.length < 14;
-    } catch (e) {
-      return true;
-    }
-  }
-};
+// Keeps a require of the path this module had before it moved to lib.
+module.exports = require('../lib/keyUtils');

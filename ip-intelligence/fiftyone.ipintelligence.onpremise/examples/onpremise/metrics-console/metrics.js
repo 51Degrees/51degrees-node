@@ -25,11 +25,18 @@
  *
  * This example takes all public IP addresses and passes them to the IP
  * intelligence service, recording the average geographic area in square
- * kilometers, the number of polygons that form the area, and the
- * equivalent radius if the area can be represented as a circle.
+ * kilometers and the number of polygons that form the area.
+ *
+ * The area is the shape the data file gives, which the data model holds
+ * as a WKT shape of one or more polygons, so no single distance stands
+ * for it and none is written here. AccuracyRadius is a property of its
+ * own for anyone who wants a distance.
  *
  * The example can take a long time to complete. The sample of IP
- * addresses used in the metrics can be adjusted as a parameter.
+ * addresses used in the metrics can be adjusted as a parameter. The
+ * example uses the LowMemory performance profile unless another, such as
+ * MaxPerformance, is named as the fourth command line argument.
+ * MaxPerformance runs much faster but holds the whole data file in memory.
  *
  * This example is primarily designed for those who are interested in
  * verifying the published metrics associated with 51Degrees'
@@ -64,11 +71,28 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 const areas = require(path.join(__dirname, '/../areas'));
 
-// This example requires the enterprise data file as the area properties
-// used are not available in the lite file. To obtain an enterprise data
-// file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise_v_4_1_ipi
-const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
+// This example needs the area properties, which only the Enterprise data
+// file has. By default it uses the free Lite data file, which is
+// downloaded if it is missing, and there it says what it needs and where
+// to ask for a copy of the Enterprise data file.
+const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=enterprise-data-file';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // The percentage of registered IP addresses to randomly include in the
 // metrics sample. 1 is 100%. Higher values will result in longer elapsed
@@ -95,7 +119,6 @@ const OUTPUT_FIELDS = KEY_PROPERTIES.concat([
   'IpCount',
   'AreaCount',
   'AverageAreaKm',
-  'EquivalentRadiusKm',
   'AveragePolygons'
 ]);
 
@@ -306,8 +329,6 @@ const writeToCsv = function (output, groups) {
     const averageAreaKm = metric.areaCount > 0
       ? Math.floor(metric.totalAreaKm / metric.areaCount)
       : 0;
-    const equivalentRadiusKm =
-      Math.floor(Math.sqrt(averageAreaKm / Math.PI));
     let averagePolygons = 0;
     if (metric.polygons.size > 0) {
       let weightedSum = 0;
@@ -326,7 +347,6 @@ const writeToCsv = function (output, groups) {
       metric.ipCount,
       metric.areaCount,
       averageAreaKm,
-      equivalentRadiusKm,
       averagePolygons.toFixed(2)
     ]);
     output.write(values.join(',') + '\n');
@@ -344,25 +364,32 @@ const writeToCsv = function (output, groups) {
  * @param {Function} condition function used to determine if an IP address
  * range should be included, or undefined to include all ranges
  * @param {object} progress writable stream for progress messages
+ * @param {string} [performanceProfile] the performance profile to use,
+ * LowMemory unless another is named
  */
 const run = async function (
   dataFile,
   output,
   samplePercentage,
   condition,
-  progress) {
+  progress,
+  performanceProfile = 'LowMemory') {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
-    // We use the max performance profile for optimal detection speed
-    // in this example. See the documentation for more detail on this
-    // and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
-    performanceProfile: 'MaxPerformance',
+    // The low memory profile is the default because this example needs
+    // the Enterprise data file, which is about 6 GB. It reads the file as
+    // it goes, which uses little memory but runs much more slowly.
+    // MaxPerformance holds all of the file in memory and runs much faster,
+    // where the machine has the memory for it. Choose it with the fourth
+    // command line argument. See the documentation for more detail on
+    // this and other configuration options:
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=run
+    performanceProfile,
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
     shareUsage: false,
@@ -374,6 +401,13 @@ const run = async function (
 
   const engine = pipeline.getElement('ip');
   const metadata = engine.engine.getMetaData();
+
+  // The metrics are measured from the areas, which only the Enterprise
+  // data file has, so with a free data file the example says so and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(engine, 'Measuring the areas',
+    ['Areas'], progress, CONTACT_US)) {
+    return false;
+  }
 
   // Create the data set structure to rapidly retrieve the data needed
   // to calculate the metrics.
@@ -425,18 +459,18 @@ const run = async function (
   // Finally check the data file used for consistency with the other
   // examples.
   ExampleUtils.checkDataFile(pipeline, dataFile);
+  return true;
 };
 
 // Don't run the example if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
-  // file in the project space. The lite file does not contain the
-  // properties needed by this example.
+  // _51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // which is downloaded if it is missing.
   const dataFile = args.length > 0
     ? args[0]
-    : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   // Get the location for the output file.
   const outputFile = args.length > 1 ? args[1] : 'metrics-output.csv';
@@ -445,6 +479,11 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const samplePercentage = args.length > 2
     ? parseFloat(args[2])
     : DEFAULT_SAMPLE_PERCENTAGE;
+
+  // Get the performance profile, LowMemory unless another is named, for
+  // example MaxPerformance where the machine can hold the whole data file
+  // in memory.
+  const performanceProfile = args.length > 3 ? args[3] : 'LowMemory';
 
   // A condition can be used to limit the ranges included. For example,
   // only include IPv4 ranges as there are too many IPv6 addresses for
@@ -459,16 +498,20 @@ if (process.env.JEST_WORKER_ID === undefined) {
       output,
       samplePercentage,
       condition,
-      process.stdout).then(function () {
+      process.stdout,
+      performanceProfile).then(function (measured) {
       output.end();
-      console.log(`Output written to '${outputFile}'`);
+      if (measured) {
+        console.log(`Output written to '${outputFile}'`);
+      }
+      console.log(FIND_OUT_MORE);
     });
   } else {
-    console.error('Failed to find an enterprise IP intelligence data ' +
-      'file. This example requires an enterprise data file. To obtain ' +
-      'one for testing, please contact us: ' +
-      'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-metrics-console-metrics.js&utm_term=no-enterprise-data-file. The full path to a data file ' +
-      'can be specified as a command line argument');
+    console.error('Failed to find an IP intelligence data file. Make ' +
+      'sure the cxx/data submodule has been fetched by running ' +
+      '`git submodule update --init --recursive`. The full path to a data ' +
+      'file can be specified as a command line argument');
+    console.log(FIND_OUT_MORE);
   }
 };
 

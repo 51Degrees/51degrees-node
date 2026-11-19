@@ -38,7 +38,7 @@ const args = process.argv.slice(2);
 const dataFile = args.length > 0
   ? args[0]
   : path.join(__dirname, '..', '..', '..', 'cxx',
-    'ip-intelligence-data', '51Degrees-LiteV41.ipi');
+    'data', 'ip-intelligence', '51Degrees-LiteV41.ipi');
 
 const run = async function () {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({

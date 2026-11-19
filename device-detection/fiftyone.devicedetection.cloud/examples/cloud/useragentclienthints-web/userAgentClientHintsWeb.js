@@ -104,6 +104,20 @@ const DeviceDetectionCloudPipelineBuilder = require51('fiftyone.devicedetection.
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
+// Where to go next, printed when the example ends with no resource key. The
+// page holds the same section when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Helper function to read property values from flowData
 const getValueHelper = (flowData, propertyKey) => {
   const device = flowData.device;
@@ -119,8 +133,8 @@ const getValueHelper = (flowData, propertyKey) => {
   }
 };
 
-// The aligned '_51DEGREES_RESOURCE_KEY' environment variable is checked
-// first, followed by the legacy 'RESOURCE_KEY' variable.
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// environment variable.
 const myResourceKey = ExampleUtils.getResourceKeyFromEnv() || '!!YOUR_RESOURCE_KEY!!';
 
 // We need 'server' to be defined here so that, when this example
@@ -133,7 +147,7 @@ let pipeline;
 const setPipeline = (resourceKey) => {
   // Create a new Device Detection pipeline and set the config.
   // You need to create a resource key at
-  // https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=setpipeline
+  // https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=setpipeline
   // and paste it into the code. This example displays paid properties, so a
   // paid subscription is needed to populate them all.
   pipeline = new DeviceDetectionCloudPipelineBuilder({
@@ -153,11 +167,13 @@ const setPipeline = (resourceKey) => {
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
   process.env.JEST_WORKER_ID === undefined) {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required and paste it into the ' +
+        'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required and set the environment ' +
+        'variable _51DEGREES_RESOURCE_KEY to it, or paste it into the ' +
         'code, replacing !!YOUR_RESOURCE_KEY!!. This example displays ' +
         'paid properties, so a paid subscription is needed to populate ' +
         'them all. See https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=resource-key-required to get a paid ' +
         'subscription with more properties.');
+  console.log(FIND_OUT_MORE);
 } else {
   const http = require('http');
 
@@ -168,6 +184,11 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
       return;
     }
 
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
+    // Code that shares one Flow Data between tasks is responsible for any
+    // locking.
     const flowData = pipeline.createFlowData();
 
     // Add any information from the request

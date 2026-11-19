@@ -105,4 +105,49 @@ describe('Examples', () => {
     expect(posted.statusCode).toBe(200);
     expect(JSON.parse(posted.text).device.screenpixelswidth).toBe(1920);
   });
+
+  // The client-side endpoints carry the caching headers of the web
+  // integration specification, and the script endpoint answers a matching
+  // If-None-Match with a 304. supertest listens on a new port for each
+  // request and the host is evidence, so each request names the same host.
+  test('cloud getting started web caching headers', async () => {
+    const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
+    OptionsExtension.updateElementPath(options, __dirname);
+    const resourceKey = keyUtils.getResourceKey(
+      tc.envVars.superResourceKeyEnvVar);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(
+        tc.envVars.superResourceKeyEnvVar));
+    }
+    OptionsExtension.setResourceKey(options, resourceKey);
+    example.setPipeline(options);
+
+    const script = await request(example.server)
+      .get('/51Degrees.core.js')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc');
+    expect(script.statusCode).toBe(200);
+    expect(script.headers['cache-control']).toBe('private, max-age=1800');
+    expect(script.headers.vary).toMatch(/user-agent/i);
+    expect(script.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
+
+    const again = await request(example.server)
+      .get('/51Degrees.core.js')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc')
+      .set('If-None-Match', script.headers.etag);
+    expect(again.statusCode).toBe(304);
+    expect(again.text).toBe('');
+    expect(again.headers.etag).toBe(script.headers.etag);
+
+    const json = await request(example.server)
+      .post('/json')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc')
+      .type('form')
+      .send({ '51D_ScreenPixelsWidth': '1920' });
+    expect(json.statusCode).toBe(200);
+    expect(json.headers['cache-control']).toBe('private, max-age=1800');
+    expect(json.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
+  });
 });

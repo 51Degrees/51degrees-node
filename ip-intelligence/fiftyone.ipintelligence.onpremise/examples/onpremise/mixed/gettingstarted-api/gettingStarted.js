@@ -29,17 +29,15 @@
  * for details of the endpoints provided.
  *
  * The cloud examples can be run against this local API by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can be used for the resource key when using the local API.
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/mixed/gettingstarted-api/gettingStarted.js).
  *
- * Required data files:
- * - Device detection data file (.hash format)
- * - IP intelligence data file (.ipi format)
- *
- * The paths to the data files should be provided as 2 consecutive
- * command line parameters.
+ * By default the example uses the free Lite device detection and IP
+ * intelligence data files, which it downloads when they are missing. Paid
+ * data files can be given as 2 consecutive command line parameters, or in
+ * the '_51DEGREES_DD_PATH' and '_51DEGREES_IPI_PATH' environment variables.
  *
  * Required npm Dependencies:
  * - [fiftyone.pipeline.core](https://www.npmjs.com/package/fiftyone.pipeline.core)
@@ -75,20 +73,39 @@ const DeviceDetectionOnPremise =
 const IpIntelligenceOnPremise =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremise;
 
-const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils')).ExampleUtils;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../../exampleUtils'));
 
-// Device detection data file names in priority order.
-const HASH_FILE_NAMES = [
-  'TAC-HashV41.hash',
-  '51Degrees-EnterpriseV4.1.hash',
-  '51Degrees-LiteV4.1.hash'
-];
+// Where to go next, printed once the local API is listening, or when it
+// cannot start for want of a data file.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tDevice detection for Node.js: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe IP Intelligence and device detection engines: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-device-detection-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
 
-// IP intelligence data file names in priority order.
-const IPI_FILE_NAMES = [
-  '51Degrees-EnterpriseIpiV41.ipi',
-  '51Degrees-LiteV41.ipi'
-];
+// The free data files the data repository links, which are downloaded
+// when they are missing.
+const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Properties the API serves only from the Enterprise data files. Each one
+// the data file in use does not have is named when the API starts.
+const ENTERPRISE_PROPERTIES = {
+  device: ['HardwareVendor', 'HardwareName', 'DeviceType'],
+  ip: ['Country', 'Latitude', 'Longitude', 'Areas']
+};
+
+// Where to ask for a copy of the Enterprise data files.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-api-gettingstarted.js&utm_term=enterprise-data-files';
 
 // The port that the local API listens on. The same port is used by the
 // cloud examples in the .NET version of this example.
@@ -116,7 +133,11 @@ const setPipeline = (deviceDataFile, ipDataFile) => {
   // Create the IP intelligence engine from scratch.
   const ipEngine = new IpIntelligenceOnPremise({
     dataFilePath: ipDataFile,
-    performanceProfile: 'MaxPerformance',
+    // A paid data file given to this example can be the Enterprise IP
+    // intelligence data file, which is about 6 GB, so the low memory
+    // profile reads the file as it goes rather than holding all of it in
+    // memory.
+    performanceProfile: 'LowMemory',
     // inhibit auto-update of the data file for this example. An empty
     // license key disables automatic updates.
     licenceKeys: '',
@@ -179,6 +200,11 @@ const evidenceKeys = function (res) {
 // Processes the evidence provided in the request and returns the JSON
 // response produced by the JSON bundler element.
 const processEvidence = function (req, res, query, body) {
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Add the query string parameters and any form body values as query
@@ -250,55 +276,70 @@ const server = http.createServer((req, res) => {
   });
 });
 
+// Names each of ENTERPRISE_PROPERTIES the data files in use do not have,
+// and where to ask for the Enterprise data files when any is missing.
+const reportEnterpriseProperties = function () {
+  let missing = false;
+  for (const [key, names] of Object.entries(ENTERPRISE_PROPERTIES)) {
+    const engine = pipeline.getElement(key);
+    for (const name of names) {
+      if (!ExampleUtils.hasProperty(engine, name)) {
+        console.log(`${name}: ${NEEDS_ENTERPRISE}`);
+        missing = true;
+      }
+    }
+  }
+  if (missing) {
+    console.log('Contact us for a copy of the Enterprise data files at ' +
+      CONTACT_US);
+  }
+};
+
 // Don't run the server if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
-  // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let deviceDataFile = args.length > 0 ? args[0] : undefined;
-  if (deviceDataFile === undefined) {
-    for (const fileName of HASH_FILE_NAMES) {
-      deviceDataFile = ExampleUtils.findDeviceDataFile(fileName);
-      if (deviceDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the device detection data file, the path in
+  // the _51DEGREES_DD_PATH environment variable, or the free Lite data
+  // file.
+  const deviceDataFile = args.length > 0
+    ? args[0]
+    : ExampleUtils.findDeviceDataFile(LITE_V_4_1_HASH);
 
-  // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let ipDataFile = args.length > 1 ? args[1] : undefined;
-  if (ipDataFile === undefined) {
-    for (const fileName of IPI_FILE_NAMES) {
-      ipDataFile = ExampleUtils.findDataFile(fileName);
-      if (ipDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the IP intelligence data file, the path in
+  // the _51DEGREES_IPI_PATH environment variable, or the free Lite data
+  // file.
+  const ipDataFile = args.length > 1
+    ? args[1]
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (deviceDataFile !== undefined && ipDataFile !== undefined) {
     console.log(`Device detection data file: ${deviceDataFile}`);
     console.log(`IP intelligence data file: ${ipDataFile}`);
     setPipeline(deviceDataFile, ipDataFile);
-    server.listen(PORT, '0.0.0.0');
+    // Only the machine the example runs on, because the example serves
+    // the data file in use, at 127.0.0.1 rather than localhost, which
+    // can resolve to the IPv6 loopback alone.
+    server.listen(PORT, '127.0.0.1');
     console.log(`Local cloud API listening on: http://localhost:${PORT}`);
+    reportEnterpriseProperties();
   } else {
     if (deviceDataFile === undefined) {
-      console.error('Failed to find a device detection data file. A ' +
-        'lite data file is available from the device-detection-data ' +
-        'repository on GitHub ' +
-        'https://github.com/51Degrees/device-detection-data. The full ' +
-        'path to a data file can be specified as the first command ' +
-        'line argument');
+      console.error('Failed to find a device detection data file. ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path to a ' +
+        'data file can be specified as the first command line argument');
     }
     if (ipDataFile === undefined) {
       console.error('Failed to find an IP intelligence data file. ' +
-        'Make sure the ip-intelligence-data submodule has been updated ' +
-        'by running `git submodule update --recursive`. The full path ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path ' +
         'to a data file can be specified as the second command line ' +
         'argument');
     }
   }
+
+  console.log(FIND_OUT_MORE);
 };
 
 // Export server object and set pipeline.

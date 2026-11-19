@@ -18,10 +18,14 @@ declare class JavaScriptBuilderElement extends FlowElement {
      *
      * @param {object} options options object
      * @param {string} options.objName the name of the client
-     * side object with the JavaScript properties in it
-     * @param {string} options.protocol The protocol ("http" or "https")
-     * used by the client side callback url.
-     * This can be overriden with header.protocol evidence
+     * side object with the JavaScript properties in it. This must be a valid
+     * JavaScript identifier that is not a reserved word, or the constructor
+     * throws. Leaving it out, or giving null, means "fod". This can be overridden with "query.fod-js-object-name" evidence,
+     * which is ignored with a warning when it is not a valid name.
+     * @param {string} options.protocol The protocol of the client side
+     * callback url, http or https in any case of its ASCII letters. The
+     * constructor throws for any other protocol. Left out, the header.protocol
+     * evidence is used, or https when there is none
      * @param {string} options.host The host of the client side
      * callback url. This can be overriden with header.host evidence.
      * @param {string} options.endPoint The endpoint of the client side
@@ -29,8 +33,10 @@ declare class JavaScriptBuilderElement extends FlowElement {
      * @param {boolean} options.enableCookies Whether the client JavaScript
      * stored results of client side processing in cookies. This can also
      * be set per request, using the "query.fod-js-enable-cookies" evidence key.
-     * For more details on personal data policy, see http://51degrees.com/terms/client-services-privacy-policy/
+     * For more details on personal data policy, see https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-javascriptbuilder.js&utm_term=constructor
      * @param {boolean} options.minify Whether to minify the JavaScript
+     * @throws {Error} when objName is not a valid name, or when protocol is
+     * given and is not http or https
      */
     constructor({ objName, protocol, host, endPoint, enableCookies, minify }?: {
         objName: string;
@@ -49,6 +55,14 @@ declare class JavaScriptBuilderElement extends FlowElement {
         minify: boolean;
     };
     evidenceKeyFilter: JSEvidenceKeyFilter;
+    properties: {
+        javascript: {
+            name: string;
+            type: string;
+            description: string;
+        };
+    };
+    _invalidUrlLogged: boolean;
     /**
      * Internal process function of the JavaScript builder
      * Gets JSON from the JSONBundler and constructs JavaScript
@@ -67,10 +81,9 @@ import FlowElement = require("./flowElement.js");
  * @typedef {import('./flowData')} FlowData
  */
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
- **/
+ * The script reads the query string, and the host and protocol it calls
+ * back to, so those are the evidence that can change it.
+ */
 declare class JSEvidenceKeyFilter extends EvidenceKeyFilter {
     filterEvidenceKey(key: any): boolean;
 }

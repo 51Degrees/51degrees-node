@@ -10,13 +10,14 @@ export = SequenceElement;
  * this is added automatically along with the JavaScriptBuilder and JSONBundler.
  **/
 declare class SequenceElement extends FlowElement {
-    constructor(...args: any[]);
+    constructor();
     evidenceKeyFilter: BasicListEvidenceKeyFilter;
     /**
      * Internal process function for the sequence element
      * Checks if there is a session id and sequence number set
      * if there is it increments the sequence number for that session
-     * if not it initialises both
+     * if not it initialises both. Both values are written to the evidence
+     * and to the element data.
      *
      * @param {FlowData} flowData flowData with the evidence in it
      */

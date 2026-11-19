@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const FlowElement = require('fiftyone.pipeline.core').FlowElement;
+const { FlowElement, listSetting } = require('fiftyone.pipeline.core');
 
 const DataFileUpdateService = require('./dataFileUpdateService');
 
@@ -44,8 +44,9 @@ class Engine extends FlowElement {
    * @param {DataFile} options.dataFile an optional datafile
    * to add to the engine
    * @param {DataKeyedCache} options.cache instance of a DataKeyedCache
-   * @param {Array} options.restrictedProperties specific list
-   * of properties to fetch elementData for
+   * @param {Array<string>|string} options.restrictedProperties specific
+   * list of properties to fetch elementData for, or one comma separated
+   * string of them, as a configuration file gives a list
    */
   constructor (
     {
@@ -62,9 +63,50 @@ class Engine extends FlowElement {
       this.cache = cache;
     }
 
-    if (restrictedProperties) {
-      this.restrictedProperties = restrictedProperties;
+    const restricted = listSetting(restrictedProperties);
+    if (restricted) {
+      this.restrictedProperties = restricted;
+
+      /**
+       * The restricted property names in lower case, because property
+       * names are compared ignoring case.
+       *
+       * @type {Set<string>}
+       */
+      this.restrictedPropertyKeys = new Set(
+        restricted.map((name) => name.toLowerCase()));
     }
+  }
+
+  /**
+   * Whether a result may be stored in the cache and served from it. A result
+   * that holds a value created for the one request that asked for it, such
+   * as a 51Did, must not be, or the next request with the same evidence
+   * would be given it.
+   *
+   * @param {object} data the element data of a result
+   * @returns {boolean} true unless the result holds such a value
+   */
+  isCacheable (data) {
+    return true;
+  }
+
+  /**
+   * The key the cache keeps a result under, made from the evidence this
+   * engine accepts with each key in lower case and the keys in order, so
+   * the same evidence gives the same key whatever order it was added in and
+   * whatever the letters of its keys. Values keep their letters.
+   *
+   * @param {FlowData} flowData the flow data being processed
+   * @returns {string} the cache key
+   */
+  cacheKey (flowData) {
+    const evidence = this.evidenceKeyFilter
+      .filterEvidence(flowData.evidence.getAll());
+    const entries = Object.entries(evidence)
+      .map(([key, value]) => [key.toLowerCase(), value]);
+    entries.sort((a, b) => (a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0)));
+    return JSON.stringify(entries);
   }
 
   /**
@@ -72,17 +114,14 @@ class Engine extends FlowElement {
    *
    * @param {FlowData} flowData checks if a FlowData's evidence
    * is already in the cache and processing can be bypassed
+   * @param {string} [key] the flow data's cache key, made from it when not
+   * given
    * @returns {boolean} whether in cache
    */
-  inCache (flowData) {
-    let keys = this.evidenceKeyFilter
-      .filterEvidence(flowData.evidence.getAll());
+  inCache (flowData, key = this.cacheKey(flowData)) {
+    const cached = this.cache.get(key);
 
-    keys = JSON.stringify(keys);
-
-    const cached = this.cache.get(keys);
-
-    if (cached) {
+    if (cached && this.isCacheable(cached)) {
       flowData.setElementData(cached);
 
       return true;
@@ -104,20 +143,23 @@ class Engine extends FlowElement {
   process (flowData) {
     const engine = this;
 
+    // The key is made before processing, from the evidence the request
+    // brought, so the result is stored under the key the next request with
+    // the same evidence looks for, whatever processing adds.
+    let key;
     if (this.cache) {
-      if (this.inCache(flowData)) {
+      key = this.cacheKey(flowData);
+      if (this.inCache(flowData, key)) {
         return Promise.resolve(true);
       }
     }
 
     return Promise.resolve(this.processInternal(flowData)).then(function () {
       if (engine.cache) {
-        let keys = engine.evidenceKeyFilter
-          .filterEvidence(flowData.evidence.getAll());
-
-        keys = JSON.stringify(keys);
-
-        engine.cache.put(keys, flowData.get(engine.dataKey));
+        const data = flowData.get(engine.dataKey);
+        if (engine.isCacheable(data)) {
+          engine.cache.put(key, data);
+        }
       }
     });
   }

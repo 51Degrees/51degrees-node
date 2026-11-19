@@ -22,5 +22,8 @@
 
 module.exports = {
   evidenceEnableCookies: 'query.fod-js-enable-cookies',
-  evidenceObjectName: 'query.fod-js-object-name'
+  evidenceObjectName: 'query.fod-js-object-name',
+  // The web request, which the web integration adds whether or not any
+  // element accepts it.
+  evidenceHttpRequest: 'server.http-request'
 };

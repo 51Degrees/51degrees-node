@@ -21,7 +21,6 @@ declare class SwigData extends SwigData_base {
         swigResults: object;
     }, ...args: any[]);
     swigResults: object;
-    missingPropertyService: DataFileMissingPropertyService;
     /**
      * Retrieves elementData via the swigWrapper but also casts it to the
      * correct type via a check of the engine's property list metadata
@@ -30,9 +29,18 @@ declare class SwigData extends SwigData_base {
      * @returns {AspectPropertyValue} value property value
      */
     getInternal(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
+    /**
+     * Looks for a key again as the engine's own key for that name, ignoring
+     * letter case. The engine maps each key in lower case to its own key when
+     * the data file loads, because the match metric keys are not all in lower
+     * case.
+     *
+     * @param {string} key the property key to retrieve
+     * @returns {AspectPropertyValue} value property value
+     */
+    getInternalIgnoringCase(key: string): typeof import("fiftyone.pipeline.core/types/aspectPropertyValue");
 }
 declare namespace SwigData {
     export { FlowElement };
 }
-import DataFileMissingPropertyService = require("./dataFileMissingPropertyService");
 type FlowElement = import("fiftyone.pipeline.core/types/flowElement");

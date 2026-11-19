@@ -65,9 +65,9 @@
  * signature check.
  *
  * Environment variables:
- *   _51DEGREES_RESOURCE_KEY, or RESOURCE_KEY. Required.
- *   _51DEGREES_LICENSE_KEY, or LICENSE_KEY. Optional, see below.
- *   FOD_CLOUD_API_URL. Optional. The cloud API base including the
+ *   _51DEGREES_RESOURCE_KEY. Required.
+ *   _51DEGREES_LICENSE_KEY. Optional, see below.
+ *   _51DEGREES_CLOUD_ENDPOINT. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
  *   PORT. Optional, defaults to 5100.
@@ -93,6 +93,18 @@ const {
 // server exactly as the other 51Degrees web examples vendor it.
 const readPage = () => readFileSync(join(__dirname, 'page.html'), 'utf8');
 const readCss = () => readFileSync(join(__dirname, 'examples-main.min.css'));
+
+// Where to go next, printed when the demo ends with no resource key. The
+// page holds the same links when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tThe specifications: https://github.com/51Degrees/specifications',
+  '\tWhat a 51Did is: https://51degrees.com/documentation/_identifiers__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=find-out-more-documentation',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=find-out-more-contact'
+].join('\n');
 
 /**
  * The text of an error, whatever was thrown. fetch wraps the cause of a
@@ -211,26 +223,32 @@ function redeemRoute (client) {
  * Reads the environment, builds the client and starts the server.
  */
 function main () {
-  // The cloud API base, normalised to end in exactly one slash so every
-  // URL is base plus a relative path, exactly as the cloud request engine
-  // and the DidClient treat the same variable. The page builds its own two
-  // cloud calls from the same base once it is substituted in. A host other
-  // than cloud.51degrees.com would be used to (a) use an on premise web
-  // server, or (b) use a privately hosted version of the 51Degrees cloud
-  // for performance reasons. This is the private hosting option of the
-  // 51Degrees cloud service. Both run the same service, so the demo works
-  // unchanged.
-  const base = (process.env.FOD_CLOUD_API_URL ||
-    'https://cloud.51degrees.com/api/v4/').replace(/\/*$/, '/');
+  // RESOURCE_KEY and LICENSE_KEY are the deprecated names of the two
+  // variables, each read only when its _51DEGREES_ name is unset or
+  // empty.
+  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
+    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
+      'instead.');
+  }
+  if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
+    console.warn('The LICENSE_KEY environment variable is deprecated and ' +
+      '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
+      'instead.');
+  }
   const resource = process.env._51DEGREES_RESOURCE_KEY ||
     process.env.RESOURCE_KEY;
   const licence = process.env._51DEGREES_LICENSE_KEY ||
     process.env.LICENSE_KEY || '';
   const port = Number(process.env.PORT || 5100);
   if (!resource) {
-    console.error('Set _51DEGREES_RESOURCE_KEY (or RESOURCE_KEY) to the ' +
-      'resource key of the page.');
-    process.exit(1);
+    // With no resource key the demo has nothing to serve, so it says how
+    // to get one and ends.
+    console.log('Set _51DEGREES_RESOURCE_KEY to the resource key of the ' +
+      'page. Resource keys are created at ' +
+      'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=resource-key-required');
+    console.log(FIND_OUT_MORE);
+    return;
   }
   if (!licence) {
     // Only an account that holds licence keys needs one to redeem,
@@ -246,12 +264,23 @@ function main () {
   }
 
   // One client for the whole server. It caches the public key list, and
-  // it holds the licence key so no route handles the key itself.
+  // it holds the licence key so no route handles the key itself. No
+  // endpoint is given, so the client reads the cloud API base from the
+  // environment, as it does for any caller.
   const client = new DidClient({
     resourceKey: resource,
-    licenceKey: licence,
-    endpoint: base
+    licenceKey: licence
   });
+
+  // The cloud API base the client settled on, which ends in exactly one
+  // slash so every URL is base plus a relative path. The page builds its
+  // own two cloud calls from the same base once it is substituted in. A
+  // host other than cloud.51degrees.com would be used to (a) use an on
+  // premise web server, or (b) use a privately hosted version of the
+  // 51Degrees cloud for performance reasons. This is the private hosting
+  // option of the 51Degrees cloud service. Both run the same service, so
+  // the demo works unchanged.
+  const base = client.endpoint;
   const redeem = redeemRoute(client);
 
   createServer(async (request, response) => {
@@ -275,7 +304,9 @@ function main () {
     }
     response.writeHead(404);
     response.end();
-  }).listen(port, () =>
+  // Only the machine the example runs on, at 127.0.0.1 rather than
+  // localhost, which can resolve to the IPv6 loopback alone.
+  }).listen(port, '127.0.0.1', () =>
     console.log(`51Did demo on http://localhost:${port}/`));
 }
 

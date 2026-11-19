@@ -21,22 +21,86 @@
  * ********************************************************************* */
 
 const engines = require('fiftyone.pipeline.engines');
+const core = require('fiftyone.pipeline.core');
 
 const Engine = engines.Engine;
+const BasicListEvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const Constants = core.Constants;
 const ShareUsageEvidenceKeyFilter = require('./shareUsageEvidenceKeyFilter');
+const ShareUsageTrackerEvidenceKeyFilter = require('./shareUsageTrackerEvidenceKeyFilter');
 const ShareUsageTracker = require('./shareUsageTracker');
+const ShareUsageBackOff = require('./shareUsageBackOff');
+const packageVersions = require('./packageVersions');
+
+// Usage sharing's warnings are also emitted at 'warning', a deprecated
+// level, so that a listener on it still hears them until a later release
+// emits them at 'warn' alone.
+const DEPRECATED_WARNING_LEVEL = 'warning';
+
+/**
+ * Logs a warning from a usage sharing element at 'warn', and at the
+ * deprecated 'warning' as well.
+ *
+ * @param {object} element the usage sharing element
+ * @param {*} message the warning
+ */
+const warn = (element, message) => {
+  element._log('warn', message);
+  element._log(DEPRECATED_WARNING_LEVEL, message);
+};
 const zlib = require('zlib');
 const url = require('url');
 
 const os = require('os');
+const { performance } = require('perf_hooks');
+const crypto = require('crypto');
+
+// The version of the Pipeline, read from the package that provides it, so
+// that the usage shared names the release that is running.
+const PIPELINE_VERSION =
+  require('fiftyone.pipeline.core/package.json').version;
 
 /**
- * The maximum length of a piece of evidence's value which can be
- * added to the usage data being sent.
+ * The maximum number of code points in a piece of evidence's value which
+ * can be added to the usage data being sent.
  */
-const SHARE_USAGE_MAX_EVIDENCE_LENGTH = 512;
+const SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS = 10000;
 
 const SHARE_USAGE_VERSION = '1.1';
+
+/**
+ * The default maximum number of entries waiting to be sent, unless ten times
+ * the requested package size is larger.
+ */
+const MAX_QUEUE_SIZE_DEFAULT = 1000;
+
+/**
+ * While the queue is full, a message is logged for the first entry dropped
+ * and then once for every this many more, never one for each entry.
+ */
+const QUEUE_FULL_LOG_EVERY = 1000;
+
+/**
+ * The most characters of an answer's content that are logged.
+ */
+const LOGGED_CONTENT_LENGTH = 500;
+
+/**
+ * The default time in milliseconds to wait for the service to answer.
+ */
+const REQUEST_TIMEOUT_DEFAULT = 60000;
+
+/**
+ * The longest single wait during a pause. Longer pauses are waited out in
+ * parts, as a timer cannot wait longer than about 24 days.
+ */
+const LONGEST_WAIT_MILLIS = 86400000;
+
+/**
+ * How long after the values that do not change while the element lives are
+ * written that they are written again, in milliseconds.
+ */
+const INVARIANT_INTERVAL_MILLIS = 60 * 60 * 1000;
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
@@ -62,41 +126,103 @@ class ShareUsage extends Engine {
    * is recommended in order to reduce the overhead of sending HTTP
    * messages.
    * For example, the 51Degrees cloud service uses a value of 2500.
-   * @param {string} options.cookie if a cookie is being used to identify
-   * user sessions, it can be specified here in order to reduce the
-   * sharing of duplicated data.
-   * @param {Array} options.queryWhitelist By default query string
-   * and HTTP form parameters are not shared unless prefixed with '51D_'.
-   * If you need to share query string parameters, a list can be
-   * specified here.
-   * @param {Array} options.headerBlacklist By default, all HTTP headers
-   * (except a few, such as Cookies) are shared. Individual headers can
-   * be excluded from sharing by adding them to this list.
+   * @param {string} options.cookie The name of the cookie that holds the
+   * session id. It has no effect unless trackSession is true. The cookie
+   * itself is never shared unless its name starts with '51D_', as no other
+   * cookie is.
+   * @param {boolean} options.shareAllQueryStringParameters If true, every
+   * query string and HTTP form parameter is shared. True by default.
+   * @param {Array<string>|string|null} options.queryWhitelist When
+   * shareAllQueryStringParameters is false, query string and HTTP form
+   * parameters are not shared unless prefixed with '51D_' or given in this
+   * list, or in one comma separated string of them, as a configuration file
+   * gives a list. null is the same as an empty list.
+   * @param {Array<string>|string} options.headerBlacklist By default, all
+   * HTTP headers except Cookie are shared. Individual headers can be
+   * excluded from sharing by adding them to this list, or to one comma
+   * separated string of them, as a configuration file gives a list.
    * @param {number} options.sharePercentage approximate proportion of
    * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
    * @param {string} options.endpoint The target destination for usage
    * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
+   * @param {boolean} options.shareAll If true, all evidence is shared apart
+   * from the email address, the salt used for hashed email identifiers, the
+   * request's query string and path, and every cookie whose name does not
+   * start with '51D_'. False by default.
+   * @param {boolean} options.trackSession If true, the cookie named by
+   * cookie is used to tell user sessions apart, so evidence already shared
+   * is shared again when it comes from a new session. False by default. It
+   * needs cookie to be set, and works the same whether or not shareAll is
+   * true.
+   * @param {number} options.maximumQueueSize The most entries held while
+   * waiting to be sent. When the queue is full, new entries are dropped. The
+   * default is 1000, or ten times requestedPackageSize if that is larger.
+   * @param {number} options.requestTimeout The time in milliseconds to wait
+   * for the service to answer before the send counts as failed. 60000 by
+   * default.
+   * @param {number} options.failuresToEnterRecovery The number of failed
+   * sends within failuresWindowSeconds that pauses sending, from 1 to 100.
+   * Usage data is still queued while sending is paused. 10 by default.
+   * @param {number} options.failuresWindowSeconds The time in seconds over
+   * which failed sends are counted. 100 by default.
+   * @param {number} options.initialRecoveryDelaySeconds The length in
+   * seconds of the first pause after failed sends. 2 by default.
+   * @param {number} options.maxRecoveryDelaySeconds The longest a pause can
+   * be, in seconds. 300 by default.
+   * @param {number} options.recoveryMultiplier What the pause is multiplied
+   * by each time the send tried when a pause ends fails. 2 by default.
    */
   constructor (
     {
       interval = 1200000,
       requestedPackageSize = 10,
       cookie,
+      shareAllQueryStringParameters = true,
       queryWhitelist,
       headerBlacklist,
       sharePercentage = 1,
-      endpoint = 'https://devices-v4.51degrees.com/new.ashx'
+      endpoint = 'https://devices-v4.51degrees.com/new.ashx',
+      shareAll = false,
+      trackSession = false,
+      maximumQueueSize,
+      requestTimeout = REQUEST_TIMEOUT_DEFAULT,
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
     } = {}) {
     super(...arguments);
 
     this.trackingCookie = cookie;
 
-    this.evidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
-      {
-        cookie,
-        queryWhitelist,
-        headerBlacklist
-      });
+    this.shareAll = shareAll;
+
+    this.trackSession = trackSession;
+
+    // The session id and sequence number are kept in evidence, as the usage
+    // data carries them separately.
+    const queryList = core.listSetting(queryWhitelist);
+    const options = {
+      cookie,
+      shareAllQueryStringParameters,
+      queryWhitelist: [...(queryList || []), 'session-id', 'sequence'],
+      headerBlacklist: core.listSetting(headerBlacklist),
+      shareAll
+    };
+
+    // The element accepts no evidence, as none of what it shares changes a
+    // result, so caching, the ETag and the Vary header never depend on it.
+    // The flow data still keeps the evidence it would share, and, when
+    // sessions are tracked, the session cookie for the tracker. The data
+    // sent leaves out every cookie whose name does not start with 51D_.
+    this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.keptEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
+      { ...options, includeSession: trackSession });
+    this.dataEvidenceKeyFilter = new ShareUsageEvidenceKeyFilter(
+      { ...options, includeSession: false });
+    this.trackerEvidenceKeyFilter = new ShareUsageTrackerEvidenceKeyFilter(
+      { ...options, includeSession: trackSession });
 
     this.dataKey = 'shareUsage';
 
@@ -106,7 +232,45 @@ class ShareUsage extends Engine {
 
     this.sharePercentage = sharePercentage;
 
+    // The entries waiting to be sent, oldest first.
     this.shareData = [];
+
+    // The entries dropped since the queue last had room.
+    this.dropped = 0;
+
+    this.maximumQueueSize = maximumQueueSize === undefined
+      ? Math.max(MAX_QUEUE_SIZE_DEFAULT, 10 * requestedPackageSize)
+      : maximumQueueSize;
+    if (!(this.maximumQueueSize >= requestedPackageSize)) {
+      throw new RangeError(
+        'maximumQueueSize cannot be smaller than requestedPackageSize.');
+    }
+
+    this.requestTimeout = requestTimeout;
+
+    // Pauses sending after repeated failed sends.
+    this.backOff = new ShareUsageBackOff({
+      failuresToEnterRecovery,
+      failuresWindowSeconds,
+      initialRecoveryDelaySeconds,
+      maxRecoveryDelaySeconds,
+      recoveryMultiplier
+    });
+
+    // True while a message is being sent. One is sent at a time.
+    this.sending = false;
+
+    // Starts sending again when a pause ends.
+    this.resumeTimer = null;
+
+    // A version 4 UUID that names this element in every record it writes,
+    // created when it is built and never stored, so a process that starts
+    // again, or a second element, has its own.
+    this.processId = crypto.randomUUID();
+
+    // When, by ShareUsage.now, the values that do not change while the
+    // element lives were last written to a record, or null before the first.
+    this.invariantWrittenAt = null;
 
     if (endpoint.includes('https://') === false &&
       endpoint.includes('http://') === false) {
@@ -124,23 +288,79 @@ class ShareUsage extends Engine {
   }
 
   /**
+   * The time in milliseconds, from a clock that only goes forward, which
+   * decides when the values that do not change while the element lives are
+   * written again. Tests replace it to move time on.
+   *
+   * @returns {number} the time now in milliseconds
+   */
+  static now () {
+    return performance.now();
+  }
+
+  /**
    * Internal process method which uses the ShareUsageTracker
    * to determine whether to add usage data to a batch and adds it if necessary.
    *
    * @param {FlowData} flowData flowData to process
    */
   processInternal (flowData) {
-    if (Math.random() <= this.sharePercentage) {
-      const cacheKey = this.evidenceKeyFilter
-        .filterEvidence(flowData.evidence.getAll());
+    // Usage sharing never stops processing, so an error is logged here
+    // rather than passed to the Pipeline.
+    try {
+      if (Math.random() <= this.sharePercentage) {
+        // The tracker compares the values that would be shared.
+        const cacheKey = this.trackerEvidenceKeyFilter
+          .filterEvidence(this.getFoundEvidence(flowData));
 
-      const share = this.tracker.track(cacheKey);
-      if (share) {
-        this.tracker.put(cacheKey);
+        const share = this.tracker.track(cacheKey);
+        if (share) {
+          this.tracker.put(cacheKey);
 
-        this.addToShareUsage(this.getDataFromEvidence(flowData));
+          this.addToShareUsage(this.getDataFromEvidence(flowData));
+        }
+      }
+    } catch (err) {
+      this._log('error', 'Usage sharing could not record a request. ' +
+        (err && err.stack ? err.stack : err));
+    }
+  }
+
+  /**
+   * The values the element finds to share, before its rules leave any out.
+   * They are every value of the web request the web integration supplied
+   * as server.http-request, under the key each has as evidence, and every
+   * evidence value. Keys ignore letter case, so a key in both places is
+   * one value, under the evidence spelling. The web request itself is not
+   * one of them.
+   *
+   * @param {FlowData} flowData the flow data to look in
+   * @returns {object} the values, keyed as evidence is
+   */
+  getFoundEvidence (flowData) {
+    const found = {};
+    // The name each value is held under in found, by that name folded.
+    const names = {};
+    const put = (key, value) => {
+      const folded = String(key).toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(names, folded)) {
+        delete found[names[folded]];
+      }
+      names[folded] = key;
+      found[key] = value;
+    };
+    const httpRequest = flowData.evidence.get(Constants.evidenceHttpRequest);
+    if (httpRequest !== null && typeof httpRequest === 'object') {
+      for (const [key, value] of Object.entries(httpRequest)) {
+        if (value !== undefined && value !== null) {
+          put(key, value);
+        }
       }
     }
+    for (const [key, value] of Object.entries(flowData.evidence.getAll())) {
+      put(key, value);
+    }
+    return found;
   }
 
   /**
@@ -153,17 +373,21 @@ class ShareUsage extends Engine {
    */
   getDataFromEvidence (flowData) {
     const data = new ShareUsageData();
+    const found = this.getFoundEvidence(flowData);
 
-    Object.keys(flowData.evidence.getAll()).forEach(key => {
-      const value = flowData.evidence.get(key);
-      if (key === 'server.client-ip') {
+    Object.keys(found).forEach(key => {
+      const value = found[key];
+      // Evidence keys are compared ignoring case, and the evidence keeps the
+      // letters of the key that first arrived.
+      const lowerKey = key.toLowerCase();
+      if (lowerKey === 'server.client-ip') {
         // The client IP is dealt with separately for backwards
         // compatibility purposes.
         data.clientIP = value;
-      } else if (key === 'query.session-id') {
+      } else if (lowerKey === 'query.session-id') {
         // The SessionID is dealt with separately.
         data.sessionId = value;
-      } else if (key === 'query.sequence') {
+      } else if (lowerKey === 'query.sequence') {
         // The Sequence is dealt with separately.
         const sequence = parseInt(value);
 
@@ -175,7 +399,7 @@ class ShareUsage extends Engine {
         }
       } else {
         // Check if we can send this piece of evidence
-        if (this.evidenceKeyFilter.filterEvidenceKey(key)) {
+        if (this.dataEvidenceKeyFilter.filterEvidenceKey(key)) {
           data.tryAddToData(key, value);
         }
       }
@@ -191,7 +415,7 @@ class ShareUsage extends Engine {
       let xml = '';
 
       // The version number of the Pipeline API
-      xml += '<Version>4.4.7</Version>';
+      xml += `<Version>${new ReplacedString(PIPELINE_VERSION).result}</Version>`;
       // Write Pipeline information
       // The product name
       xml += '<Product>Pipeline</Product>';
@@ -199,9 +423,21 @@ class ShareUsage extends Engine {
       this.getFlowElements().forEach(element => {
         xml += `<FlowElement>${element}</FlowElement>`;
       });
+      // Every 51Degrees package in use, with its version, so that the
+      // spread of each package's releases can be measured
+      const elements = this.pipelines.length === 1
+        ? Object.values(this.pipelines[0].flowElements)
+        : [];
+      packageVersions(elements).forEach(({ name, version }) => {
+        xml += `<Package Name="${new ReplacedString(name).result}">` +
+          `${new ReplacedString(version).result}</Package>`;
+      });
       xml += '<Language>Node.JS</Language>';
       // The software language version
       xml += `<LanguageVersion>${nodeVersion}</LanguageVersion>`;
+      // The IP address of this server
+      xml += '<ServerIP>' + new ReplacedString(serverAddress()).result +
+        '</ServerIP>';
       // The OS name and version
       xml += `<Platform>${osVersion}</Platform>`;
       this.constantXml = xml;
@@ -216,20 +452,46 @@ class ShareUsage extends Engine {
    * evidence in FlowData (filtered by the ShareUsageEvidenceKeyFilter)
    */
   addToShareUsage (data) {
+    // When the queue is full, the newest entries are dropped.
+    if (this.shareData.length >= this.maximumQueueSize) {
+      this.dropped++;
+      if (this.dropped === 1 || this.dropped % QUEUE_FULL_LOG_EVERY === 0) {
+        warn(this, 'The usage sharing queue is full at ' +
+          `${this.maximumQueueSize} entries, so usage data is being ` +
+          `dropped. ${this.dropped} entries have been dropped since the ` +
+          'queue last had room.');
+      }
+      return;
+    }
+    this.dropped = 0;
+
     let xml = '';
 
     xml += '<Device>';
 
-    // --- write invariant data
-    xml += this.getConstantXml();
+    // The process identifier, in every record, which ties a record that
+    // leaves out the invariant data to the record that carries it
+    xml += `<ProcessId>${this.processId}</ProcessId>`;
+
+    // --- write invariant data, to the first record and again to the first
+    // once an hour has passed since they were last written
+    const now = ShareUsage.now();
+    if (this.invariantWrittenAt === null ||
+      now - this.invariantWrittenAt >= INVARIANT_INTERVAL_MILLIS) {
+      xml += this.getConstantXml();
+      this.invariantWrittenAt = now;
+    }
 
     // --- write variable data
     // The SessionID used to track a series of requests
-    xml += `<SessionId>${data.sessionId}</SessionId>`;
+    xml += '<SessionId>' + new ReplacedString(data.sessionId).result +
+      '</SessionId>';
     // The sequence number of the request in a series of requests.
-    xml += `<Sequence>${data.sequence}</Sequence>`;
-    // The client IP of the request
-    xml += `<ClientIP>${data.clientIP}</ClientIP>`;
+    xml += '<Sequence>' + new ReplacedString(data.sequence).result +
+      '</Sequence>';
+    // The client IP of the request, empty where there is none
+    xml += '<ClientIP>' + new ReplacedString(data.clientIP).result +
+      '</ClientIP>';
 
     // The UTC date/time this entry was written
     const date = new Date().toISOString();
@@ -244,13 +506,14 @@ class ShareUsage extends Engine {
         const replacedString = new ReplacedString(entryValue);
         // Write start element
         if (categoryKey.length > 0) {
-          xml += `<${categoryKey} Name="${entryKey}"`;
+          const name = new ReplacedString(entryKey).result;
+          xml += `<${categoryKey} Name="${name}"`;
         } else {
           xml += `<${entryKey}`;
         }
         // Write any attributes
-        if (replacedString.replaced) {
-          xml += ' replaced="true"';
+        if (replacedString.escaped) {
+          xml += ' escaped="true"';
         }
         if (replacedString.truncated) {
           xml += ' truncated="true"';
@@ -272,40 +535,156 @@ class ShareUsage extends Engine {
 
     this.shareData.push(xml);
 
-    if (this.shareData.length >= this.requestedPackageSize) {
-      this.sendShareUsage();
-    }
+    this.sendShareUsage();
   }
 
   /**
-   * Internal method to send the share usage bundle to the 51Degrees servers
+   * Internal method to start sending the share usage bundle to the 51Degrees
+   * servers. Nothing starts if a message is already being sent, if fewer
+   * than requestedPackageSize entries are queued, or while sending is paused
+   * after failed sends, in which case a timer starts sending when the pause
+   * ends.
    */
   sendShareUsage () {
+    if (this.sending) {
+      return;
+    }
+    const pause = this.backOff.remaining(ShareUsageBackOff.now());
+    if (pause > 0) {
+      this.scheduleResume(pause);
+      return;
+    }
+    if (this.shareData.length < this.requestedPackageSize) {
+      return;
+    }
+    this.sending = true;
+    this.sendNext();
+  }
+
+  /**
+   * Start sending when the pause ends.
+   *
+   * @param {number} pause the milliseconds until the pause ends
+   */
+  scheduleResume (pause) {
+    if (this.resumeTimer) {
+      return;
+    }
+    this.resumeTimer = setTimeout(() => {
+      this.resumeTimer = null;
+      this.sendShareUsage();
+    }, Math.min(pause, LONGEST_WAIT_MILLIS));
+    // The timer does not keep the process running.
+    this.resumeTimer.unref();
+  }
+
+  /**
+   * Send one message of at most twice requestedPackageSize entries, then the
+   * next until fewer than requestedPackageSize are queued or a failed send
+   * pauses sending.
+   */
+  sendNext () {
+    const shareData = this.shareData.splice(0, 2 * this.requestedPackageSize);
+    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join('')}</Devices>`;
+    this.post(data, accepted => {
+      let pause = 0;
+      if (accepted) {
+        if (this.backOff.succeeded()) {
+          this._log('info', 'Usage sharing resumed after a send succeeded.');
+        }
+      } else {
+        pause = this.backOff.failed(ShareUsageBackOff.now());
+        if (pause > 0) {
+          warn(this, `Usage sharing paused for ${pause / 1000} ` +
+            'seconds after failed sends. Usage data is still queued, up to ' +
+            'the maximum queue size, and sending starts again when the pause ' +
+            'ends.');
+          this.scheduleResume(pause);
+        }
+      }
+      if (pause > 0 || this.shareData.length < this.requestedPackageSize) {
+        this.sending = false;
+        return;
+      }
+      this.sendNext();
+    });
+  }
+
+  /**
+   * Post one message to the 51Degrees servers.
+   *
+   * @param {string} data the XML to send
+   * @param {Function} done called once with true if the service accepted the
+   * message, or false if the send failed
+   */
+  post (data, done) {
     const usageEngine = this;
-    const shareData = this.shareData;
-    this.shareData = [];
-    const data = `<Devices version="${SHARE_USAGE_VERSION}">${shareData.join()}</Devices>`;
+    let finished = false;
+    const finish = accepted => {
+      if (finished === false) {
+        finished = true;
+        done(accepted);
+      }
+    };
 
     const options = {
       hostname: this.endpoint.hostname,
       path: this.endpoint.pathname,
       port: this.endpoint.port,
       method: 'POST',
-      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' }
+      headers: { 'Content-Encoding': 'gzip', 'Content-Type': 'text/xml; charset=utf-8' },
+      timeout: this.requestTimeout
     };
 
     zlib.gzip(data, function (err, buffer) {
       if (err) {
-        usageEngine._log('warning', err);
+        warn(usageEngine, err);
+        finish(false);
+        return;
       }
-      const req = usageEngine.http.request(options, function (res) {
-        usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
-      });
-      req.on('error', function (e) {
-        usageEngine._log('warning', e);
-      });
-      req.write(buffer);
-      req.end();
+      try {
+        const req = usageEngine.http.request(options, function (res) {
+          usageEngine._log('debug', `Usage data sent. Response code ${res.statusCode}`);
+          if (res.statusCode === 200) {
+            // Reads the answer so the connection can be used again.
+            res.resume();
+            finish(true);
+            return;
+          }
+          let content = '';
+          res.setEncoding('utf8');
+          res.on('data', chunk => {
+            if (content.length < LOGGED_CONTENT_LENGTH) {
+              content += chunk;
+            }
+          });
+          res.on('end', function () {
+            warn(usageEngine, 'Usage sharing sent a message and ' +
+              `the service answered ${res.statusCode} with content ` +
+              `'${content.substring(0, LOGGED_CONTENT_LENGTH)}'.`);
+            finish(false);
+          });
+          res.on('error', function () {
+            finish(false);
+          });
+          res.on('close', function () {
+            finish(false);
+          });
+        });
+        req.on('timeout', function () {
+          req.destroy(new Error(
+            `Usage sharing had no answer within ${usageEngine.requestTimeout} ms`));
+        });
+        req.on('error', function (e) {
+          warn(usageEngine, e);
+          finish(false);
+        });
+        req.write(buffer);
+        req.end();
+      } catch (e) {
+        warn(usageEngine, e);
+        finish(false);
+      }
     });
   }
 
@@ -343,57 +722,96 @@ class ShareUsage extends Engine {
   }
 }
 
-// a set of valid XML character values (ignoring valid controls x09, x0a, x0d, x85)
-const VALID_XML_CHARS =
-  Array.from({ length: parseInt('0x7F', 16) - parseInt('0x20', 16) }, (v, k) => k + parseInt('0x20', 16))
-    .concat(
-      Array.from({ length: parseInt('0x100', 16) - parseInt('0x40', 16) }, (v, k) => k + parseInt('0x40', 16)));
-
-const IS_VALID_XML_CHAR = __getIsValidCharMap();
-
 /**
- * Get an object describing whether a character value is valid
+ * The first address of this server that is not a loopback address, an IPv4
+ * address before an IPv6 one, or an empty string where there is none.
  *
- * @returns {object} Object of valid chars
+ * @returns {string} the address
  */
-function __getIsValidCharMap () {
-  const maxChar = parseInt('0x100', 16);
-  const isValidChar = {};
-  for (let c = 0; c <= maxChar; c++) {
-    isValidChar[c] = VALID_XML_CHARS.includes(c);
+function serverAddress () {
+  let interfaces = {};
+  try {
+    interfaces = os.networkInterfaces();
+  } catch (e) {
+    // The addresses of this server cannot be read.
   }
-  return isValidChar;
+  const addresses = [];
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (!entry.internal) {
+        addresses.push(entry);
+      }
+    }
+  }
+  const address = addresses.find(
+    (entry) => entry.family === 'IPv4' || entry.family === 4) ||
+    addresses[0];
+  return address ? address.address : '';
 }
 
 /**
- * Replace characters that cause problems in XML with the "Replacement character"
+ * Whether a character is allowed in XML 1.0, which allows tab, line feed,
+ * carriage return, and the ranges U+0020 to U+D7FF, U+E000 to U+FFFD and
+ * U+10000 to U+10FFFF.
+ *
+ * @param {number} code the UTF-16 code unit
+ * @returns {boolean} true if the character is allowed
+ */
+function isValidXmlChar (code) {
+  return code === 0x9 || code === 0xA || code === 0xD ||
+    (code >= 0x20 && code <= 0xD7FF) ||
+    (code >= 0xE000 && code <= 0xFFFD);
+}
+
+/**
+ * Prepares a value for the XML. A value that is not a string is written as
+ * its text, and undefined and null as nothing. A value over the maximum
+ * number of code points is cut, special XML characters are escaped, and a
+ * character XML 1.0 does not allow is written as \x and four lower case
+ * hexadecimal digits of its code. A surrogate pair is one valid character
+ * and is kept whole.
  */
 class ReplacedString {
   constructor (text) {
     this.result = '';
-    this.replaced = false;
+    this.escaped = false;
     this.truncated = false;
-    if (text) {
-      const escapedText = text
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const length = Math.min(escapedText.length, SHARE_USAGE_MAX_EVIDENCE_LENGTH);
-      this.truncated = escapedText.length > SHARE_USAGE_MAX_EVIDENCE_LENGTH;
-      Array.from(escapedText.substring(0, length))
-        .forEach(c => {
-          if (c.charCodeAt(0) < Object.keys(IS_VALID_XML_CHAR).length && IS_VALID_XML_CHAR[c.charCodeAt(0)]) {
-            this.result += c;
-          } else {
-            this.result += String.fromCharCode(parseInt('0xFFFD', 16));
-            this.replaced = true;
-          }
-        });
+    if (text !== undefined && text !== null) {
+      // The limit counts code points, so a character is never cut in two.
+      let value = String(text);
+      const points = Array.from(value);
+      if (points.length > SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS) {
+        this.truncated = true;
+        value = points.slice(0, SHARE_USAGE_MAX_EVIDENCE_CODE_POINTS)
+          .join('');
+      }
+      for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code >= 0xD800 && code <= 0xDBFF &&
+          i + 1 < value.length &&
+          value.charCodeAt(i + 1) >= 0xDC00 &&
+          value.charCodeAt(i + 1) <= 0xDFFF) {
+          this.result += value.substring(i, i + 2);
+          i++;
+        } else if (isValidXmlChar(code)) {
+          this.result += ESCAPED_CHARS[value[i]] || value[i];
+        } else {
+          this.result += '\\x' + code.toString(16).padStart(4, '0');
+          this.escaped = true;
+        }
+      }
     }
   }
 }
+
+const ESCAPED_CHARS = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;',
+  '<': '&lt;',
+  '>': '&gt;'
+};
+
 /**
  * Internal class that is used to store details of data in memory
  * prior to it being sent to 51Degrees.
@@ -402,7 +820,7 @@ class ShareUsageData {
   constructor () {
     this.evidenceData = {};
     this.sessionId = '';
-    this.clientIp = '';
+    this.clientIP = '';
     this.sequence = '';
   }
 

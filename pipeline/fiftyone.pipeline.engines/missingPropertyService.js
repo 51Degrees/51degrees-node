@@ -21,11 +21,30 @@
  * ********************************************************************* */
 
 const util = require('util');
-const coreErrorMessages = require('fiftyone.pipeline.core').ErrorMessages;
-const engineErrorMessages = require('./errorMessages');
+const errorMessages = require('./errorMessages');
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
  */
+
+/**
+ * The metadata of the Property of the name given, compared ignoring case.
+ *
+ * @param {object} properties an element's Property metadata by name
+ * @param {string} key the Property name asked for
+ * @returns {object | undefined} the Property's metadata, if it is listed
+ */
+const listed = function (properties, key) {
+  if (!properties || typeof key !== 'string') {
+    return undefined;
+  }
+  if (properties[key] !== undefined) {
+    return properties[key];
+  }
+  const lower = key.toLowerCase();
+  const name = Object.keys(properties)
+    .find((property) => property.toLowerCase() === lower);
+  return name === undefined ? undefined : properties[name];
+};
 
 /**
  * Base class for a missing property service that throws
@@ -35,36 +54,74 @@ class MissingPropertyService {
   /**
    * Check is called if a property is requested that exists
    * in the FlowElement property list but is not available
-   * in the AspectData returned by the FlowElement
+   * in the AspectData returned by the FlowElement. It throws the message
+   * for the reason, decided in the order the specification gives.
    *
    * @param {string} key property key
    * @param {FlowElement} flowElement flowelement the data
    * was requested in
+   * @throws {string} the message saying why the Property is missing
    */
   check (key, flowElement) {
-    let message = util.format(coreErrorMessages.genericMissingProperties, key) +
-      (typeof flowElement === 'undefined' ? '' : ' in data for element "' + flowElement.dataKey) + '".';
+    const dataKey = flowElement === undefined
+      ? 'Unknown'
+      : flowElement.dataKey;
+    const format = (message, ...rest) =>
+      util.format(message, key, dataKey, ...rest);
 
-    if (this._isCloudEngine(flowElement)) {
-      if (typeof flowElement.properties === 'undefined') {
-        message = message +
-          util.format(engineErrorMessages.cloudNoPropertiesAccess,
-            flowElement.dataKey);
-      } else {
-        const properties = Object.getOwnPropertyNames(flowElement.properties);
-        if (properties.includes(key) === false) {
-          message = message +
-            util.format(engineErrorMessages.cloudNoPropertyAccess,
-              flowElement.dataKey, properties.join(', '));
-        } else {
-          message = message + util.format(engineErrorMessages.cloudReasonUnknown);
-        }
+    // The metadata lists the Property, so it is missing either because the
+    // data file's tier lacks it or because the engine was told not to give
+    // it.
+    const property = flowElement === undefined
+      ? undefined
+      : listed(flowElement.properties, key);
+    if (property !== undefined) {
+      const tiers = this.tiersWithProperty(property, flowElement);
+      if (tiers === undefined) {
+        throw format(errorMessages.missingPropertyExcluded);
       }
-    } else {
-      message = message + util.format(coreErrorMessages.noReasonUnknown);
+      throw tiers.length === 0
+        ? format(errorMessages.missingPropertyUpgradeNoTiers)
+        : format(errorMessages.missingPropertyUpgrade, tiers.join(','),
+          flowElement.constructor.name);
     }
 
-    throw message;
+    if (this._isCloudEngine(flowElement)) {
+      // A cloud engine whose Resource Key has no product for it is left with
+      // no Property metadata at all once the cloud service has answered.
+      const cloud = flowElement._cloudRequestEngine;
+      const loaded = flowElement.properties === undefined ||
+        Object.keys(flowElement.properties).length > 0 ||
+        (cloud !== undefined && cloud.flowElementProperties !== undefined &&
+          Object.keys(cloud.flowElementProperties).length > 0);
+      if (loaded) {
+        const names = Object.keys(flowElement.properties || {});
+        throw names.length === 0
+          ? format(errorMessages.missingPropertyProduct, dataKey)
+          : format(errorMessages.missingPropertyNotIncluded, dataKey,
+            names.join(','));
+      }
+      if (flowElement.errors !== undefined) {
+        throw format(errorMessages.missingPropertyCloudRequestFailed);
+      }
+    }
+
+    throw format(errorMessages.missingPropertyUnknown);
+  }
+
+  /**
+   * The data tiers that have a Property the metadata lists, where the
+   * engine's data file is not one of them. A service for an on-premise
+   * engine whose data files come in tiers gives them, and this one gives
+   * none, so the Property is taken to be excluded.
+   *
+   * @param {object} property the Property's metadata
+   * @param {FlowElement} flowElement the engine the Property was asked of
+   * @returns {string[] | undefined} the tiers that have the Property, or
+   * undefined where the engine's data file has it
+   */
+  tiersWithProperty (property, flowElement) {
+    return undefined;
   }
 
   /**

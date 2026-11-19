@@ -1,15 +1,19 @@
 {
   "name": "fiftyone.ipintelligence.cloud",
   "version": "1.0.0",
-  "description": "IP intelligence cloud services for the 51Degrees Pipeline API",
+  "description": "IP Intelligence and IP geolocation for Node.js. Finds an IP address's likely location (country, region, town, and coordinates), connection type, and network. Uses the 51Degrees cloud service with a Resource Key. Built on the 51Degrees Pipeline API. An alternative to MaxMind and IPinfo.",
   "keywords": [
     "51degrees",
+    "ip-intelligence",
+    "ip-geolocation",
+    "geoip",
+    "ip-lookup",
+    "asn",
+    "ip-to-country",
     "ip intelligence",
     "ip",
     "geolocation",
-    "geoip",
     "network",
-    "asn",
     "vpn",
     "proxy",
     "tor",
@@ -34,11 +38,11 @@
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
-    "fiftyone.ipintelligence.shared": ">=1.0.0-alpha.0",
-    "fiftyone.pipeline.cloudrequestengine": "4.4.x",
-    "fiftyone.pipeline.core": "4.4.x",
-    "fiftyone.pipeline.engines": "4.4.x",
-    "fiftyone.pipeline.engines.fiftyone": "4.4.x",
+    "fiftyone.ipintelligence.shared": "^4.5.0",
+    "fiftyone.pipeline.cloudrequestengine": "^4.5.0",
+    "fiftyone.pipeline.core": "^4.5.0",
+    "fiftyone.pipeline.engines": "^4.5.0",
+    "fiftyone.pipeline.engines.fiftyone": "^4.5.0",
     "js-yaml": "^4.1.0",
     "n-readlines": "^1.0.1"
   },
@@ -49,6 +53,7 @@
     "jest-junit": "^13.2.0"
   },
   "license": "EUPL-1.2",
+  "homepage": "https://51degrees.com/ip-intelligence?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud&utm_term=homepage",
   "bugs": {
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },

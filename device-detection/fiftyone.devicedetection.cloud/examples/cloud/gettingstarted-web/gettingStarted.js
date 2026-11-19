@@ -53,6 +53,10 @@
  * var hardwareVendor = deviceData.hardwarevendor;
  * ```
  *
+ * A Flow Data holds the evidence and results of one request. It must not be
+ * used by two threads at once, so the example creates one for each request
+ * and reads any value it hands to other work into its own variables first.
+ *
  * Results can also be accessed in client-side code by using the `fod` object. See the
  * [JavaScriptBuilderElement](/documentation/4.5/apis/pipeline-node/class_java_script_builder_element.html)
  * for details on available settings such as changing the `fod` name.
@@ -138,28 +142,47 @@ const DataExtension =
 
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 
+// Where to go next, printed when the example ends with no resource key. The
+// page holds the same section when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Pipeline variable to be used
 let pipeline;
+
+// What the example says when it has no resource key, which it needs to use
+// the 51Degrees cloud service.
+const NO_RESOURCE_KEY_MESSAGE =
+  'No resource key specified in the configuration file ' +
+  '\'51d.json\' or the environment variable ' +
+  `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+  'service is accessed using a \'ResourceKey\'. For more information ' +
+  'see ' +
+  'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+  'A resource key with the free properties used by this example can ' +
+  'be created at https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
+  'key populates the free properties only, whilst a key created at ' +
+  'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
+  'properties this example displays. See ' +
+  'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+  'more properties. Once complete, populate the config file or ' +
+  'environment variable mentioned at the start of this message ' +
+  'with the key.';
 
 const setPipeline = (options) => {
   const resourceKey = OptionsExtension.getResourceKey(options);
   // If we don't have a resource key then log an error
   if (!resourceKey) {
-    throw 'No resource key specified in the configuration file ' +
-    '\'51d.json\' or the environment variable ' +
-    `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
-    'service is accessed using a \'ResourceKey\'. For more information ' +
-    'see ' +
-    'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
-    'A resource key with the free properties used by this example can ' +
-    'be created at https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. A free ' +
-    'key populates the free properties only, whilst a key created at ' +
-    'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required also includes the paid ' +
-    'properties this example displays. See ' +
-    'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
-    'more properties. Once complete, populate the config file or ' +
-    'environment variable mentioned at the start of this message ' +
-    'with the key.';
+    throw NO_RESOURCE_KEY_MESSAGE;
   }
 
   // 'suppressProcessExceptions' is set to true in 51d.json
@@ -195,6 +218,11 @@ const server = http.createServer(async (req, res) => {
   // and usually consists of a number of HTTP Header field
   // values, in this case represented by a
   // Object of header name/value entries.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
 
   // Extract required evidence from the Http request. The client script
@@ -210,11 +238,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.url.startsWith('/json')) {
+    // A matching If-None-Match gets its 304 without processing.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-
-      res.end(JSON.stringify(flowData.jsonbundler.json));
+      // Sends the caching headers.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
   } else if (req.url.split('?')[0] === coreJsPath) {
     // Serve the client-side script built by the JavaScriptBuilder as a separate
@@ -224,11 +255,13 @@ const server = http.createServer(async (req, res) => {
     // the results of this request's detection. Query parameters, such as
     // 'fod-js-enable-cookies', are evidence like any other and are already in
     // the flow data via addFromRequest.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/x-javascript');
-
-      res.end(flowData.javascriptbuilder.javascript);
+      // Sends the caching headers.
+      core.Helpers.writeClientSideResponse(req, res, flowData,
+        'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
   } else {
     flowData.process().then(function () {
@@ -295,11 +328,18 @@ if (process.env.JEST_WORKER_ID === undefined) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  setPipeline(options);
-  const port = process.env.PORT || 3001;
-  const hostname = 'localhost';
-  server.listen(port, hostname);
-  console.log(`Server listening on: http://${hostname}:${port}`);
+  if (!OptionsExtension.getResourceKey(options)) {
+    // With no resource key there is nothing to serve, so the example says
+    // how to get one and ends.
+    console.log(NO_RESOURCE_KEY_MESSAGE);
+    console.log(FIND_OUT_MORE);
+  } else {
+    setPipeline(options);
+    const port = process.env.PORT || 3001;
+    const hostname = 'localhost';
+    server.listen(port, hostname);
+    console.log(`Server listening on: http://${hostname}:${port}`);
+  }
 }
 
 // Export server object and set pipeline.

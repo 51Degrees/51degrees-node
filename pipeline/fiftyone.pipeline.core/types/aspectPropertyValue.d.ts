@@ -25,7 +25,7 @@ declare class AspectPropertyValue {
      * Get the value of this instance.
      *
      * @returns {*} The value of the property
-     * @throws Will throw error if 'hasValue' is false.
+     * @throws {string} the no value message, when hasValue is false
      */
     get value(): any;
 }

@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const owid = require('owid');
+const owid = require('../owid-js/v1.js');
 const { FodId, FodIdParseError, IdType, Usage } = require('../index');
 // The named value is internal to the package and is not exported, so the
 // table test below reaches the module directly rather than through the
@@ -1175,4 +1175,32 @@ describe('FodId.tryParse and tryFromByteArray', () => {
       }
     }
   });
+});
+
+// identifier-layout.md lines 260 to 262: a reader refuses a payload whose
+// version it does not know, naming the version it found. A payload too short
+// for version 0's header still names its version in its flags byte, so it is
+// refused for its version rather than as too short.
+describe('FodId short payloads of another version', () => {
+  test.each([
+    [1, 1], [2, 1], [2, 2], [4, 3]
+  ])('a %i byte payload naming version %i is refused naming it',
+    (length, version) => {
+      const p = withPayloadVersion(canonicalPayload(), version)
+        .slice(0, length);
+      const read = FodId.tryParse(envelopeBase64(p));
+      expect(read.ok).toBe(false);
+      expect(read.status).toBe(ParseStatus.UNSUPPORTED_PAYLOAD_VERSION);
+      expect(read.value).toBeNull();
+
+      let thrown = null;
+      try {
+        FodId.fromBase64(envelopeBase64(p));
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).not.toBeNull();
+      expect(thrown.status).toBe(ParseStatus.UNSUPPORTED_PAYLOAD_VERSION);
+      expect(thrown.message).toContain(`version ${version}`);
+    });
 });

@@ -24,11 +24,122 @@ const FlowElement = require('./flowElement.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter.js');
 
+// The delayed execution Properties of each element by its data key, kept for
+// each Pipeline, because one JSON Builder can be added to several Pipelines
+// whose elements differ. An element's entry is made again once its
+// Properties are replaced, as a cloud engine's are when discovery succeeds
+// and an on-premise engine's when its data file is refreshed.
+const pipelineCaches = new WeakMap();
+
+/**
+ * Whether a value is an Aspect Property Value, which carries hasValue.
+ *
+ * @param {*} value the value
+ * @returns {boolean} true when it carries hasValue
+ */
+const isAspectValue = function (value) {
+  return value !== null && typeof value === 'object' &&
+    Object.prototype.hasOwnProperty.call(value, 'hasValue');
+};
+
+/**
+ * An item of a list Property as the JSON carries it. An item that is Element
+ * Data, or an object whose every value is an Aspect Property Value as each
+ * hardware profile is, is written as an object whose Properties follow the
+ * rules for the Element Data's own Properties, so a Property with no value
+ * is null with its nullreason, a plain null has no entry, and every key is
+ * in lower case. Any other item is written as it is.
+ *
+ * @param {*} item the item
+ * @returns {*} the item as the JSON carries it
+ */
+const listItem = function (item) {
+  let contents;
+  if (item instanceof ElementDataDictionary) {
+    contents = item.contents;
+  } else if (item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false && Object.keys(item).length > 0 &&
+    Object.values(item).every(isAspectValue)) {
+    contents = item;
+  } else {
+    return item;
+  }
+  const written = {};
+  for (const [key, value] of Object.entries(contents)) {
+    const name = key.toLowerCase();
+    if (isAspectValue(value)) {
+      if (value.hasValue) {
+        written[name] = value.value;
+      } else {
+        written[name] = null;
+        written[name + 'nullreason'] = value.noValueMessage;
+      }
+    } else if (value !== null && value !== undefined) {
+      written[name] = value;
+    }
+  }
+  return written;
+};
+
+/**
+ * Whether an item of a list is a weighted value, as the on-premise engines
+ * give one with rawWeight, or as the cloud service writes one with
+ * rawweighting.
+ *
+ * @param {*} item the item
+ * @returns {boolean} true when it is a weighted value
+ */
+const isWeightedItem = function (item) {
+  return item !== null && typeof item === 'object' &&
+    Array.isArray(item) === false &&
+    Object.prototype.hasOwnProperty.call(item, 'value') &&
+    (typeof item.rawWeight === 'number' ||
+      typeof item.rawweighting === 'number');
+};
+
+/**
+ * A Property's value as the JSON carries it. Each item of a weighted value
+ * has the lower-case keys rawweighting and value, and keeps the weight and
+ * rawWeight it had beside them, which are deprecated and go in a later
+ * release. Each item of any other list is written as listItem writes it.
+ *
+ * @param {*} value the value
+ * @returns {*} the value as the JSON carries it
+ */
+const jsonValue = function (value) {
+  if (Array.isArray(value) === false) {
+    return value;
+  }
+  return value.map((item) => {
+    if (isWeightedItem(item) === false) {
+      return listItem(item);
+    }
+    const written = {
+      rawweighting: typeof item.rawWeight === 'number'
+        ? item.rawWeight
+        : item.rawweighting,
+      value: item.value
+    };
+    for (const name of ['weight', 'rawWeight']) {
+      if (name in item) {
+        written[name] = item[name];
+      }
+    }
+    return written;
+  });
+};
+
 /**
  * @typedef {import('./flowData')} FlowData
  */
 
-const elementBlacklist = ['jsonbundler', 'javascriptbuilder', 'sequence', 'set-headers'];
+// From this sequence number on, no JavaScript properties are listed, so that
+// the JavaScript does not call back to the server without end.
+const MaxJavaScriptSequence = 10;
+
+const elementBlacklist = [
+  'jsonbundler', 'javascriptbuilder', 'set-headers', 'cloud', 'shareUsage'
+];
 
 /**
  * The JSONBundler aggregates all properties from FlowElements
@@ -45,7 +156,38 @@ class JSONBundlerElement extends FlowElement {
 
     this.dataKey = 'jsonbundler';
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
+    this.properties = {
+      json: {
+        name: 'json',
+        type: 'string',
+        description: 'The raw JSON produced by this element.'
+      }
+    };
     this.propertyCache = null;
+  }
+
+  /**
+   * The sequence number the Sequence Element produced, which is its Element
+   * Data or, as a whole number a caller put in the evidence, query.sequence.
+   * Text from a query string does not count.
+   *
+   * @param {FlowData} flowData the FlowData being processed
+   * @returns {number} the sequence number
+   * @throws {Error} when there is no sequence number, which a Sequence
+   * Element placed before the JSON Builder gives
+   */
+  getSequence (flowData) {
+    let sequence;
+    try {
+      sequence = flowData.get('sequence').get('sequence');
+    } catch (e) {
+      sequence = flowData.evidence.get('query.sequence');
+    }
+    if (!Number.isInteger(sequence)) {
+      throw new Error('The JSON Builder needs a sequence number. Place a ' +
+        'Sequence Element before the JSON Builder in the Pipeline.');
+    }
+    return sequence;
   }
 
   /**
@@ -54,6 +196,9 @@ class JSONBundlerElement extends FlowElement {
    * @param {FlowData} flowData the FlowData being processed
    */
   processInternal (flowData) {
+    // Fails, and sets no JSON, where no sequence number has been produced.
+    const sequence = this.getSequence(flowData);
+
     // Get every property on every flowElement
     // Storing JavaScript properties in an extra section
 
@@ -61,15 +206,18 @@ class JSONBundlerElement extends FlowElement {
       javascriptProperties: []
     };
 
-    // Check if property cache has already been set
+    // This Pipeline's property cache
 
-    let propertyCacheSet;
+    let cache = pipelineCaches.get(flowData.pipeline);
 
-    if (this.propertyCache) {
-      propertyCacheSet = true;
-    } else {
-      propertyCacheSet = false;
-      this.propertyCache = {};
+    if (cache === undefined) {
+      cache = {};
+      pipelineCaches.set(flowData.pipeline, cache);
+    }
+
+    // Holds the first Pipeline's, as it always has.
+    if (!this.propertyCache) {
+      this.propertyCache = /** @type {{}} */ (cache);
     }
 
     for (const flowElement in flowData.pipeline.flowElements) {
@@ -90,7 +238,8 @@ class JSONBundlerElement extends FlowElement {
 
       const properties = flowElementObject.getProperties();
 
-      if (!propertyCacheSet) {
+      if (cache[flowElement] === undefined ||
+        cache[flowElement].properties !== properties) {
         const delayExecutionList = [];
         const delayedEvidenceProperties = {};
 
@@ -123,31 +272,21 @@ class JSONBundlerElement extends FlowElement {
           }
         }
 
-        this.propertyCache[flowElement.dataKey] = {
+        cache[flowElement] = {
+          properties,
           delayExecutionList,
           evidenceProperties: delayedEvidenceProperties
         };
       }
 
-      const propertyCache = this.propertyCache[flowElement.dataKey];
+      const propertyCache = cache[flowElement];
 
       for (const property in properties) {
-        // Check if property has delayed execution and set in JSON if yes
-
-        if (propertyCache.delayExecutionList.indexOf(property) !== -1) {
-          output[flowElement.toLowerCase()][property.toLowerCase() + 'delayexecution'] = true;
-        }
-
-        // Check if property has any delayed execution evidence properties and set in JSON if yes
-
-        if (propertyCache.evidenceProperties[property]) {
-          output[flowElement.toLowerCase()][property.toLowerCase() + 'evidenceproperties'] = propertyCache.evidenceProperties[property];
-        }
-
         // Get the value
 
         let value;
         let nullReason = 'Unknown';
+        let found = true;
 
         try {
           const valueContainer = flowData.get(flowElement).get(property);
@@ -168,9 +307,32 @@ class JSONBundlerElement extends FlowElement {
 
             value = valueContainer;
           }
+
+          // Each item of a weighted value gets rawweighting and value, and
+          // each item of a list of Element Data, such as the hardware
+          // profiles, is written as that Element Data's own Properties are.
+          value = jsonValue(value);
         } catch (e) {
           // Catching missing property exceptions and other errors
 
+          found = false;
+        }
+
+        // A property with a value whose execution is delayed is marked, so
+        // the client does not run it straight away.
+
+        if (found && value !== null && value !== undefined &&
+          propertyCache.delayExecutionList.indexOf(property) !== -1) {
+          output[flowElement.toLowerCase()][property.toLowerCase() + 'delayexecution'] = true;
+        }
+
+        // Check if property has any delayed execution evidence properties and set in JSON if yes
+
+        if (propertyCache.evidenceProperties[property]) {
+          output[flowElement.toLowerCase()][property.toLowerCase() + 'evidenceproperties'] = propertyCache.evidenceProperties[property];
+        }
+
+        if (!found) {
           continue;
         }
 
@@ -181,10 +343,7 @@ class JSONBundlerElement extends FlowElement {
 
         const propertyObject = properties[property];
 
-        if (
-          !flowData.evidence.get('query.sequence') ||
-          flowData.evidence.get('query.sequence') < 10
-        ) {
+        if (sequence < MaxJavaScriptSequence) {
           const type =
             propertyObject[
               Object.keys(propertyObject).find(

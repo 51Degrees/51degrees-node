@@ -20,7 +20,7 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const EvidenceKeyFilterBase = require('./evidenceKeyFilter');
+const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 
 /**
  * @typedef {import('./flowData')} FlowData
@@ -44,14 +44,20 @@ class FlowElement {
    * elementData will be stored under
    * @param {Function} options.processInternal callback to act on flowData
    * @param {object} options.properties list of properties including metadata
-   * @param {EvidenceKeyFilter} options.evidenceKeyFilter an instance of
-   * an EvidenceKeyFilter to filter evidence added to the Pipeline
+   * @param {EvidenceKeyFilter} options.evidenceKeyFilter the evidence the
+   * element accepts, being the keys that can change its results. An element
+   * that gives none accepts no evidence, so it never widens what the
+   * Pipeline keeps
+   * @param {EvidenceKeyFilter} [options.keptEvidenceKeyFilter] the evidence
+   * the element reads without it changing its results, which the flow data
+   * keeps but which is not accepted evidence
    */
   constructor ({
     processInternal,
     dataKey,
     properties = {},
-    evidenceKeyFilter
+    evidenceKeyFilter,
+    keptEvidenceKeyFilter
   } = {}) {
     this.dataKey = dataKey;
 
@@ -61,11 +67,21 @@ class FlowElement {
 
     this.properties = properties;
 
+    // The evidence the element accepts, being the evidence that can change
+    // its results. Caching, the ETag and the Vary header are built from it.
     if (evidenceKeyFilter) {
       this.evidenceKeyFilter = evidenceKeyFilter;
     } else {
-      this.evidenceKeyFilter = new EvidenceKeyFilterBase();
+      this.evidenceKeyFilter = new BasicListEvidenceKeyFilter([]);
     }
+
+    /**
+     * Evidence the flow data keeps for the element, though it is not
+     * accepted, such as the evidence the usage sharing element shares.
+     *
+     * @type {EvidenceKeyFilter|undefined}
+     */
+    this.keptEvidenceKeyFilter = keptEvidenceKeyFilter;
 
     /**
      * @type {Function[]}

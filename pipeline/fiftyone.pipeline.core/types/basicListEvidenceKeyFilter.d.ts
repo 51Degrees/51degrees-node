@@ -11,5 +11,6 @@ declare class BasicListEvidenceKeyFilter extends EvidenceKeyFilter {
      */
     constructor(list: any[]);
     list: any[];
+    #private;
 }
 import EvidenceKeyFilter = require("./evidenceKeyFilter");

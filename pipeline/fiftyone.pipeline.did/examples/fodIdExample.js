@@ -45,6 +45,17 @@ const VERSION = 2;
 const DOMAIN = '51degrees.com';
 const DATE = 2900000; // minutes since 2020-01-01
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tThe specifications: https://github.com/51Degrees/specifications',
+  '\tWhat a 51Did is: https://51degrees.com/documentation/_identifiers__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-fodidexample.js&utm_term=find-out-more-identifiers',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-fodidexample.js&utm_term=find-out-more-contact'
+].join('\n');
+
 function uint32LE (v) {
   return [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF];
 }
@@ -157,6 +168,8 @@ async function run () {
   if (short.ok || short.status !== expected) {
     throw new Error('Expected InvalidTypePayloadLength for a short payload.');
   }
+
+  console.log(FIND_OUT_MORE);
 }
 
 run().catch((e) => { console.error(e); process.exit(1); });

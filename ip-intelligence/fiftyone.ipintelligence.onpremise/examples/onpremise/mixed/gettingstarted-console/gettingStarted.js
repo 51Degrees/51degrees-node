@@ -65,21 +65,31 @@ const DeviceDetectionOnPremise =
 const IpIntelligenceOnPremise =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremise;
 
-const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils')).ExampleUtils;
-const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
+const { ExampleUtils, NEEDS_ENTERPRISE } =
+  require(path.join(__dirname, '/../../exampleUtils'));
 
-// Device detection data file names in priority order.
-const HASH_FILE_NAMES = [
-  'TAC-HashV41.hash',
-  '51Degrees-EnterpriseV4.1.hash',
-  '51Degrees-LiteV4.1.hash'
-];
+// The free Lite data files, which are downloaded if they are missing.
+const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 
-// IP intelligence data file names in priority order.
-const IPI_FILE_NAMES = [
-  '51Degrees-EnterpriseIpiV41.ipi',
-  '51Degrees-LiteV41.ipi'
-];
+// Where to ask for a copy of the Enterprise data files, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=enterprise-data-file';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tDevice detection for Node.js: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe IP Intelligence and device detection engines: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-device-detection-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // Evidence that includes both a User-Agent (for device detection) and an
 // IP address (for IP intelligence).
@@ -106,9 +116,11 @@ const combinedEvidence = [
   ])
 ];
 
+// A property that the data file does not have is shown as needing the
+// Enterprise data file.
 const outputValue = function (name, elementData, propertyName) {
-  return `\n\t${name}: ` +
-    DataExtension.getValueHelper(elementData, propertyName);
+  return `\n\t${name}: ` + ExampleUtils.getEnterpriseValue(
+    elementData.flowElement, elementData, propertyName);
 };
 
 const analyse = async function (evidence, pipeline, output) {
@@ -146,6 +158,7 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Screen Width', device, 'screenpixelswidth');
   message += outputValue('Screen Height', device, 'screenpixelsheight');
   output.write(message + '\n');
+  const needsEnterprise = message.includes(NEEDS_ENTERPRISE);
 
   // Get the IP intelligence results.
   message = '\nIP Intelligence Results:';
@@ -163,9 +176,10 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Registered Country', ip, 'registeredcountry');
   message += outputValue('IP Range Start', ip, 'iprangestart');
   message += outputValue('IP Range End', ip, 'iprangeend');
-  message += outputValue('Accuracy Radius', ip, 'accuracyradiusmin');
+  message += outputValue('Accuracy Radius Min', ip, 'accuracyradiusmin');
   message += outputValue('Time Zone Offset', ip, 'timezoneoffset');
   output.write(message + '\n\n');
+  return needsEnterprise || message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (deviceDataFile, ipDataFile, output) {
@@ -195,7 +209,7 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 
   // Create a pipeline and add both engines to it. For more information
   // about pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-mixed-gettingstarted-console-gettingstarted.js&utm_term=run
   const pipeline = new core.PipelineBuilder()
     .add(deviceEngine)
     .add(ipEngine)
@@ -207,8 +221,12 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 
   // Process the combined evidence (User-Agent for device detection,
   // IP address for IP intelligence).
+  let needsEnterprise = false;
   for (const evidence of combinedEvidence) {
-    await analyse(evidence, pipeline, output);
+    needsEnterprise = await analyse(evidence, pipeline, output) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    output.write(`${ExampleUtils.getEnterpriseNote(CONTACT_US)}\n`);
   }
 
   // Check the IP intelligence data file.
@@ -219,48 +237,37 @@ const run = async function (deviceDataFile, ipDataFile, output) {
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
 
-  // Use the supplied path for the device detection data file or try to
-  // find one in priority order. The 51DEGREES_DD_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let deviceDataFile = args.length > 0 ? args[0] : undefined;
-  if (deviceDataFile === undefined) {
-    for (const fileName of HASH_FILE_NAMES) {
-      deviceDataFile = ExampleUtils.findDeviceDataFile(fileName);
-      if (deviceDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the device detection data file, the path in
+  // the _51DEGREES_DD_PATH environment variable, or the Lite file.
+  const deviceDataFile = args.length > 0
+    ? args[0]
+    : ExampleUtils.findDeviceDataFile(LITE_V_4_1_HASH);
 
-  // Use the supplied path for the IP intelligence data file or try to
-  // find one in priority order. The 51DEGREES_IPI_PATH environment
-  // variable is checked before the folder hierarchy is searched.
-  let ipDataFile = args.length > 1 ? args[1] : undefined;
-  if (ipDataFile === undefined) {
-    for (const fileName of IPI_FILE_NAMES) {
-      ipDataFile = ExampleUtils.findDataFile(fileName);
-      if (ipDataFile !== undefined) break;
-    }
-  }
+  // Use the supplied path for the IP intelligence data file, the path in
+  // the _51DEGREES_IPI_PATH environment variable, or the Lite file.
+  const ipDataFile = args.length > 1
+    ? args[1]
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (deviceDataFile !== undefined && ipDataFile !== undefined) {
     console.log(`Device detection data file: ${deviceDataFile}`);
     console.log(`IP intelligence data file: ${ipDataFile}`);
-    run(deviceDataFile, ipDataFile, process.stdout);
+    run(deviceDataFile, ipDataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     if (deviceDataFile === undefined) {
-      console.error('Failed to find a device detection data file. A ' +
-        'lite data file is available from the device-detection-data ' +
-        'repository on GitHub ' +
-        'https://github.com/51Degrees/device-detection-data. The full ' +
-        'path to a data file can be specified as the first command ' +
-        'line argument');
+      console.error('Failed to find a device detection data file. ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path to a ' +
+        'data file can be specified as the first command line argument');
     }
     if (ipDataFile === undefined) {
       console.error('Failed to find an IP intelligence data file. ' +
-        'Make sure the ip-intelligence-data submodule has been updated ' +
-        'by running `git submodule update --recursive`. The full path ' +
+        'Make sure the cxx/data submodule has been fetched by running ' +
+        '`git submodule update --init --recursive`. The full path ' +
         'to a data file can be specified as the second command line ' +
         'argument');
     }
+    console.log(FIND_OUT_MORE);
   }
 };
 

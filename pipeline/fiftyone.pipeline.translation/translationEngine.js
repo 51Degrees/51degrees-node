@@ -76,8 +76,10 @@ class TranslationEngine extends FlowElement {
    * Constructor.
    *
    * @param {object} options the options object
-   * @param {string} options.sourceDataKey element data key of the source flow
-   * element to read the properties to translate from
+   * @param {string} options.sourceElementDataKey element data key of the
+   * source flow element to read the properties to translate from
+   * @param {string} [options.sourceDataKey] deprecated, the old name for
+   * sourceElementDataKey, used only when sourceElementDataKey is not given
    * @param {string} [options.elementDataKey] element data key this engine
    * stores its results under; defaults to 'translation'
    * @param {Array<TranslationProperty>} options.translations the source to
@@ -86,16 +88,22 @@ class TranslationEngine extends FlowElement {
    * of file name to YAML content string
    * @param {string} [options.fixedLanguage] a fixed locale to always translate
    * to; when null or omitted the language is taken from the evidence
-   * @param {string} [options.behavior] the {@link MissingTranslationBehavior}
-   * to use when a translation is missing; defaults to Original
+   * @param {string} [options.missingTranslationBehavior] the
+   * {@link MissingTranslationBehavior} to use when a translation is missing,
+   * as the enum or as text naming a value in any case; defaults to Original
+   * @param {string} [options.behavior] deprecated, the old name for
+   * missingTranslationBehavior, used only when missingTranslationBehavior is
+   * not given
    */
   constructor ({
+    sourceElementDataKey,
     sourceDataKey,
     elementDataKey = 'translation',
     translations,
     sources,
     fixedLanguage = null,
-    behavior = MissingTranslationBehavior.Original
+    missingTranslationBehavior,
+    behavior
   } = {}) {
     super();
 
@@ -105,19 +113,23 @@ class TranslationEngine extends FlowElement {
     if (!sources || Object.keys(sources).length === 0) {
       throw 'At least one source file must be configured.';
     }
-    if (typeof sourceDataKey !== 'string' || sourceDataKey.trim() === '') {
+    // The specification's names win over the deprecated ones.
+    const sourceKey = sourceElementDataKey ?? sourceDataKey;
+    if (typeof sourceKey !== 'string' || sourceKey.trim() === '') {
       throw 'The source element key must be configured.';
     }
+    const missing = TranslationEngine.toMissingTranslationBehavior(
+      missingTranslationBehavior ?? behavior);
 
     this.dataKey = elementDataKey;
-    this.sourceDataKey = sourceDataKey.trim();
+    this.sourceDataKey = sourceKey.trim();
     this.translationProperties = translations;
-    this.behavior = behavior;
-    this.emptyTranslator = new Translator(null, behavior);
+    this.behavior = missing;
+    this.emptyTranslator = new Translator(null, missing);
     this.fixedLanguage = fixedLanguage !== null && fixedLanguage !== undefined
       ? TranslationEngine.validateLocale(fixedLanguage)
       : null;
-    this.languages = TranslationEngine.parseSources(sources, behavior);
+    this.languages = TranslationEngine.parseSources(sources, missing);
 
     this.evidenceKeyFilter = new BasicListEvidenceKeyFilter(evidenceKeys);
 
@@ -290,6 +302,34 @@ class TranslationEngine extends FlowElement {
         'code.';
     }
     return locale;
+  }
+
+  /**
+   * The {@link MissingTranslationBehavior} a value names. The value is one
+   * of the enum's values, or text naming one in any case, so that a
+   * configuration file can give it. Undefined and null give Original.
+   *
+   * @param {*} value the value given
+   * @returns {string} the MissingTranslationBehavior value
+   * @throws {string} when the value names no MissingTranslationBehavior
+   */
+  static toMissingTranslationBehavior (value) {
+    if (value === undefined || value === null) {
+      return MissingTranslationBehavior.Original;
+    }
+    if (typeof value === 'string') {
+      const wanted = value.toLowerCase();
+      for (const name of Object.keys(MissingTranslationBehavior)) {
+        if (name.toLowerCase() === wanted ||
+          MissingTranslationBehavior[name].toLowerCase() === wanted) {
+          return MissingTranslationBehavior[name];
+        }
+      }
+    }
+    const names = Object.keys(MissingTranslationBehavior);
+    throw 'The missing translation behavior \'' + value + '\' is not one ' +
+      'of ' + names.slice(0, -1).join(', ') + ' or ' +
+      names[names.length - 1] + '.';
   }
 
   /**

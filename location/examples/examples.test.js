@@ -20,65 +20,104 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const fs = require('fs');
-const path = require('path');
+// Runs each example in its own process, from its own folder, as a person
+// runs it, and checks every line it printed. An example that stops with an
+// error, or prints anything else, such as an error it caught, fails its
+// test. With a resource key the examples call the cloud service, and
+// without one they say where to create one. Either way each ends with the
+// Find out more section.
 
-const testExample = function ({ file, portNumber }) {
-  if (portNumber) {
-    process.env.PORT = portNumber;
+const childProcess = require('child_process');
+
+const TIMEOUT_MS = 60000;
+const RESOURCE_KEY = '_51DEGREES_RESOURCE_KEY';
+
+// The deprecated name of the key, removed so that only the name above
+// decides what the examples print.
+const DEPRECATED_NAMES = ['RESOURCE_KEY'];
+
+const COUNTRY = 'Which country is the location ' +
+  '[51.458048,-0.9822207999999999] in? United Kingdom';
+const MOBILE = 'Does the User-Agent \'Mozilla/5.0 (iPhone; CPU iPhone OS ' +
+  '11_2 like Mac OS X) AppleWebKit/604.4.7 (KHTML, like Gecko) ' +
+  'Mobile/15C114\' represent a mobile device? true';
+const NEEDS_KEY = expect.stringMatching(
+  /^You need to create a resource key at https:\/\/51degrees\.com\/configure/);
+const NEEDS_ISMOBILE = 'Make sure to include the ismobile property as it ' +
+  'is used by this example.';
+
+const hasKey = Boolean(process.env[RESOURCE_KEY]);
+
+// Every example ends with the Find out more section, which is a rule of 79
+// equals signs, the heading, then one line per link, each a tab, a label
+// and an address. It gives this API's folder, and its links to
+// 51degrees.com are tagged with the example's file.
+const RULE = '='.repeat(79);
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/location';
+
+const expectFindOutMore = (file, lines) => {
+  expect(lines.slice(0, 2)).toEqual([RULE, 'Find out more:']);
+  const links = lines.slice(2);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
   }
-
-  // Change the working directory of the example to be the example itself
-
-  process.env.directory = path.dirname(file);
-
-  let code = fs.readFileSync(file, 'utf8');
-
-  // Add in closer of any apps
-
-  const serverClose = `
-    
-    if(typeof server !== "undefined"){
-
-        server.close();
-
-    }
-
-    `;
-
-  code += serverClose;
-
-  jest.fn(eval(code));
+  expect(links).toContain(`\tThis API: ${REPOSITORY}`);
+  const tagged = links.filter((line) => line.includes('51degrees.com/'));
+  expect(tagged.length).toBeGreaterThan(0);
+  const content = `&utm_content=examples-${file.toLowerCase()}&`;
+  expect(tagged.filter((line) => !line.includes(content))).toEqual([]);
 };
 
-// Skip the rest of the examples when async is not available
-let isAsync = true;
-
-try {
-  eval('async () => {}');
-} catch (e) {
-  isAsync = false;
-}
-
-if (isAsync) {
-  test('cloud getting started', async (done) => {
-    setTimeout(done, 1000);
-
-    testExample({ file: path.resolve(__dirname, 'gettingStarted.js') });
+// Runs an example and returns its exit status, its error output and the
+// lines of its output. The deprecated names are removed without regard to
+// case, as Windows matches them.
+const runExample = (file) => {
+  const remove = new Set(DEPRECATED_NAMES.map((name) => name.toUpperCase()));
+  const env = Object.assign({}, process.env);
+  for (const name of Object.keys(env)) {
+    if (remove.has(name.toUpperCase())) {
+      delete env[name];
+    }
+  }
+  const result = childProcess.spawnSync(process.execPath, [file], {
+    cwd: __dirname,
+    env,
+    encoding: 'utf8',
+    timeout: TIMEOUT_MS
   });
+  return {
+    error: result.error,
+    status: result.status,
+    stderr: result.stderr,
+    lines: (result.stdout || '').split(/\r?\n/).filter((line) => line !== '')
+  };
+};
 
-  test('combining services', async (done) => {
-    setTimeout(done, 1000);
+// Checks the example printed the lines, then the Find out more section.
+const expectLines = (file, lines) => {
+  const result = runExample(file);
+  const rule = result.lines.lastIndexOf(RULE);
+  expect(rule).toBeGreaterThan(-1);
+  expect(Object.assign({}, result, { lines: result.lines.slice(0, rule) }))
+    .toEqual({
+      error: undefined,
+      status: 0,
+      stderr: '',
+      lines
+    });
+  expectFindOutMore(file, result.lines.slice(rule));
+};
 
-    testExample({ file: path.resolve(__dirname, 'combiningServices.js') });
-  });
+test('getting started', () => {
+  expectLines('gettingStarted.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);
 
-  test('configure from file', async (done) => {
-    setTimeout(done, 1000);
+test('combining services', () => {
+  expectLines('combiningServices.js',
+    hasKey ? [COUNTRY, MOBILE] : [NEEDS_KEY, NEEDS_ISMOBILE]);
+}, TIMEOUT_MS * 2);
 
-    testExample({ file: path.resolve(__dirname, 'configureFromFile.js') });
-  });
-} else {
-  // Skip if async is not available (e.g node 6)
-  test.skip('Workaround', () => 1);
-}
+test('configure from file', () => {
+  expectLines('configureFromFile.js', hasKey ? [COUNTRY] : [NEEDS_KEY]);
+}, TIMEOUT_MS * 2);

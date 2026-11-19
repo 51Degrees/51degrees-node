@@ -20,14 +20,20 @@ declare class FlowElement {
      * elementData will be stored under
      * @param {Function} options.processInternal callback to act on flowData
      * @param {object} options.properties list of properties including metadata
-     * @param {EvidenceKeyFilter} options.evidenceKeyFilter an instance of
-     * an EvidenceKeyFilter to filter evidence added to the Pipeline
+     * @param {EvidenceKeyFilter} options.evidenceKeyFilter the evidence the
+     * element accepts, being the keys that can change its results. An element
+     * that gives none accepts no evidence, so it never widens what the
+     * Pipeline keeps
+     * @param {EvidenceKeyFilter} [options.keptEvidenceKeyFilter] the evidence
+     * the element reads without it changing its results, which the flow data
+     * keeps but which is not accepted evidence
      */
-    constructor({ processInternal, dataKey, properties, evidenceKeyFilter }?: {
+    constructor({ processInternal, dataKey, properties, evidenceKeyFilter, keptEvidenceKeyFilter }?: {
         dataKey: string;
         processInternal: Function;
         properties: object;
         evidenceKeyFilter: EvidenceKeyFilter;
+        keptEvidenceKeyFilter?: EvidenceKeyFilter;
     });
     dataKey: string;
     /**
@@ -40,7 +46,14 @@ declare class FlowElement {
      */
     processInternal(flowData: FlowData): any;
     properties: object;
-    evidenceKeyFilter: EvidenceKeyFilterBase;
+    evidenceKeyFilter: import("./evidenceKeyFilter");
+    /**
+     * Evidence the flow data keeps for the element, though it is not
+     * accepted, such as the evidence the usage sharing element shares.
+     *
+     * @type {EvidenceKeyFilter|undefined}
+     */
+    keptEvidenceKeyFilter: EvidenceKeyFilter | undefined;
     /**
      * @type {Function[]}
      */
@@ -100,7 +113,6 @@ declare class FlowElement {
 declare namespace FlowElement {
     export { FlowData, Pipeline, EvidenceKeyFilter };
 }
-import EvidenceKeyFilterBase = require("./evidenceKeyFilter");
 type FlowData = import("./flowData");
 type Pipeline = import("./pipeline");
 type EvidenceKeyFilter = import("./evidenceKeyFilter");

@@ -47,24 +47,52 @@ const require51 = (requestedPackage) => {
 
 const IpIntelligencePipelineBuilder = require51('fiftyone.ipintelligence').IpIntelligencePipelineBuilder;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Create the IP intelligence pipeline with the desired settings.
 
 // You need to create a resource key at
-// https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and paste it into the code,
+// https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and paste it into the code,
 // replacing !!YOUR_RESOURCE_KEY!! below. The link selects the free
 // properties, which include the country property used by this example.
 
-// The aligned 51DEGREES_RESOURCE_KEY environment variable is checked
-// first, followed by the legacy RESOURCE_KEY name.
-const myResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
-  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+// The resource key is read from the _51DEGREES_RESOURCE_KEY environment
+// variable.
+// 51DEGREES_RESOURCE_KEY and RESOURCE_KEY are the deprecated names of the
+// same variable, read in that order only when _51DEGREES_RESOURCE_KEY is
+// unset or empty.
+const oldResourceKeyName = process.env['51DEGREES_RESOURCE_KEY']
+  ? '51DEGREES_RESOURCE_KEY'
+  : 'RESOURCE_KEY';
+const oldResourceKey = process.env['51DEGREES_RESOURCE_KEY'] ||
+  process.env.RESOURCE_KEY;
+if (!process.env._51DEGREES_RESOURCE_KEY && oldResourceKey) {
+  console.warn(`The ${oldResourceKeyName} environment variable is ` +
+    'deprecated and _51DEGREES_RESOURCE_KEY replaces it. Set ' +
+    '_51DEGREES_RESOURCE_KEY instead.');
+}
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
+  oldResourceKey || '!!YOUR_RESOURCE_KEY!!';
 
 if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
   console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and paste it into ' +
-        'the code, replacing !!YOUR_RESOURCE_KEY!!');
+        'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence-examples-gettingstarted.js&utm_term=myresourcekey and set the ' +
+        'environment variable _51DEGREES_RESOURCE_KEY to it, or paste it ' +
+        'into the code, replacing !!YOUR_RESOURCE_KEY!!.');
   console.log('Make sure to include the country property ' +
         'as it is used by this example.');
+  console.log(FIND_OUT_MORE);
 } else {
   // Construct the IP intelligence pipeline using the
   // IpIntelligencePipelineBuilder, passing in your resourceKey.
@@ -107,5 +135,5 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
     }
   };
 
-  checkCountry('8.8.8.8');
+  checkCountry('8.8.8.8').then(() => console.log(FIND_OUT_MORE));
 }

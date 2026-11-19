@@ -20,9 +20,157 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const crypto = require('crypto');
+const Constants = require('./constants');
+
 /**
  * @typedef {import('./flowData')} FlowData
  */
+
+// How long a browser may reuse a client-side response before it asks again.
+const DEFAULT_MAX_AGE_SECONDS = 1800;
+
+// A response to a request whose processing recorded errors may be kept, but
+// only used again once the server has been asked, and it carries no ETag, so
+// the next request gets a full response rather than a 304 that keeps it.
+const CACHE_CONTROL_AFTER_ERRORS = 'private, no-cache';
+
+// Request headers that say how to answer rather than what to answer, being
+// the preconditions of RFC 9110 section 13.1 and the cache directives of
+// RFC 9111 sections 5.2.1 and 5.4. They take no part in the ETag, or a
+// revalidation, which sends If-None-Match, would never match. They are named
+// here because an element can accept every key of a prefix, as the
+// JavaScript builder does for the query string, or whatever keys it is
+// given, as the cloud request engine does with the keys the cloud service
+// lists.
+const NOT_IN_ETAG = [
+  'header.if-match',
+  'header.if-none-match',
+  'header.if-modified-since',
+  'header.if-unmodified-since',
+  'header.if-range',
+  'header.cache-control',
+  'header.pragma'
+];
+
+/**
+ * The ETag for the evidence a request carries, the same in every process.
+ * It is built from what addFromRequest read from the request, which it
+ * keeps as server.http-request, rather than the flow data's evidence,
+ * because processing adds evidence of its own, such as the new session id
+ * the sequence element makes for each request without one, which would give
+ * every response a different ETag. Evidence added by hand has no such
+ * record, so its ETag is built from the flow data's evidence. Only the
+ * evidence an element accepts is hashed, so evidence kept for an element
+ * that does not accept it, such as the usage sharing element, takes no
+ * part. It is weak, because the response can change for the same evidence,
+ * for example when a data file is updated, and RFC 9110 section 8.8.3 asks
+ * for such a validator to be marked weak.
+ *
+ * @param {FlowData} flowData the flow data for the request
+ * @returns {string} the ETag
+ */
+const clientSideETag = function (flowData) {
+  const evidence = flowData.evidence.get(Constants.evidenceHttpRequest) ||
+    flowData.evidence.getAll();
+  const elements = Object.values(flowData.pipeline.flowElements);
+  const hash = crypto.createHash('sha256');
+  for (const key of Object.keys(evidence).sort()) {
+    if (NOT_IN_ETAG.includes(key.toLowerCase()) ||
+      elements.some((element) =>
+        element.evidenceKeyFilter.filterEvidenceKey(key)) === false) {
+      continue;
+    }
+    hash.update(key + '\0' + String(evidence[key]) + '\0');
+  }
+  return 'W/"' + hash.digest('hex').substring(0, 32) + '"';
+};
+
+/**
+ * The HTTP headers the pipeline's elements read evidence from, for the Vary
+ * header. Only an element that lists its evidence keys names any.
+ *
+ * @param {FlowData} flowData the flow data
+ * @returns {string} the header names, comma separated
+ */
+const clientSideVary = function (flowData) {
+  const names = [];
+  for (const element of Object.values(flowData.pipeline.flowElements)) {
+    const list = element.evidenceKeyFilter && element.evidenceKeyFilter.list;
+    for (const key of Array.isArray(list) ? list : []) {
+      const lower = String(key).toLowerCase();
+      if (lower.startsWith('header.') && lower.length > 'header.'.length &&
+        names.includes(lower.substring('header.'.length)) === false) {
+        names.push(lower.substring('header.'.length));
+      }
+    }
+  }
+  return names.sort().join(', ');
+};
+
+/**
+ * Whether an If-None-Match header value matches an ETag, by the weak
+ * comparison RFC 9110 section 13.1.2 asks for.
+ *
+ * @param {string} ifNoneMatch the header value
+ * @param {string} etag the ETag of the response
+ * @returns {boolean} true when it matches
+ */
+const ifNoneMatchMatches = function (ifNoneMatch, etag) {
+  if (typeof ifNoneMatch !== 'string') {
+    return false;
+  }
+  if (ifNoneMatch.trim() === '*') {
+    return true;
+  }
+  const opaque = (tag) => tag.replace(/^W\//, '');
+  const tags = ifNoneMatch.match(/(W\/)?"[^"]*"/g) || [];
+  return tags.some((tag) => opaque(tag) === opaque(etag));
+};
+
+/**
+ * The max-age a client-side response carries.
+ *
+ * @param {object} options the options given to a helper
+ * @returns {number} the max-age in seconds
+ */
+const maxAgeSecondsOf = function (options) {
+  return options.maxAgeSeconds === undefined
+    ? DEFAULT_MAX_AGE_SECONDS
+    : options.maxAgeSeconds;
+};
+
+/**
+ * Answer a request whose If-None-Match matches the ETag, with a 304 to a GET
+ * or HEAD and a 412 to any other method (RFC 9110 section 13.1.2). The 304
+ * carries the Cache-Control, Vary and ETag a good 200 carries (RFC 9110
+ * section 15.4.5), because a matching request is not processed, so a
+ * browser keeps the response it holds through an outage.
+ *
+ * @param {import('http').IncomingMessage} request the request
+ * @param {import('http').ServerResponse} response the response, which this
+ * ends
+ * @param {FlowData} flowData the flow data for the request
+ * @param {string} etag the ETag the request matched
+ * @param {number} maxAgeSeconds the max-age of a good response
+ */
+const writeNotModified = function (
+  request, response, flowData, etag, maxAgeSeconds) {
+  const method = (request.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    response.statusCode = 412;
+    response.end();
+    return;
+  }
+  response.setHeader('Cache-Control', 'private, max-age=' + maxAgeSeconds);
+  const vary = clientSideVary(flowData);
+  if (vary) {
+    response.setHeader('Vary', vary);
+  }
+  response.setHeader('ETag', etag);
+  response.statusCode = 304;
+  response.end();
+};
 
 class Helpers {
   /**
@@ -33,12 +181,108 @@ class Helpers {
    * from.
    */
   static setResponseHeaders (response, flowData) {
-    for (const [key, value] of Object.entries(flowData['set-headers'].responseheadersdictionary)) {
+    let headers;
+    try {
+      headers = flowData.get('set-headers').responseheadersdictionary;
+    } catch (e) {
+      // A request whose processing stopped before the Set Headers element
+      // has no headers to set, and its response goes on without them
+      // rather than failing the request.
+      flowData.pipeline.log('warn', 'No response headers were set, as ' +
+        'the Flow Data has no result from the Set Headers element. ' + e);
+      return;
+    }
+    for (const [key, value] of Object.entries(headers || {})) {
       if (response.hasHeader(key)) {
         response.setHeader(key, `${response.getHeader(key)},${value}`);
       } else {
         response.setHeader(key, value);
       }
+    }
+  }
+
+  /**
+   * Answer a request to a client-side endpoint, the JSON endpoint or the
+   * JavaScript endpoint, whose If-None-Match matches the ETag, without
+   * processing it. Call this once the evidence is added and before the flow
+   * data is processed, and process the request and call
+   * writeClientSideResponse only when this returns false. The web
+   * integration specification requires that a matching request is not
+   * processed, and the ETag depends only on the evidence the request
+   * supplied, so it is known before processing.
+   *
+   * @param {import('http').IncomingMessage} request the request
+   * @param {import('http').ServerResponse} response the response, which this
+   * ends when it returns true
+   * @param {FlowData} flowData the flow data for the request, with its
+   * evidence added and not yet processed
+   * @param {object} [options] options
+   * @param {number} [options.maxAgeSeconds] how long a browser may reuse the
+   * response, 1800 unless given
+   * @returns {boolean} true when the request matched and has been answered
+   * with a 304 or a 412
+   */
+  static writeClientSideNotModified (
+    request, response, flowData, options = {}) {
+    const etag = clientSideETag(flowData);
+    if (ifNoneMatchMatches(
+      (request.headers || {})['if-none-match'], etag) === false) {
+      return false;
+    }
+    writeNotModified(
+      request, response, flowData, etag, maxAgeSecondsOf(options));
+    return true;
+  }
+
+  /**
+   * Write the response of a client-side endpoint, the JSON endpoint or the
+   * JavaScript endpoint, with the caching headers of the web integration
+   * specification. A response to a request whose processing recorded errors
+   * has Cache-Control private, no-cache and no ETag. A request whose
+   * If-None-Match matches the ETag gets what writeClientSideNotModified
+   * gives it, for a caller that processes every request before writing the
+   * response, though such a request should not have been processed.
+   *
+   * @param {import('http').IncomingMessage} request the request
+   * @param {import('http').ServerResponse} response the response, which this
+   * ends
+   * @param {FlowData} flowData the processed flow data for the request
+   * @param {string} contentType the content type of the body
+   * @param {string} body the JSON or the JavaScript
+   * @param {object} [options] options
+   * @param {number} [options.maxAgeSeconds] how long a browser may reuse the
+   * response, 1800 unless given
+   */
+  static writeClientSideResponse (
+    request, response, flowData, contentType, body, options = {}) {
+    const maxAgeSeconds = maxAgeSecondsOf(options);
+    const etag = clientSideETag(flowData);
+    if (ifNoneMatchMatches(
+      (request.headers || {})['if-none-match'], etag)) {
+      writeNotModified(request, response, flowData, etag, maxAgeSeconds);
+      return;
+    }
+
+    const failed = Object.keys(flowData.errors || {}).length > 0;
+    const method = (request.method || 'GET').toUpperCase();
+    response.setHeader('Cache-Control', failed
+      ? CACHE_CONTROL_AFTER_ERRORS
+      : 'private, max-age=' + maxAgeSeconds);
+    const vary = clientSideVary(flowData);
+    if (vary) {
+      response.setHeader('Vary', vary);
+    }
+    if (failed === false) {
+      response.setHeader('ETag', etag);
+    }
+
+    response.statusCode = 200;
+    response.setHeader('Content-Type', contentType);
+    response.setHeader('Content-Length', Buffer.byteLength(body));
+    if (method === 'HEAD') {
+      response.end();
+    } else {
+      response.end(body);
     }
   }
 }

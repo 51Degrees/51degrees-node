@@ -9,6 +9,14 @@ declare const ShareUsage_base: typeof import("fiftyone.pipeline.engines/types/en
  */
 declare class ShareUsage extends ShareUsage_base {
     /**
+     * The time in milliseconds, from a clock that only goes forward, which
+     * decides when the values that do not change while the element lives are
+     * written again. Tests replace it to move time on.
+     *
+     * @returns {number} the time now in milliseconds
+     */
+    static now(): number;
+    /**
      * Constructor for ShareUsage engine
      *
      * @param {object} options settings object for share usage.
@@ -23,36 +31,90 @@ declare class ShareUsage extends ShareUsage_base {
      * is recommended in order to reduce the overhead of sending HTTP
      * messages.
      * For example, the 51Degrees cloud service uses a value of 2500.
-     * @param {string} options.cookie if a cookie is being used to identify
-     * user sessions, it can be specified here in order to reduce the
-     * sharing of duplicated data.
-     * @param {Array} options.queryWhitelist By default query string
-     * and HTTP form parameters are not shared unless prefixed with '51D_'.
-     * If you need to share query string parameters, a list can be
-     * specified here.
-     * @param {Array} options.headerBlacklist By default, all HTTP headers
-     * (except a few, such as Cookies) are shared. Individual headers can
-     * be excluded from sharing by adding them to this list.
+     * @param {string} options.cookie The name of the cookie that holds the
+     * session id. It has no effect unless trackSession is true. The cookie
+     * itself is never shared unless its name starts with '51D_', as no other
+     * cookie is.
+     * @param {boolean} options.shareAllQueryStringParameters If true, every
+     * query string and HTTP form parameter is shared. True by default.
+     * @param {Array<string>|string|null} options.queryWhitelist When
+     * shareAllQueryStringParameters is false, query string and HTTP form
+     * parameters are not shared unless prefixed with '51D_' or given in this
+     * list, or in one comma separated string of them, as a configuration file
+     * gives a list. null is the same as an empty list.
+     * @param {Array<string>|string} options.headerBlacklist By default, all
+     * HTTP headers except Cookie are shared. Individual headers can be
+     * excluded from sharing by adding them to this list, or to one comma
+     * separated string of them, as a configuration file gives a list.
      * @param {number} options.sharePercentage approximate proportion of
      * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
      * @param {string} options.endpoint The target destination for usage
      * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
+     * @param {boolean} options.shareAll If true, all evidence is shared apart
+     * from the email address, the salt used for hashed email identifiers, the
+     * request's query string and path, and every cookie whose name does not
+     * start with '51D_'. False by default.
+     * @param {boolean} options.trackSession If true, the cookie named by
+     * cookie is used to tell user sessions apart, so evidence already shared
+     * is shared again when it comes from a new session. False by default. It
+     * needs cookie to be set, and works the same whether or not shareAll is
+     * true.
+     * @param {number} options.maximumQueueSize The most entries held while
+     * waiting to be sent. When the queue is full, new entries are dropped. The
+     * default is 1000, or ten times requestedPackageSize if that is larger.
+     * @param {number} options.requestTimeout The time in milliseconds to wait
+     * for the service to answer before the send counts as failed. 60000 by
+     * default.
+     * @param {number} options.failuresToEnterRecovery The number of failed
+     * sends within failuresWindowSeconds that pauses sending, from 1 to 100.
+     * Usage data is still queued while sending is paused. 10 by default.
+     * @param {number} options.failuresWindowSeconds The time in seconds over
+     * which failed sends are counted. 100 by default.
+     * @param {number} options.initialRecoveryDelaySeconds The length in
+     * seconds of the first pause after failed sends. 2 by default.
+     * @param {number} options.maxRecoveryDelaySeconds The longest a pause can
+     * be, in seconds. 300 by default.
+     * @param {number} options.recoveryMultiplier What the pause is multiplied
+     * by each time the send tried when a pause ends fails. 2 by default.
      */
-    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint }?: {
+    constructor({ interval, requestedPackageSize, cookie, shareAllQueryStringParameters, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll, trackSession, maximumQueueSize, requestTimeout, failuresToEnterRecovery, failuresWindowSeconds, initialRecoveryDelaySeconds, maxRecoveryDelaySeconds, recoveryMultiplier }?: {
         interval: number;
         requestedPackageSize: number;
         cookie: string;
-        queryWhitelist: any[];
-        headerBlacklist: any[];
+        shareAllQueryStringParameters: boolean;
+        queryWhitelist: Array<string> | string | null;
+        headerBlacklist: Array<string> | string;
         sharePercentage: number;
         endpoint: string;
+        shareAll: boolean;
+        trackSession: boolean;
+        maximumQueueSize: number;
+        requestTimeout: number;
+        failuresToEnterRecovery: number;
+        failuresWindowSeconds: number;
+        initialRecoveryDelaySeconds: number;
+        maxRecoveryDelaySeconds: number;
+        recoveryMultiplier: number;
     }, ...args: any[]);
     trackingCookie: string;
-    evidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    shareAll: boolean;
+    trackSession: boolean;
+    evidenceKeyFilter: import("fiftyone.pipeline.core/types/basicListEvidenceKeyFilter");
+    keptEvidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    dataEvidenceKeyFilter: ShareUsageEvidenceKeyFilter;
+    trackerEvidenceKeyFilter: ShareUsageTrackerEvidenceKeyFilter;
     tracker: ShareUsageTracker;
     requestedPackageSize: number;
     sharePercentage: number;
     shareData: any[];
+    dropped: number;
+    maximumQueueSize: number;
+    requestTimeout: number;
+    backOff: ShareUsageBackOff;
+    sending: boolean;
+    resumeTimer: any;
+    processId: `${string}-${string}-${string}-${string}-${string}`;
+    invariantWrittenAt: number;
     endpoint: url.URL;
     http: typeof import("http") | typeof import("https");
     /**
@@ -62,6 +124,18 @@ declare class ShareUsage extends ShareUsage_base {
      * @param {FlowData} flowData flowData to process
      */
     processInternal(flowData: FlowData): void;
+    /**
+     * The values the element finds to share, before its rules leave any out.
+     * They are every value of the web request the web integration supplied
+     * as server.http-request, under the key each has as evidence, and every
+     * evidence value. Keys ignore letter case, so a key in both places is
+     * one value, under the evidence spelling. The web request itself is not
+     * one of them.
+     *
+     * @param {FlowData} flowData the flow data to look in
+     * @returns {object} the values, keyed as evidence is
+     */
+    getFoundEvidence(flowData: FlowData): object;
     /**
      * Creates a ShareUsageData instance populated from the evidence
      * within the flow data provided.
@@ -81,9 +155,33 @@ declare class ShareUsage extends ShareUsage_base {
      */
     addToShareUsage(data: object): void;
     /**
-     * Internal method to send the share usage bundle to the 51Degrees servers
+     * Internal method to start sending the share usage bundle to the 51Degrees
+     * servers. Nothing starts if a message is already being sent, if fewer
+     * than requestedPackageSize entries are queued, or while sending is paused
+     * after failed sends, in which case a timer starts sending when the pause
+     * ends.
      */
     sendShareUsage(): void;
+    /**
+     * Start sending when the pause ends.
+     *
+     * @param {number} pause the milliseconds until the pause ends
+     */
+    scheduleResume(pause: number): void;
+    /**
+     * Send one message of at most twice requestedPackageSize entries, then the
+     * next until fewer than requestedPackageSize are queued or a failed send
+     * pauses sending.
+     */
+    sendNext(): void;
+    /**
+     * Post one message to the 51Degrees servers.
+     *
+     * @param {string} data the XML to send
+     * @param {Function} done called once with true if the service accepted the
+     * message, or false if the send failed
+     */
+    post(data: string, done: Function): void;
     /**
      * Return a list of FlowElements in the pipeline.
      * If the list is null then populate from the pipeline.
@@ -101,7 +199,9 @@ declare namespace ShareUsage {
     export { FlowData, FlowElement };
 }
 import ShareUsageEvidenceKeyFilter = require("./shareUsageEvidenceKeyFilter");
+import ShareUsageTrackerEvidenceKeyFilter = require("./shareUsageTrackerEvidenceKeyFilter");
 import ShareUsageTracker = require("./shareUsageTracker");
+import ShareUsageBackOff = require("./shareUsageBackOff");
 import url = require("url");
 /**
  * Internal class that is used to store details of data in memory
@@ -110,7 +210,7 @@ import url = require("url");
 declare class ShareUsageData {
     evidenceData: {};
     sessionId: string;
-    clientIp: string;
+    clientIP: string;
     sequence: string;
     /**
      * Try to add data to shared usage

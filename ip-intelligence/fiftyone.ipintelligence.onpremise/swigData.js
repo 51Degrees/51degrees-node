@@ -27,9 +27,27 @@ const swigHelpers = require('./swigHelpers');
 
 const DataFileMissingPropertyService = require('./dataFileMissingPropertyService');
 
-// The number of decimal places to use when converting WKB values to
-// WKT strings.
-const defaultWktDecimalPlaces = 16;
+// The number of decimal places a location is given to, whether it is a
+// number or a point in a WKT string.
+const defaultDecimalPlaces = 3;
+
+// Properties whose numbers are given to the decimal places above. The rule
+// covers a value the data file stores as an Azimuth or a Declination, and
+// the swig results do not say which stored type a value came from, so the
+// two properties the IP Intelligence data model gives as those types are
+// named here instead.
+const locationProperties = ['latitude', 'longitude'];
+
+/**
+ * Rounds a number to the decimal places, to the binary floating point number
+ * nearest to the rounded decimal. Zero is never negative.
+ *
+ * @param {number} value the number to round
+ * @returns {number} the rounded number
+ */
+const roundLocation = function (value) {
+  return Number(value.toFixed(defaultDecimalPlaces)) + 0;
+};
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
@@ -130,7 +148,7 @@ class SwigData extends AspectData {
         case 'weightedwkb':
         case 'weightedwkbr':
           value = this.swigResults.getValuesAsWeightedWKTStringList(
-            property.name, defaultWktDecimalPlaces);
+            property.name, defaultDecimalPlaces);
           isWeighted = true;
           break;
         default:
@@ -145,6 +163,12 @@ class SwigData extends AspectData {
 
         if (isWeighted) {
           result.value = swigHelpers.weightedVectorToArray(result.value);
+          if (locationProperties.includes(property.name.toLowerCase()) &&
+            (type === 'weightedsingle' || type === 'weighteddouble')) {
+            result.value.forEach(function (weighted) {
+              weighted.value = roundLocation(weighted.value);
+            });
+          }
         } else if (type === 'string[]') {
           result.value = swigHelpers.vectorToArray(result.value);
         }
@@ -154,6 +178,21 @@ class SwigData extends AspectData {
 
       return result;
     }
+  }
+
+  /**
+   * Looks for a key again in lower case, which is how the engine keys its
+   * properties, so a key in any letter case finds its property.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {AspectPropertyValue} value property value
+   */
+  getInternalIgnoringCase (key) {
+    if (typeof key !== 'string') {
+      return undefined;
+    }
+    const lowerKey = key.toLowerCase();
+    return lowerKey === key ? undefined : this.getInternal(lowerKey);
   }
 }
 

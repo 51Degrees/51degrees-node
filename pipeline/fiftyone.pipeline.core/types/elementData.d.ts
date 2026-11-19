@@ -14,6 +14,8 @@ declare class ElementData {
      * @param {object} options the options object
      * @param {FlowElement} options.flowElement the FlowElement this data
      * is part of
+     * @throws {string} 'flowElement dataKey not found', when the FlowElement
+     * has no data key
      */
     constructor({ flowElement }: {
         flowElement: FlowElement;
@@ -28,11 +30,25 @@ declare class ElementData {
      */
     getInternal(key: string): void;
     /**
+     * Looks for a key again ignoring its letter case, after getInternal found
+     * nothing for the key as given, because property names are compared
+     * ignoring case. Classes inheriting from elementData override this, and
+     * this one finds nothing.
+     *
+     * @param {string} key the key to retrieve a property value for
+     * @returns {*} the value, or undefined if there is none
+     */
+    getInternalIgnoringCase(key: string): any;
+    /**
      * A wrapper that performs actions before passing on processing
-     * (or skipping) the getInternal method
+     * (or skipping) the getInternal method. A key that finds nothing as given
+     * is looked for again ignoring its letter case, so a read that found its
+     * value before costs no more.
      *
      * @param {string} key the key to retrieve a property value for
      * @returns {FlowData} value
+     * @throws {string} a message naming the property and the element, when
+     * the data has no value for the key in any case
      */
     get(key: string): FlowData;
     /**

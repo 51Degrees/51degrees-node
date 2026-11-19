@@ -21,6 +21,8 @@
  * ********************************************************************* */
 
 const AspectData = require('./aspectData');
+const ElementDataDictionary =
+  require('fiftyone.pipeline.core').ElementDataDictionary;
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
@@ -63,6 +65,18 @@ class AspectDataDictionary extends AspectData {
    */
   getInternal (key) {
     return this.contents[key];
+  }
+
+  /**
+   * Looks for a key in the dictionary ignoring its letter case, as the core
+   * dictionary does.
+   *
+   * @param {string} key property key
+   * @returns {*} property value, or undefined if there is none
+   */
+  getInternalIgnoringCase (key) {
+    return ElementDataDictionary.prototype.getInternalIgnoringCase.call(
+      this, key);
   }
 }
 

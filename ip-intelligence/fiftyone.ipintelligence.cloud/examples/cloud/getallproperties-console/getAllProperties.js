@@ -42,7 +42,7 @@
  * but it is not yet available for IP intelligence. For now, you can run
  * the onpremise/mixed/gettingstarted-api example to simulate a custom
  * hosted cloud service, and point this example to it by setting the
- * 'FOD_CLOUD_API_URL' environment variable to 'http://localhost:5225/'.
+ * '_51DEGREES_CLOUD_ENDPOINT' environment variable to 'http://localhost:5225/'.
  * Any value can then be used for the resource key.
  *
  * Required npm Dependencies:
@@ -69,6 +69,19 @@ const PipelineBuilder = require51('fiftyone.pipeline.core').PipelineBuilder;
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
 const OptionsExtension = require51('fiftyone.ipintelligence.shared').optionsExtension;
 const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=find-out-more-contact'
+].join('\n');
 
 const SOME_IP_ADDRESS = '8.8.8.8';
 
@@ -111,14 +124,14 @@ const run = async function (options, output) {
     console.log(
       'No resource key specified in the configuration file ' +
       '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required. ' +
+      'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required. ' +
       'A resource key with everything this example displays can be ' +
-      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required with a paid ' +
+      'created at https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required with a paid ' +
       'subscription. A free key created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required populates only the ' +
+      'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required populates only the ' +
       'Country, LocationConfidence, Ip and IpV6 properties. See ' +
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-getallproperties-console-getallproperties.js&utm_term=resource-key-required to get a paid subscription with ' +
       'more properties. Once complete, populate the config file or ' +
@@ -153,7 +166,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  run(options, process.stdout);
+  run(options, process.stdout).then(() => console.log(FIND_OUT_MORE));
 }
 
 module.exports = {

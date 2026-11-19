@@ -24,6 +24,7 @@ const core = require('fiftyone.pipeline.core');
 const engines = require('fiftyone.pipeline.engines');
 
 const Engine = engines.Engine;
+const AutoUpdateStatus = engines.AutoUpdateStatus;
 const DataFile = require('./deviceDetectionDataFile');
 const SwigData = require('./swigData');
 const swigHelpers = require('./swigHelpers');
@@ -31,13 +32,29 @@ const errorMessages = require('fiftyone.devicedetection.shared').errorMessages;
 const os = require('os');
 const path = require('path');
 const EvidenceKeyFilter = core.BasicListEvidenceKeyFilter;
+const AnyEvidenceKeyFilter = core.EvidenceKeyFilter;
 const fs = require('fs');
 const util = require('util');
 const constants = require('./constants');
-const metricCategory = 'Device metrics';
+const metricCategory = 'Device Metrics';
+// The data files every match metric Property is available with.
+const metricDataFiles = ['Lite', 'Premium', 'Enterprise', 'TAC'];
 const Component = require('./component');
 const Property = require('./property');
 const Profile = require('./profile');
+
+/**
+ * The key with the part before its first dot in lower case.
+ *
+ * @param {string} key an evidence key, such as Header.User-Agent
+ * @returns {string} the key with a lower case prefix
+ */
+const lowerCasePrefix = (key) => {
+  const dot = key.indexOf('.');
+  return dot === -1
+    ? key
+    : key.substring(0, dot).toLowerCase() + key.substring(dot);
+};
 
 /**
  * @typedef {import('fiftyone.pipeline.engines').DataKeyedCache} DataKeyedCache
@@ -88,6 +105,21 @@ const initComponents = function (metadata) {
   this.components = components;
 };
 
+// The possible values of a match metric Property, read as a data file
+// Property's are, each with a name and no description.
+const metricValues = function (names) {
+  const values = names.map((name) => ({
+    getName: () => name,
+    getDescription: () => ''
+  }));
+  return {
+    getValues: function * () {
+      yield * values;
+    },
+    getNumberOfValues: () => values.length
+  };
+};
+
 const initMatchMetrics = function () {
   // Add a component for Device Metrics
   const metricComponent = {
@@ -99,74 +131,110 @@ const initMatchMetrics = function () {
     }
   };
 
-  // Special properties
-  this.properties.deviceID = {
-    name: 'DeviceId',
-    type: 'string',
+  // Special properties, added in the order the specification lists them
+  this.properties.matchedNodes = {
+    name: 'MatchedNodes',
+    type: 'int',
     category: metricCategory,
-    description: constants.deviceIdDescription,
-    component: metricComponent
-  };
-
-  this.properties.userAgents = {
-    name: 'UserAgents',
-    type: 'string[]',
-    category: metricCategory,
-    description: constants.userAgentsDescription,
-    component: metricComponent
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
+    description: constants.matchedNodesDescription,
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.difference = {
     name: 'Difference',
     type: 'int',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
     description: constants.differenceDescription,
-    component: metricComponent
-  };
-
-  this.properties.method = {
-    name: 'Method',
-    type: 'string',
-    category: metricCategory,
-    description: constants.methodDescription,
-    component: metricComponent
-  };
-
-  this.properties.matchedNodes = {
-    name: 'MatchedNodes',
-    type: 'int',
-    category: metricCategory,
-    description: constants.matchedNodesDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.drift = {
     name: 'Drift',
     type: 'int',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
     description: constants.driftDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
+  };
+
+  this.properties.deviceID = {
+    name: 'DeviceId',
+    type: 'string',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: '0-0-0-0',
+    description: constants.deviceIdDescription,
+    component: metricComponent,
+    ...metricValues([])
+  };
+
+  this.properties.userAgents = {
+    name: 'UserAgents',
+    type: 'string[]',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: [],
+    description: constants.userAgentsDescription,
+    component: metricComponent,
+    ...metricValues([])
   };
 
   this.properties.iterations = {
     name: 'Iterations',
     type: 'int',
     category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 0,
     description: constants.iterationsDescription,
-    component: metricComponent
+    component: metricComponent,
+    ...metricValues([])
+  };
+
+  this.properties.method = {
+    name: 'Method',
+    type: 'string',
+    category: metricCategory,
+    dataFiles: metricDataFiles.slice(),
+    defaultValue: 'NONE',
+    description: constants.methodDescription,
+    component: metricComponent,
+    ...metricValues(['NONE', 'PERFORMANCE', 'COMBINED', 'PREDICTIVE'])
   };
 
   metricComponent.properties = [
+    this.properties.matchedNodes,
+    this.properties.difference,
+    this.properties.drift,
     this.properties.deviceID,
     this.properties.userAgents,
-    this.properties.difference,
-    this.properties.method,
-    this.properties.matchedNodes,
-    this.properties.drift,
-    this.properties.iterations
+    this.properties.iterations,
+    this.properties.method
   ];
 
   this.components.metrics = metricComponent;
+};
+
+// Private method to map each property key in lower case to the key itself,
+// so a read can find a property whatever the letter case of the key it is
+// given. The match metric keys are not all in lower case. This should only be
+// called by the call() method, after the properties are made.
+const initPropertyKeys = function () {
+  const keys = Object.create(null);
+  for (const key of Object.keys(this.properties)) {
+    const lowerKey = key.toLowerCase();
+    if (keys[lowerKey] === undefined) {
+      keys[lowerKey] = key;
+    }
+  }
+  this.propertyKeys = keys;
 };
 
 /**
@@ -193,8 +261,15 @@ class DeviceDetectionOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-   * @param {Array<string>} options.restrictedProperties list of properties the engine
-   * will be restricted to
+   * @param {Array<string>|string} options.restrictedProperties list of
+   * properties the engine will be restricted to, or one comma separated
+   * string of them, as a configuration file gives a list
+   * @param {Array<string>|string} [options.indexedProperties] list of
+   * Properties, such as TAC and NativeModel, whose values the native code
+   * indexes to the profiles holding them when the data file loads, or one
+   * comma separated string of them. profileIdsForPropertyValue then finds
+   * the profiles for a value of one of them without reading every profile.
+   * Names are matched exactly. None by default.
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
@@ -204,7 +279,8 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {boolean} options.download whether to download the datafile
    * or store it in memory
    * @param {string} options.performanceProfile options are:
-   * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance
+   * LowMemory, MaxPerformance, Balanced, BalancedTemp, HighPerformance.
+   * Balanced by default, as in the native code.
    * @param {boolean} options.fileSystemWatcher whether to monitor the datafile
    * path for changes
    * @param {number} options.concurrency defaults to the number of cpus
@@ -212,8 +288,11 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {boolean} options.reuseTempFile Indicates that an existing temp
    * file may be used. This should be selected if multiple instances wish to
    * use the same file to prevent high disk usage.
-   * @param {boolean} options.updateMatchedUserAgent True if the detection
-   * should record the matched characters from the target User-Agent
+   * @param {boolean} [options.updateMatchedUserAgent] True if the detection
+   * should record the matched characters from the target User-Agent, which
+   * the UserAgents property returns. On by default, as the native code sets
+   * it. Set it to false where UserAgents is not needed, which saves
+   * recording the characters.
    * @param {number} options.maxMatchedUserAgentLength Number of characters to
    * consider in the matched User-Agent. Ignored if updateMatchedUserAgent
    * is false
@@ -234,7 +313,8 @@ class DeviceDetectionOnPremise extends Engine {
    * @param {string} options.tempDataDir The directory to use for the
    * temporary data copy if 'createTempDataCopy' is set to true.
    * @param {boolean} options.updateOnStart whether to download / update
-   * the datafile on initialisation
+   * the datafile on initialisation. If there is no file at dataFilePath it
+   * is downloaded, and processing fails if the download does not work.
    */
   constructor (
     {
@@ -245,11 +325,12 @@ class DeviceDetectionOnPremise extends Engine {
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
       restrictedProperties,
+      indexedProperties,
       licenceKeys,
       download,
-      performanceProfile = 'LowMemory',
+      performanceProfile = 'Balanced',
       reuseTempFile = false,
-      updateMatchedUserAgent = false,
+      updateMatchedUserAgent,
       maxMatchedUserAgentLength,
       drift,
       difference,
@@ -280,7 +361,13 @@ class DeviceDetectionOnPremise extends Engine {
     if (typeof dataFilePath === 'undefined') {
       throw errorMessages.dataFilePathRequired;
     }
-    if (fs.existsSync(dataFilePath) === false) {
+    // A file that is not there is downloaded when the engine updates on
+    // start-up, so only an engine that cannot do so needs the file.
+    const downloadsOnStart = updateOnStart && (
+      dataUpdateUrl !== constants.dataUpdateUrl ||
+      (licenceKeys && licenceKeys.length > 0));
+    const fileMissing = fs.existsSync(dataFilePath) === false;
+    if (fileMissing && !downloadsOnStart) {
       throw util.format(errorMessages.fileNotFound, dataFilePath);
     }
     // look at dataFile extension to detect type
@@ -345,8 +432,9 @@ class DeviceDetectionOnPremise extends Engine {
     // Create vector for restricted properties
     const propertiesList = new swigWrapper.VectorStringSwig();
 
-    if (restrictedProperties) {
-      restrictedProperties.forEach(function (property) {
+    const restricted = core.listSetting(restrictedProperties);
+    if (restricted) {
+      restricted.forEach(function (property) {
         propertiesList.add(property);
       });
     }
@@ -394,7 +482,11 @@ class DeviceDetectionOnPremise extends Engine {
     }
 
     config.setReuseTempFile(reuseTempFile);
-    config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+
+    // Left at the native default, which is on, unless a value was given.
+    if (updateMatchedUserAgent !== undefined) {
+      config.setUpdateMatchedUserAgent(updateMatchedUserAgent);
+    }
 
     if (typeof allowUnmatched === 'boolean') {
       config.setAllowUnmatched(allowUnmatched);
@@ -419,11 +511,49 @@ class DeviceDetectionOnPremise extends Engine {
     // This should always be set to 'false' for on-premise
     config.setUseUpperPrefixHeaders(false);
 
+    // The Properties whose values the native code indexes to their
+    // profiles.
+    const indexed = core.listSetting(indexedProperties);
+    if (indexed && indexed.length > 0) {
+      const indexedList = new swigWrapper.VectorStringSwig();
+      indexed.forEach(function (property) {
+        indexedList.add(property);
+      });
+      config.setIndexedProperties(indexedList);
+    }
+
     super(...arguments);
 
     this.dataKey = 'device';
 
+    // The data file's keys are read when the engine is initialised,
+    // which waits for the download when updateOnStart is set and there
+    // is no file yet. Until then the engine accepts no Evidence, as
+    // nothing can change its results, and keeps every key, so evidence
+    // set before then is not lost. initEngine replaces both with the keys
+    // the file lists.
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
+      new EvidenceKeyFilter([]));
+    this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
+
     const current = this;
+
+    /**
+     * The accepted Evidence keys the native engine gives for the data it
+     * holds, read at start-up and after each refresh, because a new data
+     * file can accept other keys.
+     *
+     * @param {object} engine the native engine
+     * @returns {EvidenceKeyFilter} a filter of those keys
+     */
+    const readEvidenceKeyFilter = function (engine) {
+      const evidenceKeys = engine.getKeys();
+      const evidenceKeyArray = [];
+      for (let i = 0; i < evidenceKeys.size(); i += 1) {
+        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
+      }
+      return new EvidenceKeyFilter(evidenceKeyArray);
+    };
 
     /**
      * Function for initialising the engine, wrapped like this so
@@ -435,17 +565,8 @@ class DeviceDetectionOnPremise extends Engine {
     this.initEngine = function () {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
-      // Get keys and add to evidenceKey filter
-
-      const evidenceKeys = engine.getKeys();
-
-      const evidenceKeyArray = [];
-
-      for (let i = 0; i < evidenceKeys.size(); i += 1) {
-        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
-      }
-
-      current.evidenceKeyFilter = new EvidenceKeyFilter(evidenceKeyArray);
+      current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
+      current.keptEvidenceKeyFilter = undefined;
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;
@@ -457,6 +578,7 @@ class DeviceDetectionOnPremise extends Engine {
       initProperties.call(current, metadata);
       initComponents.call(current, metadata);
       initMatchMetrics.call(current);
+      initPropertyKeys.call(current);
     };
 
     // Disable features that require a license key if one was
@@ -487,12 +609,13 @@ class DeviceDetectionOnPremise extends Engine {
       useUrlFormatter: dataUpdateUseUrlFormatter
     };
 
+    // An engine with no data file yet has no published date, so the update
+    // service falls back to the date of the file, if there is one.
     dataFileSettings.getDatePublished = function () {
       if (current.engine) {
         return swigHelpers.swigDateToDate(current.engine.getPublishedTime());
-      } else {
-        return new Date();
       }
+      return undefined;
     };
 
     dataFileSettings.getNextUpdate = function () {
@@ -503,8 +626,26 @@ class DeviceDetectionOnPremise extends Engine {
       }
     };
 
+    // The first refresh of an engine started without its data file
+    // creates the engine from the file just downloaded.
     dataFileSettings.refresh = function () {
-      current.engine.refreshData();
+      if (current.engine) {
+        current.engine.refreshData();
+        current.evidenceKeyFilter = readEvidenceKeyFilter(current.engine);
+      } else {
+        current.initEngine();
+        current.startUpError = undefined;
+        current.updateProperties();
+      }
+    };
+
+    // An engine with no data file at all has nothing to process with if the
+    // download fails.
+    dataFileSettings.onUpdateComplete = function (status) {
+      if (!current.engine && status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS) {
+        current.startUpError = util.format(
+          errorMessages.fileNotFoundNotDownloaded, dataFilePath, status);
+      }
     };
 
     const params = {
@@ -524,7 +665,9 @@ class DeviceDetectionOnPremise extends Engine {
 
     const ddDatafile = new DataFile(dataFileSettings);
 
-    this.initEngine();
+    if (!fileMissing) {
+      this.initEngine();
+    }
 
     this.registerDataFile(ddDatafile);
   }
@@ -535,6 +678,28 @@ class DeviceDetectionOnPremise extends Engine {
     for (let i = 0; i < profilesInternal.getSize(); i++) {
       yield new Profile(profilesInternal.getByIndex(i), engineMetadata);
     }
+  }
+
+  /**
+   * The ids of the profiles that hold a value of a Property, from the
+   * native code, in ascending order with each id once. The name and the
+   * value are matched exactly, as the data file holds them. A Property
+   * named in the indexedProperties option is found through the native
+   * index, and any other by reading every profile, which gives the same
+   * ids more slowly.
+   *
+   * @param {string} propertyName the name of the Property
+   * @param {string} value the value of the Property
+   * @returns {Array<number>} the ids of the profiles holding the value
+   */
+  profileIdsForPropertyValue (propertyName, value) {
+    const ids = this.engine.getProfileIdsForPropertyValue(
+      propertyName, value);
+    const result = [];
+    for (let i = 0; i < ids.size(); i++) {
+      result.push(ids.get(i));
+    }
+    return result;
   }
 
   /**
@@ -554,8 +719,15 @@ class DeviceDetectionOnPremise extends Engine {
 
       const evidence = new dd.swigWrapper.EvidenceDeviceDetectionSwig();
 
-      Object.entries(flowData.evidence.getAll()).forEach(function ([key, value]) {
-        evidence.set(key, value);
+      // Only the evidence the native engine reads is passed to it, as
+      // the native evidence takes strings and other evidence may not be.
+      const accepted = dd.evidenceKeyFilter.filterEvidence(
+        flowData.evidence.getAll());
+
+      // Evidence keys ignore case, but the native evidence matches a key's
+      // prefix with case, so the prefix is given in lower case.
+      Object.entries(accepted).forEach(function ([key, value]) {
+        evidence.set(lowerCasePrefix(key), value);
       });
 
       const result = dd.engine.process(evidence);
@@ -572,14 +744,21 @@ class DeviceDetectionOnPremise extends Engine {
     } else {
       // wait until initialised
 
-      return new Promise(function (resolve) {
+      return new Promise(function (resolve, reject) {
         const dataFileChecker = setInterval(function () {
           if (dd.engine) {
-            process();
-
             clearInterval(dataFileChecker);
 
-            resolve();
+            try {
+              process();
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          } else if (dd.startUpError) {
+            clearInterval(dataFileChecker);
+
+            reject(new Error(dd.startUpError));
           }
         }, 500);
       });

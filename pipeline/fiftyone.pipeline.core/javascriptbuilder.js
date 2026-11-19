@@ -33,6 +33,7 @@ const FlowElement = require('./flowElement.js');
 const EvidenceKeyFilter = require('./evidenceKeyFilter.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const Constants = require('./constants.js');
+const callbackUrl = require('./callbackUrl.js');
 const uglifyJS = require('uglify-js');
 
 // Evidence names the rendered script is not configured with. The script
@@ -59,10 +60,13 @@ const defaultObjectName = 'fod';
 
 // Words the pattern accepts that cannot be the name of the object. These are
 // the reserved words of the language, including those reserved only in
-// strict mode, plus the three global values a top level var cannot replace,
-// where the object would silently never be created. The last entry is the
-// constructor the script itself defines and calls to create the object, so
-// that name would clash with it.
+// strict mode, then eval and arguments, which strict mode code cannot
+// declare and of which eval would replace the page's own eval function, then
+// the three global values and the properties of the browser's Window object
+// that a top level var cannot replace, so the object would never be created,
+// and location, where a top level var navigates the page away. The last
+// entry is the constructor the script itself defines and calls to create the
+// object, so that name would clash with it.
 const reservedObjectNames = [
   'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
   'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export',
@@ -71,6 +75,14 @@ const reservedObjectNames = [
   'package', 'private', 'protected', 'public', 'return', 'static', 'super',
   'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void',
   'while', 'with', 'yield', 'Infinity', 'NaN', 'undefined',
+  'eval', 'arguments',
+  'window', 'document', 'top', 'name', 'status', 'history', 'navigator',
+  'closed', 'location', 'frameElement', 'isSecureContext',
+  'crossOriginIsolated', 'trustedTypes', 'crypto', 'indexedDB',
+  'localStorage', 'sessionStorage', 'caches', 'cookieStore',
+  'speechSynthesis', 'styleMedia', 'crashReport', 'credentialless',
+  'customElements', 'documentPictureInPicture', 'fence', 'launchQueue',
+  'originAgentCluster',
   'fiftyoneDegreesManager'
 ];
 
@@ -103,7 +115,7 @@ const maxSequence = 2147483647;
  * The session id to write into the script, which is the value given when it
  * is safe to write and an empty string otherwise.
  *
- * @param {*} value the session id evidence
+ * @param {*} value the session id from the Sequence Element
  * @returns {string} the session id, or an empty string
  */
 function safeSessionId (value) {
@@ -119,7 +131,7 @@ function safeSessionId (value) {
  * number could break the script, and a number below 1 is not a sequence the
  * Sequence Element would ever give.
  *
- * @param {*} value the sequence evidence
+ * @param {*} value the sequence from the Sequence Element
  * @returns {number} the sequence, which is always at least 1
  */
 function safeSequence (value) {
@@ -153,17 +165,33 @@ const urlEncode = function (value) {
 };
 
 /**
+ * Text quoted for a log message, with the control characters and the line
+ * and paragraph separators escaped so that it cannot start a new log line.
+ *
+ * @param {string} text the text to quote
+ * @returns {string} the quoted text
+ */
+function quotedForLog (text) {
+  return JSON.stringify(text).replace(
+    /[\u007f-\u009f\u2028\u2029]/g,
+    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
+/**
  * @typedef {import('./flowData')} FlowData
  */
 
 /**
- * An instance of EvidenceKeyFilter which removes all but header
- * and query evidence as that is all that is used by
- * the JavaScript builder
- **/
+ * The script reads the query string, and the host and protocol it calls
+ * back to, so those are the evidence that can change it.
+ */
 class JSEvidenceKeyFilter extends EvidenceKeyFilter {
   filterEvidenceKey (key) {
-    return key.indexOf('query.') !== -1 || key.indexOf('header.') !== -1;
+    // Evidence keys ignore letter case.
+    const lower = String(key).toLowerCase();
+    return lower.startsWith('query.') ||
+      lower === 'header.host' ||
+      lower === 'header.protocol';
   }
 }
 
@@ -190,9 +218,10 @@ class JavaScriptBuilderElement extends FlowElement {
    * JavaScript identifier that is not a reserved word, or the constructor
    * throws. Leaving it out, or giving null, means "fod". This can be overridden with "query.fod-js-object-name" evidence,
    * which is ignored with a warning when it is not a valid name.
-   * @param {string} options.protocol The protocol ("http" or "https")
-   * used by the client side callback url.
-   * This can be overriden with header.protocol evidence
+   * @param {string} options.protocol The protocol of the client side
+   * callback url, http or https in any case of its ASCII letters. The
+   * constructor throws for any other protocol. Left out, the header.protocol
+   * evidence is used, or https when there is none
    * @param {string} options.host The host of the client side
    * callback url. This can be overriden with header.host evidence.
    * @param {string} options.endPoint The endpoint of the client side
@@ -202,6 +231,8 @@ class JavaScriptBuilderElement extends FlowElement {
    * be set per request, using the "query.fod-js-enable-cookies" evidence key.
    * For more details on personal data policy, see https://51degrees.com/terms/client-services-privacy-policy/?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-javascriptbuilder.js&utm_term=constructor
    * @param {boolean} options.minify Whether to minify the JavaScript
+   * @throws {Error} when objName is not a valid name, or when protocol is
+   * given and is not http or https
    */
   constructor ({
     objName = defaultObjectName,
@@ -223,6 +254,16 @@ class JavaScriptBuilderElement extends FlowElement {
         'JavaScript identifier that is not a reserved word.');
     }
 
+    // A protocol given here is used for every request, so one the script
+    // cannot send its request with is refused now rather than logged on the
+    // first request.
+    const protocolIsValid = typeof protocol === 'string' &&
+      callbackUrl.isScheme(protocol);
+    if (protocol && !protocolIsValid) {
+      throw new Error(
+        'JavaScriptBuilder protocol is invalid. It must be http or https.');
+    }
+
     this.settings = {
       objName,
       protocol,
@@ -234,6 +275,17 @@ class JavaScriptBuilderElement extends FlowElement {
 
     this.dataKey = 'javascriptbuilder';
     this.evidenceKeyFilter = new JSEvidenceKeyFilter();
+    this.properties = {
+      javascript: {
+        name: 'javascript',
+        type: 'string',
+        description: 'The raw JavaScript produced by this Element.'
+      }
+    };
+
+    // Set once a callback URL that is not valid has been logged, because a
+    // misconfigured element would otherwise log on every request.
+    this._invalidUrlLogged = false;
   }
 
   /**
@@ -279,42 +331,44 @@ class JavaScriptBuilderElement extends FlowElement {
     settings._host = host;
     settings._protocol = protocol;
 
-    if (settings._host && settings._protocol && settings._endPoint) {
-      // The URL is the protocol, the host and the endpoint and nothing
-      // else, as the .NET builder renders it. The values the page was
-      // requested with go in the request body as the parameters below, so
-      // none of them, the visitor's User-Agent and address included, are
-      // written into a URL that servers and proxies log. Exactly one slash
-      // separates the host from the endpoint.
-      let endPoint = settings._endPoint;
-      const hostHasSlash = settings._host.endsWith('/');
-      const endPointHasSlash = endPoint.startsWith('/');
-      if (hostHasSlash === false && endPointHasSlash === false) {
-        endPoint = '/' + endPoint;
-      } else if (hostHasSlash && endPointHasSlash) {
-        endPoint = endPoint.substring(1);
-      }
-      settings._url = settings._protocol + '://' + settings._host + endPoint;
+    // The URL is the protocol, the host and the endpoint and nothing else,
+    // as the .NET builder renders it, and callbackUrl checks it. The values
+    // the page was requested with go in the request body as the parameters
+    // below, so none of them, the visitor's User-Agent and address included,
+    // are written into a URL that servers and proxies log.
+    const url = callbackUrl(protocol, host, settings._endPoint);
+    if (url !== null && url.valid === false && !this._invalidUrlLogged) {
+      this._invalidUrlLogged = true;
+      this._log('error',
+        'The generated URL ' + quotedForLog(url.url) + ' is not valid, so ' +
+        'the JavaScript has no callback URL. Check the JavaScript ' +
+        "builder's protocol, host and endpoint, and the protocol and host " +
+        'evidence. This is reported once.');
+    }
 
-      // The parameters are the query evidence, each named by everything
-      // after the first dot of its key so that a name such as id.usage is
-      // kept whole, and leaving out the two the script appends itself. The
-      // script joins them into its request body as they stand, so each name
-      // and value is encoded here.
-      const evidence = this.evidenceKeyFilter.filterEvidence(
-        flowData.evidence.getAll()
-      );
-      const scriptParameters = {};
-      for (const key in evidence) {
-        if (key.startsWith('query.')) {
-          const name = key.substring('query.'.length);
-          if (excludedParameters.indexOf(name) === -1) {
-            scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
-          }
+    // The parameters are the query evidence, each named by everything after
+    // the first dot of its key so that a name such as id.usage is kept whole,
+    // and leaving out the two the script appends itself. The script joins
+    // them into its request body as they stand, so each name and value is
+    // encoded here. They are written with or without a callback URL, as the
+    // script reads them either way.
+    const evidence = this.evidenceKeyFilter.filterEvidence(
+      flowData.evidence.getAll()
+    );
+    const scriptParameters = {};
+    for (const key in evidence) {
+      // Evidence keys ignore case, so the prefix and the excluded names do.
+      if (key.toLowerCase().startsWith('query.')) {
+        const name = key.substring('query.'.length);
+        if (excludedParameters.indexOf(name.toLowerCase()) === -1) {
+          scriptParameters[urlEncode(name)] = urlEncode(evidence[key]);
         }
       }
-      settings._parameters = JSON.stringify(scriptParameters);
+    }
+    settings._parameters = JSON.stringify(scriptParameters);
 
+    if (url !== null && url.valid) {
+      settings._url = url.url;
       settings._updateEnabled = true;
     } else {
       settings._updateEnabled = false;
@@ -336,10 +390,19 @@ class JavaScriptBuilderElement extends FlowElement {
 
     settings._hasDelayedProperties = settings._jsonObject.includes('delayexecution');
 
-    settings._sessionId =
-      safeSessionId(flowData.evidence.get('query.session-id'));
-    settings._sequence =
-      safeSequence(flowData.evidence.get('query.sequence'));
+    // The session id and the sequence come from the Sequence Element's
+    // data. Where there is no Sequence Element, or its data lacks one of
+    // them, the script gets an empty session id and a sequence of 1, so it
+    // always parses.
+    const fromSequenceElement = (key) => {
+      try {
+        return flowData.get('sequence').get(key);
+      } catch (e) {
+        return undefined;
+      }
+    };
+    settings._sessionId = safeSessionId(fromSequenceElement('session-id'));
+    settings._sequence = safeSequence(fromSequenceElement('sequence'));
 
     // Try and get the requested enable cookies from evidence.
     const enableCookies = flowData.evidence.get(Constants.evidenceEnableCookies);
@@ -362,9 +425,14 @@ class JavaScriptBuilderElement extends FlowElement {
 
     let output = mustache.render(template, settings);
 
+    // uglify-js gives an error only when minifying failed, and the script
+    // is then given as it is.
     if (settings._minify) {
       const minified = uglifyJS.minify(output);
-      if (minified.error === null) {
+      if (minified.error) {
+        this._log('warn', 'The JavaScript could not be minified, so it is ' +
+          'given as it is. ' + minified.error);
+      } else {
         output = minified.code;
       }
     }

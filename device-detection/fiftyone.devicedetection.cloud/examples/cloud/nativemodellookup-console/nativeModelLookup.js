@@ -65,6 +65,19 @@ const constants = require(path.join(__dirname, '/../../../constants.js'));
 
 const DataExtension = require51('fiftyone.devicedetection.shared').dataExtension;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const analyseNativeModel = async function (nativemodel, pipeline, output) {
   // Create a flow data instance.
   const flowData = pipeline.createFlowData();
@@ -110,7 +123,7 @@ const run = async function (resourceKey, output) {
   // This example creates the pipeline and engines in code. For a demonstration
   // of how to do this using a configuration file instead, see the TacLookup example.
   // For more information about builders in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=run
   const requestEngineInstance = new CloudRequestEngine.CloudRequestEngine({
     resourceKey
   });
@@ -145,20 +158,21 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const resourceKey = args.length > 0 ? args[0] : ExampleUtils.getResourceKeyFromEnv();
 
   if (resourceKey) {
-    run(resourceKey, process.stdout);
+    run(resourceKey, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     console.error('No resource key specified on the command line or in the ' +
     `the environment variable '${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. ` +
     'The 51Degrees cloud service is accessed using a \'ResourceKey\'. ' +
     'For more information ' +
-    'see https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=resource-key-required. ' +
+    'see https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=resource-key-required. ' +
     'Native model lookup requires a paid subscription. See ' +
     'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
     'properties. Once subscribed, a resource key with the properties ' +
     'required by this example can be created at ' +
-    'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=resource-key-required. You can now populate the ' +
+    'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-nativemodellookup-console-nativemodellookup.js&utm_term=resource-key-required. You can now populate the ' +
     'environment variable mentioned at the start of this message with the ' +
     'resource key or pass it as the first argument on the command line.');
+    console.log(FIND_OUT_MORE);
   }
 };
 

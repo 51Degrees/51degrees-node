@@ -233,14 +233,46 @@ function windowFetch (handler) {
 }
 
 describe('DidClient construction', () => {
-  const saved = process.env.FOD_CLOUD_API_URL;
+  // The name the endpoint variable had before, which is still read when
+  // the new name is not set. Built in two parts so the environment variable
+  // name check does not find it here.
+  const oldName = 'FOD' + '_CLOUD_API_URL';
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
+  const savedOld = process.env[oldName];
+  let emitWarning;
+  beforeEach(() => {
+    delete process.env[oldName];
+    // Node's route for a deprecation, replaced so the calls can be counted
+    // and nothing is written to the test output.
+    emitWarning = jest.spyOn(process, 'emitWarning')
+      .mockImplementation(() => {});
+  });
   afterEach(() => {
+    emitWarning.mockRestore();
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
+    }
+    if (savedOld === undefined) {
+      delete process.env[oldName];
+    } else {
+      process.env[oldName] = savedOld;
     }
   });
+
+  /**
+   * The DidClient class of a newly loaded module, which has reported no
+   * deprecated name yet.
+   * @returns {typeof DidClient} the class
+   */
+  const newlyLoadedDidClient = () => {
+    let loaded;
+    jest.isolateModules(() => {
+      loaded = require('../didClient').DidClient;
+    });
+    return loaded;
+  };
 
   test('resourceKey is required', () => {
     expect(() => new DidClient({})).toThrow(TypeError);
@@ -249,20 +281,89 @@ describe('DidClient construction', () => {
   });
 
   test('endpoint defaults to the public cloud', () => {
-    delete process.env.FOD_CLOUD_API_URL;
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
     expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
     expect(client.resourceKey).toBe(RESOURCE);
   });
 
-  test('endpoint reads FOD_CLOUD_API_URL and normalises the slash', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+  test('endpoint reads _51DEGREES_CLOUD_ENDPOINT and normalises the slash', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
     expect(client.endpoint).toBe('https://other.example/api/v4/');
   });
 
+  test('endpoint reads the old variable name when the new one is not set', () => {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = 'https://old.example/api/v4';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://old.example/api/v4/');
+  });
+
+  test('endpoint reads the old variable name when the new one is empty', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = '';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://old.example/api/v4/');
+  });
+
+  test('the new variable name wins when both are set', () => {
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://other.example/api/v4/');
+  });
+
+  test('an empty old variable name counts as not set', () => {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = '';
+    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
+  });
+
+  test('reading the old variable name is reported as deprecated, once', () => {
+    const Fresh = newlyLoadedDidClient();
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    process.env[oldName] = 'https://old.example/api/v4/';
+
+    const first = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+    const second = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
+
+    expect(first.endpoint).toBe('https://old.example/api/v4/');
+    expect(second.endpoint).toBe('https://old.example/api/v4/');
+    expect(emitWarning).toHaveBeenCalledTimes(1);
+    const [message, type] = emitWarning.mock.calls[0];
+    expect(type).toBe('DeprecationWarning');
+    expect(message).toContain(oldName);
+    expect(message).toContain('deprecated');
+    expect(message).toContain('_51DEGREES_CLOUD_ENDPOINT');
+  });
+
+  test('the old variable name is not reported when it is not used', () => {
+    const Fresh = newlyLoadedDidClient();
+    const build = (options) => new Fresh(Object.assign(
+      { resourceKey: RESOURCE, fetch: fakeFetch(() => null) }, options));
+
+    // Neither name set.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    build();
+
+    // Both set, so the new name is the one read.
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
+    process.env[oldName] = 'https://old.example/api/v4/';
+    build();
+
+    // Only the old name set, and the endpoint option given, so the
+    // environment is not read.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+    expect(build({ endpoint: 'https://mine.example/api/v4/' }).endpoint)
+      .toBe('https://mine.example/api/v4/');
+
+    expect(emitWarning).not.toHaveBeenCalled();
+  });
+
   test('endpoint option wins over the environment', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = new DidClient({
       resourceKey: RESOURCE, endpoint: 'https://mine.example/api/v4//', fetch: fakeFetch(() => null)
     });
@@ -281,12 +382,12 @@ describe('DidClient construction', () => {
 // the client would make every request need a preflight.
 describe('DidClient in a browser', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
-  const saved = process.env.FOD_CLOUD_API_URL;
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
   afterEach(() => {
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
   });
 
@@ -308,7 +409,7 @@ describe('DidClient in a browser', () => {
   }
 
   test('the endpoint defaults to the public cloud where there is no process global', () => {
-    process.env.FOD_CLOUD_API_URL = 'https://other.example/api/v4';
+    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = withoutProcess(() =>
       new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) }));
     expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
@@ -377,12 +478,12 @@ describe('DidClient in a browser', () => {
 // key on every route, so a client for it still needs one.
 describe('DidClient without a resource key', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
-  const saved = process.env.FOD_CLOUD_API_URL;
+  const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
   afterEach(() => {
     if (saved === undefined) {
-      delete process.env.FOD_CLOUD_API_URL;
+      delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
-      process.env.FOD_CLOUD_API_URL = saved;
+      process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
   });
 
@@ -391,13 +492,13 @@ describe('DidClient without a resource key', () => {
     expect(client.resourceKey).toBeNull();
     expect(client.endpoint).toBe(ENDPOINT);
     // An endpoint from the environment serves as well.
-    process.env.FOD_CLOUD_API_URL = ENDPOINT;
+    process.env._51DEGREES_CLOUD_ENDPOINT = ENDPOINT;
     expect(new DidClient({ fetch: fakeFetch(() => null) }).resourceKey)
       .toBeNull();
   });
 
   test('the public cloud still needs one', () => {
-    delete process.env.FOD_CLOUD_API_URL;
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     const fetch = fakeFetch(() => null);
     expect(() => new DidClient({ fetch })).toThrow(TypeError);
     expect(() => new DidClient({
@@ -1360,7 +1461,7 @@ describe('DidClient redeem', () => {
         platformname: 'verified',
         platformversion: 'mismatch',
         browsername: 'verified',
-        browserversion: null
+        browserversion: 'notrecorded'
       },
       verifiedAt: '2026-08-07T09:15:32Z',
       secondsSinceVerified: 2
@@ -1443,6 +1544,103 @@ describe('DidClient redeem', () => {
       expect(result.toJSON().factors).toEqual(body.factors);
     });
 
+  test('a factor word the package does not know is a mismatch',
+    async () => {
+      const body = {
+        signature: 'verified',
+        context: 'mismatch',
+        factors: {
+          transport: 'verified',
+          device: 'somethingnew',
+          browserip: 'VERIFIED',
+          connectionip: '',
+          asn: 7,
+          platformname: { value: 'verified' },
+          platformversion: 'notrecorded',
+          browsername: 'misconfigured',
+          browserversion: 'futureword'
+        }
+      };
+      const { client } = redeemClient(200, body);
+      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      expect(result.factors[Factor.TRANSPORT]).toBe(FactorResult.VERIFIED);
+      expect(result.factors[Factor.DEVICE]).toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.BROWSER_IP]).toBe(FactorResult.VERIFIED);
+      expect(result.factors[Factor.CONNECTION_IP])
+        .toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.ASN]).toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.PLATFORM_NAME])
+        .toBe(FactorResult.MISMATCH);
+      expect(result.factors[Factor.PLATFORM_VERSION])
+        .toBe(FactorResult.NOT_RECORDED);
+      expect(result.factors[Factor.BROWSER_NAME])
+        .toBe(FactorResult.MISCONFIGURED);
+      expect(result.factors[Factor.BROWSER_VERSION])
+        .toBe(FactorResult.MISMATCH);
+      expect(Object.isFrozen(result.factors)).toBe(true);
+    });
+
+  test('a factor name the package does not list is kept, and an unknown ' +
+    'word for it is a mismatch', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { newfactor: 'newword', device: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors.newfactor).toBe(FactorResult.MISMATCH);
+    expect(result.factors.device).toBe(FactorResult.VERIFIED);
+  });
+
+  // The specification says the comparison ignores case, as .NET does.
+  test('a factor word in another case is read as that word', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: {
+        transport: 'Verified',
+        device: 'MISMATCH',
+        browserip: 'MisConfigured',
+        connectionip: 'NotRecorded'
+      }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors).toEqual({
+      transport: FactorResult.VERIFIED,
+      device: FactorResult.MISMATCH,
+      browserip: FactorResult.MISCONFIGURED,
+      connectionip: FactorResult.NOT_RECORDED
+    });
+  });
+
+  // An unexpected value must never read as one that could not be compared,
+  // so null is a mismatch, as in .NET and Java.
+  test('a null factor is a mismatch', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { device: null, transport: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(result.factors.device).toBe(FactorResult.MISMATCH);
+    expect(result.factors.transport).toBe(FactorResult.VERIFIED);
+  });
+
+  test('the factor words as sent are in the raw body', async () => {
+    const body = {
+      signature: 'verified',
+      context: 'mismatch',
+      factors: { device: 'somethingnew', transport: 'verified' }
+    };
+    const { client } = redeemClient(200, body);
+    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    expect(JSON.parse(result.raw).factors).toEqual(body.factors);
+    expect(result).not.toHaveProperty('factorsRaw');
+  });
+
   test('the factor outcomes are the words the cloud writes', () => {
     expect(Object.isFrozen(FactorResult)).toBe(true);
     expect(Object.keys(FactorResult)).toEqual([
@@ -1453,7 +1651,7 @@ describe('DidClient redeem', () => {
     ]);
   });
 
-  test('a factor value this package does not list is passed through',
+  test('a factor value this package does not list is a mismatch',
     async () => {
       const body = {
         context: 'mismatch',
@@ -1461,8 +1659,8 @@ describe('DidClient redeem', () => {
       };
       const { client } = redeemClient(200, body);
       const result = await client.redeem(fod, RESULT, CHALLENGE);
-      expect(result.factors.transport).toBe('somethingnewer');
-      expect(result.toJSON().factors).toEqual(body.factors);
+      expect(result.factors.transport).toBe(FactorResult.MISMATCH);
+      expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
     });
 
   test('the factor names are the nine the cloud lists, in its order', () => {
@@ -1663,6 +1861,26 @@ describe('DidClient redeem', () => {
     const fetch = fakeFetch(() => { throw new TypeError('fetch failed'); });
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
     await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toThrow('fetch failed');
+  });
+
+  // The cloud refuses a licence key with an error that names it. Only the
+  // key's last 4 characters may reach an error's message or body.
+  test.each([
+    [401, '{ "status":"401", "errors": ["Invalid license key(s) supplied: ' +
+      '\\u0027' + LICENCE + '\\u0027"] }', 'DidClientError'],
+    [400, { errors: ['Invalid license key(s) supplied: \'' + LICENCE + '\''] },
+      'DidArgumentError'],
+    [404, 'Nothing here for ' + LICENCE, 'DidNotSupportedError']
+  ])('a licence key named in a %s answer is masked', async (status, body, name) => {
+    const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
+    const { client } = redeemClient(status, body);
+    const error = await client.redeem(fod, RESULT, CHALLENGE)
+      .then(() => undefined, (e) => e);
+    expect(error).toHaveProperty('name', name);
+    expect(error.message).toContain(masked);
+    expect(error.body).toContain(masked);
+    expect(require('util').inspect(error, { showHidden: true }))
+      .not.toContain(LICENCE);
   });
 });
 

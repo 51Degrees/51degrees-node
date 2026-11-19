@@ -13,7 +13,7 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * @param {object} options the options for the pipeline builder
      * @param {string} [options.licenceKeys] license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremisepipelinebuilder.js&utm_term=constructor.
      * This parameter MUST be set when using a data file.
      * If you do not wish to use a key then you can specify
      * an empty string, but this will cause automatic updates
@@ -38,14 +38,22 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * engine.
      * @param {Array<string>} [options.restrictedProperties] list of properties the engine
      * will be restricted to
+     * @param {Array<string>|string} [options.indexedProperties] list of
+     * Properties whose values the native code indexes to the profiles holding
+     * them, so the engine's profileIdsForPropertyValue finds them without
+     * reading every profile
      * @param {string} [options.performanceProfile] used to control the tradeoff
      * between performance and system memory usage (Only applies to on-premise,
      * not cloud) options are: LowMemory, MaxPerformance, Balanced,
-     * BalancedTemp, HighPerformance
+     * BalancedTemp, HighPerformance. Balanced by default, as in the native
+     * code.
      * @param {number} [options.concurrency] defaults to the number of cpus
      * in the machine
      * @param {boolean} [options.updateMatchedUserAgent] True if the detection
-     * should record the matched characters from the target User-Agent
+     * should record the matched characters from the target User-Agent, which
+     * the UserAgents property returns. On by default, as the native code sets
+     * it. Set it to false where UserAgents is not needed, which saves
+     * recording the characters.
      * @param {number} [options.maxMatchedUserAgentLength] Number of characters to
      * consider in the matched User-Agent. Ignored if updateMatchedUserAgent is
      * false
@@ -79,7 +87,7 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * normally. Recommended true for web apps so a device-detection failure
      * degrades gracefully instead of failing the request.
      */
-    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, allowUnmatched, createTempDataCopy, tempDataDir }: {
+    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, indexedProperties, performanceProfile, concurrency, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, allowUnmatched, createTempDataCopy, tempDataDir }: {
         licenceKeys?: string;
         dataFile: string;
         dataUpdateVerifyMd5?: boolean;
@@ -93,6 +101,7 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
         updateOnStart?: boolean;
         cacheSize?: number;
         restrictedProperties?: Array<string>;
+        indexedProperties?: Array<string> | string;
         performanceProfile?: string;
         concurrency?: number;
         updateMatchedUserAgent?: boolean;

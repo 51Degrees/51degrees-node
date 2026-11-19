@@ -2,14 +2,16 @@
   "PipelineOptions": {
       "Elements": [
       {
-          "elementName": "../../shareUsage",
+          "elementName": "fiftyone.pipeline.engines.fiftyone/shareUsage",
           "elementParameters": {
               "sharePercentage": 100,
               "interval": 1200000,
               "requestedPackageSize": 50,
               "cookie": "",
+              "trackSession": false,
               "queryWhitelist": [],
-              "headerBlacklist": []
+              "headerBlacklist": [],
+              "shareAll": false
           }
       }
       ]

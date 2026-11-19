@@ -1,11 +1,17 @@
 {
   "name": "fiftyone.devicedetection.onpremise",
   "version": "1.0.0",
-  "description": "Device detection on-premise services for the 51Degrees Pipeline API",
+  "description": "Device Detection and User-Agent parser for Node.js. Detects the device, browser, operating system, and crawlers from HTTP headers such as the User-Agent and User-Agent Client Hints. Reads a data file on your server. Built on the 51Degrees Pipeline API. An alternative to UAParser.js, DeviceAtlas, and WURFL.",
   "keywords": [
     "51degrees",
-    "device detection",
+    "device-detection",
     "user-agent",
+    "user-agent-parser",
+    "client-hints",
+    "browser-detection",
+    "mobile-detection",
+    "crawler-detection",
+    "device detection",
     "client hints",
     "browser",
     "os",
@@ -35,10 +41,10 @@
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "dependencies": {
-    "fiftyone.devicedetection.shared": ">=4.5.0-alpha.0",
-    "fiftyone.pipeline.core": "4.4.x",
-    "fiftyone.pipeline.engines": "4.4.x",
-    "fiftyone.pipeline.engines.fiftyone": "4.4.x",
+    "fiftyone.devicedetection.shared": "^4.5.0",
+    "fiftyone.pipeline.core": "^4.5.0",
+    "fiftyone.pipeline.engines": "^4.5.0",
+    "fiftyone.pipeline.engines.fiftyone": "^4.5.0",
     "js-yaml": "^4.1.0",
     "n-readlines": "^1.0.1"
   },
@@ -49,6 +55,7 @@
     "jest-junit": "^13.2.0"
   },
   "license": "EUPL-1.2",
+  "homepage": "https://51degrees.com/device-detection?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise&utm_term=homepage",
   "bugs": {
     "url": "https://github.com/51Degrees/51degrees-node/issues"
   },

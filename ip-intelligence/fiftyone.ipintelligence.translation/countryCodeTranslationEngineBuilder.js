@@ -34,8 +34,8 @@ class CountryCodeTranslationEngineBuilder {
    *
    * @param {object} [options] the options object
    * @param {string} [options.translationsPath] the directory holding the
-   * translation YAML files; defaults to the ip-intelligence-data submodule
-   * path
+   * translation YAML files. Defaults to the Translations folder of the
+   * cxx/data submodule.
    */
   constructor ({ translationsPath } = {}) {
     this.translationsPath = translationsPath;

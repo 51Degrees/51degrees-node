@@ -59,6 +59,27 @@ class ElementDataDictionary extends ElementData {
   getInternal (key) {
     return this.contents[key];
   }
+
+  /**
+   * Looks for a key in the dictionary ignoring its letter case. The contents
+   * can change after the data is made, so they are searched each time
+   * rather than indexed once.
+   *
+   * @param {string} key the property key to retrieve
+   * @returns {*} the value, or undefined if there is none
+   */
+  getInternalIgnoringCase (key) {
+    if (typeof key !== 'string') {
+      return undefined;
+    }
+    const lowerKey = key.toLowerCase();
+    for (const name of Object.keys(this.contents)) {
+      if (name.toLowerCase() === lowerKey) {
+        return this.contents[name];
+      }
+    }
+    return undefined;
+  }
 }
 
 module.exports = ElementDataDictionary;

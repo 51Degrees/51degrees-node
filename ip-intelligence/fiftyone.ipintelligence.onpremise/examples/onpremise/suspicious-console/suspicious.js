@@ -61,12 +61,28 @@ const IpIntelligenceOnPremisePipelineBuilder =
 const ExampleUtils = require(path.join(__dirname, '/../exampleUtils')).ExampleUtils;
 const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleConstants;
 
-// This example requires the enterprise data file as the diversity
-// properties used are not available in the lite file. To obtain an
-// enterprise data file for testing, please contact us:
-// https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=enterprise_v_4_1_ipi
-const ENTERPRISE_V_4_1_IPI = '51Degrees-EnterpriseIpiV41.ipi';
+// This example needs the diversity properties, which only the Enterprise
+// data file has. By default it uses the free Lite data file, which is
+// downloaded if it is missing, and there it says what it needs and where
+// to ask for a copy of the Enterprise data file.
 const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=enterprise-data-file';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // Most IP intelligence values are lists of weighted values. This helper
 // returns the single value with the highest weight, or the supplied
@@ -145,15 +161,17 @@ const run = async function (dataFile, output) {
   // In this example, we use the IpIntelligenceOnPremisePipelineBuilder
   // and configure it in code. For more information about
   // pipelines in general see the documentation at
-  // https://51degrees.com/documentation/_concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
+  // https://51degrees.com/documentation/_pipeline_api__concepts__configuration__builders__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile,
-    // We use the max performance profile for optimal detection speed
-    // in this example. See the documentation for more detail on this
-    // and other configuration options:
-    // https://51degrees.com/documentation/_features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
-    // https://51degrees.com/documentation/_features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
-    performanceProfile: 'MaxPerformance',
+    // This example needs the Enterprise data file, which is about 6 GB, so
+    // it uses the low memory profile, which reads the file as it goes. Max
+    // performance would hold all of the file in memory. See the
+    // documentation for more detail on this and other configuration
+    // options:
+    // https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
+    // https://51degrees.com/documentation/_pipeline_api__features__usage_sharing.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=run
+    performanceProfile: 'LowMemory',
     // inhibit sharing usage for this example, usually this should be
     // set 'true'
     shareUsage: false,
@@ -162,6 +180,17 @@ const run = async function (dataFile, output) {
     updateOnStart: false,
     fileSystemWatcher: false
   }).build();
+
+  // Telling whether an address is suspicious needs properties only the
+  // Enterprise data file has, so with a free data file the example says so
+  // and stops.
+  if (ExampleUtils.lacksEnterpriseProperties(pipeline.getElement('ip'),
+    'Telling whether an IP address is suspicious',
+    ['IsCellular', 'HardwareDiversity', 'BrowserDiversity',
+      'LocationConfidence', 'IsHosted', 'HumanProbability'],
+    output, CONTACT_US)) {
+    return;
+  }
 
   // carry out some sample lookups
   for (const values of exampleConstants.defaultEvidenceValues) {
@@ -175,30 +204,19 @@ const run = async function (dataFile, output) {
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
   // Use the supplied path for the data file, the path in the
-  // 51DEGREES_IPI_PATH environment variable, or find the enterprise
-  // file in the project space, falling back to the lite file that is
-  // included in the repository.
-  let dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(ENTERPRISE_V_4_1_IPI);
-  if (dataFile === undefined) {
-    dataFile = ExampleUtils.findDataFile(LITE_V_4_1_IPI);
-    if (dataFile !== undefined) {
-      console.warn('Failed to find an enterprise IP intelligence data ' +
-        'file. Using the lite file instead. Note that the lite file ' +
-        'does not contain the diversity properties used by this ' +
-        'example, so all the results will use the default values. ' +
-        'To obtain an enterprise data file for testing, please ' +
-        'contact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-suspicious-console-suspicious.js&utm_term=lite-file-fallback');
-    }
-  }
+  // _51DEGREES_IPI_PATH environment variable, or find the lite file,
+  // which is downloaded if it is missing.
+  const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (dataFile !== undefined) {
-    run(dataFile, process.stdout);
+    run(dataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     console.error('Failed to find an IP intelligence ' +
-      'data file. Make sure the ip-intelligence-data ' +
-      'submodule has been updated by running ' +
-      '`git submodule update --recursive`. A different file can be ' +
+      'data file. Make sure the cxx/data submodule ' +
+      'has been fetched by running ' +
+      '`git submodule update --init --recursive`. A different file can be ' +
       'specified by supplying the full path as a command line argument');
+    console.log(FIND_OUT_MORE);
   }
 };
 

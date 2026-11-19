@@ -1,0 +1,1530 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+// Checks the data update service against the Data update page of the
+// pipeline specification, which sets the If-Modified-Since fallback, when
+// the first check is made, programmatic update of a memory data file and
+// the log messages.
+
+const fs = require('fs');
+const http = require('http');
+const os = require('os');
+const path = require('path');
+const { Readable } = require('stream');
+
+const DataFileUpdateService = require(
+  path.resolve(__dirname, '..', 'dataFileUpdateService'));
+const AutoUpdateStatus = require(
+  path.resolve(__dirname, '..', 'autoUpdateStatus'));
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const MinuteMilliseconds = 60000;
+const HourMilliseconds = 60 * MinuteMilliseconds;
+const DayMilliseconds = 24 * HourMilliseconds;
+const MaximumTimerMilliseconds = 2147483647;
+
+// The tries of a refresh from a file that was written, which the
+// specification's table names (data-updates.md line 509).
+const RefreshTries = 10;
+
+// A failed refresh is tried 10 times 200 ms apart, so a test of one takes
+// about two seconds longer than the five Jest allows by default.
+const FailedRefreshTestMilliseconds = 15000;
+
+// How long the file system watcher waits for a changed file to open, from
+// the specification's table (data-updates.md line 512).
+const WatchedFileWaitMilliseconds = 10 * MinuteMilliseconds;
+
+class TestEngine {
+  constructor () {
+    this.dataKey = 'testEngine';
+  }
+}
+
+const newFolder = () => fs.mkdtempSync(path.join(os.tmpdir(), 'update-spec-'));
+
+// An update service whose log calls are kept as { level, message }.
+const loggingService = () => {
+  const logs = [];
+  const service = new DataFileUpdateService({
+    log: (level, message) => logs.push({ level, message })
+  });
+  return { service, logs };
+};
+
+// Stands in for a data file, with the options the update route reads.
+const standInDataFile = (overrides) => Object.assign({
+  autoUpdate: false,
+  updateOnStart: false,
+  fileSystemWatcher: false,
+  attemptedDownload: false,
+  updating: false,
+  verifyIfModifiedSince: true,
+  verifyMD5: false,
+  decompress: false,
+  identifier: 'test',
+  flowElement: new TestEngine(),
+  refresh: function () {}
+}, overrides);
+
+// Answers each request with the status and body given and keeps the headers
+// of the requests.
+const serve = (status, body) => new Promise((resolve) => {
+  const requests = [];
+  const server = http.createServer((request, response) => {
+    requests.push(request.headers);
+    response.statusCode = status;
+    response.write(body);
+    setTimeout(() => response.end(), 50);
+  });
+  server.listen(0, '127.0.0.1', () => resolve({
+    server,
+    requests,
+    url: 'http://127.0.0.1:' + server.address().port + '/datafile'
+  }));
+});
+
+const stop = (server) => {
+  server.closeAllConnections();
+  server.close();
+};
+
+// Answers each request with the start of a file that never arrives in full,
+// and keeps the server's end of each connection.
+const serveCutShort = () => new Promise((resolve) => {
+  const sockets = [];
+  const server = http.createServer((request, response) => {
+    sockets.push(request.socket);
+    response.writeHead(200, { 'content-length': '1000' });
+    response.write('version');
+  });
+  server.listen(0, '127.0.0.1', () => resolve({
+    server,
+    sockets,
+    url: 'http://127.0.0.1:' + server.address().port + '/datafile'
+  }));
+});
+
+// Calls back once the service's request for new data has its response, so
+// that a test cuts the connection part way through the download rather
+// than at a time that may come before the response.
+const whenResponded = (callback) => {
+  const get = http.get;
+  return jest.spyOn(http, 'get').mockImplementation((...args) => {
+    const request = get.apply(http, args);
+    request.once('response', callback);
+    return request;
+  });
+};
+
+// Resolves at the next updateComplete event with the number of files the
+// service had finished removing by then.
+const removedWhenCompleted = (service) => {
+  const unlink = fs.unlink;
+  const removed = [];
+  const spy = jest.spyOn(fs, 'unlink').mockImplementation((name, callback) =>
+    unlink(name, (err) => {
+      removed.push(name);
+      callback(err);
+    }));
+  const done = new Promise((resolve) => {
+    service.once('updateComplete', () => resolve(removed.length));
+  });
+  return { done, spy };
+};
+
+// The error for a data update service that could not be reached, with any
+// cause, as the cause's text differs between platforms.
+const accessError = (url) => expect.stringMatching(new RegExp(
+  '^Error during check for data update\\. Error detail: ' +
+  "Error accessing data update service at '" +
+  url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+  "' for engine 'TestEngine'\\. Error detail: .+$"));
+
+// Resolves at the next updateComplete event.
+const completed = (service) => new Promise((resolve) => {
+  service.once('updateComplete', (status) => resolve(status));
+});
+
+describe('If-Modified-Since', () => {
+  let folder;
+  let file;
+  let remote;
+  const modified = new Date(Date.UTC(2026, 0, 15, 8, 30, 0));
+
+  beforeEach(async () => {
+    folder = newFolder();
+    file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+    fs.utimesSync(file, modified, modified);
+    remote = await serve(304, '');
+  });
+
+  afterEach(() => {
+    stop(remote.server);
+  });
+
+  const check = async (dataFile) => {
+    const { service } = loggingService();
+    Object.assign(dataFile, {
+      updateUrl: remote.url,
+      tempDataDirectory: folder
+    });
+    const done = completed(service);
+    service.updateDataFile(dataFile);
+    await done;
+    return remote.requests[0]['if-modified-since'];
+  };
+
+  test('is the published date when the data file has one', async () => {
+    const published = new Date(Date.UTC(2026, 5, 1, 12, 0, 0));
+    const header = await check(standInDataFile({
+      path: file,
+      getDatePublished: () => published
+    }));
+    expect(header).toBe('Mon, 01 Jun 2026 12:00:00 GMT');
+  });
+
+  test('is the file last modified time when there is no published date',
+    async () => {
+      const header = await check(standInDataFile({
+        path: file,
+        getDatePublished: () => {
+          throw new Error('The data file has no published date.');
+        }
+      }));
+      expect(header).toBe('Thu, 15 Jan 2026 08:30:00 GMT');
+    });
+
+  test('is the file last modified time when the published date is not a ' +
+    'date', async () => {
+    const header = await check(standInDataFile({
+      path: file,
+      getDatePublished: () => new Date(NaN)
+    }));
+    expect(header).toBe('Thu, 15 Jan 2026 08:30:00 GMT');
+  });
+
+  test('is the file last modified time when there is no way to get a ' +
+    'published date', async () => {
+    const header = await check(standInDataFile({ path: file }));
+    expect(header).toBe('Thu, 15 Jan 2026 08:30:00 GMT');
+  });
+
+  test('is not sent when there is no published date and no file',
+    async () => {
+      const header = await check(standInDataFile({
+        path: path.join(folder, 'missing.dat'),
+        getDatePublished: () => {
+          throw new Error('The data file has no published date.');
+        }
+      }));
+      expect(header).toBeUndefined();
+    });
+});
+
+describe('first check after an update', () => {
+  let setTimeoutSpy;
+  let randomSpy;
+  const delays = [];
+
+  beforeEach(() => {
+    delays.length = 0;
+    setTimeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(
+      (callback, delay) => {
+        delays.push(delay);
+        return { unref: () => {} };
+      });
+    // Gives a random offset of six minutes.
+    randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+
+  afterEach(() => {
+    setTimeoutSpy.mockRestore();
+    randomSpy.mockRestore();
+  });
+
+  const schedule = (nextUpdate) => {
+    const { service } = loggingService();
+    service.checkNextUpdate(standInDataFile({
+      autoUpdate: true,
+      pollingInterval: 30,
+      updateTimeMaximumRandomisation: 10,
+      getNextUpdate: () => nextUpdate
+    }));
+    return delays[0];
+  };
+
+  test('waits for the polling interval and the offset when no update is ' +
+    'expected in the future', () => {
+    const delay = schedule(new Date(Date.now() - HourMilliseconds));
+    expect(delay).toBe(36 * MinuteMilliseconds);
+  });
+
+  test('waits until the update is expected, then the offset', () => {
+    const before = Date.now();
+    const delay = schedule(new Date(before + 2 * HourMilliseconds));
+    const after = Date.now();
+    const expected = 2 * HourMilliseconds + 6 * MinuteMilliseconds;
+    expect(delay).toBeGreaterThanOrEqual(expected - (after - before));
+    expect(delay).toBeLessThanOrEqual(expected);
+  });
+
+  test('waits no longer than a timer can', () => {
+    const delay = schedule(new Date(Date.now() + 90 * DayMilliseconds));
+    expect(delay).toBe(MaximumTimerMilliseconds);
+  });
+});
+
+describe('update from memory', () => {
+  const memoryDataFile = (content) => {
+    const dataFile = standInDataFile({
+      data: Buffer.from(content),
+      seen: null
+    });
+    dataFile.refresh = function () {
+      if (this.data.toString().startsWith('unusable')) {
+        throw new Error('The data cannot be used.');
+      }
+      this.seen = this.data.toString();
+    };
+    return dataFile;
+  };
+
+  test('refreshes the data file with the bytes given', async () => {
+    const { service } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const done = completed(service);
+    expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+      .toBe(true);
+    expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    expect(dataFile.data.toString()).toBe('version 2');
+    expect(dataFile.seen).toBe('version 2');
+    expect(dataFile.updating).toBe(false);
+  });
+
+  // The status is reported from timer, request and file system watcher
+  // callbacks, where an error thrown by an application's listener would be
+  // uncaught and end the process. The specification says the callbacks
+  // after the one that raised the error are not called.
+  test('a listener that throws is logged and the callbacks after it are ' +
+    'not called', () => {
+    const { service, logs } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const heard = [];
+    service.on('updateComplete', (status) => heard.push('before ' + status));
+    service.on('updateComplete', () => {
+      throw new Error('The listener failed.');
+    });
+    service.on('updateComplete', (status) => heard.push('after ' + status));
+    dataFile.onUpdateComplete = (status) => heard.push('data file ' + status);
+    expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+      .toBe(true);
+    expect(heard).toEqual(['before ' + AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+    expect(logs.filter((log) => log.level === 'error')
+      .map((log) => String(log.message))).toEqual([
+      'An unhandled error occurred while checking for automatic updates ' +
+      "for engine 'TestEngine'. Error detail: The listener failed."
+    ]);
+  });
+
+  // A 'once' listener is removed when it is called, as emit removes it.
+  test('a once listener hears one update', () => {
+    const { service } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const heard = [];
+    service.once('updateComplete', (status) => heard.push(status));
+    service.updateFromMemory(dataFile, Buffer.from('version 2'));
+    service.updateFromMemory(dataFile, Buffer.from('version 3'));
+    expect(heard).toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+  });
+
+  // The data file's own onUpdateComplete is the other update complete
+  // callback, so an error it throws is reported in the same words.
+  test('an error from the data file callback is logged in the same words',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = memoryDataFile('version 1');
+      dataFile.onUpdateComplete = () => {
+        throw new Error('The data file callback failed.');
+      };
+      expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+        .toBe(true);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: The data file callback " +
+        'failed.'
+      ]);
+    });
+
+  // A service is made with no pipeline until one is attached, and an error
+  // from a callback then has no log to go to, so it is written to the
+  // console rather than lost.
+  test('a callback error with no pipeline is written to the console',
+    () => {
+      const consoleError = jest.spyOn(console, 'error')
+        .mockImplementation(() => {});
+      try {
+        const service = new DataFileUpdateService();
+        const dataFile = memoryDataFile('version 1');
+        dataFile.onUpdateComplete = () => {
+          throw new Error('The data file callback failed.');
+        };
+        expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+          .toBe(true);
+        expect(consoleError).toHaveBeenCalledWith(
+          'An unhandled error occurred while checking for automatic ' +
+          "updates for engine 'TestEngine'. Error detail: The data file " +
+          'callback failed.');
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+  test('keeps the data it has when the refresh fails', async () => {
+    const { service, logs } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    const done = completed(service);
+    expect(service.updateFromMemory(dataFile, Buffer.from('unusable')))
+      .toBe(false);
+    expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
+    expect(dataFile.data.toString()).toBe('version 1');
+    expect(dataFile.updating).toBe(false);
+    expect(logs.filter((log) => log.level === 'error')
+      .map((log) => log.message)).toEqual([
+      'Error during check for data update. Error detail: ' +
+      'An error occurred when applying a data update to engine ' +
+      "'TestEngine'. Error detail: The data cannot be used."
+    ]);
+  });
+
+  test('does not run while the data file is updating', () => {
+    const { service } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    dataFile.updating = true;
+    expect(service.updateFromMemory(dataFile, Buffer.from('version 2')))
+      .toBe(false);
+    expect(dataFile.data.toString()).toBe('version 1');
+  });
+
+  test('refuses something that is not bytes', () => {
+    const { service } = loggingService();
+    expect(() => service.updateFromMemory(memoryDataFile('version 1'),
+      'version 2')).toThrow('must be a Buffer or a Uint8Array');
+  });
+
+  test('refuses a data file that is read from a path', () => {
+    const { service } = loggingService();
+    const dataFile = memoryDataFile('version 1');
+    dataFile.path = '/some/file.dat';
+    expect(() => service.updateFromMemory(dataFile, Buffer.from('x')))
+      .toThrow('not held in memory');
+  });
+});
+
+describe('log messages', () => {
+  let folder;
+  let file;
+
+  beforeEach(() => {
+    folder = newFolder();
+    file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+  });
+
+  const messages = (logs) => logs.map((log) => log.level + ': ' + log.message);
+
+  test('an update on start-up is logged', () => {
+    const { service, logs } = loggingService();
+    // The download fails to connect, which is logged after the messages
+    // checked here.
+    const dataFile = standInDataFile({
+      updateOnStart: true,
+      updateUrl: 'http://127.0.0.1:1/datafile',
+      tempDataDirectory: folder,
+      path: file
+    });
+    service.registerDataFile(dataFile);
+    expect(messages(logs)[0]).toBe('info: Updating on start-up');
+  });
+
+  test('a file system watcher is logged', async () => {
+    const { service, logs } = loggingService();
+    const dataFile = standInDataFile({
+      fileSystemWatcher: true,
+      path: file
+    });
+    service.registerDataFile(dataFile);
+    expect(messages(logs)).toContain('info: Creating file system watcher');
+  });
+
+  test('a download and a refresh are logged', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        getDatePublished: () => new Date(Date.UTC(2026, 0, 1))
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(messages(logs)).toEqual([
+        'info: Checking for update',
+        "info: Checking for update from '" + remote.url +
+          "' for Engine 'TestEngine'",
+        "info: Downloaded new data from '" + remote.url +
+          "' for Engine 'TestEngine'",
+        "info: Attempting to refresh Engine 'TestEngine' with new data"
+      ]);
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a 304 response is logged', async () => {
+    const remote = await serve(304, '');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        getDatePublished: () => new Date(Date.UTC(2026, 5, 1, 12, 0, 0))
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      await done;
+      expect(messages(logs)).toContain(
+        'info: No data newer than Mon, 01 Jun 2026 12:00:00 GMT found at \'' +
+        remote.url + "' for Engine 'TestEngine'");
+      expect(logs.some((log) => log.level === 'warn' ||
+        log.level === 'error')).toBe(false);
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  // The messages and levels below are the ones the .NET data update service
+  // writes, which the Errors table of the specification now follows.
+
+  test('a connection failure is an error that names the service and the ' +
+    'engine', async () => {
+    const run = async (automatic) => {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: 'http://127.0.0.1:1/datafile',
+        tempDataDirectory: folder,
+        autoUpdate: false
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile, automatic);
+      await done;
+      return logs.find((log) => log.level === 'error');
+    };
+    const procedural = await run(false);
+    expect(procedural.message).toEqual(expect.stringMatching(new RegExp(
+      '^Error during check for data update\\. Error detail: ' +
+      "Error accessing data update service at 'http://127\\.0\\.0\\.1:1/" +
+      "datafile' for engine 'TestEngine'\\. Error detail: .*ECONNREFUSED")));
+
+    const { service, logs } = loggingService();
+    const dataFile = standInDataFile({
+      updateUrl: 'http://127.0.0.1:1/datafile',
+      tempDataDirectory: folder,
+      autoUpdate: true,
+      pollingInterval: 30,
+      updateTimeMaximumRandomisation: 10,
+      getNextUpdate: () => new Date(0)
+    });
+    const timer = jest.spyOn(global, 'setTimeout')
+      .mockImplementation(() => ({ unref: () => {} }));
+    const done = completed(service);
+    service.updateDataFile(dataFile, true);
+    await done;
+    timer.mockRestore();
+    // The retry sentence is not part of any .NET message, so an automatic
+    // update reads exactly as a programmatic one does.
+    const automatic = logs.find((log) => log.level === 'error');
+    expect(automatic.message).toBe(procedural.message);
+  });
+
+  test('a URL that cannot be parsed is the same error', async () => {
+    const { service, logs } = loggingService();
+    const dataFile = standInDataFile({
+      updateUrl: 'not a url',
+      tempDataDirectory: folder
+    });
+    const done = completed(service);
+    service.updateDataFile(dataFile);
+    expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    expect(logs.find((log) => log.level === 'error').message).toBe(
+      'Error during check for data update. Error detail: ' +
+      "Error accessing data update service at 'not a url' for engine " +
+      "'TestEngine'. Error detail: Invalid URL");
+  });
+
+  // .NET reads the whole response before its request returns, so a download
+  // cut short fails that request, which .NET reports as the service that
+  // could not be reached, with the cause attached.
+  test('a download cut short is the error for a service that could not be ' +
+    'reached', async () => {
+    const remote = await serveCutShort();
+    let cut = false;
+    const responded = whenResponded(() => {
+      cut = true;
+      remote.server.closeAllConnections();
+    });
+    let removal;
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const done = completed(service);
+      removal = removedWhenCompleted(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(cut).toBe(true);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([accessError(remote.url)]);
+      // The cut comes before the service opens its part file, and the part
+      // file has been removed by the time the update is reported.
+      expect(await removal.done).toBe(1);
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
+    } finally {
+      if (removal) {
+        removal.spy.mockRestore();
+      }
+      responded.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a connection closed before any response is the same error',
+    async () => {
+      const server = http.createServer((request) => request.socket.destroy());
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+          tempDataDirectory: folder,
+          path: file
+        });
+        const done = completed(service);
+        service.updateDataFile(dataFile);
+        expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+        expect(logs.filter((log) => log.level === 'error')
+          .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
+      } finally {
+        stop(server);
+      }
+    });
+
+  // A refresh from a file that was written is tried 10 times before it
+  // fails, and the failure is logged once (data-updates.md line 509).
+  test('a failed refresh is an error naming the tries', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service, logs } = loggingService();
+      let tries = 0;
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        refresh: () => {
+          tries++;
+          throw new Error('The data cannot be used.');
+        }
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED);
+      expect(tries).toBe(RefreshTries);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([
+        'Error during check for data update. Error detail: ' +
+        'An error occurred when applying a data ' +
+        "update to engine 'TestEngine' after 10 tries. Error detail: The " +
+        'data cannot be used.'
+      ]);
+    } finally {
+      stop(remote.server);
+    }
+  }, FailedRefreshTestMilliseconds);
+
+  // A file that cannot be used at first, for example because it is still
+  // being written, is loaded on a later try and nothing is logged as an
+  // error.
+  test('a refresh that works on a later try is a success', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service, logs } = loggingService();
+      let tries = 0;
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        refresh: () => {
+          tries++;
+          if (tries < 3) {
+            throw new Error('The data cannot be used yet.');
+          }
+        }
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(tries).toBe(3);
+      expect(logs.filter((log) => log.level === 'error')).toEqual([]);
+    } finally {
+      stop(remote.server);
+    }
+  }, FailedRefreshTestMilliseconds);
+
+  test('a response with no MD5 header is a warning and the check goes on',
+    async () => {
+      const remote = await serve(200, 'version 2');
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: remote.url,
+          tempDataDirectory: folder,
+          path: file,
+          verifyMD5: true
+        });
+        const done = completed(service);
+        service.updateDataFile(dataFile);
+        expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+        expect(logs.find((log) => log.level === 'warn').message).toBe(
+          'No MD5 hash included in data update response for ' +
+          "'" + remote.url + "'. Unable to verify data integrity");
+      } finally {
+        stop(remote.server);
+      }
+    });
+
+  test('a failed integrity check is an error naming both hashes',
+    async () => {
+      const remote = await serve(200, 'version 2');
+      remote.server.removeAllListeners('request');
+      remote.server.on('request', (request, response) => {
+        response.setHeader('Content-MD5', 'not-the-right-hash');
+        response.statusCode = 200;
+        response.end('version 2');
+      });
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: remote.url,
+          tempDataDirectory: folder,
+          path: file,
+          verifyMD5: true
+        });
+        const done = completed(service);
+        service.updateDataFile(dataFile);
+        expect(await done)
+          .toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_MD5_VALIDATION_FAILED);
+        const error = logs.find((log) => log.level === 'error');
+        expect(error.message).toMatch(
+          /^Error during check for data update\. Error detail: Integrity check failed\. MD5 hash in HTTP response 'not-the-right-hash' for 'TestEngine'data update does not match calculated hash for the downloaded file '[0-9a-f]{32}'\.$/);
+      } finally {
+        stop(remote.server);
+      }
+    });
+
+  test('a 429 response is an error naming too many requests', async () => {
+    const remote = await serve(429, '');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done)
+        .toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS);
+      expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
+        "Too many requests to '" + remote.url + "' for engine 'TestEngine'");
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a 403 response is an error naming access denied', async () => {
+    const remote = await serve(403, '');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
+      expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
+        "Access denied to data update service at '" + remote.url +
+        "' for engine 'TestEngine'");
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('any other response is an error naming the status code', async () => {
+    const remote = await serve(500, '');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
+        "HTTP status code '500' from data update service at '" + remote.url +
+        "' for engine 'TestEngine'");
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a data file with no temporary directory is an error reported as ' +
+    'the temp path status', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        identifier: 'HashV41',
+        tempDataDirectory: undefined
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done)
+        .toBe(AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET);
+      expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
+        "The data file 'HashV41' is checking for updates but does not " +
+        'have a temporary file path configured.');
+      expect(dataFile.updating).toBe(false);
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a data file that cannot be copied over is an error', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service, logs } = loggingService();
+      const target = path.join(folder, 'missing-folder', 'data.dat');
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: target
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      await done;
+      await sleep(50);
+      expect(logs.find((log) => log.level === 'error').message).toBe(
+        'Error during check for data update. Error detail: ' +
+        'An error occurred when copying a data file to replace the ' +
+        'existing one at \'' + target + '\'. Error detail: ENOENT: no ' +
+        "such file or directory, open '" + target + "'");
+    } finally {
+      stop(remote.server);
+    }
+  });
+});
+
+describe('file system watcher', () => {
+  // The watcher runs on its own setting. Watching a file downloads nothing,
+  // so the watcher does not wait for automatic updates to be on, and with
+  // its own setting off a changed file is not loaded.
+  test.each([
+    {
+      name: 'watcher on, automatic updates on',
+      autoUpdate: true,
+      fileSystemWatcher: true,
+      watched: true
+    },
+    {
+      name: 'watcher on, automatic updates off',
+      autoUpdate: false,
+      fileSystemWatcher: true,
+      watched: true
+    },
+    {
+      name: 'watcher off, automatic updates on',
+      autoUpdate: true,
+      fileSystemWatcher: false,
+      watched: false
+    }
+  ])('runs on its own setting, $name', async ({
+    autoUpdate,
+    fileSystemWatcher,
+    watched
+  }) => {
+    const folder = newFolder();
+    const file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+    const { service, logs } = loggingService();
+    const loaded = [];
+    let finished = false;
+    const dataFile = standInDataFile({
+      autoUpdate,
+      fileSystemWatcher,
+      pollingInterval: 60,
+      updateTimeMaximumRandomisation: 1,
+      getNextUpdate: () => new Date(),
+      path: file,
+      refresh: () => {
+        if (!finished) {
+          loaded.push(fs.readFileSync(file, 'utf8'));
+        }
+      }
+    });
+    // The wait for the next automatic update is on fake timers, so that it
+    // never runs and does not keep the process alive.
+    jest.useFakeTimers();
+    try {
+      service.registerDataFile(dataFile);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    try {
+      expect(logs.map((log) => log.message)
+        .includes('Creating file system watcher')).toBe(watched);
+
+      // On macOS fs.watch can miss a change made straight after it starts.
+      await sleep(500);
+      fs.writeFileSync(file, 'version 2');
+      for (let waited = 0; waited < 3000; waited += 50) {
+        if (loaded.includes('version 2')) {
+          break;
+        }
+        await sleep(50);
+      }
+      expect(loaded.includes('version 2')).toBe(watched);
+    } finally {
+      // The folder is left in place. On Windows, removing the folder of a
+      // watched file makes fs.watch raise an error that nothing handles.
+      finished = true;
+      fs.unlinkSync(file);
+    }
+  });
+
+  // A changed file is not loaded until it opens for reading, so a copy
+  // still under way is not read part written. The service tries every half
+  // second for 10 minutes, and reports AUTO_UPDATE_TIMEOUT, logging nothing,
+  // if the file never opens (data-updates.md line 512).
+
+  // Fails the opens of the file given, as Windows does while another
+  // process holds the file, until the number of opens given has failed.
+  // Every open of the file is counted, and other files open as usual.
+  const holdFile = (file, failures) => {
+    const open = fs.open;
+    const held = { opens: 0 };
+    held.spy = jest.spyOn(fs, 'open').mockImplementation((name, ...rest) => {
+      if (name !== file) {
+        return open.call(fs, name, ...rest);
+      }
+      held.opens++;
+      if (held.opens > failures) {
+        return open.call(fs, name, ...rest);
+      }
+      process.nextTick(rest[rest.length - 1], Object.assign(
+        new Error("EBUSY: resource busy or locked, open '" + file + "'"),
+        { code: 'EBUSY' }));
+    });
+    return held;
+  };
+
+  // Waits until the condition holds, or until the time given has passed.
+  // The time is counted in waits rather than read from the clock, which one
+  // test below moves on.
+  const until = async (condition, milliseconds) => {
+    for (let waited = 0; waited < milliseconds; waited += 50) {
+      if (condition()) {
+        return;
+      }
+      await sleep(50);
+    }
+  };
+
+  // How long a test waits for the watcher to see a change and report it,
+  // which in the first test below follows three half second waits.
+  const WatchedFileMilliseconds = 10000;
+
+  // Each test below waits at most twice that, after half a second.
+  const WatchedFileTestMilliseconds = 30000;
+
+  // A watched data file at version 1, with each status the service reports
+  // and, for each refresh, the file's content and the opens made by then.
+  const watchedDataFile = () => {
+    const folder = newFolder();
+    const file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+    const { service, logs } = loggingService();
+    const watch = { file, service, logs, statuses: [], loaded: [] };
+    service.on('updateComplete', (status) => watch.statuses.push(status));
+    watch.dataFile = standInDataFile({
+      fileSystemWatcher: true,
+      path: file,
+      refresh: () => {
+        if (!watch.finished) {
+          watch.loaded.push({
+            data: fs.readFileSync(file, 'utf8'),
+            opens: watch.held.opens
+          });
+        }
+      }
+    });
+    service.registerDataFile(watch.dataFile);
+    return watch;
+  };
+
+  // The folder is left in place, as in the test above.
+  const unwatch = (watch) => {
+    watch.finished = true;
+    watch.held.spy.mockRestore();
+    fs.unlinkSync(watch.file);
+  };
+
+  const errorsAndWarnings = (logs) => logs
+    .filter((log) => log.level === 'error' || log.level === 'warn');
+
+  // The statuses that say how the change ended. Another event of the same
+  // change, which waits while the first is applied, may be reported as in
+  // progress (data-updates.md lines 365 to 368).
+  const ended = (statuses) => statuses
+    .filter((status) => status !== AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
+
+  test('waits for a changed file to open before loading it', async () => {
+    const watch = watchedDataFile();
+    watch.held = holdFile(watch.file, 3);
+    try {
+      // On macOS fs.watch can miss a change made straight after it starts.
+      await sleep(500);
+      fs.writeFileSync(watch.file, 'version 2');
+      await until(() => ended(watch.statuses).length > 0,
+        WatchedFileMilliseconds);
+      expect(watch.loaded[0]).toEqual({ data: 'version 2', opens: 4 });
+      expect(ended(watch.statuses)[0])
+        .toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(errorsAndWarnings(watch.logs)).toEqual([]);
+    } finally {
+      unwatch(watch);
+    }
+  }, WatchedFileTestMilliseconds);
+
+  test('reports a changed file that never opens as a timeout', async () => {
+    const watch = watchedDataFile();
+    watch.held = holdFile(watch.file, Infinity);
+    // The clock moves on by the whole wait once the first open has failed,
+    // so the second try finds the wait over.
+    const now = Date.now;
+    let moved = 0;
+    const clock = jest.spyOn(Date, 'now')
+      .mockImplementation(() => now.call(Date) + moved);
+    try {
+      // As in the test above.
+      await sleep(500);
+      fs.writeFileSync(watch.file, 'version 2');
+      await until(() => watch.held.opens > 0, WatchedFileMilliseconds);
+      moved = WatchedFileWaitMilliseconds;
+      await until(() => ended(watch.statuses).length > 0,
+        WatchedFileMilliseconds);
+      expect(ended(watch.statuses))
+        .toEqual([AutoUpdateStatus.AUTO_UPDATE_TIMEOUT]);
+      expect(watch.loaded).toEqual([]);
+      expect(watch.dataFile.updating).toBe(false);
+      expect(errorsAndWarnings(watch.logs)).toEqual([]);
+    } finally {
+      clock.mockRestore();
+      unwatch(watch);
+    }
+  }, WatchedFileTestMilliseconds);
+});
+
+describe('every update reports one status', () => {
+  let folder;
+  let file;
+
+  beforeEach(() => {
+    folder = newFolder();
+    file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+  });
+
+  // Records each status, and whether the data file was still marked as
+  // updating when it was reported.
+  const record = (service, dataFile) => {
+    const seen = [];
+    service.on('updateComplete', (status) => {
+      seen.push({ status, updating: dataFile.updating });
+    });
+    return seen;
+  };
+
+  test('a URL that cannot be parsed is reported and does not leave the ' +
+    'data file updating', async () => {
+    const { service } = loggingService();
+    const dataFile = standInDataFile({
+      updateUrl: 'not a url',
+      tempDataDirectory: folder
+    });
+    const seen = record(service, dataFile);
+    expect(() => service.updateDataFile(dataFile, true)).not.toThrow();
+    await sleep(100);
+    expect(seen).toEqual([
+      { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+    ]);
+    expect(dataFile.updating).toBe(false);
+  });
+
+  test('a download that is cut short is reported', async () => {
+    const server = http.createServer((request, response) => {
+      response.writeHead(200, { 'content-length': '1000' });
+      response.write('version');
+      setTimeout(() => request.socket.destroy(), 50);
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: 'http://127.0.0.1:' + server.address().port + '/datafile',
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(500);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+      ]);
+      expect(dataFile.data).toBeUndefined();
+      expect(dataFile.updating).toBe(false);
+    } finally {
+      stop(server);
+    }
+  });
+
+  // A reset raises an error on the request whilst the response is still
+  // arriving, and then closes the response. Each would report the update
+  // and schedule the next check.
+  test('a connection reset part way through the download is reported ' +
+    'once and schedules one check', async () => {
+    const remote = await serveCutShort();
+    let closed;
+    const responded = whenResponded((response) => {
+      closed = new Promise((resolve) => response.once('close', resolve));
+      remote.sockets[0].resetAndDestroy();
+    });
+    let removal;
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const checks = jest.spyOn(service, 'checkNextUpdate');
+      const seen = record(service, dataFile);
+      const done = completed(service);
+      removal = removedWhenCompleted(service);
+      service.updateDataFile(dataFile);
+      await done;
+      // The update is reported after the request has failed and the
+      // response has closed, so no handler is left that could report it
+      // again.
+      expect(closed).toBeDefined();
+      await closed;
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR, updating: false }
+      ]);
+      expect(checks).toHaveBeenCalledTimes(1);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([accessError(dataFile.updateUrl)]);
+      expect(await removal.done).toBe(1);
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
+    } finally {
+      if (removal) {
+        removal.spy.mockRestore();
+      }
+      responded.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a data file that is locked is an error reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    const writeFile = fs.writeFile;
+    const locked = jest.spyOn(fs, 'writeFile').mockImplementation(
+      (name, data, callback) => {
+        if (name === file) {
+          callback(Object.assign(new Error('resource busy or locked'),
+            { code: 'EBUSY' }));
+        } else {
+          writeFile(name, data, callback);
+        }
+      });
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
+          updating: false
+        }
+      ]);
+      // A locked file is the same row as any other failure to copy, which
+      // is the row .NET has.
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => log.message)).toEqual([
+        'Error during check for data update. Error detail: ' +
+        'An error occurred when copying a data file to replace the ' +
+        "existing one at '" + file + "'. Error detail: resource busy or " +
+        'locked'
+      ]);
+      expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+    } finally {
+      locked.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  // Reading the download has no row of its own in the specification's
+  // table, so it is the last row, any other error, with that row's status,
+  // whether or not the download is compressed.
+  test.each([false, true])(
+    'a download that cannot be read is an unknown error reported once, ' +
+    'compressed %s', async (decompress) => {
+      const remote = await serve(200, 'version 2');
+      const readFile = fs.readFile;
+      const failing = jest.spyOn(fs, 'readFile').mockImplementation(
+        (name, ...rest) => {
+          if (String(name).startsWith(folder)) {
+            rest[rest.length - 1](Object.assign(new Error('cannot read'),
+              { code: 'EACCES' }));
+          } else {
+            readFile(name, ...rest);
+          }
+        });
+      try {
+        const { service, logs } = loggingService();
+        const dataFile = standInDataFile({
+          updateUrl: remote.url,
+          tempDataDirectory: folder,
+          path: file,
+          decompress
+        });
+        const seen = record(service, dataFile);
+        service.updateDataFile(dataFile);
+        await sleep(1000);
+        expect(seen).toEqual([
+          {
+            status: AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR,
+            updating: false
+          }
+        ]);
+        const errors = logs.filter((log) => log.level === 'error');
+        expect(errors).toHaveLength(1);
+        expect(errors[0].message).toBe(
+          'An unhandled error occurred while checking for automatic ' +
+          "updates for engine 'TestEngine'. Error detail: cannot read");
+        expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+      } finally {
+        failing.mockRestore();
+        stop(remote.server);
+      }
+    });
+
+  test('a download the MD5 check cannot read is reported once and ' +
+    'removed', async () => {
+    const remote = await serve(200, 'version 2');
+    // The check is made only where the response carries a hash.
+    remote.server.removeAllListeners('request');
+    remote.server.on('request', (request, response) => {
+      response.setHeader('Content-MD5', 'a-hash-the-check-never-reaches');
+      response.statusCode = 200;
+      response.end('version 2');
+    });
+    const createReadStream = fs.createReadStream;
+    const failing = jest.spyOn(fs, 'createReadStream').mockImplementation(
+      (name, ...rest) => {
+        if (String(name).startsWith(folder)) {
+          const stream = new Readable({ read () {} });
+          process.nextTick(() => stream.destroy(
+            Object.assign(new Error('cannot read'), { code: 'EIO' })));
+          return stream;
+        }
+        return createReadStream(name, ...rest);
+      });
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        verifyMD5: true
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR,
+          updating: false
+        }
+      ]);
+      const errors = logs.filter((log) => log.level === 'error');
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toBe(
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: cannot read");
+      expect(fs.readdirSync(folder)).toEqual(['data.dat']);
+      expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+    } finally {
+      failing.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a copy that fails is reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: path.join(folder, 'missing-folder', 'data.dat')
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        {
+          status: AutoUpdateStatus.AUTO_UPDATE_NEW_FILE_CANT_RENAME,
+          updating: false
+        }
+      ]);
+    } finally {
+      stop(remote.server);
+    }
+  });
+
+  test('a download that cannot be removed after a good refresh is a ' +
+    'success reported once', async () => {
+    const remote = await serve(200, 'version 2');
+    const unlink = jest.spyOn(fs, 'unlink').mockImplementation(
+      (name, callback) => callback(new Error('cannot remove')));
+    try {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file
+      });
+      const seen = record(service, dataFile);
+      service.updateDataFile(dataFile);
+      await sleep(1000);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_SUCCESS, updating: false }
+      ]);
+      expect(logs.some((log) => log.level === 'error' &&
+        log.message.includes('cannot remove'))).toBe(true);
+    } finally {
+      unlink.mockRestore();
+      stop(remote.server);
+    }
+  });
+
+  test('a failed refresh is reported after the data file stops ' +
+    'updating', async () => {
+    const remote = await serve(200, 'version 2');
+    try {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        updateUrl: remote.url,
+        tempDataDirectory: folder,
+        path: file,
+        refresh: () => {
+          throw new Error('The data cannot be used.');
+        }
+      });
+      const seen = record(service, dataFile);
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      await done;
+      // Long enough for a second report, if there were one, to arrive.
+      await sleep(1000);
+      expect(seen).toEqual([
+        { status: AutoUpdateStatus.AUTO_UPDATE_REFRESH_FAILED, updating: false }
+      ]);
+    } finally {
+      stop(remote.server);
+    }
+  }, FailedRefreshTestMilliseconds);
+});
+
+// The statuses the .NET data update service reports, which the Reporting
+// each check section of the specification names.
+describe('the statuses the service can report', () => {
+  test('carry the names the .NET service uses', () => {
+    expect(AutoUpdateStatus.AUTO_UPDATE_TEMP_PATH_NOT_SET)
+      .toBe('Temp Path Not Set');
+    expect(AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR)
+      .toBe('Unknown Error');
+  });
+
+  // The file system watcher reports this when a changed file does not open
+  // within the wait (data-updates.md line 512).
+  test('include the watched file timeout', () => {
+    expect(AutoUpdateStatus.AUTO_UPDATE_TIMEOUT).toBe('Timeout');
+  });
+
+  // .NET reports this from a programmatic check with no configuration,
+  // which this service does not have, so a status nothing sets is not
+  // offered.
+  test('leave out the statuses nothing here reports', () => {
+    expect(AutoUpdateStatus.AUTO_UPDATE_NO_CONFIGURATION).toBeUndefined();
+  });
+});
+
+// Every check reports once, and one that found nothing to do reports not
+// needed, as the Reporting each check section of the specification says.
+describe('every check is reported', () => {
+  let folder;
+  let file;
+
+  beforeEach(() => {
+    folder = newFolder();
+    file = path.join(folder, 'data.dat');
+    fs.writeFileSync(file, 'version 1');
+  });
+
+  test('a check with no update URL and no newer file is not needed',
+    async () => {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        path: file,
+        tempDataDirectory: folder,
+        updateUrl: undefined,
+        getDatePublished: () => new Date(Date.now() + DayMilliseconds)
+      });
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED);
+      expect(dataFile.updating).toBe(false);
+    });
+
+  test('a second check while one is under way is reported as in progress',
+    async () => {
+      const { service } = loggingService();
+      const dataFile = standInDataFile({
+        path: file,
+        tempDataDirectory: folder,
+        updateUrl: undefined
+      });
+      dataFile.updating = true;
+      const done = completed(service);
+      service.updateDataFile(dataFile);
+      expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
+    });
+});
+
+// An unexpected error anywhere in a check is logged in the words .NET uses
+// and reported as the unknown error status, rather than being lost.
+describe('an error with no row of its own', () => {
+  // An error while the next check is scheduled is any other error, so it is
+  // logged with the last row's message and its cause.
+  test('is logged with its cause when the next check cannot be scheduled',
+    () => {
+      const { service, logs } = loggingService();
+      const dataFile = standInDataFile({
+        autoUpdate: true,
+        pollingInterval: 30,
+        updateTimeMaximumRandomisation: 10,
+        getNextUpdate: () => {
+          throw new Error('The data file has no next update date.');
+        }
+      });
+      service.checkNextUpdate(dataFile);
+      expect(logs.filter((log) => log.level === 'error')
+        .map((log) => String(log.message))).toEqual([
+        'An unhandled error occurred while checking for automatic updates ' +
+        "for engine 'TestEngine'. Error detail: The data file has no next " +
+        'update date.'
+      ]);
+    });
+
+  // A protocol no client handles throws out of the get call, which has no
+  // row of its own.
+  test('is the unhandled error message and status', async () => {
+    const folder = newFolder();
+    const { service, logs } = loggingService();
+    const dataFile = standInDataFile({
+      path: path.join(folder, 'data.dat'),
+      tempDataDirectory: folder,
+      updateUrl: 'http://127.0.0.1:1/datafile',
+      verifyIfModifiedSince: true,
+      getDatePublished: () => {
+        throw new TypeError('The data file is broken.');
+      }
+    });
+    // The header the request carries is read from the data file, and a
+    // getter that throws something ifModifiedSince does not expect leaves
+    // the check with no row of its own.
+    Object.defineProperty(dataFile, 'verifyIfModifiedSince', {
+      get: () => {
+        throw new TypeError('The data file is broken.');
+      }
+    });
+    const done = completed(service);
+    service.updateDataFile(dataFile);
+    expect(await done).toBe(AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
+    expect(logs.find((log) => log.level === 'error').message).toBe(
+      'An unhandled error occurred while checking for automatic updates ' +
+      "for engine 'TestEngine'. Error detail: The data file is broken.");
+  });
+});

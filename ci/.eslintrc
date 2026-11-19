@@ -1,0 +1,49 @@
+{
+    "env": {
+        "commonjs": true,
+        "es6": true,
+        "node": true
+    },
+    "plugins": [
+        "jsdoc"
+    ],
+    "extends": [
+        "standard"
+    ],
+    "overrides": [
+        {
+            "files": ["**/tests/**/*.js", "**/*.test.js"],
+            "env": {
+                "jest": true
+            }
+        }
+    ],
+    "parserOptions": {
+        "ecmaVersion": 2022
+    },
+    "settings": {
+        "jsdoc": {
+            "mode": "typescript"
+        }
+    },
+    "rules": {
+        "semi": [
+            2,
+            "always"
+        ],
+        "jsdoc/check-alignment": 1,
+        "jsdoc/check-param-names": 1,
+        "jsdoc/check-tag-names": 1,
+        "jsdoc/check-types": 1,
+        "jsdoc/require-description": 1,
+        "jsdoc/require-param": 1,
+        "jsdoc/require-param-description": 1,
+        "jsdoc/require-param-name": 1,
+        "jsdoc/require-param-type": 1,
+        "jsdoc/require-returns": 1,
+        "jsdoc/require-returns-check": 1,
+        "jsdoc/require-returns-description": 1,
+        "jsdoc/require-returns-type": 1,
+        "jsdoc/valid-types": 1
+    }
+}

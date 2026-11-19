@@ -50,6 +50,19 @@ const exampleConstants = require51('fiftyone.ipintelligence.shared').exampleCons
 const OptionsExtension = require51('fiftyone.ipintelligence.shared').optionsExtension;
 const DataExtension = require51('fiftyone.ipintelligence.shared').dataExtension;
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 const outputValue = function (name, value) {
   // Individual result values have a wrapper called
   // `AspectPropertyValue`. This functions similarly to
@@ -59,6 +72,31 @@ const outputValue = function (name, value) {
   // `AspectPropertyValue` also includes the `noValueMessage`
   // property, which describes why the value has not been set.
   return `\n\t${name}: ${value}`;
+};
+
+/**
+ * Each value of a weighted property with its weighting, the share of the
+ * result the value applies to, which is 1 for a single answer.
+ *
+ * @param {string} name the name of the property to print
+ * @param {object} property the property's value from the Element Data
+ * @returns {string} a line for each value, or nothing where there is none
+ */
+const outputWeightings = function (name, property) {
+  if (!property || property.hasValue !== true) {
+    return '';
+  }
+  // A property gives a list of weighted values, or a single value, which
+  // is the one answer, so its weighting is 1.
+  const items = Array.isArray(property.value)
+    ? property.value
+    : [property.value];
+  return items
+    .map((item) => item !== null && typeof item === 'object' &&
+      item.weight !== undefined
+      ? `\n\t${name}: ${item.value}, weighting ${item.weight}`
+      : `\n\t${name}: ${item}, weighting 1`)
+    .join('');
 };
 
 const analyse = async function (evidence, pipeline, output) {
@@ -122,6 +160,15 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Town', getValue('town'));
   message += outputValue('Latitude', getValue('latitude'));
   message += outputValue('Longitude', getValue('longitude'));
+  // Each value comes with its weighting, so the Registered Country is shown
+  // again with the weighting of each of its values.
+  let registeredCountry;
+  try {
+    registeredCountry = ip.registeredcountry;
+  } catch (e) {
+    registeredCountry = undefined;
+  }
+  message += outputWeightings('Registered Country', registeredCountry);
   message += '\n\n';
   output.write(message);
   return anyValueMissing;
@@ -134,14 +181,14 @@ const run = async function (options, output) {
     console.log(
       'No resource key specified in the configuration file ' +
       '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. The 51Degrees cloud ` +
+      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
       'service is accessed using a \'ResourceKey\'. For more information ' +
       'see ' +
-      'https://51degrees.com/documentation/_info__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +
+      'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required. ' +
       'A resource key with everything this example displays can be ' +
-      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required with a paid ' +
+      'created at https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required with a paid ' +
       'subscription. A free key created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required populates only the ' +
+      'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required populates only the ' +
       'Country, LocationConfidence, Ip and IpV6 properties. See ' +
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-gettingstarted-console-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
       'more properties. Once complete, populate the config file or ' +
@@ -187,7 +234,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  run(options, process.stdout);
+  run(options, process.stdout).then(() => console.log(FIND_OUT_MORE));
 }
 
 module.exports = {
