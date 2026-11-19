@@ -87,8 +87,11 @@ const problems = (file) => {
 };
 
 test('every example is checked', () => {
+  // A TypeScript example is read as well, because the readme tells people
+  // to run one.
   const examples = fs.readdirSync(path.join(PRODUCT, 'examples'))
-    .filter((name) => name.endsWith('.js') && !name.endsWith('.test.js'))
+    .filter((name) => /\.(js|ts)$/.test(name) &&
+      !/\.test\.(js|ts)$/.test(name))
     .map((name) => `examples/${name}`);
   expect(examples.sort()).toEqual(EXAMPLES.slice().sort());
 });

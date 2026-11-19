@@ -129,6 +129,14 @@ class Pipeline {
     storeInFlowElementList(this.flowElementsChain);
     Object.freeze(this.flowElements);
 
+    // The position of each data key in Pipeline order, by which a FlowData
+    // lists its ElementData.
+    /**
+     * @type {Map<string, number>}
+     */
+    this.dataKeyOrder = new Map(Object.keys(this.flowElements)
+      .map((key, index) => [key, index]));
+
     // The Evidence the Pipeline accepts, from its elements' filters.
     /**
      * @type {EvidenceKeyFilter}
@@ -158,7 +166,9 @@ class Pipeline {
     const processMethod = function () {
       const promiseChain = [];
 
-      const makeProcessPromise = function (flowElement) {
+      // Runs one FlowElement. A failure is the FlowElement's error, added
+      // to the FlowData by onError, which by default adds it at once.
+      const makeProcessPromise = function (flowElement, onError) {
         return function (flowData) {
           if (flowData.stopped) {
             return Promise.resolve(flowData);
@@ -171,7 +181,11 @@ class Pipeline {
 
           return new Promise(function (resolve) {
             const setError = function (error) {
-              flowData.setError(error, flowElement);
+              if (onError) {
+                onError(error);
+              } else {
+                flowData.setError(error, flowElement);
+              }
 
               return resolve(flowData);
             };
@@ -197,18 +211,24 @@ class Pipeline {
 
       pipeline.flowElementsChain.forEach(function (item) {
         if (Array.isArray(item)) {
+          // A parallel group runs its members together and finishes once
+          // every member has. An error a member throws is held until then,
+          // and added in the order the members were added to the group.
           promiseChain.push(function (flowData) {
-            const promises = [];
+            const thrown = item.map(() => undefined);
 
-            item.forEach(function (flowElement) {
-              const promise = makeProcessPromise(flowElement)(flowData);
-
-              promises.push(promise);
+            return Promise.all(item.map(function (flowElement, index) {
+              return makeProcessPromise(flowElement, function (error) {
+                thrown[index] = { error };
+              })(flowData);
+            })).then(function () {
+              thrown.forEach(function (failure, index) {
+                if (failure !== undefined) {
+                  flowData.setError(failure.error, item[index]);
+                }
+              });
+              return flowData;
             });
-
-            return Promise.all(promises.map((p) => p.catch((e) => e)))
-              .then((results) => flowData)
-              .catch((e) => console.log(e));
           });
         } else {
           promiseChain.push(makeProcessPromise(item));

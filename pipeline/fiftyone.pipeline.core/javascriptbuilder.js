@@ -275,6 +275,13 @@ class JavaScriptBuilderElement extends FlowElement {
 
     this.dataKey = 'javascriptbuilder';
     this.evidenceKeyFilter = new JSEvidenceKeyFilter();
+    this.properties = {
+      javascript: {
+        name: 'javascript',
+        type: 'string',
+        description: 'The raw JavaScript produced by this Element.'
+      }
+    };
 
     // Set once a callback URL that is not valid has been logged, because a
     // misconfigured element would otherwise log on every request.

@@ -327,19 +327,34 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
 
   // Settles when the example has finished, which is after the pipeline
   // below has been built and both updates have completed.
-  const finished = new Promise(resolve => {
-    dataUpdateService.once('updateComplete', function (status, dataFile) {
-      // thread blocks till update checking is complete - or if there is an
-      // exception we don't get this far
+  //
+  // A download writes the new data to the path the file system watcher
+  // watches, so the watcher raises events while the download is still
+  // being applied. Each of those is reported with the in progress status,
+  // which says the check found nothing left to do, so none of them is the
+  // result of the check this example asked for. Both waits below pass over
+  // them and take the first status that ends a check.
+  const whenUpdateEnds = function () {
+    return new Promise(resolve => {
+      let ended = false;
+      dataUpdateService.on('updateComplete', function (status, dataFile) {
+        if (!ended && status !== AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
+          ended = true;
+          resolve(status);
+        }
+      });
+    });
+  };
+
+  const finished = whenUpdateEnds()
+    .then(status => {
       output.write(`Update on start-up complete - status: ${status}\n`);
 
       if (status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS) {
         output.write('Auto update was not successful, abandoning example\n');
         throw new Error('Auto update failed: ' + status);
       }
-      resolve();
-    });
-  })
+    })
     .then(() => {
       output.write('Modifying downloaded file to trigger reload - please wait for that' +
         ' to complete\n');
@@ -350,23 +365,25 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
       const timeoutId = setTimeout(() => {
         output.write('Update on file modification timed out\n');
       }, 60 * 1000);
-      return new Promise(resolve => {
-        dataUpdateService.once('updateComplete', function (status, dataFile) {
+      // The wait is set up before the file is touched, so that the reload
+      // it triggers cannot be missed.
+      const reloaded = whenUpdateEnds()
+        .then(status => {
           clearTimeout(timeoutId);
           output.write(`Update on file modification complete - status: ${status}\n`);
-          resolve();
         });
-        try {
-          // it's the same file but changing the file metadata will trigger reload,
-          // demonstrating that if you download a new file and replace the
-          // existing one, then it will be loaded
-          const time = new Date();
-          fs.utimesSync(dataFilePath, time, time);
-        } catch (err) {
-          throw new Error('Could not modify file time - abandoning ' +
-          'example\n');
-        }
-      });
+      try {
+        // it's the same file but changing the file metadata will trigger reload,
+        // demonstrating that if you download a new file and replace the
+        // existing one, then it will be loaded
+        const time = new Date();
+        fs.utimesSync(dataFilePath, time, time);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw new Error('Could not modify file time - abandoning ' +
+        'example\n');
+      }
+      return reloaded;
     })
     .then(() => {
       output.write('Finished example\n');

@@ -173,7 +173,7 @@ const analyse = async function (evidence, pipeline, output) {
   message += outputValue('Registered Country', ip, 'registeredcountry');
   message += outputValue('IP Range Start', ip, 'iprangestart');
   message += outputValue('IP Range End', ip, 'iprangeend');
-  message += outputValue('Accuracy Radius', ip, 'accuracyradiusmin');
+  message += outputValue('Accuracy Radius Min', ip, 'accuracyradiusmin');
   message += outputValue('Time Zone Offset', ip, 'timezoneoffset');
   output.write(message + '\n\n');
 };

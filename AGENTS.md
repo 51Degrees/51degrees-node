@@ -200,9 +200,9 @@ and one that adds the paid properties they show
 [here](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=agents.md&utm_term=cloud-examples),
 as `device-detection/readme.md` and `ip-intelligence/readme.md` say.
 
-The Device Detection cloud example reads `51d.json` from the folder it runs
-in, so run it from its own folder. It takes the key as its first argument, or
-from `_51DEGREES_RESOURCE_KEY`.
+The Device Detection cloud example reads `51d.json` from its own folder, so it
+runs from any folder. It takes the key as its first argument, or from
+`_51DEGREES_RESOURCE_KEY`.
 
 ```
 cd device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-console

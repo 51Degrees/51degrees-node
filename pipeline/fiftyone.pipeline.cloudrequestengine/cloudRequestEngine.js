@@ -33,6 +33,7 @@ const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
+const CloudDiscoveryState = require('./cloudDiscoveryState');
 
 // Names the cloud service reads its credentials and property list from,
 // which Evidence must not supply under any prefix or in any letter case.
@@ -74,12 +75,64 @@ function reportOldEndpointVariable (engine, flowData) {
 const discoveryAttempts = new WeakMap();
 
 // The failures to a discovery request that got no answer or a 5xx, which
-// cloud-request-engine.md lines 258 to 263 treat as transient.
+// cloud-request-engine.md lines 259 to 264 treat as transient.
 const transientFailures = new WeakSet();
 
 // For an engine in no Pipeline when its build attempt failed, what the
 // first process logs.
 const unloggedBuildFailures = new WeakMap();
+
+// What each engine's discovery fetched, the evidence keys and the
+// accessible properties answer as JSON text, for getDiscoveryState.
+const discoveredKeys = new WeakMap();
+const discoveredProperties = new WeakMap();
+
+/**
+ * The properties of each product in an accessible properties answer, as
+ * flowElementProperties holds them.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {object} answer the accessible properties answer, parsed
+ * @returns {object} each product's properties by name
+ */
+function productProperties (engine, answer) {
+  const output = {};
+  for (const product in answer.Products) {
+    output[product] = engine.propertiesTransform(
+      answer.Products[product].Properties);
+  }
+  return output;
+}
+
+/**
+ * Whether a discoveryState option was given, a blank value being what a
+ * configuration file holding the option unset gives.
+ *
+ * @param {CloudDiscoveryState|string|object} state the option's value
+ * @returns {boolean} true when a copy was given
+ */
+function discoveryStateGiven (state) {
+  return state !== undefined && state !== null &&
+    !(typeof state === 'string' && state.trim() === '');
+}
+
+/**
+ * Takes the evidence keys and properties from a saved copy of discovery,
+ * as discovery would set them.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {CloudDiscoveryState} state the copy
+ */
+function useDiscoveryState (engine, state) {
+  engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
+    state.evidenceKeys.slice());
+  engine.keptEvidenceKeyFilter = undefined;
+  engine.evidenceKeysFetched = true;
+  engine.flowElementProperties = productProperties(
+    engine, JSON.parse(state.accessibleProperties));
+  discoveredKeys.set(engine, state.evidenceKeys);
+  discoveredProperties.set(engine, state.accessibleProperties);
+}
 
 /**
  * Makes both discovery requests, or gives the attempt the engine is already
@@ -216,6 +269,12 @@ class CloudRequestEngine extends Engine {
    * For more detail, see the 'Request Headers' section in the
    * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
    * @param {RequestClient} options.requestClient Set predefined RequestClient.
+   * @param {CloudDiscoveryState|string|object} [options.discoveryState] a
+   * saved copy of discovery for the same keys, from getDiscoveryState, as
+   * the copy, its JSON text or that JSON parsed. The engine then makes no
+   * discovery request.
+   * A blank value is the option unset, so the engine discovers for
+   * itself, and text that is not the copy's JSON is refused.
    */
   constructor (
     {
@@ -224,7 +283,8 @@ class CloudRequestEngine extends Engine {
       requestedProperties,
       baseURL,
       cloudRequestOrigin,
-      requestClient
+      requestClient,
+      discoveryState
     }) {
     super(...arguments);
 
@@ -296,10 +356,35 @@ class CloudRequestEngine extends Engine {
     // Properties of connected FlowElements
     this.flowElementProperties = {};
 
-    // Both discovery requests are made now, so that in the normal case the
-    // engine is ready to process once it is built
-    // (cloud-request-engine.md line 241).
-    discover(this).catch((errors) => reportBuildFailure(this, errors));
+    if (discoveryStateGiven(discoveryState)) {
+      // A saved copy is used in place of the discovery requests
+      // (cloud-request-engine.md lines 307 to 314).
+      useDiscoveryState(this, discoveryState instanceof CloudDiscoveryState
+        ? discoveryState
+        : CloudDiscoveryState.fromJson(discoveryState));
+    } else {
+      // Both discovery requests are made now, so that in the normal case
+      // the engine is ready to process once it is built
+      // (cloud-request-engine.md line 241).
+      discover(this).catch((errors) => reportBuildFailure(this, errors));
+    }
+  }
+
+  /**
+   * A copy of what discovery fetched, which a later engine for the same keys
+   * can be given as its discoveryState so that it makes no discovery
+   * request. There is a copy once both discovery requests have answered,
+   * for example once ready() has resolved, or when the engine was given one.
+   *
+   * @returns {CloudDiscoveryState|undefined} the copy, or undefined before
+   * then
+   */
+  getDiscoveryState () {
+    const keys = discoveredKeys.get(this);
+    const properties = discoveredProperties.get(this);
+    return keys === undefined || properties === undefined
+      ? undefined
+      : new CloudDiscoveryState(keys, properties);
   }
 
   /**
@@ -578,19 +663,16 @@ class CloudRequestEngine extends Engine {
             reject(failures);
             return;
           }
-          const propertiesOutput = {};
-
           properties = JSON.parse(properties);
           engine.logWarnings(properties, engine.pipelines);
 
-          const products = properties.Products;
-
-          for (const product in products) {
-            propertiesOutput[product] = engine.propertiesTransform(
-              products[product].Properties);
-          }
+          const propertiesOutput = productProperties(engine, properties);
 
           engine.flowElementProperties = propertiesOutput;
+          if (properties !== null && properties.Products !== null &&
+            typeof properties.Products === 'object') {
+            discoveredProperties.set(engine, JSON.stringify(properties));
+          }
           resolve(propertiesOutput);
         }).catch(function (response) {
           reject(requestFailure(engine, response, url));
@@ -764,11 +846,13 @@ class CloudRequestEngine extends Engine {
             reject(failures);
             return;
           }
-          engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
-            JSON.parse(body)
-          );
+          const keys = JSON.parse(body);
+          engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(keys);
           engine.keptEvidenceKeyFilter = undefined;
           engine.evidenceKeysFetched = true;
+          if (Array.isArray(keys)) {
+            discoveredKeys.set(engine, keys.slice());
+          }
 
           resolve();
         }).catch(function (response) {

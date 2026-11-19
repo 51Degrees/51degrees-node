@@ -628,8 +628,8 @@ test('share usage back-off - pause still reaches the deprecated warning level', 
     () => `No warning of the pause was heard. Heard: ${JSON.stringify(heard)}`);
 }, 30000);
 
-// Shows that processing ran to the end, rather than stopping where usage
-// sharing paused.
+// Shows that processing ran to the end of the Pipeline, rather than
+// stopping where usage sharing paused.
 const marker = new FlowElement({
   dataKey: 'marker',
   evidenceKeyFilter: new BasicListEvidenceKeyFilter([]),
@@ -643,47 +643,42 @@ const marker = new FlowElement({
 });
 
 /**
- * Only sending pauses. Each request processed during a pause of a minute
- * returns in a fraction of it, with its Flow Data complete and no error,
- * and processing goes on after the queue has filled and entries are being
- * dropped (usage-sharing-element.md line 373).
+ * Only sending pauses. Processing neither waits for the pause nor is
+ * stopped by it. The clock is held, so the pause cannot end, and the
+ * receiver never answers, so a process that waited for a send would never
+ * return. The queue is small, so processing is also shown to go on once
+ * sharing can keep nothing more.
  */
-test('share usage back-off - processing neither waits for nor is stopped ' +
-  'by the pause', async () => {
-  const pipeline = createPipeline({
-    maximumQueueSize: 4,
-    failuresToEnterRecovery: 1,
-    initialRecoveryDelaySeconds: 60,
-    maxRecoveryDelaySeconds: 60
-  }, [marker]);
-  holdClock();
-  await failSends(pipeline, 1);
-  expect(usageEngine.backOff.backingOff).toBe(true);
+test('share usage back-off - processing is not stopped by the pause',
+  async () => {
+    const pipeline = createPipeline({
+      maximumQueueSize: 4,
+      failuresToEnterRecovery: 1,
+      initialRecoveryDelaySeconds: 600,
+      maxRecoveryDelaySeconds: 600
+    }, [marker]);
+    holdClock();
+    await failSends(pipeline, 1);
+    expect(usageEngine.backOff.backingOff).toBe(true);
+    hang = true;
 
-  const startedAt = Date.now();
-  const took = [];
-  for (let i = 0; i < 20; i++) {
-    const flowData = pipeline.createFlowData();
-    flowData.evidence.add('server.client-ip', `10.1.0.${i + 1}`);
-    const started = Date.now();
-    await flowData.process();
-    took.push(Date.now() - started);
-    expect(flowData.errors).toEqual({});
-    expect(flowData.get('marker').get('processed')).toBe(true);
-  }
-  const elapsed = Date.now() - startedAt;
+    // Each of these resolves while the pause is in force, with its Flow
+    // Data complete and no error. A rejection fails the test, because this
+    // Pipeline does not suppress process exceptions.
+    for (let i = 0; i < 25; i++) {
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.add('server.client-ip', `10.1.0.${i + 1}`);
+      await flowData.process();
+      expect(flowData.errors).toEqual({});
+      expect(flowData.get('marker').get('processed')).toBe(true);
+    }
 
-  // The queue filled and the rest were dropped, so processing went on past
-  // the point where sharing could keep anything. The pause is still on and
-  // nothing more was sent, so every request above was processed during it.
-  expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
-  expect(usageEngine.dropped).toBeGreaterThan(0);
-  expect(usageEngine.backOff.backingOff).toBe(true);
-  expect(attempts.length).toBe(1);
-
-  // A request that waited for the pause would take a minute, so these
-  // limits are a fraction of it. A slow runner cannot fail them, and a
-  // process that waited for the pause cannot pass them.
-  expect(Math.max(...took)).toBeLessThan(2000);
-  expect(elapsed).toBeLessThan(10000);
-}, 30000);
+    // The queue filled and the rest were dropped, so processing went on
+    // past the point where sharing could keep anything. The pause is still
+    // in force and only the one failed send was ever attempted, so none of
+    // the 25 waited for the pause to end or for a send to answer.
+    expect(usageEngine.shareData.length).toBe(usageEngine.maximumQueueSize);
+    expect(usageEngine.dropped).toBeGreaterThan(0);
+    expect(usageEngine.backOff.backingOff).toBe(true);
+    expect(attempts.length).toBe(1);
+  }, 30000);

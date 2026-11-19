@@ -51,6 +51,8 @@
  * ```
  */
 
+const path = require('path');
+
 const core = require('fiftyone.pipeline.core');
 
 // Note that this example is designed to be run from within the
@@ -75,7 +77,10 @@ console.log('Constructing pipeline from configuration file.');
 console.log();
 
 // Create a new pipeline from the supplied config file.
-const pipeline = new core.PipelineBuilder().buildFromConfigurationFile('51d.json'); // eslint-disable-line
+// The file is read from the example's own folder, so that the example
+// runs from any working folder.
+const pipeline = new core.PipelineBuilder() // eslint-disable-line no-unused-vars
+  .buildFromConfigurationFile(path.join(__dirname, '51d.json'));
 
 // Alternatively, the commented code below shows how to
 // configure the ShareUsageElement in code, rather than

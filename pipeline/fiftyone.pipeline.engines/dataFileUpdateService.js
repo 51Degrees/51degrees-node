@@ -796,10 +796,12 @@ class DataFileUpdateService {
 
     fs.readFile(filename, function (err, data) {
       if (err) {
+        // Reading the download has no row of its own, so it is any other
+        // error.
         dataFileUpdateService.unhandled(dataFile, err);
         dataFileUpdateService.fail(
           dataFile,
-          AutoUpdateStatus.AUTO_UPDATE_MASTER_FILE_CANT_RENAME);
+          AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
         return;
       }
 
@@ -854,10 +856,12 @@ class DataFileUpdateService {
     if (dataFile.decompress) {
       fs.readFile(filename, function (err, buffer) {
         if (err) {
+          // Reading the download has no row of its own, so it is any other
+          // error.
           dataFileUpdateService.unhandled(dataFile, err);
           dataFileUpdateService.fail(
             dataFile,
-            AutoUpdateStatus.AUTO_UPDATE_ERR_READING_STREAM);
+            AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
           return;
         }
 

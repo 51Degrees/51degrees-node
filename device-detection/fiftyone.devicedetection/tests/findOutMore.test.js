@@ -53,6 +53,7 @@ const EXAMPLES = [
   'fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updateOnStartUp.js',
   'fiftyone.devicedetection.onpremise/examples/onpremise/automaticupdates/updatePollingInterval.js',
   'fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console/gettingStarted.js',
+  'fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-console/gettingStarted.ts',
   'fiftyone.devicedetection.onpremise/examples/onpremise/gettingstarted-web/index.pug',
   'fiftyone.devicedetection.onpremise/examples/onpremise/matchmetrics-console/matchMetrics.js',
   'fiftyone.devicedetection.onpremise/examples/onpremise/metadata-console/metaData.js',
@@ -136,8 +137,9 @@ const problems = (file) => {
 // loads and the JavaScript templates submodule.
 const SKIPPED_FOLDERS = ['node_modules', 'public', 'javascript-templates'];
 
-// Every .js, .pug and .html file below an examples folder, other than
-// tests.
+// Every .js, .ts, .pug and .html file below an examples folder, other
+// than tests. A TypeScript example is read as well, because the readme
+// tells people to run one.
 const exampleFiles = (dir, inExamples = false) => {
   let found = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -147,17 +149,19 @@ const exampleFiles = (dir, inExamples = false) => {
         found = found.concat(
           exampleFiles(full, inExamples || entry.name === 'examples'));
       }
-    } else if (inExamples && /\.(js|pug|html)$/.test(entry.name) &&
-      !entry.name.endsWith('.test.js')) {
+    } else if (inExamples && /\.(js|ts|pug|html)$/.test(entry.name) &&
+      !/\.test\.(js|ts)$/.test(entry.name)) {
       found.push(path.relative(PRODUCT, full).split(path.sep).join('/'));
     }
   }
   return found;
 };
 
-// Runs an example from its own folder with no resource key and returns
-// what it printed.
-const printedWithoutKey = (file) => {
+// Runs an example with no resource key and returns what it printed. The
+// folder it runs from is its own unless another is given, because an
+// example reads every file it needs from its own folder and so runs the
+// same from anywhere.
+const printedWithoutKey = (file, cwd) => {
   const remove = new Set(RESOURCE_KEY_NAMES.concat(['JEST_WORKER_ID'])
     .map((name) => name.toUpperCase()));
   const env = Object.assign({}, process.env);
@@ -168,8 +172,8 @@ const printedWithoutKey = (file) => {
   }
   const full = path.join(PRODUCT, file);
   const result = childProcess.spawnSync(
-    process.execPath, [path.basename(full)], {
-      cwd: path.dirname(full),
+    process.execPath, [cwd ? full : path.basename(full)], {
+      cwd: cwd || path.dirname(full),
       env,
       encoding: 'utf8',
       timeout: TIMEOUT_MS
@@ -213,6 +217,16 @@ describe('Find out more', () => {
   for (const file of CLOUD_EXAMPLES) {
     test(`${file} ends with the section when it has no resource key`, () => {
       expectEndsWithSection(printedWithoutKey(file), file);
+    }, TIMEOUT_MS);
+  }
+
+  // Each cloud example also runs from another folder, as it reads its files
+  // from its own folder and not the one it runs in.
+  for (const file of CLOUD_EXAMPLES) {
+    test(`${file} ends with the section when it is run from another ` +
+      'folder', () => {
+      expectEndsWithSection(
+        printedWithoutKey(file, path.join(PRODUCT, '..')), file);
     }, TIMEOUT_MS);
   }
 });
