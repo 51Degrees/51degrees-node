@@ -821,7 +821,7 @@ cd examples/creator-context-web
 _51DEGREES_RESOURCE_KEY=<resource key> node server.js
 ```
 
-Then open `http://localhost:5100/`. To demonstrate across two devices, serve
+Then open `http://localhost:5151/`. To demonstrate across two devices, serve
 on an address both can reach and open the copied link on the second device.
 
 **The copy-and-paste proof.** Once the 51Did has fully validated, the page
@@ -846,7 +846,7 @@ build and is refreshed by common-ci's `update-example-assets` step.
 | `_51DEGREES_RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
 | `_51DEGREES_LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
 | `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
-| `PORT` | Web demo only. Defaults to `5100` |
+| `PORT` | Web demo only. Defaults to `5151` |
 
 ### What a run costs
 

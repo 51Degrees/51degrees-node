@@ -319,7 +319,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   setPipeline(options);
   // The port can be set with the 'PORT' environment variable, as in the
   // cloud example, so that the example can be run alongside others.
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT || 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);

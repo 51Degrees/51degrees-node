@@ -283,7 +283,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 
   setPipeline(options);
-  const port = 3001;
+  const port = 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);
