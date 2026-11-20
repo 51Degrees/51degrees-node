@@ -1,6 +1,5 @@
 param (
     [Parameter(Mandatory)][string]$RepoName,
-    [string]$TestResourceKey,
     # False, from select-options.ps1, on every entry of a pull request but
     # one, so the browser contract runs once.
     [bool]$SeleniumContract = $true
@@ -8,8 +7,9 @@ param (
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-# The pipeline and location tests read the key from this.
-$env:_51DEGREES_RESOURCE_KEY = $TestResourceKey
+# The pipeline and location tests read _51DEGREES_RESOURCE_KEY, which
+# common-ci exports before this runs. It is not set here, so an empty input
+# cannot clear it.
 
 ./node/run-integration-tests.ps1 -RepoName $RepoName
 
@@ -99,15 +99,18 @@ $env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
 $failed = @()
 
 # Cloud example, pointed at the live cloud.
-if ($TestResourceKey) {
-    $env:PAID_RESOURCE_KEY = $TestResourceKey
+if ($env:_51DEGREES_RESOURCE_KEY) {
+    # The shared suite reads the key under this name.
+    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
+    # The example reads _51DEGREES_RESOURCE_KEY from the environment it
+    # inherits. It is not in the list below, because the variables listed
+    # are cleared after the run.
     try {
         Invoke-ContractTests `
         -Name 'cloud' `
         -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
         -Port 8096 `
         -Environment @{
-            '_51DEGREES_RESOURCE_KEY' = $TestResourceKey
             '_51DEGREES_CLOUD_ENDPOINT' = 'https://cloud.51degrees.com/api/v4/'
         }
     } catch { $failed += 'cloud' }

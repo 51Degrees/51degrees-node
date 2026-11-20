@@ -29,10 +29,10 @@ module.exports = {
   envVars: {
     resourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY',
     superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER',
-    platformResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_PLATFORM',
-    hardwareResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_HARDWARE',
-    browserResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_BROWSER',
-    noSetHeaderResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_NO_SETHEADER',
+    // The cloud license. The Accept-CH tests use it with values= naming
+    // the one SetHeader property each needs, in place of a resource key
+    // for each header.
+    licenseKeyBespokeEnvVar: '_51DEGREES_LICENSE_KEY_BESPOKE',
     /**
      * @deprecated No test reads a licence key under this name. The licence
      * key is read from the _51DEGREES_LICENSE_KEY environment variable.
@@ -45,11 +45,7 @@ module.exports = {
    */
   legacyEnvVars: {
     _51DEGREES_RESOURCE_KEY: 'RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_SUPER: 'TEST_SUPER_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_PLATFORM: 'TEST_PLATFORM_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_HARDWARE: 'TEST_HARDWARE_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_BROWSER: 'TEST_BROWSER_RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_NO_SETHEADER: 'TEST_NO_SETHEADER_RESOURCE_KEY'
+    _51DEGREES_RESOURCE_KEY_SUPER: 'TEST_SUPER_RESOURCE_KEY'
   },
   // User-Agent string for testing
   userAgents: {

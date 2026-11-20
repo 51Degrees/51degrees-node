@@ -54,10 +54,7 @@ Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json 
 
 There are other environment variables that you will also need to set in your test environment before running all tests:
 - `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.
-- `_51DEGREES_RESOURCE_KEY_PLATFORM`: This key contains only the `SetHeaderPlatform*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_HARDWARE`: This key contains only the `SetHeaderHardware*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_BROWSER`: This key contains only the `SetHeaderBrowser*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_NO_SETHEADER`: This key contains no `SetHeader` properties.
+- `_51DEGREES_LICENSE_KEY_BESPOKE`: A cloud license key. The Accept-CH tests use it with `values=` naming the one property each needs, such as `device.SetHeaderBrowserAccept-CH`, or `device.IsMobile` for the case that sets no header. When it is not set, those tests are skipped, and their names say which variable to set.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
 

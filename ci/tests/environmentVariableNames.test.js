@@ -65,6 +65,28 @@ const FALLBACK_NAME =
 // is matched, so a longer name holding it is left alone.
 const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
 
+// The keys come only under their agreed _51DEGREES_ names, which common-ci
+// exports from the organization secrets of the same names. So none of these
+// may appear anywhere, read, set or described:
+// - the names that left the agreed list, which no secret fills: the four
+//   header resource keys the Accept-CH tests used, the ACCEPTCH ones, the
+//   CloudV5Bespoke license under its long name and the IP Intelligence
+//   data file address
+// - the old secrets that held keys and addresses
+// - the inputs a workflow used to map those secrets to.
+// Only the whole name is matched, so a longer name holding one, such as a
+// constant naming another variable, is left alone.
+const OLD_KEY_NAME = new RegExp('(^|[^A-Za-z0-9_])(' + [
+  '_51DEGREES_RESOURCE_KEY_(?:PLATFORM|HARDWARE|BROWSER|NO_SETHEADER)',
+  '_51DEGREES_RESOURCE_KEY_ACCEPTCH_[A-Z]+',
+  '_51DEGREES_LICENSE_KEY_CLOUDV5BESPOKE',
+  '_51DEGREES_IPI_DATA_FILE_URL',
+  'DEVICE_DETECTION_KEY', 'DEVICE_DETECTION_URL', 'IP_INTELLIGENCE_KEY',
+  'IPI_DATA_FILE_URL', 'CSV_URL', 'ACCEPTCH_[A-Z]+_KEY',
+  'Test(?:Super|Platform|Hardware|Browser|NoSetHeader)?ResourceKey',
+  'TestLicenseKey', 'DeviceDetectionUrl', 'IpIntelligenceUrl', 'CsvUrl'
+].join('|') + ')(?![A-Za-z0-9_])', 'g');
+
 // The files that document that the old cloud endpoint name is no longer
 // read.
 const OLD_NAME_FILES = new Set([
@@ -79,9 +101,10 @@ const SKIPPED_EXTENSIONS = new Set([
   '.ttf', '.eot', '.pdf', '.zip', '.gz', '.hash', '.ipi', '.dat', '.node'
 ]);
 
-// This file names the old form on purpose, to describe what is banned.
+// These files name the old forms on purpose, to describe what is banned.
 const SKIPPED_FILES = new Set([
-  path.join('ci', 'tests', 'environmentVariableNames.test.js')
+  path.join('ci', 'tests', 'environmentVariableNames.test.js'),
+  path.join('ci', 'key-names.Tests.ps1')
 ]);
 
 /**
@@ -180,6 +203,41 @@ describe('environment variable names', () => {
     () => {
       expect(unusedFiles(OLD_NAME_FILES, OLD_NAME)).toEqual([]);
     });
+
+  it('names no key that is not under its agreed name', () => {
+    expect(namesInRepository(OLD_KEY_NAME)).toEqual([]);
+  });
+
+  it('matches only a whole old or dropped key name', () => {
+    const subject = (text) =>
+      [...text.matchAll(OLD_KEY_NAME)].map((match) => match[2]);
+
+    // The agreed names are not a match.
+    expect(subject('process.env._51DEGREES_RESOURCE_KEY')).toEqual([]);
+    expect(subject('process.env._51DEGREES_RESOURCE_KEY_SUPER')).toEqual([]);
+    expect(subject('_51DEGREES_LICENSE_KEY_BESPOKE')).toEqual([]);
+    expect(subject('secrets._51DEGREES_RESOURCE_KEY_BESPOKE')).toEqual([]);
+
+    // Neither is a longer name holding an old one, nor a stand-in key.
+    expect(subject("const IPI_DATA_FILE_VARIABLE = '_51DEGREES_IPI_PATH';"))
+      .toEqual([]);
+    expect(subject("const RESOURCE = 'AQTestResourceKey';")).toEqual([]);
+
+    // A dropped name is a match, read, set or in prose.
+    expect(subject("browserResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_BROWSER'"))
+      .toEqual(['_51DEGREES_RESOURCE_KEY_BROWSER']);
+    expect(subject('$env:_51DEGREES_RESOURCE_KEY_NO_SETHEADER = $key'))
+      .toEqual(['_51DEGREES_RESOURCE_KEY_NO_SETHEADER']);
+
+    // So is an old secret or input, as a workflow or script names it.
+    // The dollar sign is kept apart, as above.
+    expect(subject('DeviceDetection: $' + '{{ secrets.DEVICE_DETECTION_KEY }}'))
+      .toEqual(['DEVICE_DETECTION_KEY']);
+    expect(subject('$env:_51DEGREES_RESOURCE_KEY = $TestResourceKey'))
+      .toEqual(['TestResourceKey']);
+    expect(subject('$Options.Keys.TestPlatformResourceKey'))
+      .toEqual(['TestPlatformResourceKey']);
+  });
 
   it('matches only a name that starts with the digit', () => {
     const subject = (text) =>
