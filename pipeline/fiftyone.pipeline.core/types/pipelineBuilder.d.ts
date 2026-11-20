@@ -1,8 +1,5 @@
 export = PipelineBuilder;
 /**
- * @typedef {import('./flowElement')} FlowElement
- */
-/**
  * A PipelineBuilder generates a Pipeline object
  * Before construction of the Pipeline, FlowElements are added to it
  * There are also options for how JavaScript is output from the Pipeline
@@ -60,6 +57,13 @@ declare class PipelineBuilder {
      * @type {FlowElement[]}
      */
     flowElements: FlowElement[];
+    /**
+     * A usage sharing element the builder adds after every other Flow
+     * Element when it builds, as the product builders do.
+     *
+     * @type {FlowElement|undefined}
+     */
+    usageSharingElement: FlowElement | undefined;
     dataFileUpdateService: any;
     addJavaScriptBuilder: boolean;
     addSequenceElement: boolean;
@@ -113,10 +117,13 @@ declare class PipelineBuilder {
      * its key, compared ignoring case, so one the caller added is the one
      * used and building twice adds nothing more. A JSON Builder goes
      * immediately before a JavaScript Builder the caller added, which reads
-     * what it writes.
+     * what it writes. The usage sharing element is always last, so it shares
+     * the Evidence every other element has added.
      *
      * @param {FlowElement[]} flowElements array of elements to add to
      * @returns {FlowElement[]} resulting array with required elements
+     * @throws {Error} when the usage sharing element is anywhere but last, or
+     * in a parallel group
      */
     addRequiredElements(flowElements: FlowElement[]): FlowElement[];
     /**

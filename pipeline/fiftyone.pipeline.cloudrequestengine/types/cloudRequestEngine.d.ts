@@ -82,13 +82,15 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     fetchEvidenceKeysAndProperties(resolveCallback: Function, rejectCallback: Function): void;
     /**
-     * Internal process for cloud engine
-     * Returns raw JSON as a "cloud" property in "cloud"
+     * Builds the request from the Evidence, starts it, and adds Element Data
+     * whose "cloud" property is the raw JSON response. That property is lazy,
+     * its task being the request, so processing does not wait for the
+     * response. Readers wait for it with getAsync('cloud'), and the Pipeline
+     * waits for it before processing finishes.
      *
      * @param {FlowData} flowData flowData to process
-     * @returns {Promise} data from cloud service
      */
-    processInternal(flowData: FlowData): Promise<any>;
+    processInternal(flowData: FlowData): void;
     /**
      * Has the evidence keys and properties before processing, whatever else
      * is in the pipeline, because the cache key is built from the evidence
@@ -162,14 +164,17 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     metaPropertyTransform(key: string, value: object): object;
     /**
-     * Internal function to get data from cloud service
+     * Builds the request from the Flow Data's Evidence and sends it to the
+     * cloud service. The request is built before this returns, and the
+     * promise that follows never reads the Flow Data.
      *
      * @param {FlowData} flowData
      * FlowData used to extract evidence and send to cloud service
      * for processing
-     * @returns {Promise} result of processing
+     * @returns {Promise<string>} the raw JSON response, or the errors of a
+     * failed request
      */
-    getData(flowData: FlowData): Promise<any>;
+    getData(flowData: FlowData): Promise<string>;
     /**
      * Compares the requested properties with an answer and logs, once, the
      * names the answer left out. The cloud service drops a property the keys
