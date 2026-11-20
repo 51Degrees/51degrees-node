@@ -238,8 +238,10 @@ class ElementData {
    *
    * @param {string} key the property name
    * @param {Promise} task the work that gives the value
+   * @throws {Error} once the flow elements that write the data have finished
    */
   addLazyProperty (key, task) {
+    refuseFinished(this, key);
     let lazies = lazyProperties(this);
     if (lazies === undefined) {
       lazies = new Map();

@@ -59,6 +59,7 @@ declare class ElementData {
      *
      * @param {string} key the property name
      * @param {Promise} task the work that gives the value
+     * @throws {Error} once the flow elements that write the data have finished
      */
     addLazyProperty(key: string, task: Promise<any>): void;
     _lazy: any;
