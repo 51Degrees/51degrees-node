@@ -9,6 +9,8 @@
         'win_warning_level': 4,
         'win_exception_handling': 1,
         'win_warn_as_error': 'true',
+        # Node 26 passes the linker its own '/flto=thin', which link.exe does not know and warns about (LNK4044).
+        'wrapper_win_link_warn_as_error': "<!(node -p \"parseInt(process.versions.node) >= 26 ? 'false' : 'true'\")",
         'win_warning_ignore_list': [4018, 4100, 4127, 4244, 4302, 4311, 4324, 4459, 4702, 4996], # Only used for SWIG generated files. 4018 and 4324 come from Node 24 V8 headers.
         'win_debug_additional_ignore_list': [4701, 4702], # Only used for SWIG generated files
         'linux_mac_c_std': '-std=gnu11',
@@ -173,9 +175,7 @@
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
-                                    # Node 26 passes the linker its own '/flto=thin', which link.exe does not know (LNK4044).
-                                    'AdditionalOptions': ['/ignore:4044'],
+                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
                                     'LinkIncremental': 1
                                 }
@@ -196,9 +196,7 @@
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
-                                    # Node 26 passes the linker its own '/flto=thin', which link.exe does not know (LNK4044).
-                                    'AdditionalOptions': ['/ignore:4044'],
+                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
                                 }
                             }
