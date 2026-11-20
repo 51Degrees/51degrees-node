@@ -47,6 +47,16 @@ declare class CloudEngine extends CloudEngine_base {
     updateEngineWhenCloudRequestEngineReady(resolve: Function, reject: Function): void;
     errors: any;
     /**
+     * Waits for the Cloud Request Engine's raw JSON response. A failed
+     * request is recorded once, as the Cloud Request Engine's error, and
+     * gives undefined, so the cloud engine adds no data and no error of its
+     * own.
+     *
+     * @param {FlowData} flowData the Flow Data being processed
+     * @returns {Promise<string|undefined>} the response, or undefined
+     */
+    readResponse(flowData: FlowData): Promise<string | undefined>;
+    /**
      * Internal process method for all cloud engines
      *
      * @param {FlowData} flowData FlowData to process

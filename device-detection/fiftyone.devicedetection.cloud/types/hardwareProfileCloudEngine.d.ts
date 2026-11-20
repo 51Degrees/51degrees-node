@@ -6,12 +6,13 @@ declare const HardwareProfileCloudEngine_base: typeof import("fiftyone.pipeline.
  */
 declare class HardwareProfileCloudEngine extends HardwareProfileCloudEngine_base {
     /**
-     * Process internal FlowData cloud data for devices,
-     * set them as FlowData elements
+     * Adds the hardware profiles in the cloud response as this engine's
+     * Element Data.
      *
      * @param {FlowData} flowData The FlowData object
+     * @param {object} cloudData the cloud response, parsed from JSON
      */
-    processInternal(flowData: FlowData): void;
+    setProfiles(flowData: FlowData, cloudData: object): void;
 }
 declare namespace HardwareProfileCloudEngine {
     export { FlowData };

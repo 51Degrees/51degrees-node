@@ -119,7 +119,10 @@ class IpIntelligenceCloud extends CloudEngine {
     const engine = this;
     return super.processInternal(flowData).then(function () {
       // The CloudEngine has set the Element Data, empty where the response
-      // held no IP Intelligence part.
+      // held no IP Intelligence part, and none where the request failed.
+      if (!(engine.dataKey in flowData.data)) {
+        return;
+      }
       const data = flowData.get(engine.dataKey);
       for (const value of Object.values(data.contents)) {
         if (value !== null && typeof value === 'object' && value.hasValue) {

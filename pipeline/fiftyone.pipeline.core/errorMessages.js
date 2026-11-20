@@ -26,6 +26,8 @@ module.exports = {
   genericMissingProperties: 'Property "%s" not found',
   noReasonUnknown: ' Please check that the element and property names ' +
   'are correct.',
+  lazyPending: 'Property "%s" in data for element "%s" is worked out by a ' +
+    'task that has not finished. Use getAsync("%s") to wait for it.',
   flowDataFinished: 'Cannot add %s: the flow data has finished processing.',
   flowDataProcessed: 'The flow data has already been processed. A flow ' +
     'data is processed once.',

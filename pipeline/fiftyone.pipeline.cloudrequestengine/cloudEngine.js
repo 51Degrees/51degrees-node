@@ -115,6 +115,23 @@ class CloudEngine extends Engine {
   }
 
   /**
+   * Waits for the Cloud Request Engine's raw JSON response. A failed
+   * request is recorded once, as the Cloud Request Engine's error, and
+   * gives undefined, so the cloud engine adds no data and no error of its
+   * own.
+   *
+   * @param {FlowData} flowData the Flow Data being processed
+   * @returns {Promise<string|undefined>} the response, or undefined
+   */
+  readResponse (flowData) {
+    const cloud = flowData.get('cloud');
+    return cloud.getAsync('cloud').catch(function () {
+      cloud.recordLazyFailures(flowData);
+      return undefined;
+    });
+  }
+
+  /**
    * Internal process method for all cloud engines
    *
    * @param {FlowData} flowData FlowData to process
@@ -124,7 +141,12 @@ class CloudEngine extends Engine {
     const engine = this;
 
     return engine.ready().then(function () {
-      const cloudData = JSON.parse(flowData.get('cloud').get('cloud'));
+      return engine.readResponse(flowData);
+    }).then(function (response) {
+      if (response === undefined) {
+        return;
+      }
+      const cloudData = JSON.parse(response);
       const elementData = cloudData ? cloudData[engine.dataKey] : undefined;
       const result = {};
 

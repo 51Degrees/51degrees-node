@@ -76,6 +76,29 @@ function setFinished (data, finished) {
 }
 
 /**
+ * Waits for the task of every lazy property in the Flow Data, then records
+ * each failed task as an error of the Flow Element whose data holds it,
+ * unless a reader has already. A JavaScript read cannot wait, so processing
+ * finishes only once every task has, and a read after that has the value.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @returns {Promise|undefined} resolved once every task has finished
+ */
+function settleLazyProperties (flowData) {
+  const all = [...new Set(Object.values(flowData.data))].filter((data) =>
+    data !== null && typeof data === 'object' &&
+    typeof data.lazySettled === 'function');
+  const pending = all.filter((data) => data.hasPendingLazyProperties());
+  const record = () => all.forEach((data) =>
+    data.recordLazyFailures(flowData));
+  if (pending.length === 0) {
+    record();
+    return undefined;
+  }
+  return Promise.all(pending.map((data) => data.lazySettled())).then(record);
+}
+
+/**
  * Pipeline holding a list of flowElements for processing, can create
  * flowData that will be passed through these, collecting elementData
  * Should be constructed through the PipelineBuilder class
@@ -261,15 +284,22 @@ class Pipeline {
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
-        }, Promise.resolve(flowData)).finally(function () {
-          // Processing has finished, whether or not it rejected, so the flow
-          // data and every element data in it, including any the caller
-          // added, are read only.
+        }, Promise.resolve(flowData)).then(function () {
+          return settleLazyProperties(flowData);
+        }, function (error) {
+          // Processing rejected, but a lazy task may still record its
+          // failure, so wait for every task before the Flow Data finishes.
+          return Promise.resolve(settleLazyProperties(flowData))
+            .then(function () { throw error; });
+        }).finally(function () {
+          // Processing has finished, whether or not it rejected, and every
+          // lazy task has finished, so the flow data and every element
+          // data in it, including any the caller added, are read only.
           flowData.processed = true;
           flowData.listElementData().forEach((data) =>
             setFinished(data, true));
         }).then(function () {
-          // Every error has been recorded.
+          // Processing has finished, so every error has been recorded.
           const errors = Object.values(flowData.errors);
           if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
             throw new AggregateError(errors,

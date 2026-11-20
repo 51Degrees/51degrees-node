@@ -5,6 +5,7 @@ export let ErrorMessages: {
     noElementData: string;
     genericMissingProperties: string;
     noReasonUnknown: string;
+    lazyPending: string;
     flowDataFinished: string;
     flowDataProcessed: string;
     elementDataFinished: string;

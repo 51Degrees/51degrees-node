@@ -1,14 +1,10 @@
 export = ElementData;
 /**
- * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('./flowData')} FlowData
- */
-/**
  * Stores information created by a flowElement based on flowData.
  * Stored in flowData. Element data is written only by the flow element that
  * provides it, or the flow elements that share it, and only while they
- * process. Once they have finished, a write through the element data
- * throws.
+ * process. Once they have finished, a write through the element data, or
+ * into the contents object a dictionary keeps its values in, throws.
  */
 declare class ElementData {
     /**
@@ -54,6 +50,64 @@ declare class ElementData {
      * the data has no value for the key in any case
      */
     get(key: string): FlowData;
+    /**
+     * Adds a lazy property, whose value is the result of a task the Flow
+     * Element starts while it processes, such as a call to another resource.
+     * The task never reads the Flow Data. Readers wait for it with getAsync,
+     * and the Pipeline waits for every task before processing finishes, so a
+     * read once processing has finished has the value or the task's error.
+     *
+     * @param {string} key the property name
+     * @param {Promise} task the work that gives the value
+     */
+    addLazyProperty(key: string, task: Promise<any>): void;
+    _lazy: any;
+    /**
+     * Whether the property is lazy, in any letter case.
+     *
+     * @param {string} key the property name
+     * @returns {boolean} true if addLazyProperty added it
+     */
+    isLazyProperty(key: string): boolean;
+    /**
+     * Waits for the property's lazy task, where it has one, then gets the
+     * value as get does. Every reader of a lazy property waits for the same
+     * task, which runs once.
+     *
+     * @param {string} key the property name
+     * @returns {Promise<*>} the value, or the task's error
+     */
+    getAsync(key: string): Promise<any>;
+    /**
+     * Waits for the tasks of every lazy property.
+     *
+     * @returns {Promise<boolean>} true once every task has given its value,
+     * false once every task has finished and one or more failed
+     */
+    lazySettled(): Promise<boolean>;
+    /**
+     * Whether the data has a lazy property, whether or not its task has
+     * finished.
+     *
+     * @returns {boolean} true once addLazyProperty has added a property
+     */
+    hasLazyProperties(): boolean;
+    /**
+     * Whether a lazy property's task has not yet finished.
+     *
+     * @returns {boolean} true while a task is running
+     */
+    hasPendingLazyProperties(): boolean;
+    /**
+     * Records the failure of each lazy property's task in the Flow Data's
+     * errors, as an error of the Flow Element that provides this data, once
+     * however many readers meet it. A reader that meets a failure while the
+     * Flow Data is processed calls this, and the Pipeline calls it before
+     * processing finishes.
+     *
+     * @param {FlowData} flowData the Flow Data being processed
+     */
+    recordLazyFailures(flowData: FlowData): void;
     /**
      * Return string value of property
      *
