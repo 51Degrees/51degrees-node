@@ -169,6 +169,8 @@
                                 },
                                 'VCLinkerTool': {
                                     'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    # Node 26 passes the linker its own '/flto=thin', which link.exe does not know (LNK4044).
+                                    'AdditionalOptions': ['/ignore:4044'],
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
                                     'LinkIncremental': 1
                                 }
@@ -190,6 +192,8 @@
                                 },
                                 'VCLinkerTool': {
                                     'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    # Node 26 passes the linker its own '/flto=thin', which link.exe does not know (LNK4044).
+                                    'AdditionalOptions': ['/ignore:4044'],
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
                                 }
                             }
