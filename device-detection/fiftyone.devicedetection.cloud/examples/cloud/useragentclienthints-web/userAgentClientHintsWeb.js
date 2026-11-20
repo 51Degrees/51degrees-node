@@ -249,7 +249,7 @@ if (myResourceKey === '!!YOUR_RESOURCE_KEY!!' &&
   // Don't run the server if under TEST
   if (process.env.JEST_WORKER_ID === undefined) {
     setPipeline(myResourceKey);
-    const port = 3000;
+    const port = 5151;
     const hostname = 'localhost';
     server.listen(port, hostname);
     console.log(`Server listening on: http://${hostname}:${port}`);

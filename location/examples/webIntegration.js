@@ -228,7 +228,7 @@ if (myResourceKey.substring(0, 2) === '!!') {
     });
   });
 
-  const port = 3000;
+  const port = 5151;
   // Only the machine the example runs on, at 127.0.0.1 rather than
   // localhost, which can resolve to the IPv6 loopback alone.
   server.listen(port, '127.0.0.1');
