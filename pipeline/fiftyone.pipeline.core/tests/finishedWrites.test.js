@@ -292,3 +292,39 @@ describe('A Flow Data with a lazy property', () => {
       expect(flowData.lazy.get('value')).toBe(42);
     });
 });
+
+// A Flow Element that adds a lazy property to another's Element Data.
+const lazyAdder = (dataKey, target) => new core.FlowElement({
+  dataKey,
+  processInternal: function (flowData) {
+    flowData.get(target).addLazyProperty('value', Promise.resolve(dataKey));
+  }
+});
+
+describe('Element Data with a lazy property', () => {
+  test('throws when a lazy property is added once it has finished',
+    async () => {
+      const work = lazy('lazy');
+      const flowData = build(work.element).createFlowData();
+      work.resolve(42);
+      await flowData.process();
+      expect(() => flowData.lazy.addLazyProperty('value', Promise.resolve(7)))
+        .toThrow(ELEMENT_FINISHED);
+      expect(() => flowData.lazy.addLazyProperty('other', Promise.resolve(7)))
+        .toThrow(ELEMENT_FINISHED);
+      await settle();
+      expect(flowData.lazy.get('value')).toBe(42);
+      expect(flowData.lazy.isLazyProperty('other')).toBe(false);
+    });
+
+  test('given a lazy property by a later Flow Element is that element\'s ' +
+    'error', async () => {
+    const flowData = build(adder('first'), lazyAdder('later', 'first'))
+      .createFlowData();
+    await flowData.process();
+    expect(Object.keys(flowData.errors)).toEqual(['later']);
+    expect(String(flowData.errors.later)).toContain(ELEMENT_FINISHED);
+    expect(flowData.first.isLazyProperty('value')).toBe(false);
+    expect(flowData.first.get('value')).toBe('first');
+  });
+});
