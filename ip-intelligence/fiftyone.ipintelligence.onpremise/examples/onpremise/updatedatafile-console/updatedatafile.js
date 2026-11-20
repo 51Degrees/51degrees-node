@@ -167,29 +167,9 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
 // The variable that holds the licence key.
 const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
 
-// The deprecated names of the same variable, read only when
-// _51DEGREES_LICENSE_KEY is unset or empty.
-const UPDATE_EXAMPLE_LICENSE_KEY_NAME = 'LicenseKey';
-const OLD_LICENSE_KEY_NAMES = [UPDATE_EXAMPLE_LICENSE_KEY_NAME, 'LICENSEKEY'];
-let reportedOldName = false;
-
-// Reads the licence key from the environment, saying once that an old name
-// is deprecated when the key was found under it.
+// Reads the licence key from the environment.
 const getLicenseKey = function () {
-  if (process.env[LICENSE_KEY_VARIABLE]) {
-    return process.env[LICENSE_KEY_VARIABLE];
-  }
-  const oldName = OLD_LICENSE_KEY_NAMES.find((name) => process.env[name]);
-  if (oldName === undefined) {
-    return undefined;
-  }
-  if (!reportedOldName) {
-    reportedOldName = true;
-    console.warn(`The ${oldName} environment variable is deprecated and ` +
-      `${LICENSE_KEY_VARIABLE} replaces it. Set ${LICENSE_KEY_VARIABLE} ` +
-      'instead.');
-  }
-  return process.env[oldName];
+  return process.env[LICENSE_KEY_VARIABLE] || undefined;
 };
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
