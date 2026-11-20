@@ -5,6 +5,7 @@ export let ErrorMessages: {
     noElementData: string;
     genericMissingProperties: string;
     noReasonUnknown: string;
+    lazyPending: string;
     usageSharingNotLast: string;
 };
 export let Constants: {
