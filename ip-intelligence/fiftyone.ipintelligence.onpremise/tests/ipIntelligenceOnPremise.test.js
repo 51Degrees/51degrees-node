@@ -69,7 +69,10 @@ describe('ipIntelligenceOnPremise', () => {
   // only by polling (autoUpdate) and the update on start-up, which
   // download from the Distributor, and the build fails naming the option
   // to turn off when one of them is on with no key. The file system
-  // watcher needs no key.
+  // watcher needs no key. These tests check only the options an engine is
+  // built with, so they build from the small data file: each engine built
+  // from the CI's enterprise file holds gigabytes of native memory, and
+  // building several stops the hosted Ubuntu runners.
   const registered = (engine) => {
     let config;
     engine.registrationCallbacks[0]({
@@ -83,7 +86,7 @@ describe('ipIntelligenceOnPremise', () => {
   test.each([undefined, null, ''])(
     'No license key (%p) is needed when nothing downloads', (key) => {
       const engine = new EngineBuilder({
-        dataFilePath: DataFile,
+        dataFilePath: SmallDataFile,
         licenceKeys: key,
         autoUpdate: false,
         updateOnStart: false,
@@ -96,7 +99,7 @@ describe('ipIntelligenceOnPremise', () => {
     });
 
   test('No license key is needed with the engine defaults', () => {
-    expect(() => new EngineBuilder({ dataFilePath: DataFile }))
+    expect(() => new EngineBuilder({ dataFilePath: SmallDataFile }))
       .not.toThrow();
   });
 
@@ -110,7 +113,7 @@ describe('ipIntelligenceOnPremise', () => {
   ])('License key %p with %p is refused naming the option', (key, options,
     named) => {
     const build = () => new EngineBuilder({
-      dataFilePath: DataFile,
+      dataFilePath: SmallDataFile,
       licenceKeys: key,
       ...options
     });
@@ -122,7 +125,7 @@ describe('ipIntelligenceOnPremise', () => {
   test('The pipeline builder refuses its default autoUpdate with no key',
     () => {
       const build = () => new FiftyOneDegreesIpIntelligenceOnPremise
-        .IpIntelligenceOnPremisePipelineBuilder({ dataFile: DataFile })
+        .IpIntelligenceOnPremisePipelineBuilder({ dataFile: SmallDataFile })
         .build();
       expect(build).toThrow(/\(autoUpdate\)/);
     });
@@ -130,7 +133,7 @@ describe('ipIntelligenceOnPremise', () => {
   test('The pipeline builder needs no key with autoUpdate off', () => {
     const pipeline = new FiftyOneDegreesIpIntelligenceOnPremise
       .IpIntelligenceOnPremisePipelineBuilder({
-        dataFile: DataFile,
+        dataFile: SmallDataFile,
         autoUpdate: false
       }).build();
     expect(pipeline.getElement('ip')).toBeDefined();
@@ -138,7 +141,7 @@ describe('ipIntelligenceOnPremise', () => {
 
   test('An update URL other than the Distributor needs no key', () => {
     const engine = new EngineBuilder({
-      dataFilePath: DataFile,
+      dataFilePath: SmallDataFile,
       dataUpdateUrl: 'https://updates.example.com/data.ipi',
       autoUpdate: true
     });
