@@ -30,9 +30,9 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
      * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates to
-     * be disabled.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {boolean} options.download whether to download the datafile
      * or store it in memory
      * @param {string} options.performanceProfile options are:

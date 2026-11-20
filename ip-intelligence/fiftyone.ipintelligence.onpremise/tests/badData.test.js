@@ -109,6 +109,8 @@ afterAll(() => {
   }
 });
 
+// Updates are off so that each build reaches the bad data file. An update
+// on start-up with no license key fails the build before the file is read.
 describe('Bad data file error messages', () => {
   // Check that an error with appropriate message is
   // thrown when the data file contains bad version
@@ -120,7 +122,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: BadVersionDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -137,7 +139,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: BadHeaderDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -154,7 +156,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: SmallDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };

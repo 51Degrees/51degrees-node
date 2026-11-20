@@ -41,20 +41,89 @@ let server;
 const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 describe('deviceDetectionOnPremise', () => {
-  // Check that an exception is thrown if license key is not
-  // specified when creating an on-premise engine.
-  test('License key required', () => {
-    const test = () => {
-      return new EngineBuilder({
-        dataFilePath: DataFile
+  // As data-updates.md says at specifications d79bbe3b, lines 114 to 116
+  // and 399, a license key is needed
+  // only by polling (autoUpdate) and the update on start-up, which
+  // download from the Distributor, and the build fails naming the option
+  // to turn off when one of them is on with no key. The file system
+  // watcher needs no key.
+  const registered = (engine) => {
+    let config;
+    engine.registrationCallbacks[0]({
+      dataFileUpdateService: {
+        registerDataFile: (dataFileConfig) => { config = dataFileConfig; }
+      }
+    });
+    return config;
+  };
+
+  test.each([undefined, null, ''])(
+    'No license key (%p) is needed when nothing downloads', (key) => {
+      const engine = new EngineBuilder({
+        dataFilePath: DataFile,
+        licenceKeys: key,
+        autoUpdate: false,
+        updateOnStart: false,
+        fileSystemWatcher: true
       });
-    };
-    expect(test).toThrow(/^license key is required/);
+      const config = registered(engine);
+      expect(config.autoUpdate).toBe(false);
+      expect(config.updateOnStart).toBe(false);
+      expect(config.fileSystemWatcher).toBe(true);
+    });
+
+  test('No license key is needed with the engine defaults', () => {
+    expect(() => new EngineBuilder({ dataFilePath: DataFile }))
+      .not.toThrow();
   });
 
-  // Check that an empty license key can be specified.
-  // Also verify that this will cause auto update and
-  // update on startup to be disabled.
+  test.each([
+    [undefined, { autoUpdate: true }, /\(autoUpdate\)/],
+    [null, { autoUpdate: true }, /\(autoUpdate\)/],
+    ['', { autoUpdate: true }, /\(autoUpdate\)/],
+    ['', { updateOnStart: true }, /\(updateOnStart\)/],
+    ['', { autoUpdate: true, updateOnStart: true },
+      /\(autoUpdate, updateOnStart\)/]
+  ])('License key %p with %p is refused naming the option', (key, options,
+    named) => {
+    const build = () => new EngineBuilder({
+      dataFilePath: DataFile,
+      licenceKeys: key,
+      ...options
+    });
+    expect(build).toThrow(named);
+    expect(build).toThrow(/require a license key/);
+    expect(build).toThrow(/to false/);
+  });
+
+  test('The pipeline builder refuses its default autoUpdate with no key',
+    () => {
+      const build = () => new FiftyOneDegreesDeviceDetectionOnPremise
+        .DeviceDetectionOnPremisePipelineBuilder({ dataFile: DataFile })
+        .build();
+      expect(build).toThrow(/\(autoUpdate\)/);
+    });
+
+  test('The pipeline builder needs no key with autoUpdate off', () => {
+    const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
+      .DeviceDetectionOnPremisePipelineBuilder({
+        dataFile: DataFile,
+        autoUpdate: false
+      }).build();
+    expect(pipeline.getElement('device')).toBeDefined();
+  });
+
+  test('An update URL other than the Distributor needs no key', () => {
+    const engine = new EngineBuilder({
+      dataFilePath: DataFile,
+      dataUpdateUrl: 'https://updates.example.com/data.hash',
+      autoUpdate: true
+    });
+    expect(registered(engine).autoUpdate).toBe(true);
+  });
+
+  // An empty license key with nothing that downloads builds, with
+  // automatic update and update on start-up off.
   test('License key can be empty', done => {
     const engine = new EngineBuilder({
       dataFilePath: DataFile,
@@ -64,8 +133,6 @@ describe('deviceDetectionOnPremise', () => {
     const fakePipeline = {
       dataFileUpdateService: {
         registerDataFile: function (dataFileConfig) {
-          // No license key so auto update and update on startup
-          // should be disabled.
           expect(dataFileConfig.autoUpdate).toBe(false);
           expect(dataFileConfig.updateOnStart).toBe(false);
         }
@@ -159,7 +226,8 @@ describe('deviceDetectionOnPremise', () => {
   test('Components for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     expect(Object.entries(device.components).length).toBe(5);
@@ -184,7 +252,8 @@ describe('deviceDetectionOnPremise', () => {
   test('Properties for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     expect(Object.entries(device.properties).length).toBeGreaterThan(0);
@@ -196,7 +265,8 @@ describe('deviceDetectionOnPremise', () => {
   test('profiles for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     const profiles = device.profiles();
@@ -212,7 +282,8 @@ describe('deviceDetectionOnPremise', () => {
   test('key filter has GHEV and SUA keys', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const deviceKeyFilter = pipeline.getElement('device').evidenceKeyFilter.list;
 
