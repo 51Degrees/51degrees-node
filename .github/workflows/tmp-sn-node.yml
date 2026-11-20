@@ -1,0 +1,22 @@
+name: Temporary build of 9c646429 with common-ci 6f756057 on tmp/sn-node
+
+on:
+  push:
+    branches:
+      - 'tmp/sn-node'
+
+jobs:
+  Build:
+    uses: 51Degrees/common-ci/.github/workflows/nightly-pull-requests.yml@6f756057e5252a27df60d7722dc036f5bebd4369
+    with:
+      repo-name: 51degrees-node
+      org-name: 51Degrees
+      branch: tmp/sn-node
+      prs: ''
+      build-without-pull-requests: true
+      dryrun: true
+      cache-assets: true
+      fail-fast: false
+      skip-compare-performance: true
+      common-ci-ref: 6f756057e5252a27df60d7722dc036f5bebd4369
+    secrets: inherit
