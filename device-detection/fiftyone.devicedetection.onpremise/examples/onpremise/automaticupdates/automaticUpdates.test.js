@@ -35,9 +35,7 @@ const os = require('os');
 const path = require('path');
 
 const {
-  DATA_FILE_PATH_VARIABLE,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR
+  DATA_FILE_PATH_VARIABLE
 } = require(path.join(__dirname, '..', 'exampleUtils'));
 
 const EXAMPLES = [
@@ -54,10 +52,7 @@ const TIMEOUT_MS = 60000;
 // jest, so the jest variable is removed too.
 const SETTINGS = [
   DATA_FILE_PATH_VARIABLE,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR,
   '_51DEGREES_LICENSE_KEY',
-  'LICENSE_KEY',
   'JEST_WORKER_ID'
 ];
 

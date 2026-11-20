@@ -1,3 +1,5 @@
 export let noElementData: string;
 export let genericMissingProperties: string;
 export let noReasonUnknown: string;
+export let lazyPending: string;
+export let usageSharingNotLast: string;

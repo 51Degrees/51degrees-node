@@ -171,18 +171,19 @@ const clientIps = () => received
  * A pipeline whose usage sharing element sends each entry on its own.
  *
  * @param {object} settings more settings for the element
- * @param {Array<object>} after elements added after the usage sharing one
+ * @param {Array<object>} others elements added before the usage sharing one
  * @returns {object} the pipeline
  */
-const createPipeline = (settings = {}, after = []) => {
+const createPipeline = (settings = {}, others = []) => {
   usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint,
     ...settings
   });
-  const builder = new PipelineBuilder().add(usageEngine);
-  after.forEach(element => builder.add(element));
-  return builder.build();
+  // The usage sharing element is always last.
+  const builder = new PipelineBuilder();
+  others.forEach(element => builder.add(element));
+  return builder.add(usageEngine).build();
 };
 
 /**

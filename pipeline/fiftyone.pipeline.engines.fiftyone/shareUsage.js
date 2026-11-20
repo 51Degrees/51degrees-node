@@ -130,13 +130,12 @@ class ShareUsage extends Engine {
    * session id. It has no effect unless trackSession is true. The cookie
    * itself is never shared unless its name starts with '51D_', as no other
    * cookie is.
-   * @param {boolean} options.shareAllQueryStringParameters If true, every
-   * query string and HTTP form parameter is shared. True by default.
-   * @param {Array<string>|string|null} options.queryWhitelist When
-   * shareAllQueryStringParameters is false, query string and HTTP form
-   * parameters are not shared unless prefixed with '51D_' or given in this
-   * list, or in one comma separated string of them, as a configuration file
-   * gives a list. null is the same as an empty list.
+   * @param {boolean} options.shareAllQueryStringParameters Deprecated, and
+   * has no effect. A query string or HTTP form parameter is shared when its
+   * name starts with '51D_' or a Flow Element of the Pipeline accepts it,
+   * whatever the settings.
+   * @param {Array<string>|string|null} options.queryWhitelist Deprecated,
+   * and has no effect, as shareAllQueryStringParameters says.
    * @param {Array<string>|string} options.headerBlacklist By default, all
    * HTTP headers except Cookie are shared. Individual headers can be
    * excluded from sharing by adding them to this list, or to one comma
@@ -201,12 +200,11 @@ class ShareUsage extends Engine {
     this.trackSession = trackSession;
 
     // The session id and sequence number are kept in evidence, as the usage
-    // data carries them separately.
-    const queryList = core.listSetting(queryWhitelist);
+    // data carries them separately. The deprecated query string settings
+    // change nothing.
     const options = {
       cookie,
-      shareAllQueryStringParameters,
-      queryWhitelist: [...(queryList || []), 'session-id', 'sequence'],
+      keptQueryParameters: ['session-id', 'sequence'],
       headerBlacklist: core.listSetting(headerBlacklist),
       shareAll
     };
@@ -310,8 +308,13 @@ class ShareUsage extends Engine {
     try {
       if (Math.random() <= this.sharePercentage) {
         // The tracker compares the values that would be shared.
-        const cacheKey = this.trackerEvidenceKeyFilter
-          .filterEvidence(this.getFoundEvidence(flowData));
+        const found = this.getFoundEvidence(flowData);
+        const cacheKey = {};
+        for (const key of Object.keys(found)) {
+          if (this.shares(this.trackerEvidenceKeyFilter, key, flowData)) {
+            cacheKey[key] = found[key];
+          }
+        }
 
         const share = this.tracker.track(cacheKey);
         if (share) {
@@ -399,12 +402,54 @@ class ShareUsage extends Engine {
         }
       } else {
         // Check if we can send this piece of evidence
-        if (this.dataEvidenceKeyFilter.filterEvidenceKey(key)) {
+        if (this.shares(this.dataEvidenceKeyFilter, key, flowData)) {
           data.tryAddToData(key, value);
         }
       }
     });
     return data;
+  }
+
+  /**
+   * Whether a key is shared. A query string or form parameter the filter
+   * leaves out is still shared when a Flow Element of the Pipeline accepts
+   * it, being Evidence the Pipeline uses, as the element's specification
+   * lists it where the element gives that list.
+   *
+   * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
+   * @param {string} key the evidence key
+   * @param {FlowData} flowData the flow data being processed
+   * @returns {boolean} true if the key is shared
+   */
+  shares (filter, key, flowData) {
+    if (filter.filterEvidenceKey(key)) {
+      return true;
+    }
+    // The session id and sequence are carried separately, never as values.
+    const lowerKey = key.toLowerCase();
+    if (lowerKey === 'query.session-id' || lowerKey === 'query.sequence') {
+      return false;
+    }
+    return ShareUsageEvidenceKeyFilter.isParameter(key) &&
+      Object.values(flowData.pipeline.flowElements).some((element) => {
+        // An element whose filter accepts more than its specification
+        // lists, as the JavaScript Builder's does, is asked about the
+        // keys its specification lists.
+        const filter = element.specifiedEvidenceKeyFilter ||
+          element.evidenceKeyFilter;
+        return filter !== undefined && filter.filterEvidenceKey(key);
+      });
+  }
+
+  /**
+   * Marks the usage sharing element, which a Pipeline builder puts after
+   * every other Flow Element, outside any parallel group, and refuses
+   * anywhere else.
+   *
+   * @returns {boolean} true
+   */
+  get isUsageSharing () {
+    return true;
   }
 
   getConstantXml () {

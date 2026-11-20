@@ -26,9 +26,8 @@ module.exports = {
     // The variable the examples read their resource key from.
     superResourceKeyVariable: '_51DEGREES_RESOURCE_KEY_SUPER',
     /**
-     * @deprecated The name the variable had before, which is read only
-     * when the variable superResourceKeyVariable names is unset or empty.
-     * Use superResourceKeyVariable.
+     * @deprecated The name the variable had before, which is no longer
+     * read. Use superResourceKeyVariable.
      */
     superResourceKeyEnvVar: 'TEST_SUPER_RESOURCE_KEY',
     /**

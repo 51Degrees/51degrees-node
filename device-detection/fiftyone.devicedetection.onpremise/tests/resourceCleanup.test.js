@@ -66,6 +66,7 @@ const processAndDrop = async (tempDir, registry) => {
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile: DataFile,
     shareUsage: false,
+    autoUpdate: false,
     createTempDataCopy: true,
     tempDataDir: tempDir
   }).build();

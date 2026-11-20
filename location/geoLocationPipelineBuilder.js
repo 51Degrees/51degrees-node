@@ -56,7 +56,9 @@ class GeoLocationPipelineBuilder extends PipelineBuilder {
     // Check if share usage enabled and add it to the pipeline if so
 
     if (shareUsage) {
-      this.flowElements.push(new ShareUsageElement());
+      // Usage sharing goes after every other Flow Element when the
+      // Pipeline is built.
+      this.usageSharingElement = new ShareUsageElement();
     }
 
     // First we need the cloudRequestEngine
