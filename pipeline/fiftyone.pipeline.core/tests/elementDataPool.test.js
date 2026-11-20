@@ -180,3 +180,114 @@ describe('Element Data pools', () => {
     expect(again.get('name')).toBe('written');
   });
 });
+
+// A promise that settles only when the test says.
+const deferred = () => {
+  const d = {};
+  d.promise = new Promise((resolve) => { d.resolve = resolve; });
+  return d;
+};
+
+describe('Pooled Element Data with a lazy property', () => {
+  // Specification, resource-cleanup.md: "An instance goes back to its pool
+  // only when the Flow Data that holds it is disposed and any lazy task
+  // writing it has finished", and one taken from a pool starts "with no
+  // values and open for writing".
+  test('is reused only once its lazy task has finished, with no lazy ' +
+    'property, and the last request\'s task writes nothing into it',
+  async () => {
+    // For each request that has a lazy property, its task, and the instance
+    // the Flow Element was given once it has it.
+    const lazy = {};
+    const element = new core.FlowElement({
+      dataKey: 'lazy',
+      evidenceKeyFilter: new core.BasicListEvidenceKeyFilter(
+        ['query.request']),
+      processInternal: function (flowData) {
+        const data = this.pooledElementData(
+          () => new CountedData({ flowElement: this, contents: {} }));
+        const request = flowData.evidence.get('query.request');
+        data.contents = { request };
+        if (lazy[request] !== undefined) {
+          data.addLazyProperty('answer', lazy[request].task.promise);
+          // Kept rather than resolved with, as a promise would read 'then'
+          // from the Element Data, which has no such property.
+          lazy[request].data = data;
+          lazy[request].took.resolve();
+        }
+        flowData.setElementData(data);
+      }
+    });
+    const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
+      .add(element)
+      .build();
+    const create = () => new CountedData({
+      flowElement: element,
+      contents: {}
+    });
+
+    // The first request has a lazy property whose task has not finished,
+    // and its Flow Data is disposed while it processes.
+    lazy.first = { task: deferred(), took: deferred() };
+    const first = pipeline.createFlowData();
+    first.evidence.add('query.request', 'first');
+    // Held as a value, so a failure is seen by the expect below.
+    const firstDone = first.process().then(() => undefined, (e) => e);
+    first.dispose();
+    await lazy.first.took.promise;
+    const firstData = lazy.first.data;
+
+    // The task has not finished, so the next request is given another
+    // instance.
+    const second = await request(pipeline, 'second', ['lazy']);
+    expect(second.get('lazy')).not.toBe(firstData);
+    expect(made).toBe(2);
+    second.dispose();
+
+    lazy.first.task.resolve('first answer');
+    expect(await firstDone).toBeUndefined();
+
+    // The task has finished, so the instance went back, and the next
+    // request is given it with no lazy property.
+    const third = await request(pipeline, 'third', ['lazy']);
+    const reused = third.get('lazy');
+    expect(reused).toBe(firstData);
+    expect(made).toBe(2);
+    expect(reused.hasLazyProperties()).toBe(false);
+    expect(reused.isLazyProperty('answer')).toBe(false);
+    expect(() => reused.get('answer')).toThrow(/Property "answer" not found/);
+    third.dispose();
+
+    // Processing finishes only once every lazy task has, so a disposed Flow
+    // Data never gives back an instance whose task is still running. Giving
+    // it back as dispose does, while its task runs, shows such a task writes
+    // nothing into the instance once it is reused.
+    const stale = deferred();
+    const taken = element.elementDataPool.take(create);
+    expect(taken).toBe(firstData);
+    taken.addLazyProperty('answer', stale.promise);
+    core.ElementDataPool.release(taken);
+
+    lazy.fourth = { task: deferred(), took: deferred() };
+    const fourth = pipeline.createFlowData();
+    fourth.evidence.add('query.request', 'fourth');
+    const fourthDone = fourth.process().then(() => undefined, (e) => e);
+    await lazy.fourth.took.promise;
+    expect(lazy.fourth.data).toBe(firstData);
+
+    // The last request's task finishes after the instance was reused. Its
+    // handler was added first, so it has run once this await returns.
+    stale.resolve('stale answer');
+    await stale.promise;
+    expect(firstData.get('request')).toBe('fourth');
+    expect(firstData.hasPendingLazyProperties()).toBe(true);
+    expect(() => firstData.get('answer')).toThrow(/getAsync\("answer"\)/);
+
+    lazy.fourth.task.resolve('fourth answer');
+    expect(await fourthDone).toBeUndefined();
+    expect(fourth.get('lazy')).toBe(firstData);
+    expect(fourth.get('lazy').get('answer')).toBe('fourth answer');
+    expect(made).toBe(2);
+    fourth.dispose();
+  });
+});
