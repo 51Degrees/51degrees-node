@@ -6,6 +6,9 @@ export let ErrorMessages: {
     genericMissingProperties: string;
     noReasonUnknown: string;
     lazyPending: string;
+    flowDataFinished: string;
+    flowDataProcessed: string;
+    elementDataFinished: string;
     usageSharingNotLast: string;
 };
 export let Constants: {

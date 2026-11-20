@@ -22,6 +22,7 @@
 
 const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
+const ElementData = require('./elementData');
 const EventEmitter = require('events');
 const EvidenceKeyFilter = require('./evidenceKeyFilter');
 
@@ -57,6 +58,20 @@ class PipelineEvidenceKeyFilter extends EvidenceKeyFilter {
     return Object.values(this.pipeline.flowElements).some(element =>
       element.evidenceKeyFilter &&
       element.evidenceKeyFilter.filterEvidenceKey(key));
+  }
+}
+
+/**
+ * Records whether the flow elements that write an element data have
+ * finished, which the element data checks before a write. Anything that is
+ * not element data is left alone.
+ *
+ * @param {ElementData|undefined} data the element data
+ * @param {boolean} finished whether they have finished
+ */
+function setFinished (data, finished) {
+  if (data instanceof ElementData) {
+    data._writes.finished = finished;
   }
 }
 
@@ -215,15 +230,23 @@ class Pipeline {
 
             const local = {};
 
+            // Element data another flow element added under this key is
+            // open for writing again while this one processes.
+            setFinished(flowData.tryGet(flowElement.dataKey), false);
+
             let process;
 
             try {
               process = Promise.resolve(flowElement.process(flowData, local));
             } catch (e) {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
               return setError(e);
             }
 
             process
+              .finally(function () {
+                setFinished(flowData.tryGet(flowElement.dataKey), true);
+              })
               .then(function () {
                 resolve(flowData);
               })
@@ -263,6 +286,18 @@ class Pipeline {
           return cur.then(next);
         }, Promise.resolve(flowData)).then(function () {
           return settleLazyProperties(flowData);
+        }, function (error) {
+          // Processing rejected, but a lazy task may still record its
+          // failure, so wait for every task before the Flow Data finishes.
+          return Promise.resolve(settleLazyProperties(flowData))
+            .then(function () { throw error; });
+        }).finally(function () {
+          // Processing has finished, whether or not it rejected, and every
+          // lazy task has finished, so the flow data and every element
+          // data in it, including any the caller added, are read only.
+          flowData.processed = true;
+          flowData.listElementData().forEach((data) =>
+            setFinished(data, true));
         }).then(function () {
           // Processing has finished, so every error has been recorded.
           const errors = Object.values(flowData.errors);

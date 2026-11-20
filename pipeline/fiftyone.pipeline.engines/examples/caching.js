@@ -108,9 +108,10 @@ const cacheTest = new engine.Engine({
 
 const cachePipeline = new pipeline.PipelineBuilder().add(cacheTest).build();
 
-const flowData = cachePipeline.createFlowData();
-
+// Each request has a flow data of its own, because a flow data is
+// processed once.
 const processFlowDataWithUserId = function (userID) {
+  const flowData = cachePipeline.createFlowData();
   flowData.evidence.add('cookie.my-user-id', userID);
 
   return flowData.process();

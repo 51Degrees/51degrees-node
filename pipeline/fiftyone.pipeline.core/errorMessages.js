@@ -28,6 +28,11 @@ module.exports = {
   'are correct.',
   lazyPending: 'Property "%s" in data for element "%s" is worked out by a ' +
     'task that has not finished. Use getAsync("%s") to wait for it.',
+  flowDataFinished: 'Cannot add %s: the flow data has finished processing.',
+  flowDataProcessed: 'The flow data has already been processed. A flow ' +
+    'data is processed once.',
+  elementDataFinished: 'Cannot set "%s": the flow element that writes the ' +
+    'data for element "%s" has finished processing.',
   usageSharingNotLast: 'The usage sharing element must be the last Flow ' +
     'Element in a Pipeline, and outside any parallel group.'
 };

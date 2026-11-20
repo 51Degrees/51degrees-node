@@ -59,8 +59,52 @@ const readLazy = (data, key, lazy) => {
 };
 
 /**
+ * Throws if the flow elements that write the data have finished.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {string|symbol} key the name being written
+ * @throws {Error} once they have finished
+ */
+function refuseFinished (data, key) {
+  if (data._writes.finished) {
+    throw new Error(util.format(errorMessages.elementDataFinished,
+      String(key), data.flowElement.dataKey));
+  }
+}
+
+/**
+ * Wraps the object a dictionary keeps its values in, so that setting or
+ * deleting a value through it once the data has finished throws, as a
+ * write to the data itself does.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {*} contents the values
+ * @returns {*} the values, wrapped if they are an object
+ */
+function guardContents (data, contents) {
+  if (contents === null || typeof contents !== 'object') {
+    return contents;
+  }
+  return new Proxy(contents, {
+    set: (values, key, value) => {
+      refuseFinished(data, key);
+      values[key] = value;
+      return true;
+    },
+    deleteProperty: (values, key) => {
+      refuseFinished(data, key);
+      delete values[key];
+      return true;
+    }
+  });
+}
+
+/**
  * Stores information created by a flowElement based on flowData.
- * Stored in flowData
+ * Stored in flowData. Element data is written only by the flow element that
+ * provides it, or the flow elements that share it, and only while they
+ * process. Once they have finished, a write through the element data, or
+ * into the contents object a dictionary keeps its values in, throws.
  */
 class ElementData {
   /**
@@ -78,6 +122,15 @@ class ElementData {
     }
 
     this.flowElement = flowElement;
+
+    // Whether the flow elements that write the data have finished
+    // processing, when a write through the data throws. An object, as the
+    // proxy takes a field that reads as false for a property name. Names
+    // starting with an underscore hold the data's own state and are not
+    // writes.
+    Object.defineProperty(this, '_writes', {
+      value: { finished: false }
+    });
 
     Object.defineProperty(this, '_lazy', {
       value: noLazyProperties,
@@ -106,6 +159,17 @@ class ElementData {
             }
           }
         }
+      },
+      // Element data is written only by the flow elements that write it,
+      // while they process, so a write once they have finished throws. A
+      // dictionary's contents are wrapped when set, so a write into them is
+      // checked too.
+      set: (data, key, value) => {
+        if (!(typeof key === 'string' && key.startsWith('_'))) {
+          refuseFinished(data, key);
+        }
+        data[key] = key === 'contents' ? guardContents(data, value) : value;
+        return true;
       }
     });
   }
@@ -174,8 +238,10 @@ class ElementData {
    *
    * @param {string} key the property name
    * @param {Promise} task the work that gives the value
+   * @throws {Error} once the flow elements that write the data have finished
    */
   addLazyProperty (key, task) {
+    refuseFinished(this, key);
     let lazies = lazyProperties(this);
     if (lazies === undefined) {
       lazies = new Map();

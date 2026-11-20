@@ -1,7 +1,10 @@
 export = ElementData;
 /**
  * Stores information created by a flowElement based on flowData.
- * Stored in flowData
+ * Stored in flowData. Element data is written only by the flow element that
+ * provides it, or the flow elements that share it, and only while they
+ * process. Once they have finished, a write through the element data, or
+ * into the contents object a dictionary keeps its values in, throws.
  */
 declare class ElementData {
     /**
@@ -56,6 +59,7 @@ declare class ElementData {
      *
      * @param {string} key the property name
      * @param {Promise} task the work that gives the value
+     * @throws {Error} once the flow elements that write the data have finished
      */
     addLazyProperty(key: string, task: Promise<any>): void;
     _lazy: any;

@@ -45,6 +45,18 @@ const member = (dataKey, wait, seen) => new core.FlowElement({
   }
 });
 
+// A Flow Element that adds Element Data holding 'replaced', for a key an
+// earlier Flow Element also has.
+const replacer = (dataKey) => new core.FlowElement({
+  dataKey,
+  processInternal: function (flowData) {
+    flowData.setElementData(new core.ElementDataDictionary({
+      flowElement: this,
+      contents: { name: 'replaced' }
+    }));
+  }
+});
+
 // A Flow Element that throws after waiting.
 const thrower = (dataKey, wait, error) => new core.FlowElement({
   dataKey,
@@ -80,38 +92,33 @@ describe('The Element Data of a Flow Data', () => {
 
   test('added again under one key replaces the earlier, in its place',
     async () => {
-      const element = member('same', 0);
       const pipeline = new core.PipelineBuilder({
         addJavaScriptBuilder: false
-      }).add(element).add(member('after', 0)).build();
+      }).add(member('same', 0)).add(member('after', 0))
+        .add(replacer('same')).build();
       const flowData = pipeline.createFlowData();
       await flowData.process();
-      const replacement = new core.ElementDataDictionary({
-        flowElement: element,
-        contents: { name: 'replaced' }
-      });
-      flowData.setElementData(replacement);
-      expect(flowData.get('same')).toBe(replacement);
+      expect(flowData.get('same').get('name')).toBe('replaced');
       expect(keys(flowData)).toEqual(['same', 'after']);
     });
 
   test('found by a key in another letter case is the data under the key ' +
     'added first that matches it', async () => {
-    const first = member('device', 0);
-    const second = member('DEVICE', 0);
-    const pipeline = new core.PipelineBuilder({ addJavaScriptBuilder: false })
-      .add(first).add(second).build();
-    const flowData = pipeline.createFlowData();
+    const build = (...elements) => {
+      const builder = new core.PipelineBuilder({ addJavaScriptBuilder: false });
+      elements.forEach((element) => builder.add(element));
+      return builder.build();
+    };
+    const flowData = build(member('device', 0), member('DEVICE', 0))
+      .createFlowData();
     await flowData.process();
     expect(flowData.tryGet('Device').get('name')).toBe('device');
     expect(flowData.get('Device').get('name')).toBe('device');
     // Data added again under the first key is the data found.
-    const replacement = new core.ElementDataDictionary({
-      flowElement: first,
-      contents: { name: 'replaced' }
-    });
-    flowData.setElementData(replacement);
-    expect(flowData.tryGet('Device')).toBe(replacement);
+    const replaced = build(member('device', 0), member('DEVICE', 0),
+      replacer('device')).createFlowData();
+    await replaced.process();
+    expect(replaced.tryGet('Device').get('name')).toBe('replaced');
   });
 
   test('not there is undefined from tryGet and an error from get, naming ' +
