@@ -31,6 +31,8 @@ const template = fs.readFileSync(
 
 const FlowElement = require('./flowElement.js');
 const EvidenceKeyFilter = require('./evidenceKeyFilter.js');
+const BasicListEvidenceKeyFilter =
+  require('./basicListEvidenceKeyFilter.js');
 const ElementDataDictionary = require('./elementDataDictionary.js');
 const Constants = require('./constants.js');
 const callbackUrl = require('./callbackUrl.js');
@@ -275,6 +277,22 @@ class JavaScriptBuilderElement extends FlowElement {
 
     this.dataKey = 'javascriptbuilder';
     this.evidenceKeyFilter = new JSEvidenceKeyFilter();
+
+    /**
+     * The Evidence the element's specification lists as accepted, which
+     * usage sharing counts as Evidence the Pipeline uses. The filter above
+     * also accepts every query string parameter, because the element writes
+     * each one into its script, and it decides the cache key, the ETag and
+     * the Vary header.
+     *
+     * @type {EvidenceKeyFilter}
+     */
+    this.specifiedEvidenceKeyFilter = new BasicListEvidenceKeyFilter([
+      'header.host',
+      'header.protocol',
+      'query.fod-js-object-name',
+      'query.fod-js-enable-cookies'
+    ]);
     this.properties = {
       javascript: {
         name: 'javascript',

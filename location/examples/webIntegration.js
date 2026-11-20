@@ -62,15 +62,8 @@ const FIND_OUT_MORE = [
 // example for free: https://51degrees.com/configure/v399y42f?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-webintegration.js&utm_term=top
 // The properties used in this example are:
 // Country, State, County, Town, JavaScript
-// RESOURCE_KEY is the deprecated name of the same variable, read only
-// when _51DEGREES_RESOURCE_KEY is unset or empty.
-if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-    'instead.');
-}
 const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+  '!!YOUR_RESOURCE_KEY!!';
 // We need 'server' to be defined here so that, when this example
 // is executed as part of a unit test, the server can be closed
 // once the test is complete.
@@ -104,6 +97,11 @@ if (myResourceKey.substring(0, 2) === '!!') {
   const core = require('fiftyone.pipeline.core');
 
   server = http.createServer((req, res) => {
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
+    // Code that shares one Flow Data between tasks is responsible for any
+    // locking.
     const flowData = pipeline.createFlowData();
     // Gives the Flow Data's Element Data back to the pools once the
     // response has been sent, after every value it needs has been read.

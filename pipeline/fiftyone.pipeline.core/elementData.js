@@ -28,6 +28,36 @@ const errorMessages = require('./errorMessages');
  * @typedef {import('./flowData')} FlowData
  */
 
+// Held by Element Data with no lazy property. A field must never read as
+// undefined, because the proxy takes a missing field for a property name.
+const noLazyProperties = Object.freeze({});
+
+// The lazy properties of the data, by name in lower case, or undefined.
+const lazyProperties = (data) =>
+  data._lazy === noLazyProperties ? undefined : data._lazy;
+
+// The lazy property under a key, in any letter case, or undefined.
+const lazyEntry = (data, key) => {
+  const lazies = lazyProperties(data);
+  return lazies === undefined || typeof key !== 'string'
+    ? undefined
+    : lazies.get(key.toLowerCase());
+};
+
+// The value of a lazy property whose task has finished, or the task's
+// error. A JavaScript read cannot wait, so a read before the task has
+// finished is an error that names getAsync.
+const readLazy = (data, key, lazy) => {
+  if (lazy.state === 'fulfilled') {
+    return lazy.value;
+  }
+  if (lazy.state === 'rejected') {
+    throw lazy.error;
+  }
+  throw new Error(util.format(errorMessages.lazyPending, key,
+    data.flowElement.dataKey, key));
+};
+
 /**
  * Throws if the flow elements that write the data have finished.
  *
@@ -107,6 +137,11 @@ class ElementData {
       value: { finished: false }
     });
 
+    Object.defineProperty(this, '_lazy', {
+      value: noLazyProperties,
+      writable: true
+    });
+
     // The pool the data came from, if any, and whether it is shared with
     // other requests, as data a cache holds is, so it never goes back.
     Object.defineProperty(this, '_pooling', {
@@ -158,6 +193,9 @@ class ElementData {
    */
   reset () {
     this._writes.finished = false;
+    // A lazy property of the last request is dropped. A task of it that
+    // has not finished keeps its own record, so it writes nothing here.
+    this._lazy = noLazyProperties;
   }
 
   /**
@@ -196,6 +234,10 @@ class ElementData {
    * the data has no value for the key in any case
    */
   get (key) {
+    const lazy = lazyEntry(this, key);
+    if (lazy !== undefined) {
+      return readLazy(this, key, lazy);
+    }
     let value = this.getInternal(key);
     if (typeof value === 'undefined') {
       value = this.getInternalIgnoringCase(key);
@@ -209,6 +251,118 @@ class ElementData {
       }
     }
     return value;
+  }
+
+  /**
+   * Adds a lazy property, whose value is the result of a task the Flow
+   * Element starts while it processes, such as a call to another resource.
+   * The task never reads the Flow Data. Readers wait for it with getAsync,
+   * and the Pipeline waits for every task before processing finishes, so a
+   * read once processing has finished has the value or the task's error.
+   *
+   * @param {string} key the property name
+   * @param {Promise} task the work that gives the value
+   * @throws {Error} once the flow elements that write the data have finished
+   */
+  addLazyProperty (key, task) {
+    refuseFinished(this, key);
+    let lazies = lazyProperties(this);
+    if (lazies === undefined) {
+      lazies = new Map();
+      this._lazy = lazies;
+    }
+    const lazy = { state: 'pending', recorded: false };
+    lazy.settled = Promise.resolve(task).then((value) => {
+      lazy.state = 'fulfilled';
+      lazy.value = value;
+    }, (error) => {
+      lazy.state = 'rejected';
+      lazy.error = error;
+    });
+    lazies.set(key.toLowerCase(), lazy);
+  }
+
+  /**
+   * Whether the property is lazy, in any letter case.
+   *
+   * @param {string} key the property name
+   * @returns {boolean} true if addLazyProperty added it
+   */
+  isLazyProperty (key) {
+    return lazyEntry(this, key) !== undefined;
+  }
+
+  /**
+   * Waits for the property's lazy task, where it has one, then gets the
+   * value as get does. Every reader of a lazy property waits for the same
+   * task, which runs once.
+   *
+   * @param {string} key the property name
+   * @returns {Promise<*>} the value, or the task's error
+   */
+  getAsync (key) {
+    const lazy = lazyEntry(this, key);
+    const wait = lazy === undefined ? Promise.resolve() : lazy.settled;
+    return wait.then(() => this.get(key));
+  }
+
+  /**
+   * Waits for the tasks of every lazy property.
+   *
+   * @returns {Promise<boolean>} true once every task has given its value,
+   * false once every task has finished and one or more failed
+   */
+  lazySettled () {
+    const map = lazyProperties(this);
+    if (map === undefined) {
+      return Promise.resolve(true);
+    }
+    const lazies = [...map.values()];
+    return Promise.all(lazies.map((lazy) => lazy.settled))
+      .then(() => lazies.every((lazy) => lazy.state === 'fulfilled'));
+  }
+
+  /**
+   * Whether the data has a lazy property, whether or not its task has
+   * finished.
+   *
+   * @returns {boolean} true once addLazyProperty has added a property
+   */
+  hasLazyProperties () {
+    return lazyProperties(this) !== undefined;
+  }
+
+  /**
+   * Whether a lazy property's task has not yet finished.
+   *
+   * @returns {boolean} true while a task is running
+   */
+  hasPendingLazyProperties () {
+    const lazies = lazyProperties(this);
+    return lazies !== undefined &&
+      [...lazies.values()].some((lazy) => lazy.state === 'pending');
+  }
+
+  /**
+   * Records the failure of each lazy property's task in the Flow Data's
+   * errors, as an error of the Flow Element that provides this data, once
+   * however many readers meet it. A reader that meets a failure while the
+   * Flow Data is processed calls this, and the Pipeline calls it before
+   * processing finishes.
+   *
+   * @param {FlowData} flowData the Flow Data being processed
+   */
+  recordLazyFailures (flowData) {
+    const lazies = lazyProperties(this);
+    if (lazies === undefined) {
+      return;
+    }
+    for (const lazy of lazies.values()) {
+      if (lazy.state === 'rejected' && lazy.recorded === false) {
+        lazy.recorded = true;
+        flowData.setError(lazy.error, this.flowElement);
+      }
+    }
   }
 
   /**

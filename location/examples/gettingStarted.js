@@ -115,15 +115,8 @@ const FiftyOneDegreesGeoLocation = require('fiftyone.geolocation');
 // paste it into the code, replacing !!YOUR_RESOURCE_KEY!!.
 let localResourceKey = '!!YOUR_RESOURCE_KEY!!';
 if (localResourceKey.substr(0, 2) === '!!') {
-  // RESOURCE_KEY is the deprecated name of the same variable, read only
-  // when _51DEGREES_RESOURCE_KEY is unset or empty.
-  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-      'instead.');
-  }
   localResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY || localResourceKey;
+    localResourceKey;
 }
 
 if (localResourceKey.substr(0, 2) === '!!') {

@@ -160,7 +160,22 @@ class Engine extends FlowElement {
     return Promise.resolve(this.processInternal(flowData)).then(function () {
       if (engine.cache) {
         const data = flowData.get(engine.dataKey);
-        if (engine.isCacheable(data)) {
+        if (typeof data.hasLazyProperties === 'function' &&
+          data.hasLazyProperties()) {
+          // The cache may come to share the data with other requests, so
+          // it never goes back to a pool. It is marked now, before its
+          // tasks have finished, so a Flow Data disposed in the meantime
+          // gives it to no pool.
+          ElementDataPool.share(data);
+          // Data with a lazy property is cached once its tasks have given
+          // their values, so a failed task is never served from the cache.
+          // That includes a task that failed before processing returned.
+          data.lazySettled().then(function (succeeded) {
+            if (succeeded && engine.isCacheable(data)) {
+              engine.cache.put(key, data);
+            }
+          });
+        } else if (engine.isCacheable(data)) {
           // The cache shares the data with other requests, so it never
           // goes back to a pool.
           ElementDataPool.share(data);

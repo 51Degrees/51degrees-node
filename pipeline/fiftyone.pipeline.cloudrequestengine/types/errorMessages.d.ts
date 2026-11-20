@@ -2,7 +2,6 @@ export let evidenceConflict: string;
 export let noCredential: string;
 export let licenseKeyNeedsProperties: string;
 export let discoveryTriedAgain: string;
-export let oldEndpointVariable: string;
 export let propertiesNotCovered: string;
 export let propertiesNotProperties: string;
 export let elementMissing: string;

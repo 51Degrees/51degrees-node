@@ -32,10 +32,6 @@ const childProcess = require('child_process');
 const TIMEOUT_MS = 60000;
 const RESOURCE_KEY = '_51DEGREES_RESOURCE_KEY';
 
-// The deprecated name of the key, removed so that only the name above
-// decides what the examples print.
-const DEPRECATED_NAMES = ['RESOURCE_KEY'];
-
 const COUNTRY = 'Which country is the location ' +
   '[51.458048,-0.9822207999999999] in? United Kingdom';
 const MOBILE = 'Does the User-Agent \'Mozilla/5.0 (iPhone; CPU iPhone OS ' +
@@ -70,16 +66,9 @@ const expectFindOutMore = (file, lines) => {
 };
 
 // Runs an example and returns its exit status, its error output and the
-// lines of its output. The deprecated names are removed without regard to
-// case, as Windows matches them.
+// lines of its output.
 const runExample = (file) => {
-  const remove = new Set(DEPRECATED_NAMES.map((name) => name.toUpperCase()));
   const env = Object.assign({}, process.env);
-  for (const name of Object.keys(env)) {
-    if (remove.has(name.toUpperCase())) {
-      delete env[name];
-    }
-  }
   const result = childProcess.spawnSync(process.execPath, [file], {
     cwd: __dirname,
     env,

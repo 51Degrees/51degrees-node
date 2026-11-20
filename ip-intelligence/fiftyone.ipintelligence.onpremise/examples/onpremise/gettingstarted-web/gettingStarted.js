@@ -51,6 +51,10 @@
  * var registeredName = ipData.registeredname;
  * ```
  *
+ * A Flow Data holds the evidence and results of one request. It must not be
+ * used by two threads at once, so the example creates one for each request
+ * and reads any value it hands to other work into its own variables first.
+ *
  */
 
 const path = require('path');
@@ -162,6 +166,11 @@ const server = http.createServer((req, res) => {
   // Information required for detection is called "evidence".
   // For IP intelligence the IP address of the requesting client
   // is used. This is added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
   // Gives the Flow Data's Element Data back to the pools once the
   // response has been sent, after every value it needs has been read.

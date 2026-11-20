@@ -64,6 +64,7 @@ const processAndDrop = async (tempDir, registry) => {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile: DataFile,
     shareUsage: false,
+    autoUpdate: false,
     createTempDataCopy: true,
     tempDataDir: tempDir
   }).build();

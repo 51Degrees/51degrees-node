@@ -38,9 +38,7 @@ const path = require('path');
 
 const {
   IPI_DATA_FILE_VARIABLE,
-  IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_VARIABLE,
-  DD_DATA_FILE_ENV_VAR
+  DD_DATA_FILE_VARIABLE
 } = require(path.join(__dirname, '..', 'exampleUtils'));
 
 const EXAMPLES = [
@@ -57,11 +55,8 @@ const TIMEOUT_MS = 60000;
 // jest, so the jest variable is removed too.
 const SETTINGS = [
   IPI_DATA_FILE_VARIABLE,
-  IPI_DATA_FILE_ENV_VAR,
   DD_DATA_FILE_VARIABLE,
-  DD_DATA_FILE_ENV_VAR,
   '_51DEGREES_LICENSE_KEY',
-  'LICENSE_KEY',
   'JEST_WORKER_ID'
 ];
 

@@ -6,9 +6,11 @@ export let ErrorMessages: {
     noElementData: string;
     genericMissingProperties: string;
     noReasonUnknown: string;
+    lazyPending: string;
     flowDataFinished: string;
     flowDataProcessed: string;
     elementDataFinished: string;
+    usageSharingNotLast: string;
 };
 export let Constants: {
     evidenceEnableCookies: string;

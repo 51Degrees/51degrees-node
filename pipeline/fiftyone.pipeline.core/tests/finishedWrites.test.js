@@ -231,3 +231,100 @@ describe('Element Data', () => {
       expect(flowData.first._kept).toBe('value');
     });
 });
+
+// A Flow Element whose Element Data has one lazy property, 'value', whose
+// task finishes only when the test says.
+const lazy = (dataKey) => {
+  const work = {};
+  work.task = new Promise((resolve, reject) => {
+    work.resolve = resolve;
+    work.reject = reject;
+  });
+  // A failure the test causes is never left unhandled.
+  work.task.catch(() => {});
+  work.element = new core.FlowElement({
+    dataKey,
+    processInternal: function (flowData) {
+      const data = new core.ElementDataDictionary({
+        flowElement: this,
+        contents: {}
+      });
+      data.addLazyProperty('value', work.task);
+      flowData.setElementData(data);
+    }
+  });
+  return work;
+};
+
+// Lets pending promise callbacks run, so processing gets as far as it can.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+describe('A Flow Data with a lazy property', () => {
+  test('finishes only once the task has, so a failed task is recorded',
+    async () => {
+      const work = lazy('lazy');
+      const flowData = build(work.element).createFlowData();
+      const processing = flowData.process();
+      await settle();
+      expect(flowData.processed).toBe(false);
+      const failure = new Error('the task failed');
+      work.reject(failure);
+      await processing;
+      expect(flowData.processed).toBe(true);
+      expect(flowData.errors.lazy).toBe(failure);
+      expect(() => flowData.setError(new Error('late'), work.element))
+        .toThrow(FINISHED);
+    });
+
+  test('finishes only once the task has when processing rejects',
+    async () => {
+      const work = lazy('lazy');
+      const pipeline = build(work.element, failing('failing'));
+      pipeline.on('error', () => { throw new Error('listener failed'); });
+      const flowData = pipeline.createFlowData();
+      const processing = flowData.process();
+      processing.catch(() => {});
+      await settle();
+      expect(flowData.processed).toBe(false);
+      work.resolve(42);
+      await expect(processing).rejects.toThrow('listener failed');
+      expect(flowData.processed).toBe(true);
+      expect(flowData.lazy.get('value')).toBe(42);
+    });
+});
+
+// A Flow Element that adds a lazy property to another's Element Data.
+const lazyAdder = (dataKey, target) => new core.FlowElement({
+  dataKey,
+  processInternal: function (flowData) {
+    flowData.get(target).addLazyProperty('value', Promise.resolve(dataKey));
+  }
+});
+
+describe('Element Data with a lazy property', () => {
+  test('throws when a lazy property is added once it has finished',
+    async () => {
+      const work = lazy('lazy');
+      const flowData = build(work.element).createFlowData();
+      work.resolve(42);
+      await flowData.process();
+      expect(() => flowData.lazy.addLazyProperty('value', Promise.resolve(7)))
+        .toThrow(ELEMENT_FINISHED);
+      expect(() => flowData.lazy.addLazyProperty('other', Promise.resolve(7)))
+        .toThrow(ELEMENT_FINISHED);
+      await settle();
+      expect(flowData.lazy.get('value')).toBe(42);
+      expect(flowData.lazy.isLazyProperty('other')).toBe(false);
+    });
+
+  test('given a lazy property by a later Flow Element is that element\'s ' +
+    'error', async () => {
+    const flowData = build(adder('first'), lazyAdder('later', 'first'))
+      .createFlowData();
+    await flowData.process();
+    expect(Object.keys(flowData.errors)).toEqual(['later']);
+    expect(String(flowData.errors.later)).toContain(ELEMENT_FINISHED);
+    expect(flowData.first.isLazyProperty('value')).toBe(false);
+    expect(flowData.first.get('value')).toBe('first');
+  });
+});

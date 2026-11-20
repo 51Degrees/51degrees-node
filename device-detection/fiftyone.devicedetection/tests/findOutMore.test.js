@@ -88,7 +88,7 @@ const CLOUD_EXAMPLES = [
 ];
 
 // The names a resource key is read from, removed for the early end.
-const RESOURCE_KEY_NAMES = ['_51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY'];
+const RESOURCE_KEY_NAMES = ['_51DEGREES_RESOURCE_KEY'];
 
 // A 51degrees.com link in the section, whose utm_term starts with
 // "find-out-more".

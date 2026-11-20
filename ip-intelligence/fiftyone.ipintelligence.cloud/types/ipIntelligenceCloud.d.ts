@@ -8,8 +8,9 @@ declare const IpIntelligenceCloud_base: typeof import("fiftyone.pipeline.cloudre
  * of properties. Properties that have weighted values are returned
  * as arrays of objects with 'value', 'weight' and 'rawWeight' entries, as
  * the on-premise engine returns them, each keeping 'rawweighting', which is
- * deprecated in favour of 'rawWeight'. A WKT value is as the service sends
- * it, an object whose 'value' is the WKT text.
+ * deprecated in favour of 'rawWeight'. A WKT value, which the service sends
+ * as an object whose one member 'value' is the WKT text, is read into that
+ * text, which is what the on-premise engine gives.
  **/
 declare class IpIntelligenceCloud extends IpIntelligenceCloud_base {
     /**
