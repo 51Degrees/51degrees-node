@@ -284,20 +284,12 @@ class Pipeline {
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
-        }, Promise.resolve(flowData)).then(function () {
-          return settleLazyProperties(flowData);
-        }, function (error) {
-          // Processing rejected, but a lazy task may still record its
-          // failure, so wait for every task before the Flow Data finishes.
-          return Promise.resolve(settleLazyProperties(flowData))
-            .then(function () { throw error; });
-        }).finally(function () {
-          // Processing has finished, whether or not it rejected, and every
-          // lazy task has finished, so the flow data and every element
-          // data in it, including any the caller added, are read only.
+        }, Promise.resolve(flowData)).finally(function () {
           flowData.processed = true;
           flowData.listElementData().forEach((data) =>
             setFinished(data, true));
+        }).then(function () {
+          return settleLazyProperties(flowData);
         }).then(function () {
           // Processing has finished, so every error has been recorded.
           const errors = Object.values(flowData.errors);
