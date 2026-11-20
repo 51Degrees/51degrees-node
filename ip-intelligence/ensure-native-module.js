@@ -34,7 +34,7 @@ const path = require('path');
 // Node major versions targeted for testing, the current LTS versions.
 // The binding may well build against other versions but they are not
 // tested. See https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=comment&utm_campaign=51degrees-node&utm_content=ensure-native-module.js&utm_term=tested-versions
-const SUPPORTED_NODE_MAJOR_VERSIONS = [22, 24, 26];
+const SUPPORTED_NODE_MAJOR_VERSIONS = [22, 24];
 
 const nodeMajor = Number(process.version.split('.')[0].replace('v', ''));
 const packageDir = path.join(__dirname, 'fiftyone.ipintelligence.onpremise');
@@ -55,7 +55,7 @@ if (SUPPORTED_NODE_MAJOR_VERSIONS.includes(nodeMajor) === false) {
   console.error(
     'ERROR: The on-premise native module does not support Node ' +
     `${nodeMajor}. Supported Node major versions are ` +
-    `${SUPPORTED_NODE_MAJOR_VERSIONS.join(', ')}. Switch version ` +
+    `${SUPPORTED_NODE_MAJOR_VERSIONS.join(' and ')}. Switch version ` +
     '(for example \'nvm use 22\') and run again.');
   process.exit(1);
 }
