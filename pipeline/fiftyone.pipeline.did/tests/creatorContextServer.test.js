@@ -206,11 +206,6 @@ describe('creator context example endpoint', () => {
   const serverPath = join(
     __dirname, '..', 'examples', 'creator-context-web', 'server.js');
 
-  // The name the endpoint variable had before, which is still read when
-  // the new name is not set. Built in two parts so the environment variable
-  // name check does not find it here.
-  const oldName = 'FOD' + '_CLOUD_API_URL';
-
   /**
    * A port nothing is listening on.
    * @returns {Promise<number>} the port
@@ -247,7 +242,6 @@ describe('creator context example endpoint', () => {
   const pageServedWith = async (endpointVariables) => {
     const environment = Object.assign({}, process.env);
     delete environment._51DEGREES_CLOUD_ENDPOINT;
-    delete environment[oldName];
     const port = await freePort();
     const child = spawn(process.execPath, [serverPath], {
       env: Object.assign(environment, endpointVariables, {
@@ -278,22 +272,14 @@ describe('creator context example endpoint', () => {
   // The line of the page that carries the API base.
   const apiLine = (base) => 'var API = "' + base + '";';
 
-  test('only the old variable name set gives that endpoint', async () => {
+  test('the variable set gives its endpoint', async () => {
     const page = await pageServedWith({
-      [oldName]: 'https://old.example/api/v4'
-    });
-    expect(page).toContain(apiLine('https://old.example/api/v4/'));
-  }, 30000);
-
-  test('both names set gives the endpoint of the new name', async () => {
-    const page = await pageServedWith({
-      _51DEGREES_CLOUD_ENDPOINT: 'https://new.example/api/v4',
-      [oldName]: 'https://old.example/api/v4/'
+      _51DEGREES_CLOUD_ENDPOINT: 'https://new.example/api/v4'
     });
     expect(page).toContain(apiLine('https://new.example/api/v4/'));
   }, 30000);
 
-  test('neither name set gives the public cloud', async () => {
+  test('the variable not set gives the public cloud', async () => {
     const page = await pageServedWith({});
     expect(page).toContain(apiLine('https://cloud.51degrees.com/api/v4/'));
   }, 30000);

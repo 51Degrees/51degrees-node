@@ -28,7 +28,7 @@ const childProcess = require('child_process');
 
 const TIMEOUT_MS = 60000;
 // The names the example reads its resource key from.
-const KEY_NAMES = ['_51DEGREES_RESOURCE_KEY', 'RESOURCE_KEY'];
+const KEY_NAMES = ['_51DEGREES_RESOURCE_KEY'];
 
 // The line the example writes after the first line that starts with the
 // text given.

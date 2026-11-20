@@ -80,16 +80,8 @@ let resourceKeySetFromFile = true;
 // Check if a resource key has been set in the config file.
 if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
   .startsWith('!!')) {
-  // If not, check the resource key environment variable. RESOURCE_KEY is
-  // the deprecated name of the same variable, read only when
-  // _51DEGREES_RESOURCE_KEY is unset or empty.
-  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-      'instead.');
-  }
-  const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY;
+  // If not, check the resource key environment variable.
+  const myResourceKey = process.env._51DEGREES_RESOURCE_KEY;
 
   if (myResourceKey) {
     // If there is a resource key in the environment variable then use it.

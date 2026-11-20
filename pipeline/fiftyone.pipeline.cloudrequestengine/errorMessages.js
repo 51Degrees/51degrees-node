@@ -40,13 +40,6 @@ module.exports = {
   discoveryTriedAgain: 'The cloud service did not answer the Cloud ' +
     "Request Engine's discovery requests when the engine was built, so " +
     'they are tried again when it first processes. %s',
-  // Logged once for an engine whose endpoint was read from the deprecated
-  // variable name.
-  oldEndpointVariable: 'The FOD_CLOUD_API_URL environment variable is ' +
-    'deprecated and _51DEGREES_CLOUD_ENDPOINT replaces it. The cloud ' +
-    'endpoint was read from FOD_CLOUD_API_URL because ' +
-    '_51DEGREES_CLOUD_ENDPOINT is not set. Set _51DEGREES_CLOUD_ENDPOINT ' +
-    'to the same value.',
   // Logged once when, with a license key, an answer leaves out requested
   // properties.
   propertiesNotCovered: 'The cloud service did not return the ' +

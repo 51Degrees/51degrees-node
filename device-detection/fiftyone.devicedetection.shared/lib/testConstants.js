@@ -40,8 +40,8 @@ module.exports = {
     licenseKeyEnvVar: 'TEST_LICENSE_KEY'
   },
   /**
-   * @deprecated The name each of envVars replaced. An old name is read only
-   * when the name that replaced it is unset or empty. Use envVars.
+   * @deprecated The name each of envVars replaced. The old names are no
+   * longer read. Use envVars.
    */
   legacyEnvVars: {
     _51DEGREES_RESOURCE_KEY: 'RESOURCE_KEY',

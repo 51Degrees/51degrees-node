@@ -37,9 +37,7 @@ const request = require('supertest');
 
 const {
   ExampleUtils,
-  NEEDS_ENTERPRISE,
-  IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_ENV_VAR
+  NEEDS_ENTERPRISE
 } = require(path.join(__dirname, 'exampleUtils'));
 
 const DATA_DIR =
@@ -63,11 +61,7 @@ const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
 const SETTINGS = [
   '_51DEGREES_IPI_PATH',
   '_51DEGREES_DD_PATH',
-  IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_ENV_VAR,
-  '_51DEGREES_LICENSE_KEY',
-  'LICENSE_KEY',
-  'LICENSEKEY'
+  '_51DEGREES_LICENSE_KEY'
 ];
 
 // The free Lite data file, downloaded if it is missing.

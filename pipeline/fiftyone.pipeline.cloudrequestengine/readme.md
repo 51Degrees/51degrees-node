@@ -96,10 +96,8 @@ package, in this repository and in the device detection and geolocation
 packages, inherits that choice, so setting the variable once points all of
 them at the same place.
 
-`FOD_CLOUD_API_URL` is the deprecated name of the same variable. It is read
-only when `_51DEGREES_CLOUD_ENDPOINT` is unset or empty, and the engine then
-logs one `warn` message to its Pipeline, on the first process, saying the old
-name is deprecated. Set `_51DEGREES_CLOUD_ENDPOINT` instead.
+`FOD_CLOUD_API_URL`, the old name of the same variable, is no longer read.
+Set `_51DEGREES_CLOUD_ENDPOINT` instead.
 
 A host other than `cloud.51degrees.com` would be used to (a) use an on
 premise web server, or (b) use a privately hosted version of the 51Degrees
