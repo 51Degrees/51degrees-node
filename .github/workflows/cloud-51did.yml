@@ -57,7 +57,7 @@ jobs:
         shell: pwsh
         env:
           _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
-          _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
+          _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
           # A license key redeems only with a resource key of the same
           # account, so each is paired with the resource key of the same
           # suffix. With any other resource key the cloud answers unreadable
@@ -70,6 +70,19 @@ jobs:
             Write-Host '::error::No _51DEGREES_RESOURCE_KEY* secret reached this job. The tests need a key that carries the FODid product, and the CloudV5FODiD product for the marketing usages.'
             exit 1
           }
+          # A license key whose resource key is empty means that secret is
+          # missing. Its pass would be left out and the job would pass on
+          # the other keys alone, so the step fails naming the secret.
+          $missing = @(Get-ChildItem env: |
+            Where-Object { $_.Name -like '_51DEGREES_LICENSE_KEY_*' -and $_.Value } |
+            ForEach-Object {
+              $resourceName = $_.Name -replace '^_51DEGREES_LICENSE_KEY', '_51DEGREES_RESOURCE_KEY'
+              if (-not [Environment]::GetEnvironmentVariable($resourceName)) {
+                Write-Host "::error::$($_.Name) has a value but $resourceName is empty, so the licensed redeem would not run. Add the secret $resourceName."
+                $resourceName
+              }
+            })
+          if ($missing) { exit 1 }
           # Taken out of the environment so the test only sees the one that
           # matches the resource key of each pass.
           $licenses = @{}
@@ -100,5 +113,5 @@ jobs:
         # Runs even when the loop above failed, so a run reports both.
         if: ${{ !cancelled() }}
         env:
-          _51DEGREES_RESOURCE_KEY_BASIC: ${{ vars._51DEGREES_RESOURCE_KEY_BASIC }}
+          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
         run: npx jest tests/tierEntitlement.integration.test.js

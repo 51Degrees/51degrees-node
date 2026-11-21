@@ -144,7 +144,9 @@ let server;
 
 // Pipeline variable to be used
 let pipeline;
-const setPipeline = (resourceKey) => {
+// The tests may pass a license key, with the properties to ask the cloud
+// service for, in place of the resource key.
+const setPipeline = (resourceKey, { licenceKeys = null, requestedProperties = null } = {}) => {
   // Create a new Device Detection pipeline and set the config.
   // You need to create a resource key at
   // https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-useragentclienthints-web-useragentclienthintsweb.js&utm_term=setpipeline
@@ -152,6 +154,8 @@ const setPipeline = (resourceKey) => {
   // paid subscription is needed to populate them all.
   pipeline = new DeviceDetectionCloudPipelineBuilder({
     resourceKey,
+    licenceKeys,
+    requestedProperties,
     // Set to `true` so that if the underlying cloud service fails during request
     // processing the device-detection pipeline degrades gracefully instead of
     // returning a 500. Use `false` while developing to surface mistakes loudly.
