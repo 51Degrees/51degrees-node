@@ -360,10 +360,11 @@ class JSONBundlerElement extends FlowElement {
       }
     }
 
-    const data = new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { json: output }
-    });
+      contents: {}
+    }));
+    data.contents = { json: output };
 
     flowData.setElementData(data);
   }

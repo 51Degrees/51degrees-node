@@ -26,6 +26,11 @@ declare class AspectDataDictionary extends AspectData {
     }, ...args: any[]);
     contents: object;
     /**
+     * Returns the data to the state of a new instance, with no values and
+     * open for writing, before a pool gives it to another request.
+     */
+    reset(): void;
+    /**
      * getInternal retrieves a value from the dictionary
      *
      * @param {string} key property key

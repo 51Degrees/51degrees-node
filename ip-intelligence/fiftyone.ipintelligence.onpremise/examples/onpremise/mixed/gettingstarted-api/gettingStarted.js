@@ -206,6 +206,11 @@ const processEvidence = function (req, res, query, body) {
   // Code that shares one Flow Data between tasks is responsible for any
   // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Add the query string parameters and any form body values as query
   // evidence, and the headers and cookies from the request.

@@ -61,6 +61,25 @@ const server = http.createServer(async (req, res) => {
 
 The parallel groups a Pipeline runs are the one case where several tasks use a Flow Data at once. Each member of a group writes only its own Element Data, and the Pipeline adds the errors a member throws once every member has finished. Every web example creates its Flow Data for each request, as the comment above `pipeline.createFlowData()` in each one says.
 
+## Reusing Element Data
+
+Each Flow Element can reuse its Element Data through a bounded pool rather than make new Element Data for every request. Call `flowData.dispose()` once you have finished with a Flow Data, such as when the response to its request has been sent, and its Element Data goes back to the pools it came from. Each web example does this with `res.on('finish', () => flowData.dispose())` straight after it creates the Flow Data for a request. The finish event comes once the whole response has been sent, after every value has been read. Dispose on the close event instead and a client that goes away while its Flow Data is still processing gets its Element Data given back as processing finishes, before your code reads it. Element Data a cache holds stays with the cache, because the cache shares it with other requests. A Flow Data disposed while it is still processing gives its Element Data back once processing has finished. A Flow Data that is never disposed is collected as garbage in the usual way, and its Element Data goes back to no pool.
+
+Keeping a reference to a Flow Data, or to any Element Data it holds, after the Flow Data is disposed is not supported, because a pool may give the instance to another request. Nothing checks for this when the Element Data is read, so read the values you need before you dispose of the Flow Data.
+
+A Flow Element of your own takes its Element Data from its pool with `pooledElementData`, giving a function that makes a new instance when the pool has none. An instance taken from the pool has no values and is open for writing.
+
+```js
+processInternal (flowData) {
+  const data = this.pooledElementData(() => new ElementDataDictionary({
+    flowElement: this,
+    contents: {}
+  }));
+  data.contents = { starSign: 'Aries' };
+  flowData.setElementData(data);
+}
+```
+
 ## Tests
 
 To run tests you will need to install the `jest` library.

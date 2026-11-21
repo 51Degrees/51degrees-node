@@ -170,6 +170,11 @@ const server = http.createServer(async (req, res) => {
   // Code that shares one Flow Data between tasks is responsible for any
   // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Add any information from the request
   // (headers, cookies and additional client side provided information,

@@ -24,6 +24,7 @@ declare class FlowData {
     stopped: boolean;
     processing: boolean;
     processed: boolean;
+    disposed: boolean;
     elementDataHead: any;
     /**
      * Get back an object that lists all evidence that will be
@@ -53,6 +54,17 @@ declare class FlowData {
      * in flowData.errors, unless the pipeline suppresses process exceptions.
      */
     process(): Promise<any>;
+    /**
+     * Disposes the flow data once the caller has finished with it, giving its
+     * element data back to the pools it came from. Element data a cache holds
+     * stays with the cache. A flow data disposed while it processes gives its
+     * element data back once processing has finished. Keeping a reference to
+     * the flow data or to its element data after this is not supported,
+     * because a pool may give the instance to another request. Nothing checks
+     * for that on a read. A flow data that is never disposed is collected as
+     * garbage, and its element data goes back to no pool.
+     */
+    dispose(): void;
     /**
      * Throws once processing has finished, because a finished flow data is
      * read only. Every method that writes to the flow data calls this first.

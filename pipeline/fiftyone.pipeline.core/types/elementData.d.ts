@@ -5,6 +5,11 @@ export = ElementData;
  * provides it, or the flow elements that share it, and only while they
  * process. Once they have finished, a write through the element data, or
  * into the contents object a dictionary keeps its values in, throws.
+ *
+ * Element data may come from a pool, and go back to it when the flow data
+ * that holds it is disposed. Keeping a reference to element data after its
+ * flow data is disposed is not supported, because the pool may give the
+ * instance to another request. Nothing checks for that on a read.
  */
 declare class ElementData {
     /**
@@ -20,6 +25,13 @@ declare class ElementData {
         flowElement: FlowElement;
     });
     flowElement: import("./flowElement");
+    /**
+     * Returns the data to the state of a new instance, with no values and
+     * open for writing, before a pool gives it to another request. Classes
+     * inheriting from elementData that hold values override this and call
+     * it.
+     */
+    reset(): void;
     /**
      * Internal get method for elementData to retrieve an element from it
      * called via the elementData's get method
