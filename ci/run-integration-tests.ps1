@@ -11,11 +11,13 @@ $PSNativeCommandUseErrorActionPreference = $true
 # common-ci exports before this runs. It is not set here, so an empty input
 # cannot clear it.
 
-# common-ci exports the 51Did license into every job, but a license redeems
-# only with a resource key of the same account. With any other key the
-# licensed redeem in didClient.integration.test.js answers unreadable, so
-# the tests get the license only when they run with the 51DID resource key.
-# Without it they redeem unlicensed and check for the unreadable answer.
+# common-ci does not export the 51Did license, so the main CI has none and
+# the tests redeem unlicensed. Only .github/workflows/cloud-51did.yml sets
+# it. A license redeems only with a resource key of the same account. With
+# any other key the licensed redeem in didClient.integration.test.js answers
+# unreadable, so should a job ever have the license, the tests get it only
+# when they run with the 51DID resource key. Without it they redeem
+# unlicensed and check for the unreadable answer.
 if (-not $env:_51DEGREES_RESOURCE_KEY_51DID -or
     $env:_51DEGREES_RESOURCE_KEY -cne $env:_51DEGREES_RESOURCE_KEY_51DID) {
     Remove-Item env:_51DEGREES_LICENSE_KEY_51DID -ErrorAction Ignore
