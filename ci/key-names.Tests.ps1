@@ -100,10 +100,12 @@ Describe 'ci/setup-environment.ps1' {
 Describe 'ci/run-integration-tests.ps1' {
     BeforeEach {
         $script:Saved = Save-Environment @('_51DEGREES_RESOURCE_KEY',
-            'NAMES_TEST_KEY_SEEN')
+            '_51DEGREES_RESOURCE_KEY_51DID', '_51DEGREES_LICENSE_KEY_51DID',
+            'NAMES_TEST_KEY_SEEN', 'NAMES_TEST_LICENSE_SEEN')
         $script:Work = New-Work 'run-integration-tests.ps1' @{
-            'node/run-integration-tests.ps1' =
-                'param($RepoName) $env:NAMES_TEST_KEY_SEEN = "[$env:_51DEGREES_RESOURCE_KEY]"'
+            'node/run-integration-tests.ps1' = 'param($RepoName)
+$env:NAMES_TEST_KEY_SEEN = "[$env:_51DEGREES_RESOURCE_KEY]"
+$env:NAMES_TEST_LICENSE_SEEN = "[$env:_51DEGREES_LICENSE_KEY_51DID]"'
         }
     }
     AfterEach {
@@ -126,6 +128,42 @@ Describe 'ci/run-integration-tests.ps1' {
         } finally { Pop-Location }
         $env:NAMES_TEST_KEY_SEEN | Should -Be '[exported-key]'
         $env:_51DEGREES_RESOURCE_KEY | Should -Be 'exported-key'
+    }
+
+    # common-ci exports the 51Did license into every job, but it redeems
+    # only with the 51DID resource key. With any other key the licensed
+    # redeem in didClient.integration.test.js answers unreadable.
+    It 'gives the tests no 51Did license when the key is not the 51DID key' {
+        $env:_51DEGREES_RESOURCE_KEY = 'bespoke-key'
+        $env:_51DEGREES_RESOURCE_KEY_51DID = 'did-key'
+        $env:_51DEGREES_LICENSE_KEY_51DID = 'did-license'
+        Push-Location $script:Work
+        try {
+            & "$script:Work/repo/ci/run-integration-tests.ps1" -RepoName repo -SeleniumContract $false
+        } finally { Pop-Location }
+        $env:NAMES_TEST_LICENSE_SEEN | Should -Be '[]'
+    }
+
+    It 'gives the tests no 51Did license when there is no 51DID key' {
+        $env:_51DEGREES_RESOURCE_KEY = 'bespoke-key'
+        $env:_51DEGREES_RESOURCE_KEY_51DID = $null
+        $env:_51DEGREES_LICENSE_KEY_51DID = 'did-license'
+        Push-Location $script:Work
+        try {
+            & "$script:Work/repo/ci/run-integration-tests.ps1" -RepoName repo -SeleniumContract $false
+        } finally { Pop-Location }
+        $env:NAMES_TEST_LICENSE_SEEN | Should -Be '[]'
+    }
+
+    It 'gives the tests the 51Did license when the key is the 51DID key' {
+        $env:_51DEGREES_RESOURCE_KEY = 'did-key'
+        $env:_51DEGREES_RESOURCE_KEY_51DID = 'did-key'
+        $env:_51DEGREES_LICENSE_KEY_51DID = 'did-license'
+        Push-Location $script:Work
+        try {
+            & "$script:Work/repo/ci/run-integration-tests.ps1" -RepoName repo -SeleniumContract $false
+        } finally { Pop-Location }
+        $env:NAMES_TEST_LICENSE_SEEN | Should -Be '[did-license]'
     }
 }
 
