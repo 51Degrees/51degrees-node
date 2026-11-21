@@ -113,5 +113,5 @@ jobs:
         # Runs even when the loop above failed, so a run reports both.
         if: ${{ !cancelled() }}
         env:
-          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_FREE }}
+          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
         run: npx jest tests/tierEntitlement.integration.test.js

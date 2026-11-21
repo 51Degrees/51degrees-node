@@ -211,10 +211,14 @@ describe('environment variable names', () => {
   // A 51Did license redeems only with a resource key of the same account,
   // so the 51DID resource key must come from the secret of its own name.
   // Filled from another key, such as BESPOKE, the licensed redeem answers
-  // unreadable.
-  it('fills the 51DID resource key only from the secret of that name', () => {
-    const assignment = /^\s*_51DEGREES_RESOURCE_KEY_51DID\s*:\s*(.*?)\s*$/;
-    const expected = '$' + '{{ secrets._51DEGREES_RESOURCE_KEY_51DID }}';
+  // unreadable. The Basic tier test needs a key on CloudV5Basic alone, so
+  // the BASIC resource key must come from the secret of its own name too.
+  it.each([
+    '_51DEGREES_RESOURCE_KEY_51DID',
+    '_51DEGREES_RESOURCE_KEY_BASIC'
+  ])('fills %s only from the secret of that name', (name) => {
+    const assignment = new RegExp('^\\s*' + name + '\\s*:\\s*(.*?)\\s*$');
+    const expected = '$' + '{{ secrets.' + name + ' }}';
     const found = [];
 
     for (const file of trackedFiles()) {
