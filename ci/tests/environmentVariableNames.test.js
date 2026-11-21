@@ -208,6 +208,36 @@ describe('environment variable names', () => {
     expect(namesInRepository(OLD_KEY_NAME)).toEqual([]);
   });
 
+  // A 51Did license redeems only with a resource key of the same account,
+  // so the 51DID resource key must come from the secret of its own name.
+  // Filled from another key, such as BESPOKE, the licensed redeem answers
+  // unreadable.
+  it('fills the 51DID resource key only from the secret of that name', () => {
+    const assignment = /^\s*_51DEGREES_RESOURCE_KEY_51DID\s*:\s*(.*?)\s*$/;
+    const expected = '$' + '{{ secrets._51DEGREES_RESOURCE_KEY_51DID }}';
+    const found = [];
+
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const lines = fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8')
+        .split('\n');
+      lines.forEach((line, index) => {
+        const match = line.match(assignment);
+        if (match) {
+          found.push(`${file}:${index + 1}: ${match[1]}`);
+        }
+      });
+    }
+
+    // The Cloud 51Did workflow fills it, so the test cannot pass by
+    // finding nothing.
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.filter((entry) => !entry.endsWith(': ' + expected)))
+      .toEqual([]);
+  });
+
   it('matches only a whole old or dropped key name', () => {
     const subject = (text) =>
       [...text.matchAll(OLD_KEY_NAME)].map((match) => match[2]);
