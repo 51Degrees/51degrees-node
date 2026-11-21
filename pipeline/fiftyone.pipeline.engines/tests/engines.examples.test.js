@@ -20,48 +20,150 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const fs = require('fs');
+// Runs each example in its own process, from its own folder, as a person
+// runs it, and checks what it prints or serves.
+
+const childProcess = require('child_process');
+const http = require('http');
+const net = require('net');
 const path = require('path');
 
-const testExample = function ({ file, portNumber }) {
-  if (portNumber) {
-    process.env.PORT = portNumber;
-  }
+const TIMEOUT_MS = 30000;
 
-  // Change the working directory of the example to be the example itself
+// The environment of an example run as a person runs it, outside jest.
+const exampleEnvironment = () => {
+  const env = Object.assign({}, process.env);
+  delete env.JEST_WORKER_ID;
+  return env;
+};
 
-  process.env.directory = path.dirname(file);
+// Runs a console example to its end, from its own folder.
+const runExample = (file) => childProcess.spawnSync(
+  process.execPath, [path.basename(file)], {
+    cwd: path.dirname(file),
+    env: exampleEnvironment(),
+    encoding: 'utf8',
+    timeout: TIMEOUT_MS
+  });
 
-  let code = fs.readFileSync(file, 'utf8');
+// A port nothing is listening on.
+const freePort = () => new Promise((resolve, reject) => {
+  const server = net.createServer();
+  server.once('error', reject);
+  server.listen(0, () => {
+    const { port } = server.address();
+    server.close(() => resolve(port));
+  });
+});
 
-  // Add in closer of any apps
+// Gets a page, or undefined when nothing answers yet.
+const get = (port, urlPath) => new Promise((resolve) => {
+  http.get({ host: '127.0.0.1', port, path: urlPath }, (res) => {
+    let body = '';
+    res.setEncoding('utf8');
+    res.on('data', (chunk) => { body += chunk; });
+    res.on('end', () => resolve({ status: res.statusCode, body }));
+  }).on('error', () => resolve(undefined));
+});
 
-  const serverClose = `
-    
-    if(typeof server !== "undefined"){
-
-        server.close();
-
+// Starts a web example from its own folder, gets one page from it once it
+// answers, and stops it. What the example wrote is returned with the page,
+// so a failure shows why.
+const getFromExample = async (file, urlPath) => {
+  const port = await freePort();
+  const env = exampleEnvironment();
+  env.PORT = String(port);
+  const child = childProcess.spawn(
+    process.execPath, [path.basename(file)], {
+      cwd: path.dirname(file),
+      env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  let output = '';
+  child.stdout.on('data', (chunk) => { output += chunk; });
+  child.stderr.on('data', (chunk) => { output += chunk; });
+  try {
+    const end = Date.now() + TIMEOUT_MS / 2;
+    while (Date.now() < end && child.exitCode === null) {
+      const response = await get(port, urlPath);
+      if (response !== undefined) {
+        return Object.assign(response, { output });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
+    return { status: undefined, body: '', output };
+  } finally {
+    child.kill();
+  }
+};
 
-    `;
+const EXAMPLES = path.resolve(__dirname, '..', 'examples');
 
-  code += serverClose;
+// Every example ends with a Find out more section, which is a rule of 79
+// equals signs, the heading, then one line per link, each a tab, a label
+// and an address, with the Pipeline API folder and a 51degrees.com link
+// tagged for the section among them.
+const RULE = '='.repeat(79);
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/pipeline';
+const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
 
-  () => jest.fn(eval(code)); // eslint-disable-line
+const expectEndsWithFindOutMore = (stdout) => {
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const heading = lines.lastIndexOf('Find out more:');
+  expect(heading).toBeGreaterThan(0);
+  expect(lines[heading - 1]).toBe(RULE);
+  const links = lines.slice(heading + 1);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThe Pipeline API: ${REPOSITORY}`);
+  expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
+};
+
+// Checks a page has the section after the text given, with the Pipeline
+// API folder and a tagged 51degrees.com link.
+const expectPageEndsWithFindOutMore = (body, before) => {
+  const section = body.lastIndexOf('Find out more');
+  expect(section).toBeGreaterThan(body.lastIndexOf(before));
+  expect(body.slice(section)).toContain(REPOSITORY);
+  expect(body.slice(section)).toContain(FIND_OUT_MORE_LINK);
 };
 
 test('caching example', () => {
-  testExample(
-    { file: path.resolve(__dirname, '..', 'examples', 'caching.js') }
-  );
-});
+  const result = runExample(path.join(EXAMPLES, 'caching.js'));
 
-test('on premise flow element example', () => {
-  testExample(
-    {
-      file: path.resolve(__dirname, '..', 'examples', 'onPremiseFlowElement.js'),
-      portNumber: 3002
-    }
-  );
-});
+  expect({ status: result.status, stderr: result.stderr })
+    .toEqual({ status: 0, stderr: expect.any(String) });
+  // The second request with the same user id is answered from the cache.
+  expect(result.stdout).toContain('Fetched from cache');
+  expectEndsWithFindOutMore(result.stdout);
+}, TIMEOUT_MS);
+
+test('on premise flow element example asks for a date of birth',
+  async () => {
+    const page = await getFromExample(
+      path.join(EXAMPLES, 'onPremiseFlowElement.js'), '/');
+
+    // What the example wrote is shown when it served no page.
+    expect({
+      status: page.status,
+      output: page.status === 200 ? '' : page.output
+    }).toEqual({ status: 200, output: '' });
+    expect(page.body)
+      .toContain('Add your date of birth to get your starsign');
+    expectPageEndsWithFindOutMore(page.body, 'Add your date of birth to get your starsign');
+  }, TIMEOUT_MS);
+
+test('on premise flow element example gives the star sign', async () => {
+  const page = await getFromExample(
+    path.join(EXAMPLES, 'onPremiseFlowElement.js'),
+    '/?dateOfBirth=2019-09-26');
+
+  expect({
+    status: page.status,
+    output: page.status === 200 ? '' : page.output
+  }).toEqual({ status: 200, output: '' });
+  expect(page.body).toMatch(/Your starsign is libra/i);
+  expectPageEndsWithFindOutMore(page.body, 'Your starsign is');
+}, TIMEOUT_MS);

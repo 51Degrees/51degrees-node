@@ -21,8 +21,10 @@
  * ********************************************************************* */
 
 const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
+const ElementDataPool = require('./elementDataPool');
 
 /**
+ * @typedef {import('./elementData')} ElementData
  * @typedef {import('./flowData')} FlowData
  * @typedef {import('./pipeline')} Pipeline
  * @typedef {import('./evidenceKeyFilter')} EvidenceKeyFilter
@@ -129,6 +131,28 @@ class FlowElement {
    */
   processInternal (flowData) {
     return true;
+  }
+
+  /**
+   * Element data for this flow element from its pool, with no values and
+   * open for writing, or a new instance from create when the pool has none.
+   * The instance goes back to the pool when the flow data that holds it is
+   * disposed, unless a cache holds it. Keeping a reference to it after that
+   * is not supported.
+   *
+   * @param {function(): ElementData} create makes a new instance
+   * @returns {ElementData} the instance
+   */
+  pooledElementData (create) {
+    if (this.elementDataPool === undefined) {
+      /**
+       * The pool of this flow element's element data, made on first use.
+       *
+       * @type {ElementDataPool|undefined}
+       */
+      this.elementDataPool = new ElementDataPool();
+    }
+    return this.elementDataPool.take(create);
   }
 
   /**

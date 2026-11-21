@@ -93,31 +93,54 @@ const coreJsPath = '/51Degrees.core.js';
 // Path the client-side script posts the evidence it gathers to.
 const jsonPath = '/json';
 
+// Where to go next, printed when the example ends with no resource key. The
+// page holds the same section when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // Pipeline variable to be used
 let pipeline;
+
+// What the example says when it has no resource key, which it needs to use
+// the 51Degrees cloud service.
+const NO_RESOURCE_KEY_MESSAGE =
+  'No resource key specified in the configuration file ' +
+  '\'51d.json\' or the environment variable ' +
+  `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
+  'service is accessed using a \'ResourceKey\'. For more information ' +
+  'see ' +
+  'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
+  'A resource key with everything this example displays can be ' +
+  'created at https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
+  'subscription. A free key created at ' +
+  'https://51degrees.com/configure/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required populates only the ' +
+  'free properties, which for IP intelligence are Country, ' +
+  'LocationConfidence, Ip and IpV6. See ' +
+  'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
+  'more properties. Once complete, populate the config file or ' +
+  'environment variable mentioned at the start of this message ' +
+  'with the key.';
 
 const setPipeline = (options) => {
   const resourceKey = optionsExtension.getResourceKey(options);
 
   if (!resourceKey || resourceKey.startsWith('!!')) {
-    throw 'No resource key specified in the configuration file ' +
-      '\'51d.json\' or the environment variable ' +
-      `'${ExampleUtils.RESOURCE_KEY_VARIABLE}'. The 51Degrees cloud ` +
-      'service is accessed using a \'ResourceKey\'. For more information ' +
-      'see ' +
-      'https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required. ' +
-      'A resource key with everything this example displays can be ' +
-      'created at https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required with a paid ' +
-      'subscription. A free key created at ' +
-      'https://configure.51degrees.com/Wkqxf3Bs?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required populates only the ' +
-      'free properties, which for IP intelligence are Country, ' +
-      'LocationConfidence, Ip and IpV6. See ' +
-      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.cloud-examples-cloud-mixed-gettingstarted-web-gettingstarted.js&utm_term=resource-key-required to get a paid subscription with ' +
-      'more properties. Once complete, populate the config file or ' +
-      'environment variable mentioned at the start of this message ' +
-      'with the key.';
+    throw NO_RESOURCE_KEY_MESSAGE;
   }
 
+  // Usage sharing is on, as this example's 51d.json names the usage sharing
+  // element and as it should be in production, because the usage data shared
+  // improves the data and the service for everyone. The console examples
+  // turn it off, as they run sample evidence only.
   pipeline = new core.PipelineBuilder({
     // Add the elements that build the client-side script and the JSON it
     // fetches.
@@ -131,6 +154,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
@@ -151,7 +176,17 @@ const server = http.createServer(async (req, res) => {
   // Information required for detection is called "evidence".
   // The User-Agent and IP address of the requesting client are
   // added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Extract required evidence from the Http request, being its headers,
   // cookies and query string. The client-side script posts the evidence
@@ -170,9 +205,13 @@ const server = http.createServer(async (req, res) => {
 
   if (urlPath === jsonPath) {
     // Answer the client-side script with the results of processing the
-    // evidence it posted.
+    // evidence it posted. A matching If-None-Match gets its 304 without
+    // processing.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
@@ -183,8 +222,11 @@ const server = http.createServer(async (req, res) => {
     // Serve the client-side script built for this request. The script
     // carries the results of this request's detection, so it is built per
     // request rather than cached.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
@@ -252,11 +294,19 @@ if (process.env.JEST_WORKER_ID === undefined) {
       options, ExampleUtils.getResourceKeyFromEnv());
   }
 
-  setPipeline(options);
-  const port = process.env.PORT || 3001;
-  const hostname = 'localhost';
-  server.listen(port, hostname);
-  console.log(`Server listening on: http://${hostname}:${port}`);
+  const resourceKey = optionsExtension.getResourceKey(options);
+  if (!resourceKey || resourceKey.startsWith('!!')) {
+    // With no resource key there is nothing to serve, so the example says
+    // how to get one and ends.
+    console.log(NO_RESOURCE_KEY_MESSAGE);
+    console.log(FIND_OUT_MORE);
+  } else {
+    setPipeline(options);
+    const port = process.env.PORT || 5151;
+    const hostname = 'localhost';
+    server.listen(port, hostname);
+    console.log(`Server listening on: http://${hostname}:${port}`);
+  }
 };
 
 // Export server object and set pipeline.

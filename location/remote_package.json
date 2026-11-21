@@ -60,9 +60,6 @@
     "setupFilesAfterEnv": [
       "./setup.js",
       "jest-expect-message"
-    ],
-    "globals": {
-      "resourceKey": "!!YOUR_RESOURCE_KEY!!"
-    }
+    ]
   }
 }

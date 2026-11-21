@@ -51,6 +51,10 @@
  * var registeredName = ipData.registeredname;
  * ```
  *
+ * A Flow Data holds the evidence and results of one request. It must not be
+ * used by two threads at once, so the example creates one for each request
+ * and reads any value it hands to other work into its own variables first.
+ *
  */
 
 const path = require('path');
@@ -116,10 +120,18 @@ const setPipeline = (options) => {
   // ordered country name lists that the page binds the dropdown to. The
   // browser language is taken from the request's Accept-Language header (a
   // 'translation' query parameter overrides it).
+  // Usage sharing is on when the configuration names the usage sharing
+  // element, as this example's 51d.json does and as it should be in
+  // production, because the usage data shared improves the data and the
+  // service for everyone. The console examples turn it off, as they run
+  // sample evidence only.
+  const shareUsage = options.PipelineOptions.Elements.some((element) =>
+    element.elementName.endsWith('shareUsage'));
+
   pipeline = new ipi.IpIntelligenceOnPremisePipelineBuilder({
     performanceProfile: 'Balanced',
     dataFile: dataFilePath,
-    shareUsage: false,
+    shareUsage,
     autoUpdate: false,
     updateOnStart: false,
     fileSystemWatcher: false,
@@ -132,6 +144,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 // Directory holding the shared pattern-library assets (CSS and JS) that
@@ -152,7 +166,17 @@ const server = http.createServer((req, res) => {
   // Information required for detection is called "evidence".
   // For IP intelligence the IP address of the requesting client
   // is used. This is added automatically from the request.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Extract required evidence from the Http request.
   flowData.evidence.addFromRequest(req);
@@ -226,7 +250,7 @@ const server = http.createServer((req, res) => {
           countries(allList('countrycodespopulationall')),
         countryNamesPopulationAllTranslated:
           countries(allList('countrynamespopulationalltranslated')),
-        dataFilePublishedTime: new Date().getTime(),
+        dataFileOld: ExampleUtils.isDataFileOld(pipeline),
         dataFileAgeWarning: DATA_FILE_AGE_WARNING,
         evidenceUsed: evidences,
         allEvidence,
@@ -249,7 +273,7 @@ const server = http.createServer((req, res) => {
         longitude,
         mapLatitude: located(latitude),
         mapLongitude: located(longitude),
-        accuracyRadius:
+        accuracyRadiusMin:
           ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'accuracyradiusmin'),
         timeZoneOffset:
           ExampleUtils.getEnterpriseValue(ipEngine, flowData.ip, 'timezoneoffset')
@@ -264,7 +288,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 
   setPipeline(options);
-  const port = 3001;
+  const port = 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);

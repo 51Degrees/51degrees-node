@@ -51,6 +51,15 @@ class AspectDataDictionary extends AspectData {
     this.contents = contents;
   }
 
+  /**
+   * Returns the data to the state of a new instance, with no values and
+   * open for writing, before a pool gives it to another request.
+   */
+  reset () {
+    super.reset();
+    this.contents = {};
+  }
+
   * [Symbol.iterator] () {
     for (let i = 0; i < Object.keys(this.contents).length; i += 1) {
       yield Object.keys(this.contents)[i];

@@ -115,6 +115,23 @@ class CloudEngine extends Engine {
   }
 
   /**
+   * Waits for the Cloud Request Engine's raw JSON response. A failed
+   * request is recorded once, as the Cloud Request Engine's error, and
+   * gives undefined, so the cloud engine adds no data and no error of its
+   * own.
+   *
+   * @param {FlowData} flowData the Flow Data being processed
+   * @returns {Promise<string|undefined>} the response, or undefined
+   */
+  readResponse (flowData) {
+    const cloud = flowData.get('cloud');
+    return cloud.getAsync('cloud').catch(function () {
+      cloud.recordLazyFailures(flowData);
+      return undefined;
+    });
+  }
+
+  /**
    * Internal process method for all cloud engines
    *
    * @param {FlowData} flowData FlowData to process
@@ -124,19 +141,25 @@ class CloudEngine extends Engine {
     const engine = this;
 
     return engine.ready().then(function () {
-      const cloudData = JSON.parse(flowData.get('cloud').get('cloud'));
+      return engine.readResponse(flowData);
+    }).then(function (response) {
+      if (response === undefined) {
+        return;
+      }
+      const cloudData = JSON.parse(response);
       const elementData = cloudData ? cloudData[engine.dataKey] : undefined;
       const result = {};
 
       if (elementData === undefined) {
         // The cloud service leaves out a product the keys in use do not
         // include, and under a license key alone one that requestedProperties
-        // names none of. That cannot change while the keys and the list stay
-        // the same, so it is logged once rather than on every request, and
-        // the request carries on with empty element data.
+        // names none of. That is not a fault in the request and cannot change
+        // while the keys and the list stay the same, so it is a warning,
+        // logged once rather than on every request, and the request carries
+        // on with empty element data.
         if (engine._missingElementReported === false) {
           engine._missingElementReported = true;
-          flowData.pipeline.log('error', util.format(
+          flowData.pipeline.log('warn', util.format(
             errorMessages.elementMissing, engine.dataKey, engine.dataKey,
             productHint(flowData, engine.dataKey)));
         }

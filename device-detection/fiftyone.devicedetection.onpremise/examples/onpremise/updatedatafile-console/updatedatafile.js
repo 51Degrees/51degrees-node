@@ -170,13 +170,32 @@ const KeyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
  * - [fiftyone.devicedetection.onpremise](https://www.npmjs.com/package/fiftyone.devicedetection.onpremise)
  */
 
-const UPDATE_EXAMPLE_LICENSE_KEY_NAME = 'LicenseKey';
+// The variable that holds the licence key.
+const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
+
+// Reads the licence key from the environment.
+const getLicenseKey = function () {
+  return process.env[LICENSE_KEY_VARIABLE] || undefined;
+};
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
 
 // Where to ask for a licence key and a copy of the Enterprise data file,
 // tagged with this example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licence-key';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe device detection engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // Without a licence key the example cannot download a data file, so it
 // shows the data file it would start from, the free Lite data file unless
@@ -199,7 +218,7 @@ const explainLicenseKey = function (dataFilePath, output) {
   output.write('Updating the data file downloads the Enterprise data file, ' +
     'which needs a licence key. Give the key as the first command line ' +
     'argument, or in the environment variable ' +
-    `'${UPDATE_EXAMPLE_LICENSE_KEY_NAME}'. Contact us for a key and a copy ` +
+    `'${LICENSE_KEY_VARIABLE}'. Contact us for a key and a copy ` +
     `at ${CONTACT_US}\n`);
 };
 
@@ -207,7 +226,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   output.write('Starting example\n');
   // try to find a license key
   if (!licenseKey) {
-    licenseKey = KeyUtils.getNamedKey(UPDATE_EXAMPLE_LICENSE_KEY_NAME);
+    licenseKey = getLicenseKey();
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
     explainLicenseKey(dataFilePath, output);
@@ -286,19 +305,36 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   // create update service and add listener
   const dataUpdateService = new DataFileUpdateService();
 
-  new Promise(resolve => {
-    dataUpdateService.once('updateComplete', function (status, dataFile) {
-      // thread blocks till update checking is complete - or if there is an
-      // exception we don't get this far
+  // Settles when the example has finished, which is after the pipeline
+  // below has been built and both updates have completed.
+  //
+  // A download writes the new data to the path the file system watcher
+  // watches, so the watcher raises events while the download is still
+  // being applied. Each of those is reported with the in progress status,
+  // which says the check found nothing left to do, so none of them is the
+  // result of the check this example asked for. Both waits below pass over
+  // them and take the first status that ends a check.
+  const whenUpdateEnds = function () {
+    return new Promise(resolve => {
+      let ended = false;
+      dataUpdateService.on('updateComplete', function (status, dataFile) {
+        if (!ended && status !== AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS) {
+          ended = true;
+          resolve(status);
+        }
+      });
+    });
+  };
+
+  const finished = whenUpdateEnds()
+    .then(status => {
       output.write(`Update on start-up complete - status: ${status}\n`);
 
       if (status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS) {
         output.write('Auto update was not successful, abandoning example\n');
         throw new Error('Auto update failed: ' + status);
       }
-      resolve();
-    });
-  })
+    })
     .then(() => {
       output.write('Modifying downloaded file to trigger reload - please wait for that' +
         ' to complete\n');
@@ -309,23 +345,25 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
       const timeoutId = setTimeout(() => {
         output.write('Update on file modification timed out\n');
       }, 60 * 1000);
-      return new Promise(resolve => {
-        dataUpdateService.once('updateComplete', function (status, dataFile) {
+      // The wait is set up before the file is touched, so that the reload
+      // it triggers cannot be missed.
+      const reloaded = whenUpdateEnds()
+        .then(status => {
           clearTimeout(timeoutId);
           output.write(`Update on file modification complete - status: ${status}\n`);
-          resolve();
         });
-        try {
-          // it's the same file but changing the file metadata will trigger reload,
-          // demonstrating that if you download a new file and replace the
-          // existing one, then it will be loaded
-          const time = new Date();
-          fs.utimesSync(dataFilePath, time, time);
-        } catch (err) {
-          throw new Error('Could not modify file time - abandoning ' +
-          'example\n');
-        }
-      });
+      try {
+        // it's the same file but changing the file metadata will trigger reload,
+        // demonstrating that if you download a new file and replace the
+        // existing one, then it will be loaded
+        const time = new Date();
+        fs.utimesSync(dataFilePath, time, time);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw new Error('Could not modify file time - abandoning ' +
+        'example\n');
+      }
+      return reloaded;
     })
     .then(() => {
       output.write('Finished example\n');
@@ -362,6 +400,8 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
   })
   // build the pipeline
     .build();
+
+  return finished;
 };
 
 // Don't run the server if under TEST
@@ -372,7 +412,8 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
 
-  run(dataFilePath, licenseKey, true, process.stdout);
+  run(dataFilePath, licenseKey, true, process.stdout)
+    .then(() => console.log(FIND_OUT_MORE));
 };
 
-module.exports = { run };
+module.exports = { run, getLicenseKey };

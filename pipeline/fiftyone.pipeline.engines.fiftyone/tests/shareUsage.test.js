@@ -717,8 +717,8 @@ test.each([
 
 /**
  * Check that with no options the element shares headers and the 51Degrees
- * cookies and parameters, and leaves out other cookies, the Cookie header,
- * and other query string and form parameters.
+ * cookies, every query string and form parameter, and leaves out other
+ * cookies and the Cookie header.
  */
 test('share usage - default shares only accepted evidence', done => {
   const usageEngine = new ShareUsage({
@@ -791,7 +791,8 @@ test('share usage - never shared evidence', done => {
 
 /**
  * Check that sharing all evidence shares what the other rules leave out,
- * but not the evidence that is never shared.
+ * but not the evidence that is never shared or a cookie whose name does
+ * not start with 51D_.
  */
 test('share usage - share all', done => {
   const usageEngine = new ShareUsage({
@@ -812,8 +813,10 @@ test('share usage - share all', done => {
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).toContain('<cookie Name="sessionid">cookie value</cookie>');
-      expect(received[0]).toContain('<query Name="campaign">campaign value</query>');
+      expect(received[0]).not.toContain('cookie value');
+      // A parameter is shared only when its name starts with 51D_ or the
+      // Pipeline uses it, even when all Evidence is shared.
+      expect(received[0]).not.toContain('campaign value');
       expect(received[0]).not.toContain('email value');
       done();
     }, 2000);
@@ -828,6 +831,7 @@ test('share usage - parameter names with dots', done => {
   const usageEngine = new ShareUsage({
     requestedPackageSize: 1,
     endpoint: 'http://127.0.0.1:8080/',
+    shareAllQueryStringParameters: false,
     queryWhitelist: ['valid.email']
   });
 
@@ -842,7 +846,8 @@ test('share usage - parameter names with dots', done => {
   flowData.process().then(() => {
     setTimeout(() => {
       expect(received.length).toBe(1);
-      expect(received[0]).toContain('<query Name="valid.email">valid value</query>');
+      // The parameter list changes nothing, so neither is shared.
+      expect(received[0]).not.toContain('valid value');
       expect(received[0]).not.toContain('first part value');
       done();
     }, 2000);
@@ -993,4 +998,109 @@ test('share usage - repeat with new sequence not shared', done => {
       }, 2000);
     });
   });
+});
+
+/**
+ * The record names the version of the Pipeline that wrote it, so that the
+ * spread of a new release can be measured, and not a fixed text.
+ */
+test('share usage - names the version of the Pipeline it runs', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'agent');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      const version = require('fiftyone.pipeline.core/package.json').version;
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain(`<Version>${version}</Version>`);
+      expect(received[0]).not.toContain('<Version>4.4.7</Version>');
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Evidence keys ignore letter case, so the session id and sequence are
+ * written to the record as SessionId and Sequence whatever the letters of
+ * their keys.
+ */
+test('share usage - session id and sequence recorded whatever their case', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const flowData = pipeline.createFlowData();
+  flowData.evidence.add('header.user-agent', 'agent');
+  flowData.evidence.add('query.Session-Id', 'the session');
+  flowData.evidence.add('query.Sequence', '2');
+
+  flowData.process().then(() => {
+    setTimeout(() => {
+      expect(received.length).toBe(1);
+      expect(received[0]).toContain('<SessionId>the session</SessionId>');
+      expect(received[0]).toContain('<Sequence>3</Sequence>');
+      expect(received[0]).not.toMatch(/Name="session-id"/i);
+      expect(received[0]).not.toMatch(/Name="sequence"/i);
+      done();
+    }, 2000);
+  });
+});
+
+/**
+ * Three requests in one session, as the browser's script makes them. The
+ * second repeats the first and is not shared. The third changes a value
+ * the script sends, so it is shared with the same session id and the next
+ * sequence, which the Sequence Element gives.
+ */
+test('share usage - a changed value in one session is shared with its sequence', done => {
+  const usageEngine = new ShareUsage({
+    requestedPackageSize: 1,
+    endpoint: 'http://127.0.0.1:8080/'
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(usageEngine)
+    .build();
+
+  const request = (sequence, width) => {
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('header.user-agent', 'agent');
+    flowData.evidence.add('query.session-id', 'one session');
+    if (sequence !== undefined) {
+      flowData.evidence.add('query.sequence', sequence);
+    }
+    flowData.evidence.add('query.51D_ScreenPixelsWidth', width);
+    return flowData.process();
+  };
+
+  request(undefined, '1080')
+    .then(() => request('1', '1080'))
+    .then(() => request('2', '1440'))
+    .then(() => {
+      setTimeout(() => {
+        expect(received.length).toBe(2);
+        const sequences = received.map(
+          (xml) => xml.match(/<Sequence>(\d+)<\/Sequence>/)[1]);
+        expect(sequences).toEqual(['1', '3']);
+        for (const xml of received) {
+          expect(xml).toContain('<SessionId>one session</SessionId>');
+        }
+        expect(received[1]).toContain('1440');
+        done();
+      }, 2000);
+    });
 });

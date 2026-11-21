@@ -24,14 +24,21 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * update service
      * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
      * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-     * @param {Array<string>} options.restrictedProperties list of properties the engine
-     * will be restricted to
+     * @param {Array<string>|string} options.restrictedProperties list of
+     * properties the engine will be restricted to, or one comma separated
+     * string of them, as a configuration file gives a list
+     * @param {Array<string>|string} [options.indexedProperties] list of
+     * Properties, such as TAC and NativeModel, whose values the native code
+     * indexes to the profiles holding them when the data file loads, or one
+     * comma separated string of them. profileIdsForPropertyValue then finds
+     * the profiles for a value of one of them without reading every profile.
+     * Names are matched exactly. None by default.
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
      * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremise.js&utm_term=constructor.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates to
-     * be disabled.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {boolean} options.download whether to download the datafile
      * or store it in memory
      * @param {string} options.performanceProfile options are:
@@ -69,9 +76,10 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation
+     * the datafile on initialisation. If there is no file at dataFilePath it
+     * is downloaded, and processing fails if the download does not work.
      */
-    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, concurrency, allowUnmatched, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
+    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, indexedProperties, licenceKeys, download, performanceProfile, reuseTempFile, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, concurrency, allowUnmatched, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
         autoUpdate: boolean;
         pollingInterval: number;
@@ -80,7 +88,8 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
         dataUpdateUrl: string;
         dataUpdateVerifyMd5: boolean;
         dataUpdateUseUrlFormatter: boolean;
-        restrictedProperties: Array<string>;
+        restrictedProperties: Array<string> | string;
+        indexedProperties?: Array<string> | string;
         licenceKeys: string;
         download: boolean;
         performanceProfile: string;
@@ -105,6 +114,19 @@ declare class DeviceDetectionOnPremise extends DeviceDetectionOnPremise_base {
      */
     initEngine: () => void;
     profiles(): Generator<Profile, void, unknown>;
+    /**
+     * The ids of the profiles that hold a value of a Property, from the
+     * native code, in ascending order with each id once. The name and the
+     * value are matched exactly, as the data file holds them. A Property
+     * named in the indexedProperties option is found through the native
+     * index, and any other by reading every profile, which gives the same
+     * ids more slowly.
+     *
+     * @param {string} propertyName the name of the Property
+     * @param {string} value the value of the Property
+     * @returns {Array<number>} the ids of the profiles holding the value
+     */
+    profileIdsForPropertyValue(propertyName: string, value: string): Array<number>;
     /**
      * Internal process method for Device Detection On Premise engine
      * Fetches the results from the SWIG wrapper into an instance of

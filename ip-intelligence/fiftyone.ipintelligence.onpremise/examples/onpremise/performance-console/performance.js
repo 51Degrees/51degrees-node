@@ -89,6 +89,19 @@ const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=enterprise-data-file';
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-contact'
+].join('\n');
+
 // This file contains IP addresses to use as evidence.
 const EVIDENCE_CSV = 'evidence.csv';
 
@@ -157,6 +170,8 @@ eventEmitter.on('FinishProcessing', () => {
       }
     }, null, 4));
   }
+
+  console.log(FIND_OUT_MORE);
 });
 eventEmitter.on('WarmupFinished', () => {
   console.log('Warmup finished');

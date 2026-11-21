@@ -34,28 +34,96 @@ const EngineBuilder = require51('fiftyone.devicedetection.onpremise').DeviceDete
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const zlib = require('zlib');
 let server;
 
-const HTTP_PORT = 8080;
 const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
-const DataFileEnterprise = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash');
 
 describe('deviceDetectionOnPremise', () => {
-  // Check that an exception is thrown if license key is not
-  // specified when creating an on-premise engine.
-  test('License key required', () => {
-    const test = () => {
-      return new EngineBuilder({
-        dataFilePath: DataFile
+  // As data-updates.md says at specifications d79bbe3b, lines 114 to 116
+  // and 399, a license key is needed
+  // only by polling (autoUpdate) and the update on start-up, which
+  // download from the Distributor, and the build fails naming the option
+  // to turn off when one of them is on with no key. The file system
+  // watcher needs no key.
+  const registered = (engine) => {
+    let config;
+    engine.registrationCallbacks[0]({
+      dataFileUpdateService: {
+        registerDataFile: (dataFileConfig) => { config = dataFileConfig; }
+      }
+    });
+    return config;
+  };
+
+  test.each([undefined, null, ''])(
+    'No license key (%p) is needed when nothing downloads', (key) => {
+      const engine = new EngineBuilder({
+        dataFilePath: DataFile,
+        licenceKeys: key,
+        autoUpdate: false,
+        updateOnStart: false,
+        fileSystemWatcher: true
       });
-    };
-    expect(test).toThrow(/^license key is required/);
+      const config = registered(engine);
+      expect(config.autoUpdate).toBe(false);
+      expect(config.updateOnStart).toBe(false);
+      expect(config.fileSystemWatcher).toBe(true);
+    });
+
+  test('No license key is needed with the engine defaults', () => {
+    expect(() => new EngineBuilder({ dataFilePath: DataFile }))
+      .not.toThrow();
   });
 
-  // Check that an empty license key can be specified.
-  // Also verify that this will cause auto update and
-  // update on startup to be disabled.
+  test.each([
+    [undefined, { autoUpdate: true }, /\(autoUpdate\)/],
+    [null, { autoUpdate: true }, /\(autoUpdate\)/],
+    ['', { autoUpdate: true }, /\(autoUpdate\)/],
+    ['', { updateOnStart: true }, /\(updateOnStart\)/],
+    ['', { autoUpdate: true, updateOnStart: true },
+      /\(autoUpdate, updateOnStart\)/]
+  ])('License key %p with %p is refused naming the option', (key, options,
+    named) => {
+    const build = () => new EngineBuilder({
+      dataFilePath: DataFile,
+      licenceKeys: key,
+      ...options
+    });
+    expect(build).toThrow(named);
+    expect(build).toThrow(/require a license key/);
+    expect(build).toThrow(/to false/);
+  });
+
+  test('The pipeline builder refuses its default autoUpdate with no key',
+    () => {
+      const build = () => new FiftyOneDegreesDeviceDetectionOnPremise
+        .DeviceDetectionOnPremisePipelineBuilder({ dataFile: DataFile })
+        .build();
+      expect(build).toThrow(/\(autoUpdate\)/);
+    });
+
+  test('The pipeline builder needs no key with autoUpdate off', () => {
+    const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
+      .DeviceDetectionOnPremisePipelineBuilder({
+        dataFile: DataFile,
+        autoUpdate: false
+      }).build();
+    expect(pipeline.getElement('device')).toBeDefined();
+  });
+
+  test('An update URL other than the Distributor needs no key', () => {
+    const engine = new EngineBuilder({
+      dataFilePath: DataFile,
+      dataUpdateUrl: 'https://updates.example.com/data.hash',
+      autoUpdate: true
+    });
+    expect(registered(engine).autoUpdate).toBe(true);
+  });
+
+  // An empty license key with nothing that downloads builds, with
+  // automatic update and update on start-up off.
   test('License key can be empty', done => {
     const engine = new EngineBuilder({
       dataFilePath: DataFile,
@@ -65,8 +133,6 @@ describe('deviceDetectionOnPremise', () => {
     const fakePipeline = {
       dataFileUpdateService: {
         registerDataFile: function (dataFileConfig) {
-          // No license key so auto update and update on startup
-          // should be disabled.
           expect(dataFileConfig.autoUpdate).toBe(false);
           expect(dataFileConfig.updateOnStart).toBe(false);
         }
@@ -160,7 +226,8 @@ describe('deviceDetectionOnPremise', () => {
   test('Components for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     expect(Object.entries(device.components).length).toBe(5);
@@ -185,7 +252,8 @@ describe('deviceDetectionOnPremise', () => {
   test('Properties for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     expect(Object.entries(device.properties).length).toBeGreaterThan(0);
@@ -197,7 +265,8 @@ describe('deviceDetectionOnPremise', () => {
   test('profiles for on-premise engine', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const device = pipeline.getElement('device');
     const profiles = device.profiles();
@@ -213,7 +282,8 @@ describe('deviceDetectionOnPremise', () => {
   test('key filter has GHEV and SUA keys', done => {
     const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise
       .DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFile
+        dataFile: DataFile,
+        autoUpdate: false
       }).build();
     const deviceKeyFilter = pipeline.getElement('device').evidenceKeyFilter.list;
 
@@ -321,22 +391,16 @@ describe('deviceDetectionOnPremise', () => {
   // }, 20000);
 
   test('Temporary files clean up - OnUpdate', done => {
-    const DataFileOutput = path.resolve((process.env.directory || __dirname) + '/51Degrees-LiteV4.1.hash.gz');
-    const DataFileCopy = path.resolve((process.env.directory || __dirname) + '/51Degrees-LiteV4.1.hash');
+    // A copy of the free Lite data file, which the update replaces with the
+    // same file served gzipped by the server below.
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'temp-clean-up-'));
+    const DataFileOutput = path.join(folder, '51Degrees-LiteV4.1.hash.gz');
+    const DataFileCopy = path.join(folder, '51Degrees-LiteV4.1.hash');
+    fs.copyFileSync(DataFile, DataFileCopy);
     const tempDir = './tests/tmp';
 
     fs.mkdir(tempDir, { recursive: true }, (err) => {
       if (err) return console.error(err);
-      const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
-        dataFile: DataFileCopy,
-        updateOnStart: true,
-        autoUpdate: false,
-        dataUpdateUrl: `http://localhost:${HTTP_PORT}/temp`,
-        dataUpdateVerifyMd5: false,
-        dataUpdateUseUrlFormatter: false,
-        createTempDataCopy: true,
-        tempDataDir: tempDir
-      }).build();
 
       server = http.createServer((req, res) => {
         if (req.url === '/temp') {
@@ -369,13 +433,34 @@ describe('deviceDetectionOnPremise', () => {
               const doneFiles = files.filter(file => file.includes('_done'));
               expect(doneFiles.length).toBe(0);
               server.close();
+              fs.rmSync(folder, { recursive: true, force: true });
               done();
             });
           }, 5000);
         }
-      }).listen(HTTP_PORT);
-      pipeline.on('error', console.error);
-      pipeline.on('info', console.info);
+      });
+
+      // The Pipeline is built once the server is listening, so the update
+      // made on start is not refused. The server takes a port the system
+      // gives on the IPv4 loopback, which the update address names, so no
+      // other service on a fixed port can take the request.
+      server.listen(0, '127.0.0.1', () => {
+        const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
+          dataFile: DataFileCopy,
+          updateOnStart: true,
+          autoUpdate: false,
+          dataUpdateUrl: `http://127.0.0.1:${server.address().port}/temp`,
+          dataUpdateVerifyMd5: false,
+          dataUpdateUseUrlFormatter: false,
+          createTempDataCopy: true,
+          // The test is not about the file system watcher, and it removes
+          // its folder at the end, which a watcher reports as an error.
+          fileSystemWatcher: false,
+          tempDataDir: tempDir
+        }).build();
+        pipeline.on('error', console.error);
+        pipeline.on('info', console.info);
+      });
     });
   }, 20000);
 
@@ -384,35 +469,45 @@ describe('deviceDetectionOnPremise', () => {
   test('Initialise engine with updateOnStart and 304 status code', done => {
     let requestsMade = 0;
 
+    const tempDataDir = path.join(__dirname, 'tmp');
+    fs.mkdirSync(tempDataDir, { recursive: true });
+
     server = http.createServer((req, res) => {
       requestsMade++;
       res.writeHead(304);
       res.end();
-    }).listen(HTTP_PORT);
+    });
 
-    const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
-      dataFile: DataFileEnterprise,
-      updateOnStart: true,
-      autoUpdate: true,
-      dataUpdateUrl: `http://localhost:${HTTP_PORT}/temp`,
-      dataUpdateVerifyMd5: false,
-      dataUpdateUseUrlFormatter: false,
-      createTempDataCopy: true,
-      tempDataDir: './tests/tmp'
-    }).build();
+    // As above, the Pipeline is built once the server is listening, on a
+    // port the system gives on the IPv4 loopback. The free Lite data file
+    // is the valid data file, and a 304 leaves it unchanged.
+    server.listen(0, '127.0.0.1', () => {
+      const pipeline = new FiftyOneDegreesDeviceDetectionOnPremise.DeviceDetectionOnPremisePipelineBuilder({
+        dataFile: DataFile,
+        updateOnStart: true,
+        autoUpdate: true,
+        dataUpdateUrl: `http://127.0.0.1:${server.address().port}/temp`,
+        dataUpdateVerifyMd5: false,
+        dataUpdateUseUrlFormatter: false,
+        createTempDataCopy: true,
+        // The test is not about the file system watcher.
+        fileSystemWatcher: false,
+        tempDataDir
+      }).build();
 
-    pipeline.on('error', console.error);
-    pipeline.on('info', console.info);
+      pipeline.on('error', console.error);
+      pipeline.on('info', console.info);
 
-    const tryForRequestInterval = setInterval(() => {
-      if (requestsMade > 0) {
-        clearInterval(tryForRequestInterval);
-        setTimeout(() => {
-          expect(pipeline.flowElements.device.engine).toBeDefined();
-          done();
-        }, 200);
-      }
-    }, 100);
+      const tryForRequestInterval = setInterval(() => {
+        if (requestsMade > 0) {
+          clearInterval(tryForRequestInterval);
+          setTimeout(() => {
+            expect(pipeline.flowElements.device.engine).toBeDefined();
+            done();
+          }, 200);
+        }
+      }, 100);
+    });
   }, 10000);
 });
 

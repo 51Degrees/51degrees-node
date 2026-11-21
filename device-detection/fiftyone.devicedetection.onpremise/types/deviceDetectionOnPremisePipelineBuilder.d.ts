@@ -14,10 +14,9 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * @param {string} [options.licenceKeys] license key(s) used by the
      * data file update service. A key can be obtained from the
      * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremisepipelinebuilder.js&utm_term=constructor.
-     * This parameter MUST be set when using a data file.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates
-     * to be disabled.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {string} options.dataFile dataFile path for the on premise engine
      * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
      * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
@@ -38,6 +37,10 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * engine.
      * @param {Array<string>} [options.restrictedProperties] list of properties the engine
      * will be restricted to
+     * @param {Array<string>|string} [options.indexedProperties] list of
+     * Properties whose values the native code indexes to the profiles holding
+     * them, so the engine's profileIdsForPropertyValue finds them without
+     * reading every profile
      * @param {string} [options.performanceProfile] used to control the tradeoff
      * between performance and system memory usage (Only applies to on-premise,
      * not cloud) options are: LowMemory, MaxPerformance, Balanced,
@@ -83,7 +86,7 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
      * normally. Recommended true for web apps so a device-detection failure
      * degrades gracefully instead of failing the request.
      */
-    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, allowUnmatched, createTempDataCopy, tempDataDir }: {
+    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, indexedProperties, performanceProfile, concurrency, updateMatchedUserAgent, maxMatchedUserAgentLength, drift, difference, allowUnmatched, createTempDataCopy, tempDataDir }: {
         licenceKeys?: string;
         dataFile: string;
         dataUpdateVerifyMd5?: boolean;
@@ -97,6 +100,7 @@ declare class DeviceDetectionOnPremisePipelineBuilder extends DeviceDetectionOnP
         updateOnStart?: boolean;
         cacheSize?: number;
         restrictedProperties?: Array<string>;
+        indexedProperties?: Array<string> | string;
         performanceProfile?: string;
         concurrency?: number;
         updateMatchedUserAgent?: boolean;

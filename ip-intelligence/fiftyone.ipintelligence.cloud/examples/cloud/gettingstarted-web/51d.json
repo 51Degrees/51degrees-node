@@ -8,7 +8,18 @@
         }
       },
       {
-        "elementName": "../../../ipIntelligenceCloud"
+        "elementName": "fiftyone.ipintelligence.cloud/ipIntelligenceCloud"
+      },
+      {
+        "elementName": "fiftyone.pipeline.engines.fiftyone/shareUsage",
+        "elementParameters": {
+          "sharePercentage": 100,
+          "interval": 1200000,
+          "requestedPackageSize": 50,
+          "cookie": "",
+          "queryWhitelist": [],
+          "headerBlacklist": []
+        }
       }
     ]
   }

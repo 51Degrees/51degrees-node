@@ -28,20 +28,18 @@ module.exports = {
   noCredential: 'CloudRequestEngine needs a resourceKey or a licenseKey ' +
     'to authenticate with, as the cloud service answers 401 to a request ' +
     'that carries neither. Create a resource key for free at ' +
-    'https://configure.51degrees.com?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
+    'https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-errormessages.js&utm_term=no-credential',
   licenseKeyNeedsProperties: 'CloudRequestEngine has a licenseKey and no ' +
     'resourceKey or requestedProperties. A license key names no ' +
     'properties of its own, so the cloud service answers 400 to every ' +
     'request made with one that does not list the properties it wants. ' +
     'Set requestedProperties to the fully qualified names wanted, for ' +
     "example ['device.ismobile', 'device.iscrawler'].",
-  // Logged once for an engine whose endpoint was read from the deprecated
-  // variable name.
-  oldEndpointVariable: 'The FOD_CLOUD_API_URL environment variable is ' +
-    'deprecated and _51DEGREES_CLOUD_ENDPOINT replaces it. The cloud ' +
-    'endpoint was read from FOD_CLOUD_API_URL because ' +
-    '_51DEGREES_CLOUD_ENDPOINT is not set. Set _51DEGREES_CLOUD_ENDPOINT ' +
-    'to the same value.',
+  // Logged as a warning when discovery got no answer or a 5xx when the
+  // engine was built, followed by the errors.
+  discoveryTriedAgain: 'The cloud service did not answer the Cloud ' +
+    "Request Engine's discovery requests when the engine was built, so " +
+    'they are tried again when it first processes. %s',
   // Logged once when, with a license key, an answer leaves out requested
   // properties.
   propertiesNotCovered: 'The cloud service did not return the ' +

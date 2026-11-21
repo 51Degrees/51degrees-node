@@ -10,7 +10,7 @@ The 51Degrees Pipeline API is a generic web request intelligence and data proces
 
 This package uses the `engines` class created by the [`fiftyone.pipeline.engines`](https://github.com/51Degrees/51degrees-node/tree/main/pipeline/fiftyone.pipeline.engines). It makes available:
 
-* A `Cloud Request Engine` which calls the 51Degrees cloud service to fetch properties and metadata about them based on a provided resource key. A resource key with the free properties used by the tests can be created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=this-package-fiftyone-pipeline-cloudrequestengine).
+* A `Cloud Request Engine` which calls the 51Degrees cloud service to fetch properties and metadata about them based on a provided resource key. A resource key with the free properties used by the tests can be created [here](https://51degrees.com/configure/Wkqxf3Bs?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine&utm_term=this-package-fiftyone-pipeline-cloudrequestengine).
 * A `Cloud Engine` template which reads data from the Cloud Request Engine.
 
 It is used by the cloud versions of the following 51Degrees engines:
@@ -33,6 +33,35 @@ The engine refuses to build with no key at all, or with a `licenseKey` and
 no `resourceKey` or `requestedProperties`, because the cloud service refuses
 every request made that way. A license key is sent in the body of each
 request and never in a URL.
+
+## Discovery
+
+When it is built, the engine asks the cloud service which Evidence keys it
+accepts and which properties the keys in use give, and it is ready to
+process once both have answered. If the cloud service cannot be reached
+then, the engine logs a warning and asks again when it first processes.
+Until discovery has answered, the engine accepts no Evidence and keeps what
+is added, so nothing is lost.
+
+A host that starts often, or has to start with no network, can save what
+discovery fetched and give it to the next engine, which then makes no
+discovery request.
+
+```js
+const { CloudRequestEngine } = require('fiftyone.pipeline.cloudrequestengine');
+
+const engine = new CloudRequestEngine({ resourceKey });
+await engine.ready();
+const saved = engine.getDiscoveryState().toJson();
+
+// Later, with the same keys.
+const next = new CloudRequestEngine({ resourceKey, discoveryState: saved });
+```
+
+The copy holds the accepted Evidence keys and the accessible properties
+answer, which depend only on the keys, so keep one copy for each set of
+keys. A configuration file can give it as the `discoveryState` parameter of
+the engine, as that JSON. A blank value there is the option unset.
 
 ## Installation
 
@@ -67,10 +96,8 @@ package, in this repository and in the device detection and geolocation
 packages, inherits that choice, so setting the variable once points all of
 them at the same place.
 
-`FOD_CLOUD_API_URL` is the deprecated name of the same variable. It is read
-only when `_51DEGREES_CLOUD_ENDPOINT` is unset or empty, and the engine then
-logs one `warn` message to its Pipeline, on the first process, saying the old
-name is deprecated. Set `_51DEGREES_CLOUD_ENDPOINT` instead.
+`FOD_CLOUD_API_URL`, the old name of the same variable, is no longer read.
+Set `_51DEGREES_CLOUD_ENDPOINT` instead.
 
 A host other than `cloud.51degrees.com` would be used to (a) use an on
 premise web server, or (b) use a privately hosted version of the 51Degrees

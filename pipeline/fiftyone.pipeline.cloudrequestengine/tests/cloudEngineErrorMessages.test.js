@@ -20,7 +20,6 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const util = require('util');
 const path = require('path');
 
 // CloudEngine does not use relative path to import module so update the module
@@ -32,14 +31,10 @@ require('module').Module._initPaths();
 const cloudEnginePath = path.resolve(__dirname, '../cloudEngine');
 const pipelineBuilderPath = path.resolve(__dirname, '../../fiftyone.pipeline.core/pipelineBuilder');
 const aspectDataDictionaryPath = path.resolve(__dirname, '../../fiftyone.pipeline.engines/aspectDataDictionary');
-const coreErrorMessagesPath = path.resolve(__dirname, '../../fiftyone.pipeline.core/errorMessages');
-const engineErrorMessagesPath = path.resolve(__dirname, '../../fiftyone.pipeline.engines/errorMessages');
 
 const CloudEngine = require(cloudEnginePath);
 const PipelineBuilder = require(pipelineBuilderPath);
 const AspectDataDictionary = require(aspectDataDictionaryPath);
-const coreErrorMessages = require(coreErrorMessagesPath);
-const engineErrorMessages = require(engineErrorMessagesPath);
 
 // Test cloud engine class
 class TestCloudEngine extends CloudEngine {
@@ -81,29 +76,28 @@ const testEngine = new TestCloudEngine('testEngine',
   { one: { meta: { type: 'int' } }, two: { meta: { type: 'int' } } },
   { one: 1, two: 2 });
 
-// Create flow data for testing
-const flowData = new PipelineBuilder()
+// A flow data is processed once, so each test processes one of its own.
+const pipeline = new PipelineBuilder()
   .add(testEngineNoProperties)
   .add(testEngineMissingContents)
   .add(testEngine)
-  .build()
-  .createFlowData();
+  .build();
 
 // Check that in the scenario where attempting to access a property value under
 // a cloud engine, the resource key does not have any properties under that
 // product (e.g. the key has no location properties and the caller is trying
 // to get the value of location.country), a correct error message is returned.
 test('missing property service - no properties for resource key', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngineNoProperties').get('one');
     } catch (e) {
-      expect(e.indexOf(
-        util.format(coreErrorMessages.genericMissingProperties, 'one') +
-        ' in data for element "testEngineNoProperties".' +
-        util.format(engineErrorMessages.cloudNoPropertiesAccess,
-          'testEngineNoProperties')) !== -1)
-        .toBe(true);
+      expect(e).toBe("Property 'one' not found in data for element " +
+        "'testEngineNoProperties'. This is because your resource key does " +
+        'not include access to any properties under ' +
+        "'testEngineNoProperties'. Check or create a resource key with the " +
+        'properties you need on the configuration page at https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-errormessages.js&utm_term=missingpropertyproduct.');
     }
 
     done();
@@ -115,16 +109,16 @@ test('missing property service - no properties for resource key', done => {
 // property, but does include other properties under the same engine, a
 // correct error message is returned.
 test('missing property service - property not included in resource key', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('three');
     } catch (e) {
-      expect(e.indexOf(
-        util.format(coreErrorMessages.genericMissingProperties, 'three') +
-        ' in data for element "testEngine".' +
-        util.format(engineErrorMessages.cloudNoPropertyAccess,
-          'testEngine', 'one, two')) !== -1)
-        .toBe(true);
+      expect(e).toBe("Property 'three' not found in data for element " +
+        "'testEngine'. This is because your resource key does not include " +
+        'access to this property. The properties included for your key ' +
+        "under 'testEngine' are one,two. Check or change your key on the " +
+        'configuration page at https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-errormessages.js&utm_term=missingpropertynotincluded.');
     }
 
     done();
@@ -132,17 +126,18 @@ test('missing property service - property not included in resource key', done =>
 });
 
 // Check that in the scenario where attempting to access a property value
-// under a cloud engine and neither of the above scenarios is correct, a
-// correct error message is returned.
-test('missing property service - unknown reason', done => {
+// under a cloud engine whose metadata lists it, but whose results do not
+// hold it, the property is said to be excluded, as properties.md line 159
+// says for any engine whose metadata lists the property.
+test('missing property service - listed but not in the results', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngineMissingContents').get('two');
     } catch (e) {
-      expect(e.indexOf(
-        util.format(coreErrorMessages.genericMissingProperties, 'two') +
-        ' in data for element "testEngineMissingContents".' +
-        util.format(engineErrorMessages.cloudReasonUnknown)) !== -1).toBe(true);
+      expect(e).toBe("Property 'two' not found in data for element " +
+        "'testEngineMissingContents'. This is because the property has " +
+        'been excluded when configuring the engine.');
     }
 
     done();

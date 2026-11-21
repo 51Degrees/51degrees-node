@@ -1,9 +1,5 @@
 export = Pipeline;
 /**
- * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('fiftyone.pipeline.engines').DataFileUpdateService} DataFileUpdateService
- */
-/**
  * Pipeline holding a list of flowElements for processing, can create
  * flowData that will be passed through these, collecting elementData
  * Should be constructed through the PipelineBuilder class
@@ -31,6 +27,14 @@ declare class Pipeline {
      */
     flowElements: object;
     dataFileUpdateService: any;
+    /**
+     * @type {Map<string, number>}
+     */
+    dataKeyOrder: Map<string, number>;
+    /**
+     * @type {EvidenceKeyFilter}
+     */
+    evidenceKeyFilter: EvidenceKeyFilter;
     /**
      * @type {object}
      */
@@ -83,6 +87,7 @@ declare namespace Pipeline {
     export { FlowElement, DataFileUpdateService };
 }
 import EventEmitter = require("events");
+import EvidenceKeyFilter = require("./evidenceKeyFilter");
 import FlowData = require("./flowData");
 type FlowElement = import("./flowElement");
 type DataFileUpdateService = any;

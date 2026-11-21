@@ -44,6 +44,17 @@ const FiftyOnePipelineCore = require(
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
 
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE = `
+        <h3>Find out more</h3>
+        <ul>
+          <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+          <li><a href="https://51degrees.com/documentation/_pipeline_api__features__client_side_evidence.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-client-side-evidence">Client-side evidence</a></li>
+          <li><a href="https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-custom-elements">Flow elements of your own</a></li>
+          <li><a href="https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-build-your-own">Build your own</a></li>
+          <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-clientsideevidenceflowelement.js&utm_term=find-out-more-contact">Contact us</a></li>
+        </ul>`;
+
 // Function to get star sign from month and day
 const getStarSign = (month, day) => {
   if ((month === 1 && day <= 20) || (month === 12 && day >= 22)) {
@@ -58,7 +69,7 @@ const getStarSign = (month, day) => {
     return 'taurus';
   } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
     return 'gemini';
-  } else if ((month === 6 && day >= 22) || (month === 7 && day <= 22)) {
+  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
     return 'cancer';
   } else if ((month === 7 && day >= 23) || (month === 8 && day <= 23)) {
     return 'leo';
@@ -113,7 +124,9 @@ class Astrology extends FiftyOnePipelineCore.FlowElement {
   // The processInternal function is the core working of a
   // flowElement. It takes flowData, reads evidence and returns data.
   processInternal (flowData) {
-    const result = {};
+    // The star sign and the hemisphere are in the data from the start,
+    // null until they are known, so the page can read them before then.
+    const result = { starSign: null, hemisphere: null };
 
     // Get the date of birth from the query string
     // (submitted through a form on the client side)
@@ -182,20 +195,41 @@ const pipeline = new FiftyOnePipelineCore.PipelineBuilder({
   .build();
 
 const server = http.createServer((req, res) => {
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Add any information from the request
   // (headers, cookies and additional client side
   // provided information). The client side script sends its information
   // in a form body, so the asynchronous form reads that body as well.
   flowData.evidence.addFromRequestAsync(req).then(function () {
-    return flowData.process();
-  }).then(function () {
+    // A matching If-None-Match on the JSON endpoint gets its 304 without
+    // processing.
+    if (req.url.indexOf('/json') !== -1 &&
+      FiftyOnePipelineCore.Helpers.writeClientSideNotModified(
+        req, res, flowData)) {
+      return false;
+    }
+    return flowData.process().then(() => true);
+  }).then(function (processed) {
+    if (processed === false) {
+      return;
+    }
+
     // Send back JSON if requesting it from the client side
     // via the JavaScriptBuilder
 
     if (req.url.indexOf('/json') !== -1) {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       FiftyOnePipelineCore.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
 
@@ -268,7 +302,7 @@ const server = http.createServer((req, res) => {
         }
 
         </script>
-        
+        ${FIND_OUT_MORE}
         `;
 
     res.statusCode = 200;
@@ -277,7 +311,9 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const portNum = process.env.PORT || 3000;
+const portNum = process.env.PORT || 5151;
 console.info('To test this example, browse to http://localhost:' + portNum);
-server.listen(portNum);
+// Only the machine the example runs on, at 127.0.0.1 rather than
+// localhost, which can resolve to the IPv6 loopback alone.
+server.listen(portNum, '127.0.0.1');
 //! [usage]

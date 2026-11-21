@@ -11,7 +11,7 @@
             "elementName": "fiftyone.devicedetection.cloud/deviceDetectionCloud"
         },
         {
-            "elementName": "../../../../ipIntelligenceCloud"
+            "elementName": "fiftyone.ipintelligence.cloud/ipIntelligenceCloud"
         }
         ]
     }

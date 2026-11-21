@@ -116,6 +116,18 @@ function run (script) {
 }
 
 /**
+ * Three of the places the script writes its object name as code, which a
+ * name that was refused must not reach.
+ *
+ * @param {string} name the refused name
+ * @returns {Array<string>} the text each place would hold
+ */
+function namedInCode (name) {
+  return ['var ' + name, 'var sessionKey = "' + name + '"',
+    'window["' + name + 'Evidence"]'];
+}
+
+/**
  * Asserts that the script uses the name given everywhere the name is
  * written, that it parses, and that the object works once the script has
  * run.
@@ -181,11 +193,13 @@ describe('JavaScript builder object name', () => {
     });
 
   // The last argument is text that would only be in the script if the
-  // requested name had been written into it. Mustache escapes quotes and
-  // slashes, so the escaped forms are listed as well as the raw ones.
+  // requested name had been written into it as code. Mustache escapes quotes
+  // and slashes, so the escaped forms are listed as well as the raw ones.
+  // The query evidence, the requested name with it, is also in the script's
+  // parameters as an encoded string, which is data and not code.
   test.each([
     ['a separator', 'a;b//', ['a;b', 'var a;']],
-    ['a leading digit', '9bad', ['9bad']],
+    ['a leading digit', '9bad', namedInCode('9bad')],
     ['a quote', 'x"y', ['x"y', 'x&quot;y', 'var x&', 'var x"']],
     ['nothing', '', ['var  =']],
     ['a reserved word', 'class', ['var class']],
@@ -212,7 +226,9 @@ describe('JavaScript builder object name', () => {
         [objectNameKey]: '9bad'
       });
       expectWorkingObject(script, 'myFod');
-      expect(script).not.toContain('9bad');
+      for (const text of namedInCode('9bad')) {
+        expect(script).not.toContain(text);
+      }
     });
 
   test.each([

@@ -34,9 +34,10 @@ const syncPipeline = new PipelineBuilder()
   .add(setup.neverRun)
   .build();
 
-const syncFlowData = syncPipeline.createFlowData();
+// A flow data is processed once, so each test processes one of its own.
 test('error data is populated', done => {
   syncPipeline.suppressProcessExceptions = true;
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(syncFlowData.errors.error).toBe('Something went wrong');
 
@@ -53,6 +54,7 @@ syncPipeline.on('error', function (error) {
 
 test('logging', done => {
   syncPipeline.suppressProcessExceptions = true;
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     expect(log).toBe("Error occurred during processing of error. 'Something went wrong'");
 
@@ -61,6 +63,7 @@ test('logging', done => {
 });
 
 test("Don't Suppress Exception", done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     done();
   }).catch((e) => {
@@ -70,6 +73,7 @@ test("Don't Suppress Exception", done => {
 });
 
 test('stop flag works', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     try {
       syncFlowData.get('neverRun');

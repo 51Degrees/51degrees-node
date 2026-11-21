@@ -86,10 +86,15 @@ class SequenceElement extends FlowElement {
       sessionId = crypto.randomBytes(16).toString('hex');
     }
 
+    // A sequence counts only as a BigInt or as text made only of digits.
+    // Every other JavaScript number is a floating-point value, which counts
+    // as absent even when it has no fractional part.
     const given = flowData.evidence.get('query.sequence');
     let sequence = 1;
-    if (typeof given === 'number' && Number.isInteger(given)) {
-      sequence = given >= 0 && given <= MaxGivenSequence ? given + 1 : 1;
+    if (typeof given === 'bigint') {
+      sequence = given >= 0 && given <= MaxGivenSequence
+        ? Number(given) + 1
+        : 1;
     } else if (typeof given === 'string' && SequencePattern.test(given)) {
       sequence = Number(given) <= MaxGivenSequence ? Number(given) + 1 : 1;
     }
@@ -97,10 +102,12 @@ class SequenceElement extends FlowElement {
     flowData.evidence.add('query.session-id', sessionId);
     flowData.evidence.add('query.sequence', sequence);
 
-    flowData.setElementData(new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { 'session-id': sessionId, sequence }
+      contents: {}
     }));
+    data.contents = { 'session-id': sessionId, sequence };
+    flowData.setElementData(data);
   }
 }
 

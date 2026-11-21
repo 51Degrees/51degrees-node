@@ -7,7 +7,7 @@ html
     link(rel='stylesheet' href='/css/examples-main.min.css')
   body
     .c-eg-page
-      if (new Date().getTime() > dataFilePublishedTime + dataFileAgeWarning)
+      if (dataFileOld)
         .c-eg-alert
           | WARNING: This example is using a data file that is more than
           | #{dataFileAgeWarning} days old. A more recent data file may be needed

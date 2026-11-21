@@ -1,9 +1,5 @@
 export = CloudRequestEngine;
 declare const CloudRequestEngine_base: typeof import("fiftyone.pipeline.engines/types/engine");
-/**
- * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
- * @typedef {import('fiftyone.pipeline.core').Evidence} Evidence
- */
 declare class CloudRequestEngine extends CloudRequestEngine_base {
     /**
      * Constructor for CloudRequestEngine
@@ -26,14 +22,21 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      * For more detail, see the 'Request Headers' section in the
      * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
      * @param {RequestClient} options.requestClient Set predefined RequestClient.
+     * @param {CloudDiscoveryState|string|object} [options.discoveryState] a
+     * saved copy of discovery for the same keys, from getDiscoveryState, as
+     * the copy, its JSON text or that JSON parsed. The engine then makes no
+     * discovery request.
+     * A blank value is the option unset, so the engine discovers for
+     * itself, and text that is not the copy's JSON is refused.
      */
-    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient }: {
+    constructor({ resourceKey, licenseKey, requestedProperties, baseURL, cloudRequestOrigin, requestClient, discoveryState }: {
         resourceKey: string;
         licenseKey: string;
         requestedProperties: Array<string> | string;
         baseURL: string;
         cloudRequestOrigin: string;
         requestClient: RequestClient;
+        discoveryState?: CloudDiscoveryState | string | object;
     }, ...args: any[]);
     resourceKey: string;
     licenseKey: string;
@@ -45,6 +48,16 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     evidenceKeys: any[];
     evidenceKeysFetched: boolean;
     flowElementProperties: {};
+    /**
+     * A copy of what discovery fetched, which a later engine for the same keys
+     * can be given as its discoveryState so that it makes no discovery
+     * request. There is a copy once both discovery requests have answered,
+     * for example once ready() has resolved, or when the engine was given one.
+     *
+     * @returns {CloudDiscoveryState|undefined} the copy, or undefined before
+     * then
+     */
+    getDiscoveryState(): CloudDiscoveryState | undefined;
     /**
      * Check if the keys and properties have been fetched.
      *
@@ -69,50 +82,66 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     fetchEvidenceKeysAndProperties(resolveCallback: Function, rejectCallback: Function): void;
     /**
-     * Internal process for cloud engine
-     * Returns raw JSON as a "cloud" property in "cloud"
+     * Builds the request from the Evidence, starts it, and adds Element Data
+     * whose "cloud" property is the raw JSON response. That property is lazy,
+     * its task being the request, so processing does not wait for the
+     * response. Readers wait for it with getAsync('cloud'), and the Pipeline
+     * waits for it before processing finishes.
      *
      * @param {FlowData} flowData flowData to process
-     * @returns {Promise} data from cloud service
      */
-    processInternal(flowData: FlowData): Promise<any>;
+    processInternal(flowData: FlowData): void;
     /**
-     * Fetches the evidence keys and properties before the first process,
-     * whatever else is in the pipeline, because the cache key is built from
-     * the evidence keys. A fetch that fails is tried again on the next
-     * process, and its error is the process error.
+     * Has the evidence keys and properties before processing, whatever else
+     * is in the pipeline, because the cache key is built from the evidence
+     * keys. A process that starts while a discovery attempt is under way,
+     * such as the one made when the engine was built, shares its answer. A
+     * process that starts after discovery failed tries again, and a failure
+     * is the process error.
      *
      * @param {FlowData} flowData FlowData to process
      * @returns {Promise} resolved once the FlowData is processed
      */
     process(flowData: FlowData): Promise<any>;
-    discovery: Promise<any>;
+    discovery: any;
     /**
-     * A response with a top level `fodid` member, in any case, holds a 51Did
-     * created for the one request, so it is neither stored in the cache nor
-     * served from it. The answer is worked out once for each element data,
-     * so a cache hit does not parse the response again.
-     *
-     * @param {object} data the element data of a response
-     * @returns {boolean} false if the response has a top level fodid member
-     */
-    isCacheable(data: object): boolean;
-    /**
-     * Typically, cloud will return errors as JSON.
-     * However, transport level errors or other failures can result in
-     * responses that are plain text. This function handles these cases.
+     * The error messages a failed answer's body gives, being each entry of
+     * its errors array, or the no data message when the body is empty. A body
+     * that is not JSON, or has no errors array, gives none, so that
+     * getErrorsFromResponse describes the failure by its status.
      *
      * @param {string} responseBody the response data to process
+     * @param {string} url the address the request went to
      * @returns {Array} The error messages
      */
-    getErrorMessages(responseBody: string): any[];
+    getErrorMessages(responseBody: string, url: string): any[];
+    /**
+     * Logs each entry of the warnings array of a cloud response as a warning,
+     * with the license key masked as it is in the errors, because the cloud's
+     * text can name the key it was sent.
+     *
+     * @param {*} answer the response, parsed from JSON
+     * @param {Array<object>} pipelines the pipelines to log to
+     */
+    logWarnings(answer: any, pipelines: Array<object>): void;
     /**
      * Used to handle errors from http requests
      *
      * @param {import('http').ServerResponse} response Responce to get errors from
+     * @param {string} url the address the request went to
      * @returns {Array<CloudRequestError>} Array of CloudRequestError from response
      */
-    getErrorsFromResponse(response: import("http").ServerResponse): Array<CloudRequestError>;
+    getErrorsFromResponse(response: import("http").ServerResponse, url: string): Array<CloudRequestError>;
+    /**
+     * The errors an answer with a success status carries, being one for each
+     * entry of its errors array, with the license key masked, or one saying
+     * the answer is empty. An answer that is not JSON is left to its reader.
+     *
+     * @param {string} body the answer
+     * @param {string} url the address the request went to
+     * @returns {Array<CloudRequestError>} the errors, none for a good answer
+     */
+    answerErrors(body: string, url: string): Array<CloudRequestError>;
     /**
      * Internal process to fetch all the properties available under a resourcekey
      *
@@ -135,14 +164,17 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     metaPropertyTransform(key: string, value: object): object;
     /**
-     * Internal function to get data from cloud service
+     * Builds the request from the Flow Data's Evidence and sends it to the
+     * cloud service. The request is built before this returns, and the
+     * promise that follows never reads the Flow Data.
      *
      * @param {FlowData} flowData
      * FlowData used to extract evidence and send to cloud service
      * for processing
-     * @returns {Promise} result of processing
+     * @returns {Promise<string>} the raw JSON response, or the errors of a
+     * failed request
      */
-    getData(flowData: FlowData): Promise<any>;
+    getData(flowData: FlowData): Promise<string>;
     /**
      * Compares the requested properties with an answer and logs, once, the
      * names the answer left out. The cloud service drops a property the keys
@@ -219,7 +251,8 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getSelectedEvidence(evidence: Evidence, type: string): Evidence;
     /**
-     * Check that the key of a KeyValuePair has the given prefix.
+     * Check that the key of a KeyValuePair has the given prefix, ignoring
+     * letter case as evidence keys do.
      *
      * @param {string} itemKey Key to check
      * @param {string} prefix The prefix to check for.
@@ -231,6 +264,7 @@ declare namespace CloudRequestEngine {
     export { FlowData, Evidence };
 }
 import RequestClient = require("./requestClient");
+import CloudDiscoveryState = require("./cloudDiscoveryState");
 import CloudRequestError = require("./cloudRequestError");
 type FlowData = import("fiftyone.pipeline.core/types/flowData");
 type Evidence = import("fiftyone.pipeline.core/types/evidence");

@@ -33,6 +33,7 @@ const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
+const CloudDiscoveryState = require('./cloudDiscoveryState');
 
 // Names the cloud service reads its credentials and property list from,
 // which Evidence must not supply under any prefix or in any letter case.
@@ -51,21 +52,152 @@ const hasOwn = (object, name) =>
 // Whether each element data the engine has made may be cached.
 const cacheableData = new WeakMap();
 
-// The engines that read their endpoint from the deprecated variable name
-// and have not yet logged that they did.
-const oldEndpointVariableUnreported = new WeakSet();
+// The discovery attempt each engine is making, shared by the build and every
+// process that starts while it is under way.
+const discoveryAttempts = new WeakMap();
+
+// The failures to a discovery request that got no answer or a 5xx, which
+// cloud-request-engine.md lines 259 to 264 treat as transient.
+const transientFailures = new WeakSet();
+
+// For an engine in no Pipeline when its build attempt failed, what the
+// first process logs.
+const unloggedBuildFailures = new WeakMap();
+
+// What each engine's discovery fetched, the evidence keys and the
+// accessible properties answer as JSON text, for getDiscoveryState.
+const discoveredKeys = new WeakMap();
+const discoveredProperties = new WeakMap();
 
 /**
- * Logs, once for an engine, that its endpoint came from the deprecated
- * variable name. An engine has no Pipeline to log to when it is built, so
- * the first FlowData it processes carries the message.
+ * The properties of each product in an accessible properties answer, as
+ * flowElementProperties holds them.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {object} answer the accessible properties answer, parsed
+ * @returns {object} each product's properties by name
+ */
+function productProperties (engine, answer) {
+  const output = {};
+  for (const product in answer.Products) {
+    output[product] = engine.propertiesTransform(
+      answer.Products[product].Properties);
+  }
+  return output;
+}
+
+/**
+ * Whether a discoveryState option was given, a blank value being what a
+ * configuration file holding the option unset gives.
+ *
+ * @param {CloudDiscoveryState|string|object} state the option's value
+ * @returns {boolean} true when a copy was given
+ */
+function discoveryStateGiven (state) {
+  return state !== undefined && state !== null &&
+    !(typeof state === 'string' && state.trim() === '');
+}
+
+/**
+ * Takes the evidence keys and properties from a saved copy of discovery,
+ * as discovery would set them.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {CloudDiscoveryState} state the copy
+ */
+function useDiscoveryState (engine, state) {
+  engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
+    state.evidenceKeys.slice());
+  engine.keptEvidenceKeyFilter = undefined;
+  engine.evidenceKeysFetched = true;
+  engine.flowElementProperties = productProperties(
+    engine, JSON.parse(state.accessibleProperties));
+  discoveredKeys.set(engine, state.evidenceKeys);
+  discoveredProperties.set(engine, state.accessibleProperties);
+}
+
+/**
+ * Makes both discovery requests, or gives the attempt the engine is already
+ * making, so that one attempt is made at a time. An attempt that has ended
+ * is forgotten, so the next one asks again.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @returns {Promise<CloudRequestEngine>} the engine, once both are answered
+ */
+function discover (engine) {
+  let attempt = discoveryAttempts.get(engine);
+  if (attempt === undefined) {
+    attempt = Promise.all([engine.getEvidenceKeys(), engine.fetchProperties()])
+      .then(() => engine)
+      .finally(() => discoveryAttempts.delete(engine));
+    discoveryAttempts.set(engine, attempt);
+  }
+  return attempt;
+}
+
+/**
+ * The errors for a discovery request that failed before its answer could be
+ * read, marked as transient when there was no answer or a 5xx.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {*} response what the request client rejected with
+ * @param {string} url the address the request went to
+ * @returns {Array<CloudRequestError>} the errors
+ */
+function requestFailure (engine, response, url) {
+  const errors = engine.getErrorsFromResponse(response, url);
+  const status = response !== null && typeof response === 'object'
+    ? response.statusCode
+    : undefined;
+  if (status === undefined || status >= 500) {
+    transientFailures.add(errors);
+  }
+  return errors;
+}
+
+/**
+ * Logs a failure of the discovery attempt made when the engine was built, to
+ * each Pipeline the engine is in, or by the first process when it is in
+ * none yet. A transient failure is a warning, because the first process
+ * tries again. Any other failure is an error, as it is when a process meets
+ * it.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {Array<CloudRequestError>} errors the failure
+ */
+function reportBuildFailure (engine, errors) {
+  engine.errors = errors;
+  const report = transientFailures.has(errors)
+    ? {
+        level: 'warn',
+        message: util.format(errorMessages.discoveryTriedAgain,
+          errors.map((error) => error.message).join(' '))
+      }
+    : {
+        level: 'error',
+        message: { source: 'CloudRequestEngine', message: errors }
+      };
+  if (engine.pipelines.length === 0) {
+    unloggedBuildFailures.set(engine, report);
+    return;
+  }
+  for (const pipeline of engine.pipelines) {
+    pipeline.log(report.level, report.message);
+  }
+}
+
+/**
+ * Logs, on the first process, a build attempt's failure that arrived while
+ * the engine was in no Pipeline.
  *
  * @param {CloudRequestEngine} engine the engine processing
  * @param {FlowData} flowData the flow data whose pipeline is logged to
  */
-function reportOldEndpointVariable (engine, flowData) {
-  if (oldEndpointVariableUnreported.delete(engine)) {
-    flowData.pipeline.log('warn', errorMessages.oldEndpointVariable);
+function reportUnloggedBuildFailure (engine, flowData) {
+  const report = unloggedBuildFailures.get(engine);
+  if (report !== undefined) {
+    unloggedBuildFailures.delete(engine);
+    flowData.pipeline.log(report.level, report.message);
   }
 }
 
@@ -119,6 +251,12 @@ class CloudRequestEngine extends Engine {
    * For more detail, see the 'Request Headers' section in the
    * <a href="https://cloud.51degrees.com/api-docs/index.html">cloud documentation</a>.
    * @param {RequestClient} options.requestClient Set predefined RequestClient.
+   * @param {CloudDiscoveryState|string|object} [options.discoveryState] a
+   * saved copy of discovery for the same keys, from getDiscoveryState, as
+   * the copy, its JSON text or that JSON parsed. The engine then makes no
+   * discovery request.
+   * A blank value is the option unset, so the engine discovers for
+   * itself, and text that is not the copy's JSON is refused.
    */
   constructor (
     {
@@ -127,7 +265,8 @@ class CloudRequestEngine extends Engine {
       requestedProperties,
       baseURL,
       cloudRequestOrigin,
-      requestClient
+      requestClient,
+      discoveryState
     }) {
     super(...arguments);
 
@@ -160,18 +299,8 @@ class CloudRequestEngine extends Engine {
     // everything built on this engine works unchanged once
     // _51DEGREES_CLOUD_ENDPOINT names the other host's API base including the
     // /api/v4/ segment.
-    //
-    // FOD_CLOUD_API_URL is the deprecated name of the same variable. It is
-    // read only when _51DEGREES_CLOUD_ENDPOINT is unset or empty, and the
-    // first process logs that it was.
     if (!baseURL) {
       baseURL = process.env._51DEGREES_CLOUD_ENDPOINT;
-      if (!baseURL) {
-        baseURL = process.env.FOD_CLOUD_API_URL;
-        if (baseURL) {
-          oldEndpointVariableUnreported.add(this);
-        }
-      }
       if (!baseURL) {
         baseURL = sharedValues.baseURLDefault;
       }
@@ -184,16 +313,50 @@ class CloudRequestEngine extends Engine {
     this.baseURL = baseURL;
     this.evidenceKeys = [];
 
-    // The cloud service's keys are fetched when the Pipeline first processes.
-    // Until then every key is kept, so evidence set before then is not lost,
-    // and getEvidenceKeys replaces this with the keys the service lists.
-    this.evidenceKeyFilter = new EvidenceKeyFilter();
+    // Until discovery gives the keys the cloud service accepts, the engine
+    // accepts none, as nothing can change its results
+    // (cloud-request-engine.md lines 296 and 297), and keeps every key, so
+    // evidence set before then is still sent and in the cache key.
+    // getEvidenceKeys replaces both.
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
+      new BasicListEvidenceKeyFilter([]));
+    this.keptEvidenceKeyFilter = new EvidenceKeyFilter();
 
     // Set once the cloud service's evidence keys have arrived.
     this.evidenceKeysFetched = false;
 
     // Properties of connected FlowElements
     this.flowElementProperties = {};
+
+    if (discoveryStateGiven(discoveryState)) {
+      // A saved copy is used in place of the discovery requests
+      // (cloud-request-engine.md lines 307 to 314).
+      useDiscoveryState(this, discoveryState instanceof CloudDiscoveryState
+        ? discoveryState
+        : CloudDiscoveryState.fromJson(discoveryState));
+    } else {
+      // Both discovery requests are made now, so that in the normal case
+      // the engine is ready to process once it is built
+      // (cloud-request-engine.md line 241).
+      discover(this).catch((errors) => reportBuildFailure(this, errors));
+    }
+  }
+
+  /**
+   * A copy of what discovery fetched, which a later engine for the same keys
+   * can be given as its discoveryState so that it makes no discovery
+   * request. There is a copy once both discovery requests have answered,
+   * for example once ready() has resolved, or when the engine was given one.
+   *
+   * @returns {CloudDiscoveryState|undefined} the copy, or undefined before
+   * then
+   */
+  getDiscoveryState () {
+    const keys = discoveredKeys.get(this);
+    const properties = discoveredProperties.get(this);
+    return keys === undefined || properties === undefined
+      ? undefined
+      : new CloudDiscoveryState(keys, properties);
   }
 
   /**
@@ -224,7 +387,7 @@ class CloudRequestEngine extends Engine {
    */
   fetchEvidenceKeysAndProperties (resolveCallback, rejectCallback) {
     const self = this;
-    Promise.all([this.getEvidenceKeys(), this.fetchProperties()]).then(function () {
+    discover(this).then(function () {
       resolveCallback(self);
     }).catch(function (errors) {
       self.errors = errors;
@@ -259,28 +422,36 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Internal process for cloud engine
-   * Returns raw JSON as a "cloud" property in "cloud"
+   * Builds the request from the Evidence, starts it, and adds Element Data
+   * whose "cloud" property is the raw JSON response. That property is lazy,
+   * its task being the request, so processing does not wait for the
+   * response. Readers wait for it with getAsync('cloud'), and the Pipeline
+   * waits for it before processing finishes.
    *
    * @param {FlowData} flowData flowData to process
-   * @returns {Promise} data from cloud service
    */
   processInternal (flowData) {
-    const engine = this;
-    return engine.getData(flowData);
+    const data = new AspectDataDictionary({
+      flowElement: this,
+      contents: { properties: this.properties }
+    });
+    data.addLazyProperty('cloud', this.getData(flowData));
+    flowData.setElementData(data);
   }
 
   /**
-   * Fetches the evidence keys and properties before the first process,
-   * whatever else is in the pipeline, because the cache key is built from
-   * the evidence keys. A fetch that fails is tried again on the next
-   * process, and its error is the process error.
+   * Has the evidence keys and properties before processing, whatever else
+   * is in the pipeline, because the cache key is built from the evidence
+   * keys. A process that starts while a discovery attempt is under way,
+   * such as the one made when the engine was built, shares its answer. A
+   * process that starts after discovery failed tries again, and a failure
+   * is the process error.
    *
    * @param {FlowData} flowData FlowData to process
    * @returns {Promise} resolved once the FlowData is processed
    */
   process (flowData) {
-    reportOldEndpointVariable(this, flowData);
+    reportUnloggedBuildFailure(this, flowData);
     if (this.keysAndPropertiesFetched) {
       return super.process(flowData);
     }
@@ -315,42 +486,70 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Typically, cloud will return errors as JSON.
-   * However, transport level errors or other failures can result in
-   * responses that are plain text. This function handles these cases.
+   * The error messages a failed answer's body gives, being each entry of
+   * its errors array, or the no data message when the body is empty. A body
+   * that is not JSON, or has no errors array, gives none, so that
+   * getErrorsFromResponse describes the failure by its status.
    *
    * @param {string} responseBody the response data to process
+   * @param {string} url the address the request went to
    * @returns {Array} The error messages
    */
-  getErrorMessages (responseBody) {
-    let errors = [];
+  getErrorMessages (responseBody, url) {
+    if (typeof responseBody !== 'string' || responseBody.length === 0) {
+      return [`No data in response from cloud service at '${url}'`];
+    }
+    let parsed;
     try {
-      errors = JSON.parse(responseBody).errors;
+      parsed = JSON.parse(responseBody);
     } catch (parseError) {
-      errors = ['Error parsing response - ' + responseBody];
+      return [];
     }
-    if (responseBody.length === 0) {
-      errors = ['No data in response from cloud service'];
+    return parsed !== null && typeof parsed === 'object' &&
+      Array.isArray(parsed.errors)
+      ? parsed.errors
+      : [];
+  }
+
+  /**
+   * Logs each entry of the warnings array of a cloud response as a warning,
+   * with the license key masked as it is in the errors, because the cloud's
+   * text can name the key it was sent.
+   *
+   * @param {*} answer the response, parsed from JSON
+   * @param {Array<object>} pipelines the pipelines to log to
+   */
+  logWarnings (answer, pipelines) {
+    if (answer === null || typeof answer !== 'object' ||
+      Array.isArray(answer.warnings) === false) {
+      return;
     }
-    return errors;
+    for (const warning of answer.warnings) {
+      const text = LicenseKeys.mask(String(warning), this.licenseKey);
+      for (const pipeline of pipelines || []) {
+        pipeline.log('warn', text);
+      }
+    }
   }
 
   /**
    * Used to handle errors from http requests
    *
    * @param {import('http').ServerResponse} response Responce to get errors from
+   * @param {string} url the address the request went to
    * @returns {Array<CloudRequestError>} Array of CloudRequestError from response
    */
-  getErrorsFromResponse (response) {
+  getErrorsFromResponse (response, url) {
     let content = response;
-    if (response.content) {
+    if (response !== null && typeof response === 'object' &&
+      Object.prototype.hasOwnProperty.call(response, 'content')) {
       content = response.content;
     }
 
     // The cloud's errors can name the license key it was sent, so the key
     // is masked before the text goes into an error.
     const licenseKey = this.licenseKey;
-    const errors = this.getErrorMessages(content);
+    const errors = this.getErrorMessages(content, url);
     const cloudErrors = [];
     errors.forEach(function (errorText) {
       cloudErrors.push(new CloudRequestError(
@@ -359,10 +558,13 @@ class CloudRequestEngine extends Engine {
         response.statusCode));
     });
 
-    if (cloudErrors.length === 0 &&
-      response.statusCode > 299) {
-      const message = 'Cloud service returned status code ' +
-        response.statusCode + ' with content ' + content + '.';
+    // With no entry to give, a failed answer is described by its status,
+    // and a request that got no answer by the reason it failed.
+    if (cloudErrors.length === 0) {
+      const message = response.statusCode > 299
+        ? `Cloud service at '${url}' returned status code ` +
+          `'${response.statusCode}' with content ${content}`
+        : 'Error parsing response - ' + content;
       cloudErrors.push(new CloudRequestError(
         LicenseKeys.mask(message, licenseKey),
         response.headers,
@@ -370,6 +572,35 @@ class CloudRequestEngine extends Engine {
     }
 
     return cloudErrors;
+  }
+
+  /**
+   * The errors an answer with a success status carries, being one for each
+   * entry of its errors array, with the license key masked, or one saying
+   * the answer is empty. An answer that is not JSON is left to its reader.
+   *
+   * @param {string} body the answer
+   * @param {string} url the address the request went to
+   * @returns {Array<CloudRequestError>} the errors, none for a good answer
+   */
+  answerErrors (body, url) {
+    if (typeof body !== 'string' || body.length === 0) {
+      return [new CloudRequestError(
+        `No data in response from cloud service at '${url}'`)];
+    }
+    let answer;
+    try {
+      answer = JSON.parse(body);
+    } catch (e) {
+      return [];
+    }
+    if (answer === null || typeof answer !== 'object' ||
+      Array.isArray(answer.errors) === false) {
+      return [];
+    }
+    const licenseKey = this.licenseKey;
+    return answer.errors.map((text) => new CloudRequestError(
+      LicenseKeys.mask(String(text), licenseKey)));
   }
 
   /**
@@ -404,21 +635,24 @@ class CloudRequestEngine extends Engine {
 
       request
         .then(function (properties) {
-          const propertiesOutput = {};
-
-          properties = JSON.parse(properties);
-
-          const products = properties.Products;
-
-          for (const product in products) {
-            propertiesOutput[product] = engine.propertiesTransform(
-              products[product].Properties);
+          const failures = engine.answerErrors(properties, url);
+          if (failures.length > 0) {
+            reject(failures);
+            return;
           }
+          properties = JSON.parse(properties);
+          engine.logWarnings(properties, engine.pipelines);
+
+          const propertiesOutput = productProperties(engine, properties);
 
           engine.flowElementProperties = propertiesOutput;
+          if (properties !== null && properties.Products !== null &&
+            typeof properties.Products === 'object') {
+            discoveredProperties.set(engine, JSON.stringify(properties));
+          }
           resolve(propertiesOutput);
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response));
+          reject(requestFailure(engine, response, url));
         });
     });
   }
@@ -465,15 +699,20 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * Internal function to get data from cloud service
+   * Builds the request from the Flow Data's Evidence and sends it to the
+   * cloud service. The request is built before this returns, and the
+   * promise that follows never reads the Flow Data.
    *
    * @param {FlowData} flowData
    * FlowData used to extract evidence and send to cloud service
    * for processing
-   * @returns {Promise} result of processing
+   * @returns {Promise<string>} the raw JSON response, or the errors of a
+   * failed request
    */
   getData (flowData) {
     const engine = this;
+    // Only the Pipeline is kept, to log to once the response arrives.
+    const logTo = { pipeline: flowData.pipeline };
 
     // A resource key names the route. A license key on its own has no
     // resource key to put there, so it uses the route that takes none.
@@ -502,20 +741,25 @@ class CloudRequestEngine extends Engine {
         content,
         engine.cloudRequestOrigin)
         .then(function (body) {
-          const data = new AspectDataDictionary({
-            flowElement: engine,
-            contents: {
-              cloud: body,
-              properties: engine.properties
-            }
-          });
+          let answer;
+          try {
+            answer = JSON.parse(body);
+          } catch (e) {
+            answer = undefined;
+          }
+          engine.logWarnings(answer, [logTo.pipeline]);
+          const failures = engine.answerErrors(body, url);
+          if (failures.length > 0) {
+            self.errors = failures;
+            reject(failures);
+            return;
+          }
 
-          flowData.setElementData(data);
-          engine.reportPropertiesNotCovered(flowData, body);
+          engine.reportPropertiesNotCovered(logTo, body);
 
-          resolve();
+          resolve(body);
         }).catch(function (response) {
-          self.errors = engine.getErrorsFromResponse(response);
+          self.errors = engine.getErrorsFromResponse(response, url);
           reject(self.errors);
         });
     });
@@ -570,14 +814,22 @@ class CloudRequestEngine extends Engine {
     return new Promise(function (resolve, reject) {
       engine.requestClient.get(url, engine.cloudRequestOrigin)
         .then(function (body) {
-          engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(
-            JSON.parse(body)
-          );
+          const failures = engine.answerErrors(body, url);
+          if (failures.length > 0) {
+            reject(failures);
+            return;
+          }
+          const keys = JSON.parse(body);
+          engine.evidenceKeyFilter = new BasicListEvidenceKeyFilter(keys);
+          engine.keptEvidenceKeyFilter = undefined;
           engine.evidenceKeysFetched = true;
+          if (Array.isArray(keys)) {
+            discoveredKeys.set(engine, keys.slice());
+          }
 
           resolve();
         }).catch(function (response) {
-          reject(engine.getErrorsFromResponse(response));
+          reject(requestFailure(engine, response, url));
         });
     });
   }

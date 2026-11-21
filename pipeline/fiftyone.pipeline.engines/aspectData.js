@@ -73,6 +73,12 @@ class AspectData extends ElementData {
    * @returns {FlowData} result
    */
   get (key) {
+    // A lazy property is read as the core Element Data reads it, so a read
+    // before its task has finished is not taken for a missing property.
+    if (this.isLazyProperty(key)) {
+      return ElementData.prototype.get.call(this, key);
+    }
+
     let result;
 
     try {
@@ -99,7 +105,8 @@ class AspectData extends ElementData {
         this.flowElement.restrictedPropertyKeys = keys;
       }
       if (!keys.has(key) && !keys.has(key.toLowerCase())) {
-        throw util.format(errorMessages.propertyExcluded, key);
+        throw util.format(errorMessages.missingPropertyExcluded, key,
+          this.flowElement.dataKey);
       }
     }
 

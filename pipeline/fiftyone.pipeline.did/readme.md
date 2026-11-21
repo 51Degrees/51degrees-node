@@ -342,24 +342,27 @@ appear in `FodId.ParseStatus` unchanged. The library also offers an offline
 in Node and the browser (Web Crypto), so `FodId.verify()` and
 `FodId.checkSignature()` run without contacting a network endpoint.
 
-The library is not on the npm registry, so `package.json` names it as a
-GitHub reference, which npm resolves by cloning the repository. The reference
-is `github:SWAN-community/owid-js#6c5ff4e7`, the commit on `main` of
-[SWAN-community/owid-js](https://github.com/SWAN-community/owid-js) where a
+The library is not on the npm registry. This repository takes it as the git
+submodule `owid-js` of this package, as every other 51Degrees language takes
+it, from `main` of
+[SWAN-community/owid-js](https://github.com/SWAN-community/owid-js), where a
 signature covers its own OWID and no other, and a creator's key is fetched
-from the `public-key` endpoint without following a redirect. Cloning is
-needed only when working in this repository, because the published
-`fiftyone.pipeline.did` package carries the OWID source inside its own
-tarball under `node_modules/owid`, named in `bundleDependencies`. Anyone
-installing the package from npm needs neither git nor reachable GitHub, and
-gets the same OWID code every time, whatever the referenced branch happens
-to hold on the day. owid-js is Apache-2.0 and its `LICENSE` file travels in
-the bundle alongside the source.
+from the `public-key` endpoint without following a redirect. The nightly
+submodule update moves it to the newest commit on `main`, as it moves every
+submodule, through a pull request into `rc`. The published
+`fiftyone.pipeline.did` package carries the library's `v1.js` and its
+Apache-2.0 `LICENSE` in its own tarball under `owid-js`, so installing the
+package from npm needs neither git nor reachable GitHub, and gives the same
+OWID code every time.
 
 ## Install / build
 
+Clone the repository with its submodules, or fetch them in a clone made
+without, so that `owid-js` is there.
+
 ```bash
-npm install   # needs git on the PATH to fetch owid-js
+git submodule update --init pipeline/fiftyone.pipeline.did/owid-js
+npm install
 npm test
 ```
 
@@ -459,14 +462,11 @@ const client = new DidClient({
 | --- | --- |
 | `resourceKey` | Required for the public cloud. The page's resource key, public by nature. It travels in the route of the key and verify requests and in the form body of the redeem request. A private cloud serves those routes with no resource key, so a client for one is built without it |
 | `licenceKey` | Optional. A licence key of the same account, server side only. Needed to redeem where the account holds licence keys. Sent only in the body of the redeem request, never in a URL |
-| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `_51DEGREES_CLOUD_ENDPOINT` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `FOD_CLOUD_API_URL`, the deprecated name of that variable, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
+| `endpoint` | Optional. The API base including the `/api/v4/` segment. Defaults to the `_51DEGREES_CLOUD_ENDPOINT` environment variable where the runtime has environment variables, the same variable the cloud request engine honours, then to `https://cloud.51degrees.com/api/v4/`. A value without a trailing slash gains one |
 | `fetch` | Optional. The HTTP transport, defaulting to the global `fetch`, on Node and in a browser alike. Tests inject one |
 
-`FOD_CLOUD_API_URL` is read only when `_51DEGREES_CLOUD_ENDPOINT` is unset or
-empty. The first client that takes its endpoint from the old name raises one
-Node `DeprecationWarning` for the process, which Node writes to standard error
-and passes to any `process.on('warning')` listener. Set
-`_51DEGREES_CLOUD_ENDPOINT` instead.
+`FOD_CLOUD_API_URL`, the old name of the same variable, is no longer read.
+Set `_51DEGREES_CLOUD_ENDPOINT` instead.
 
 On Node every request carries a `User-Agent` naming this package and its
 version. A browser sends its own, as
@@ -821,7 +821,7 @@ cd examples/creator-context-web
 _51DEGREES_RESOURCE_KEY=<resource key> node server.js
 ```
 
-Then open `http://localhost:5100/`. To demonstrate across two devices, serve
+Then open `http://localhost:5151/`. To demonstrate across two devices, serve
 on an address both can reach and open the copied link on the second device.
 
 **The copy-and-paste proof.** Once the 51Did has fully validated, the page
@@ -845,8 +845,8 @@ build and is refreshed by common-ci's `update-example-assets` step.
 | --- | --- |
 | `_51DEGREES_RESOURCE_KEY` | The resource key. Required. Public by nature, it is what the page carries |
 | `_51DEGREES_LICENSE_KEY` | A licence key of the same account. Optional. Server-side only. Only an account that holds licence keys needs one to redeem, because the licence key is what keeps redemption to the acting party's own servers, and an account holding none has nothing to check against |
-| `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged. `FOD_CLOUD_API_URL`, the deprecated name of this variable, is still read when this one is unset or empty |
-| `PORT` | Web demo only. Defaults to `5100` |
+| `_51DEGREES_CLOUD_ENDPOINT` | Optional. The cloud API base including the `/api/v4/` segment, defaulting to `https://cloud.51degrees.com/api/v4/`. The same variable the cloud request engine and `DidClient` honour, so setting it once points every 51Degrees example at the same place. A host other than `cloud.51degrees.com` would be used to (a) use an on premise web server, or (b) use a privately hosted version of the 51Degrees cloud for performance reasons. This is the private hosting option of the 51Degrees cloud service. Both run the same service, so the examples work unchanged |
+| `PORT` | Web demo only. Defaults to `5151` |
 
 ### What a run costs
 

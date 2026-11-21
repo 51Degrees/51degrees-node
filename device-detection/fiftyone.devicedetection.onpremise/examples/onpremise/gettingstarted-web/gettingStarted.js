@@ -53,6 +53,10 @@
  * var hardwareVendor = deviceData.hardwarevendor;
  * ```
  *
+ * A Flow Data holds the evidence and results of one request. It must not be
+ * used by two threads at once, so the example creates one for each request
+ * and reads any value it hands to other work into its own variables first.
+ *
  * Results can also be accessed in client-side code by using the `fod` object. See the
  * [JavaScriptBuilderElement](/documentation/4.5/apis/pipeline-node/class_java_script_builder_element.html)
  * for details on available settings such as changing the `fod` name.
@@ -196,6 +200,8 @@ const setPipeline = (options) => {
   // Logging of errors and other messages.
   // Valid logs types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  return pipeline;
 };
 
 const server = http.createServer(async (req, res) => {
@@ -212,7 +218,17 @@ const server = http.createServer(async (req, res) => {
   // and usually consists of a number of HTTP Header field
   // values, in this case represented by a
   // Object of header name/value entries.
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Extract required evidence from the Http request. The client script
   // sends the results of its snippets, the session id and the sequence as
@@ -228,8 +244,12 @@ const server = http.createServer(async (req, res) => {
 
   // Handle report from client side separately
   if (req.url.startsWith('/json')) {
+    // A matching If-None-Match gets its 304 without processing.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/json', JSON.stringify(flowData.jsonbundler.json));
     });
@@ -241,8 +261,11 @@ const server = http.createServer(async (req, res) => {
     // detection. Query parameters, such as 'fod-js-enable-cookies', are
     // evidence like any other and are already in the flow data via
     // addFromRequest.
+    if (core.Helpers.writeClientSideNotModified(req, res, flowData)) {
+      return;
+    }
     flowData.process().then(function () {
-      // Sends the caching headers, and a 304 to a matching If-None-Match.
+      // Sends the caching headers.
       core.Helpers.writeClientSideResponse(req, res, flowData,
         'application/x-javascript', flowData.javascriptbuilder.javascript);
     });
@@ -266,7 +289,7 @@ const server = http.createServer(async (req, res) => {
       // Compile a response
       res.end(compiledFunction(
         {
-          dataFilePublishedTime: new Date().getTime(),
+          dataFileOld: ExampleUtils.isDataFileOld(pipeline),
           dataFileAgeWarning: DATA_FILE_AGE_WARNING,
           responseHeaders: res.getHeaders(),
           evidenceUsed: evidences,
@@ -301,7 +324,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
   setPipeline(options);
   // The port can be set with the 'PORT' environment variable, as in the
   // cloud example, so that the example can be run alongside others.
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT || 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);

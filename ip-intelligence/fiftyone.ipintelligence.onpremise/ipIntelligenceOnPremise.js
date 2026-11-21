@@ -41,6 +41,19 @@ const Property = require('./property');
 const Profile = require('./profile');
 
 /**
+ * The key with the part before its first dot in lower case.
+ *
+ * @param {string} key an evidence key, such as Header.User-Agent
+ * @returns {string} the key with a lower case prefix
+ */
+const lowerCasePrefix = (key) => {
+  const dot = key.indexOf('.');
+  return dot === -1
+    ? key
+    : key.substring(0, dot).toLowerCase() + key.substring(dot);
+};
+
+/**
  * @typedef {import('fiftyone.pipeline.engines').DataKeyedCache} DataKeyedCache
  */
 
@@ -117,14 +130,15 @@ class IpIntelligenceOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-   * @param {Array<string>} options.restrictedProperties list of properties the engine
-   * will be restricted to
+   * @param {Array<string>|string} options.restrictedProperties list of
+   * properties the engine will be restricted to, or one comma separated
+   * string of them, as a configuration file gives a list
    * @param {string} options.licenceKeys license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
-   * If you do not wish to use a key then you can specify
-   * an empty string, but this will cause automatic updates to
-   * be disabled.
+   * A key is needed only when autoUpdate or updateOnStart is on with the
+   * default dataUpdateUrl, and the engine refuses to build without one
+   * then. The file system watcher needs no key.
    * @param {boolean} options.download whether to download the datafile
    * or store it in memory
    * @param {string} options.performanceProfile options are:
@@ -178,6 +192,25 @@ class IpIntelligenceOnPremise extends Engine {
 
     if (typeof dataFilePath === 'undefined') {
       throw errorMessages.dataFilePathRequired;
+    }
+    // Only polling and the update on start-up download from the
+    // Distributor, so only they need a license key. The file system
+    // watcher needs none.
+    autoUpdate = Boolean(autoUpdate);
+    updateOnStart = Boolean(updateOnStart);
+    if (dataUpdateUrl === constants.dataUpdateUrl &&
+      !(licenceKeys && licenceKeys.length > 0)) {
+      const needKey = [];
+      if (autoUpdate) {
+        needKey.push('autoUpdate');
+      }
+      if (updateOnStart) {
+        needKey.push('updateOnStart');
+      }
+      if (needKey.length > 0) {
+        throw util.format(errorMessages.licenseKeyRequiredForUpdates,
+          needKey.join(', '), needKey.join(' and '));
+      }
     }
     // A file that is not there is downloaded when the engine updates on
     // start-up, so only an engine that cannot do so needs the file.
@@ -246,15 +279,12 @@ class IpIntelligenceOnPremise extends Engine {
       throw errorMessages.invalidFileExtension;
     }
 
-    if (typeof licenceKeys === 'undefined') {
-      throw errorMessages.licenseKeyRequired;
-    }
-
     // Create vector for restricted properties
     const propertiesList = new swigWrapper.VectorStringSwig();
 
-    if (restrictedProperties) {
-      restrictedProperties.forEach(function (property) {
+    const restricted = core.listSetting(restrictedProperties);
+    if (restricted) {
+      restricted.forEach(function (property) {
         propertiesList.add(property);
       });
     }
@@ -314,12 +344,32 @@ class IpIntelligenceOnPremise extends Engine {
 
     // The data file's keys are read when the engine is initialised,
     // which waits for the download when updateOnStart is set and there
-    // is no file yet. Until then every key is kept, so evidence set
-    // before then is not lost, and initEngine replaces this with the
-    // keys the file lists.
-    this.evidenceKeyFilter = new AnyEvidenceKeyFilter();
+    // is no file yet. Until then the engine accepts no Evidence, as
+    // nothing can change its results, and keeps every key, so evidence
+    // set before then is not lost. initEngine replaces both with the keys
+    // the file lists.
+    this.evidenceKeyFilter = /** @type {import('fiftyone.pipeline.core').EvidenceKeyFilter} */ (
+      new EvidenceKeyFilter([]));
+    this.keptEvidenceKeyFilter = new AnyEvidenceKeyFilter();
 
     const current = this;
+
+    /**
+     * The accepted Evidence keys the native engine gives for the data it
+     * holds, in the order it tries them, read at start-up and after each
+     * refresh, because a new data file can accept other keys.
+     *
+     * @param {object} engine the native engine
+     * @returns {EvidenceKeyFilter} a filter of those keys
+     */
+    const readEvidenceKeyFilter = function (engine) {
+      const evidenceKeys = engine.getKeys();
+      const evidenceKeyArray = [];
+      for (let i = 0; i < evidenceKeys.size(); i += 1) {
+        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
+      }
+      return new EvidenceKeyFilter(evidenceKeyArray);
+    };
 
     /**
      * Function for initialising the engine, wrapped like this so
@@ -331,17 +381,8 @@ class IpIntelligenceOnPremise extends Engine {
     this.initEngine = function () {
       const engine = new swigWrapper['Engine' + swigWrapperType + 'Swig'](dataFilePath, config, requiredProperties);
 
-      // Get keys and add to evidenceKey filter
-
-      const evidenceKeys = engine.getKeys();
-
-      const evidenceKeyArray = [];
-
-      for (let i = 0; i < evidenceKeys.size(); i += 1) {
-        evidenceKeyArray.push(evidenceKeys.get(i).toLowerCase());
-      }
-
-      current.evidenceKeyFilter = new EvidenceKeyFilter(evidenceKeyArray);
+      current.evidenceKeyFilter = readEvidenceKeyFilter(engine);
+      current.keptEvidenceKeyFilter = undefined;
 
       current.engine = engine;
       current.swigWrapper = swigWrapper;
@@ -353,18 +394,6 @@ class IpIntelligenceOnPremise extends Engine {
       initProperties.call(current, metadata);
       initComponents.call(current, metadata);
     };
-
-    // Disable features that require a license key if one was
-    // not supplied.
-    if (dataUpdateUrl === constants.dataUpdateUrl) {
-      if (licenceKeys) {
-        autoUpdate = autoUpdate && licenceKeys.length > 0;
-        updateOnStart = updateOnStart && licenceKeys.length > 0;
-      } else {
-        autoUpdate = false;
-        updateOnStart = false;
-      }
-    }
 
     // Construct datafile
     const dataFileSettings = {
@@ -404,6 +433,7 @@ class IpIntelligenceOnPremise extends Engine {
     dataFileSettings.refresh = function () {
       if (current.engine) {
         current.engine.refreshData();
+        current.evidenceKeyFilter = readEvidenceKeyFilter(current.engine);
       } else {
         current.initEngine();
         current.startUpError = undefined;
@@ -474,8 +504,10 @@ class IpIntelligenceOnPremise extends Engine {
       const accepted = ipi.evidenceKeyFilter.filterEvidence(
         flowData.evidence.getAll());
 
+      // Evidence keys ignore case, but the native evidence matches a key's
+      // prefix with case, so the prefix is given in lower case.
       Object.entries(accepted).forEach(function ([key, value]) {
-        evidence.set(key, value);
+        evidence.set(lowerCasePrefix(key), value);
       });
 
       const result = ipi.engine.process(evidence);

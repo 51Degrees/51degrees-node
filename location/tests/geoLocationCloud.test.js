@@ -32,15 +32,7 @@ const resourceKeyNames = [
 const currentResourceKey = resourceKeyNames
   .map((name) => process.env[name])
   .find((value) => value && value.trim());
-// RESOURCE_KEY is the deprecated name of _51DEGREES_RESOURCE_KEY, read only
-// when none of the names above is set.
-if (!currentResourceKey && process.env.RESOURCE_KEY) {
-  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-    'instead.');
-}
-const myResourceKey = currentResourceKey || process.env.RESOURCE_KEY ||
-  '!!YOUR_RESOURCE_KEY!!';
+const myResourceKey = currentResourceKey || '!!YOUR_RESOURCE_KEY!!';
 const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
   'so it needs a resource key and there is nothing to fall back on. None ' +
   'of ' + resourceKeyNames.join(', ') + ' is set, tried in that order. The ' +
@@ -48,7 +40,7 @@ const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
   'service for the location properties of a latitude and longitude. To ' +
   'see the products a key carries, open ' +
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. ' +
-  'Create a key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation-tests-geolocationcloud.test.js&utm_term=resource-key-required.';
+  'Create a key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation-tests-geolocationcloud.test.js&utm_term=resource-key-required.';
 
 const TestLat = '51.4578261';
 const TestLon = '-0.975922996290084';

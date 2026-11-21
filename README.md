@@ -19,7 +19,7 @@ npm install fiftyone.ipintelligence
 
 The product guides below list the cloud-only and on-premise-only packages. To work on the source, see [Getting the code](#getting-the-code).
 
-Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install).
+Try the [User-Agent tester](https://51degrees.com/developers/user-agent-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install) and [IP tester](https://51degrees.com/developers/ip-tester?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install). For cloud use, [create a Resource Key](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=install).
 
 Created from `pipeline-node`, `device-detection-node`, and `location-node`, this repository continues their work.
 
@@ -42,6 +42,7 @@ The folder table and product guides below show where to find usage examples and 
 | `location` | The `fiftyone.geolocation` package |
 | `cxx` | Submodule of [51degrees-cxx](https://github.com/51Degrees/51degrees-cxx), with the C and C++ code |
 | `cxx/data` | The [data](https://github.com/51Degrees/data) submodule of `cxx`, whose `device-detection` and `ip-intelligence` folders hold the data files the tests and examples use |
+| `pipeline/fiftyone.pipeline.derivedproperty/derived-properties` | Submodule of [derived-properties](https://github.com/51Degrees/derived-properties), whose `scripts` folder is the derived property scripts the package carries and whose `tests` folder is the cases its tests run |
 | `ci` | The scripts the shared 51Degrees CI workflows call |
 
 ## Getting the code
@@ -112,6 +113,10 @@ npm run tsc
 The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
 the keys and data files its tests use.
+
+Every environment variable name that the packages, tests, examples and CI
+scripts read is in [common-ci's list of environment variable names](https://github.com/51Degrees/common-ci/blob/18f9a570ed862a0b7e1ecb1c55a8319f35f02491/environment-variables.md),
+which decides.
 
 ## Regenerating the SWIG wrappers
 
