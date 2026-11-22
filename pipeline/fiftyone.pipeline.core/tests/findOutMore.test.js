@@ -38,6 +38,7 @@ const REPOSITORY =
 // Every file that holds a section. A web example holds it in its page.
 const EXAMPLES = [
   'fiftyone.pipeline.cloudrequestengine/examples/cloudFlowElement.js',
+  'fiftyone.pipeline.cloudrequestengine/examples/human-confidence-web/page.html',
   'fiftyone.pipeline.core/examples/customFlowElements/clientSideEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/customFlowElements/simpleEvidenceFlowElement.js',
   'fiftyone.pipeline.core/examples/pipelines.js',
@@ -50,9 +51,10 @@ const EXAMPLES = [
 ];
 
 // The other files in the examples folders. These are the flow elements
-// the pipelines and derived property examples use and the server of the
-// 51Did demo, whose page holds the section.
+// the pipelines and derived property examples use and the server of each
+// web demo, whose page holds the section.
 const NOT_EXAMPLES = [
+  'fiftyone.pipeline.cloudrequestengine/examples/human-confidence-web/server.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/async.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/neverRun.js',
   'fiftyone.pipeline.core/examples/flowElementsForExamples/stop.js',
