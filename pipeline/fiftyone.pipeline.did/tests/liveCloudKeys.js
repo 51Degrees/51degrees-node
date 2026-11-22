@@ -41,10 +41,11 @@ module.exports = {
     '_51DEGREES_RESOURCE_KEY_BESPOKE'
   ],
 
-  // The names the licence key is read from, in order.
+  // The name the license key for redemption is read from. It is the 51Did
+  // license only. _51DEGREES_LICENSE_KEY is the license for data file
+  // downloads, which CI sets for every job, and it redeems nothing.
   LICENCE_KEY_NAMES: [
-    '_51DEGREES_LICENSE_KEY_51DID',
-    '_51DEGREES_LICENSE_KEY'
+    '_51DEGREES_LICENSE_KEY_51DID'
   ],
 
   /**

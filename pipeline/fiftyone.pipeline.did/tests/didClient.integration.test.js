@@ -24,7 +24,7 @@
 // resource key is set, and when the key gets an answer without the 51Did
 // a test needs. The resource key names are in liveCloudKeys.js. A license
 // key, needed to redeem where the account holds one, is read from
-// _51DEGREES_LICENSE_KEY_51DID first, the name CI passes. The endpoint
+// _51DEGREES_LICENSE_KEY_51DID only, the name CI passes. The endpoint
 // follows _51DEGREES_CLOUD_ENDPOINT as the client does.
 
 const {

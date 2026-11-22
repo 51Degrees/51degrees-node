@@ -35,128 +35,145 @@ const tc = require51('fiftyone.devicedetection.shared').testConstants;
 
 const keyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
 
+const DeviceDetectionCloudPipelineBuilder =
+  require51('fiftyone.devicedetection.cloud').DeviceDetectionCloudPipelineBuilder;
+
 // Load the example module
 const example = require(path.join(__dirname, '/userAgentClientHintsWeb.js'));
 
+// Each case runs the example with one key. A case whose key is not set is
+// skipped, and its name and a warning say which variable to set.
+//
+// The cases for a single Accept-CH header use the cloud licence with
+// values= naming only the one property each needs, with its component, so
+// the answer carries that SetHeader property and no other. The 'none' case
+// asks for a property that needs no client hint, so the answer carries no
+// SetHeader property, and the test checks that the property came back, so
+// a call the cloud refused cannot pass for one that set no header.
+const cases = [
+  ['All available properties',
+    {
+      keyEnvVar: tc.envVars.superResourceKeyEnvVar,
+      userAgents: [
+        tc.userAgents.chromeUA,
+        tc.userAgents.edgeUA
+      ]
+    },
+    ['Sec-CH-UA-Model',
+      'Sec-CH-UA-Platform',
+      'Sec-CH-UA']
+  ],
+  ['SetHeaderPlatformAccept-CH',
+    {
+      keyEnvVar: tc.envVars.licenseKeyBespokeEnvVar,
+      requestedProperties: ['device.SetHeaderPlatformAccept-CH'],
+      userAgents: [
+        tc.userAgents.chromeUA,
+        tc.userAgents.edgeUA
+      ]
+    },
+    ['Sec-CH-UA-Platform']
+  ],
+  ['SetHeaderHardwareAccept-CH',
+    {
+      keyEnvVar: tc.envVars.licenseKeyBespokeEnvVar,
+      requestedProperties: ['device.SetHeaderHardwareAccept-CH'],
+      userAgents: [
+        tc.userAgents.chromeUA,
+        tc.userAgents.edgeUA
+      ]
+    },
+    ['Sec-CH-UA-Model']
+  ],
+  ['SetHeaderBrowserAccept-CH',
+    {
+      keyEnvVar: tc.envVars.licenseKeyBespokeEnvVar,
+      requestedProperties: ['device.SetHeaderBrowserAccept-CH'],
+      userAgents: [
+        tc.userAgents.chromeUA,
+        tc.userAgents.edgeUA
+      ]
+    },
+    ['Sec-CH-UA']
+  ],
+  ['No SetHeader properties',
+    {
+      keyEnvVar: tc.envVars.licenseKeyBespokeEnvVar,
+      requestedProperties: ['device.IsMobile'],
+      checkedProperty: 'ismobile',
+      userAgents: [
+        tc.userAgents.chromeUA,
+        tc.userAgents.edgeUA
+      ]
+    },
+    null
+  ],
+  ['No UACH supports',
+    {
+      keyEnvVar: tc.envVars.superResourceKeyEnvVar,
+      userAgents: [
+        tc.userAgents.firefoxUA,
+        tc.userAgents.safariUA,
+        tc.userAgents.curlUA
+      ]
+    },
+    null
+  ]
+];
+
+// The key a case needs, or undefined when its variable is not set.
+const keyFor = (testData) => keyUtils.getResourceKey(testData.keyEnvVar);
+
+// The pipeline options for a case: a resource key on its own, or the
+// licence with the properties it asks for.
+const optionsFor = (testData, key) => testData.requestedProperties
+  ? { licenceKeys: key, requestedProperties: testData.requestedProperties }
+  : { resourceKey: key };
+
 describe('Examples', () => {
-  test.each([
-    ['All available properties',
-      {
-        resourceKeyEnvVar: tc.envVars.superResourceKeyEnvVar,
-        userAgents: [
-          tc.userAgents.chromeUA,
-          tc.userAgents.edgeUA
-        ]
-      },
-      [{
-        headerName: 'Accept-CH',
-        headerValue: ['Sec-CH-UA-Model',
-          'Sec-CH-UA-Platform',
-          'Sec-CH-UA']
-      }]
-    ],
-    ['SetHeaderPlatformAccept-CH',
-      {
-        resourceKeyEnvVar: tc.envVars.platformResourceKeyEnvVar,
-        userAgents: [
-          tc.userAgents.chromeUA,
-          tc.userAgents.edgeUA
-        ]
-      },
-      [{
-        headerName: 'Accept-CH',
-        headerValue: ['Sec-CH-UA-Platform']
-      }]
-    ],
-    ['SetHeaderHardwareAccept-CH',
-      {
-        resourceKeyEnvVar: tc.envVars.hardwareResourceKeyEnvVar,
-        userAgents: [
-          tc.userAgents.chromeUA,
-          tc.userAgents.edgeUA
-        ]
-      },
-      [{
-        headerName: 'Accept-CH',
-        headerValue: ['Sec-CH-UA-Model']
-      }]
-    ],
-    ['SetHeaderBrowserAccept-CH',
-      {
-        resourceKeyEnvVar: tc.envVars.browserResourceKeyEnvVar,
-        userAgents: [
-          tc.userAgents.chromeUA,
-          tc.userAgents.edgeUA
-        ]
-      },
-      [{
-        headerName: 'Accept-CH',
-        headerValue: ['Sec-CH-UA']
-      }]
-    ],
-    // TODO: Falls with errors
-    // ['No SetHeader properties',
-    //   {
-    //     resourceKeyEnvVar: tc.envVars.noSetHeaderResourceKeyEnvVar,
-    //     userAgents: [
-    //       tc.userAgents.chromeUA,
-    //       tc.userAgents.edgeUA
-    //     ]
-    //   },
-    //   [{
-    //     headerName: 'Accept-CH',
-    //     headerValue: null
-    //   }]
-    // ],
-    ['No UACH supports',
-      {
-        resourceKeyEnvVar: tc.envVars.superResourceKeyEnvVar,
-        userAgents: [
-          tc.userAgents.firefoxUA,
-          tc.userAgents.safariUA,
-          tc.userAgents.curlUA
-        ]
-      },
-      [{
-        headerName: 'Accept-CH',
-        headerValue: null
-      }]
-    ]
-  ])('hash user agent client hints web - %s', async (name, testData, expectedResponses) => {
-    // Loop through the test user agents
-    for (const ua of testData.userAgents) {
-      // Make sure required resource key is defined. The message names the
-      // variable that was wanted, so whoever reads the run knows what to
-      // set.
-      const resourceKey = keyUtils.getResourceKey(testData.resourceKeyEnvVar);
-      if (!resourceKey) {
-        throw new Error(
-          keyUtils.missingResourceKeyMessage(testData.resourceKeyEnvVar));
-      }
+  for (const [name, testData, expectedValues] of cases) {
+    const key = keyFor(testData);
+    const run = key ? test : test.skip;
+    const title = 'hash user agent client hints web - ' + name +
+      (key ? '' : ` (skipped: '${testData.keyEnvVar}' is not set)`);
+    if (!key) {
+      console.warn(`Skipping '${name}': set the environment variable ` +
+        `'${testData.keyEnvVar}' to run it.`);
+    }
 
-      // Set pipeline with required resource key
-      example.setPipeline(resourceKey);
-      const response = await request(example.server)
-        .get('/')
-        .set('User-Agent', ua);
-      // Assess the returned headers
-      expectedResponses.forEach(e => {
-        // If responses do not match error out
-        const resVal = response.headers[e.headerName.toLowerCase()];
-        if (e.headerValue !== null && resVal !== undefined) {
+    run(title, async () => {
+      const options = optionsFor(testData, key);
+
+      // Loop through the test user agents
+      for (const ua of testData.userAgents) {
+        example.setPipeline(options.resourceKey || null, options);
+        const response = await request(example.server)
+          .get('/')
+          .set('User-Agent', ua);
+        const resVal = response.headers['accept-ch'];
+        if (expectedValues === null) {
+          expect(resVal).toBeUndefined();
+        } else {
+          expect(resVal).toBeDefined();
           // Get the list of items in the header value
-          const vals = resVal.split(',').map(function (i) {
-            return i.trim();
+          const vals = resVal.split(',').map((i) => i.trim());
+          // Each expected value is in the header.
+          expectedValues.forEach((v) => {
+            expect(vals).toContain(v);
           });
-
-          // Verify the header value
-          e.headerValue.forEach(v => {
-            expect(vals.find(item => item === v)).toBeDefined();
-          });
-        } else if (!(e.headerValue === null && resVal === undefined)) {
-          throw new Error('Expected and actual values should be defined or null and undefined.');
         }
-      });
-    };
-  }, 4000);
+
+        if (testData.checkedProperty) {
+          // The property asked for came back, so the cloud answered.
+          const pipeline = new DeviceDetectionCloudPipelineBuilder(
+            options).build();
+          const flowData = pipeline.createFlowData();
+          flowData.evidence.add('header.user-agent', ua);
+          await flowData.process();
+          expect(flowData.device[testData.checkedProperty].hasValue)
+            .toBe(true);
+        }
+      }
+    }, 10000);
+  }
 });

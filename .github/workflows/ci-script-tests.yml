@@ -8,6 +8,8 @@ on:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
+      # ci/cloud-51did.Tests.ps1 tests the step script read from this file.
+      - '.github/workflows/cloud-51did.yml'
   push:
     branches:
       - main
@@ -15,6 +17,7 @@ on:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
+      - '.github/workflows/cloud-51did.yml'
   workflow_dispatch:
 
 permissions:
