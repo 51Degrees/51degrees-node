@@ -28,6 +28,7 @@
 const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 
 // The repository root, two levels above this file.
 const REPOSITORY_ROOT = path.join(__dirname, '..', '..');
@@ -124,6 +125,27 @@ const otherNamesInRepository = () => {
   return found;
 };
 
+/**
+ * The names every env block of a workflow sets, at any depth.
+ *
+ * @param {*} node a workflow, or any part of one
+ * @returns {string[]} one entry per name
+ */
+const envNamesIn = (node) => {
+  if (node === null || typeof node !== 'object') {
+    return [];
+  }
+  const names = [];
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'env' && value !== null && typeof value === 'object') {
+      names.push(...Object.keys(value));
+    } else {
+      names.push(...envNamesIn(value));
+    }
+  }
+  return names;
+};
+
 describe('environment variable names', () => {
   it('reads and sets only 51Degrees names and platform names', () => {
     expect(otherNamesInRepository()).toEqual([]);
@@ -151,6 +173,30 @@ describe('environment variable names', () => {
     expect(namesIn('process.env[name]')).toEqual([]);
     expect(namesIn('The job is given no secrets. It runs without them.'))
       .toEqual([]);
+  });
+
+  it('sets only 51Degrees names and platform names in a workflow', () => {
+    const found = [];
+    const other = [];
+
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const workflow = yaml.load(
+        fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8'));
+      for (const name of envNamesIn(workflow)) {
+        found.push(name);
+        if (!isAllowed(name)) {
+          other.push(`${file}: ${name}`);
+        }
+      }
+    }
+
+    expect(found.length).toBeGreaterThan(0);
+    expect(other).toEqual([]);
+    expect(envNamesIn({ jobs: { a: { steps: [{ env: { PORT: 1 } }] } } }))
+      .toEqual(['PORT']);
   });
 
   it('allows only a 51Degrees name or a platform name', () => {
