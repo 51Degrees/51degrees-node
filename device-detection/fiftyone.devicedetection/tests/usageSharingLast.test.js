@@ -41,7 +41,7 @@ const RequestClient = require51(
   'fiftyone.pipeline.cloudrequestengine/requestClient');
 
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 const testWithLite = fs.existsSync(LiteDataFile) ? test : test.skip;
 

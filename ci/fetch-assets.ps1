@@ -17,7 +17,7 @@ $ipIntelligenceData = "$data/ip-intelligence"
 # Every data file the tests read is an asset, kept in ./assets, which the run
 # caches once, so a test job restores the files rather than downloading them.
 
-$assets = '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml', '20000 User Agents.csv',
+$assets = '51Degrees-LiteV4.1.hash', '20000 Evidence Records.yml',
     'TAC-HashV41.hash', '51Degrees.csv'
 
 ./steps/fetch-assets.ps1 -Assets $assets
@@ -47,11 +47,10 @@ $asn = '51Degrees-IPIV4AsnIpiV41.ipi'
 ./steps/fetch-assets.ps1 -Assets $asn
 Copy-Item "assets/$asn" $ipIntelligenceData
 
-# Generate the evidence files used by tests and examples.
+# Generate the evidence file used by tests and examples.
 Push-Location $ipIntelligenceData
 try {
     ./evidence-gen.ps1 -v4 10000 -v6 10000
-    ./evidence-gen.ps1 -v4 10000 -v6 10000 -csv -path "evidence.csv"
 } finally {
     Pop-Location
 }

@@ -200,7 +200,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees configuration page](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees configuration page](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY_BESPOKE` in your test environment.
 
 The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
 
@@ -231,4 +231,4 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 
 ## TypeScript
 
-Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/common-ci/blob/main/node/generate-types.ps1#L10). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
+Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/51degrees-node/blob/main/ci/generate-types.ps1). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.

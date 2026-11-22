@@ -51,13 +51,13 @@ describe('Examples', () => {
     // Update element path with a full path
     OptionsExtension.updateElementPath(options, __dirname);
     const resourceKey = keyUtils.getResourceKey(
-      tc.envVars.superResourceKeyEnvVar);
+      tc.envVars.resourceKeyBespokeEnvVar);
 
     if (!resourceKey) {
       // The message names the variable that was wanted, so whoever reads
       // the run knows what to set.
       throw new Error(keyUtils.missingResourceKeyMessage(
-        tc.envVars.superResourceKeyEnvVar));
+        tc.envVars.resourceKeyBespokeEnvVar));
     }
 
     OptionsExtension.setResourceKey(options, resourceKey);
@@ -114,10 +114,10 @@ describe('Examples', () => {
     const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
     OptionsExtension.updateElementPath(options, __dirname);
     const resourceKey = keyUtils.getResourceKey(
-      tc.envVars.superResourceKeyEnvVar);
+      tc.envVars.resourceKeyBespokeEnvVar);
     if (!resourceKey) {
       throw new Error(keyUtils.missingResourceKeyMessage(
-        tc.envVars.superResourceKeyEnvVar));
+        tc.envVars.resourceKeyBespokeEnvVar));
     }
     OptionsExtension.setResourceKey(options, resourceKey);
     example.setPipeline(options);

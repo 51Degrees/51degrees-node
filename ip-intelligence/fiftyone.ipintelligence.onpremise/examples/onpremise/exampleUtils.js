@@ -74,22 +74,6 @@ const IPI_DATA_FILE_VARIABLE = '_51DEGREES_IPI_PATH';
 // before the folder hierarchy is searched.
 const DD_DATA_FILE_VARIABLE = '_51DEGREES_DD_PATH';
 
-/**
- * The name the IP intelligence variable had when it began with the digit.
- *
- * @deprecated Set the variable IPI_DATA_FILE_VARIABLE names. This name is
- * no longer read.
- */
-const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
-
-/**
- * The name the device detection variable had when it began with the digit.
- *
- * @deprecated Set the variable DD_DATA_FILE_VARIABLE names. This name is
- * no longer read.
- */
-const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
-
 // Content types for the small set of static assets served by the web
 // examples. The shared pattern-library CSS and JS live under each
 // example's 'public' directory.
@@ -452,7 +436,5 @@ module.exports = {
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
   IPI_DATA_FILE_VARIABLE,
-  DD_DATA_FILE_VARIABLE,
-  IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_ENV_VAR
+  DD_DATA_FILE_VARIABLE
 };

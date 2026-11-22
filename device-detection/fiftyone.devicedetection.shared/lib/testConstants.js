@@ -21,31 +21,14 @@
  * ********************************************************************* */
 
 module.exports = {
-  // Resource key environment variables follow the 51Degrees convention,
-  // which is that every one of them starts with '_51DEGREES_RESOURCE_KEY'.
-  // That prefix is what common-ci's central steps/set-resource-keys.ps1
-  // exports, so a key added as an organisation secret under that
-  // convention reaches these tests with no change here.
+  // The environment variables the cloud tests read their keys from.
   envVars: {
-    resourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY',
-    superResourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY_SUPER',
+    // A resource key that carries every property the tests ask for.
+    resourceKeyBespokeEnvVar: '_51DEGREES_RESOURCE_KEY_BESPOKE',
     // The cloud license. The Accept-CH tests use it with values= naming
     // the one SetHeader property each needs, in place of a resource key
     // for each header.
-    licenseKeyBespokeEnvVar: '_51DEGREES_LICENSE_KEY_BESPOKE',
-    /**
-     * @deprecated No test reads a licence key under this name. The licence
-     * key is read from the _51DEGREES_LICENSE_KEY environment variable.
-     */
-    licenseKeyEnvVar: 'TEST_LICENSE_KEY'
-  },
-  /**
-   * @deprecated The name each of envVars replaced. The old names are no
-   * longer read. Use envVars.
-   */
-  legacyEnvVars: {
-    _51DEGREES_RESOURCE_KEY: 'RESOURCE_KEY',
-    _51DEGREES_RESOURCE_KEY_SUPER: 'TEST_SUPER_RESOURCE_KEY'
+    licenseKeyBespokeEnvVar: '_51DEGREES_LICENSE_KEY_BESPOKE'
   },
   // User-Agent string for testing
   userAgents: {

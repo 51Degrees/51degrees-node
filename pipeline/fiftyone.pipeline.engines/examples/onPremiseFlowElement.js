@@ -184,7 +184,7 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
 
 //! [usage]
 const astrologyElement = new Astrology(
-  { datafile: (process.env.directory || __dirname) + '/astrology.json' }
+  { datafile: __dirname + '/astrology.json' }
 );
 
 const http = require('http');
@@ -239,7 +239,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const portNum = process.env.PORT || 5151;
+const portNum = process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151;
 console.info('To test this example, browse to http://localhost:' + portNum);
 // Only the machine the example runs on, at 127.0.0.1 rather than
 // localhost, which can resolve to the IPv6 loopback alone.

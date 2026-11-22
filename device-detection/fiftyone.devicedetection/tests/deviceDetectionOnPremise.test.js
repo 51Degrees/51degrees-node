@@ -33,7 +33,7 @@ const fs = require('fs');
 const FiftyOneDegreesDeviceDetection = require51('fiftyone.devicedetection');
 const DataFile = 'test.hash';
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const MobileUserAgent =

@@ -31,16 +31,16 @@
 const { FodId, DidClient, Usage } = require('../index');
 const keys = require('./liveCloudKeys');
 
-const BASIC_KEY_NAMES = ['_51DEGREES_RESOURCE_KEY_BASIC'];
+const BASIC_KEY_NAME = '_51DEGREES_RESOURCE_KEY_BASIC';
 
 // What the cloud answers a Basic tier key that asks for a marketing usage.
 const MARKETING_REFUSED = 'Can not form IdProbGlobal. For marketing ' +
   '(personalized or standard) usages a CloudV5FODiD product needs to be a ' +
   'part of the license.';
 
-const basicKey = keys.findKey(BASIC_KEY_NAMES);
+const basicKey = keys.findKey(BASIC_KEY_NAME);
 
-const noKey = keys.noKeyMessage(BASIC_KEY_NAMES, 'FODid',
+const noKey = keys.noKeyMessage([BASIC_KEY_NAME], 'FODid',
   'a 51Did for each usage, to check what a Basic tier key is given', true);
 
 // Asks the json endpoint for the global 51Did with the given usage and

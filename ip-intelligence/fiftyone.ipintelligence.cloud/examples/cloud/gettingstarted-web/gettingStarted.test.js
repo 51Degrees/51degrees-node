@@ -36,8 +36,6 @@ const fs = require('fs');
 // Load the example module
 const example = require(path.join(__dirname, '/gettingStarted.js'));
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
-
 const shared = require51('fiftyone.ipintelligence.shared');
 const tc = shared.testConstants;
 const keyUtils = shared.keyUtils;
@@ -45,15 +43,13 @@ const OptionsExtension = shared.optionsExtension;
 const CloudRequestEngine =
   require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  tc.envVars.superResourceKeyVariable,
-  ExampleUtils.RESOURCE_KEY_VARIABLE);
+const resourceKeyName = tc.envVars.resourceKeyBespokeVariable;
 
 describe('Examples', () => {
   test('cloud getting started web', async () => {
-    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    const resourceKey = keyUtils.getResourceKey(resourceKeyName);
     if (!resourceKey) {
-      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyName,
         'ip', 'the IP Intelligence properties of 8.8.8.8'));
     }
     await keyUtils.requireProduct(

@@ -49,7 +49,8 @@
  *   _51DEGREES_CLOUD_ENDPOINT  the API base including the /api/v4/
  *                              segment, defaults to
  *                              https://cloud.51degrees.com/api/v4/
- *   PORT                       the port to listen on, defaults to 5151
+ *   _51DEGREES_EXAMPLE_HTTP_PORTS
+ *                              the port to listen on, defaults to 5151
  *
  * Node 18 or later (built-in fetch), with no 51Degrees package needed.
  */
@@ -315,7 +316,7 @@ function main () {
   const resource = (process.env._51DEGREES_RESOURCE_KEY || '').trim();
   const license = (process.env._51DEGREES_LICENSE_KEY || '').trim();
   const endpoint = (process.env._51DEGREES_CLOUD_ENDPOINT || '').trim();
-  const port = Number(process.env.PORT || 5151);
+  const port = Number(process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151);
   if (!resource) {
     // With no Resource Key the demo has nothing to serve, so it says how
     // to get one and ends.

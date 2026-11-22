@@ -21,14 +21,8 @@ export let errorMessages: {
 };
 export let testConstants: {
     envVars: {
-        resourceKeyEnvVar: string;
-        superResourceKeyEnvVar: string;
+        resourceKeyBespokeEnvVar: string;
         licenseKeyBespokeEnvVar: string;
-        licenseKeyEnvVar: string;
-    };
-    legacyEnvVars: {
-        _51DEGREES_RESOURCE_KEY: string;
-        _51DEGREES_RESOURCE_KEY_SUPER: string;
     };
     userAgents: {
         chromeUA: string;
@@ -39,7 +33,6 @@ export let testConstants: {
     };
 };
 export let keyUtils: {
-    getNamedKey: (keyName: string) => string;
     getResourceKey: (envVarName: string) => string;
     missingResourceKeyMessage: (envVarName: string) => string;
     isInvalidKey: (keyValue: string) => boolean;
@@ -50,7 +43,6 @@ export let exampleConstants: {
     fileNames: {
         enterpriseDataFileName: string;
         liteDataFileName: string;
-        uaFileName: string;
         evidenceFileName: string;
     };
 };

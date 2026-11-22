@@ -7,23 +7,15 @@ param (
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-# The pipeline and location tests read _51DEGREES_RESOURCE_KEY, which
-# common-ci exports before this runs. It is not set here, so an empty input
-# cannot clear it.
+# The tests read each key under its own _51DEGREES_ name, which is in the
+# environment before this runs.
 
-# common-ci does not export the 51Did license, so the main CI has none and
-# the tests redeem unlicensed. Only .github/workflows/cloud-51did.yml sets
-# it. A license redeems only with a resource key of the same account. With
-# any other key the licensed redeem in didClient.integration.test.js answers
-# unreadable, so should a job ever have the license, the tests get it only
-# when they run with the 51DID resource key. Without it they redeem
-# unlicensed and check for the unreadable answer.
-if (-not $env:_51DEGREES_RESOURCE_KEY_51DID -or
-    $env:_51DEGREES_RESOURCE_KEY -cne $env:_51DEGREES_RESOURCE_KEY_51DID) {
-    Remove-Item env:_51DEGREES_LICENSE_KEY_51DID -ErrorAction Ignore
-}
-
-./node/run-integration-tests.ps1 -RepoName $RepoName
+Push-Location $RepoName
+try {
+    Write-Host 'Running integration tests'
+    $env:JEST_JUNIT_OUTPUT_DIR = 'test-results/integration'
+    npm run integration-test
+} finally { Pop-Location }
 
 if (-not $SeleniumContract) {
     Write-Host "Another entry runs the Selenium contract tests for this pull request."
@@ -61,7 +53,7 @@ function Invoke-ContractTests {
     try {
         # The background job is a new process, which inherits this process's
         # environment and current location when it starts.
-        $env:PORT = $Port
+        $env:_51DEGREES_EXAMPLE_HTTP_PORTS = $Port
         # PowerShell names ignore case, so the loop variable must not be $name,
         # which is the same variable as the $Name parameter.
         foreach ($variable in $Environment.Keys) {
@@ -77,8 +69,8 @@ function Invoke-ContractTests {
         curl -sS -o $(if ($IsWindows) { 'NUL' } else { '/dev/null' }) --retry 20 --retry-delay 3 --retry-max-time 120 --retry-connrefused "http://localhost:$Port"
         if ($LASTEXITCODE -ne 0) { throw "The $Name example did not start on port $Port." }
 
-        $env:EXAMPLE_URL = "http://localhost:$Port"
-        $env:EXAMPLE_LANG = 'node'
+        $env:_51DEGREES_EXAMPLE_URL = "http://localhost:$Port"
+        $env:_51DEGREES_EXAMPLE_LANG = 'node'
         & $dotnet.Source test selenium-api-tests -c Release --filter TestCategory=Contract |
             Tee-Object -Variable output | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "dotnet test exited with $LASTEXITCODE." }
@@ -104,26 +96,20 @@ if (-not (Test-Path selenium-api-tests)) {
     git clone --depth 1 https://github.com/51Degrees/selenium-api-tests.git
 }
 
-# The suite reads the cloud address when it starts, even when the example it
-# drives does not use the cloud.
-$env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-
 $failed = @()
 
-# Cloud example, pointed at the live cloud.
-if ($env:_51DEGREES_RESOURCE_KEY) {
-    # The shared suite reads the key under this name.
-    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
-    # The example reads _51DEGREES_RESOURCE_KEY from the environment it
-    # inherits. It is not in the list below, because the variables listed
-    # are cleared after the run.
+# Cloud example. It reads its resource key from _51DEGREES_RESOURCE_KEY, as
+# a person running it sets it, so that is set for this run to the key the
+# tests use. It calls the cloud service _51DEGREES_CLOUD_ENDPOINT names, or
+# the public one when that is not set.
+if ($env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
     try {
         Invoke-ContractTests `
         -Name 'cloud' `
         -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
         -Port 8096 `
         -Environment @{
-            '_51DEGREES_CLOUD_ENDPOINT' = 'https://cloud.51degrees.com/api/v4/'
+            '_51DEGREES_RESOURCE_KEY' = $env:_51DEGREES_RESOURCE_KEY_BESPOKE
         }
     } catch { $failed += 'cloud' }
 } else {
@@ -137,12 +123,6 @@ if ($env:_51DEGREES_RESOURCE_KEY) {
 # its files in ./assets).
 $tacDataFile = Join-Path $PWD 'assets' 'TAC-HashV41.hash'
 if (Test-Path $tacDataFile) {
-    # The suite requires a resource key to be set, but the on-premise example
-    # never calls the cloud, so the value is not used. Keep the real one if the
-    # cloud run above set it.
-    if (-not $env:PAID_RESOURCE_KEY) {
-        $env:PAID_RESOURCE_KEY = 'not-used-by-the-on-premise-example'
-    }
     try {
         Invoke-ContractTests `
         -Name 'on-premise' `

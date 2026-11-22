@@ -24,17 +24,17 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/performance-console/performance.js).
  *
- * This example require module 'n-readlines' to operate. Please install the module
- * before running the example, by using the following command:
+ * This example requires the module 'js-yaml' to operate. Please install the
+ * module before running the example, by using the following command:
  *
  * ```
- * npm install n-readlines
+ * npm install js-yaml
  * ```
  *
  * Expected output:
  *
  * ```
- * Processing [...] User-Agents from [...]/20000 User Agents.csv
+ * Processing [...] evidence records from [...]/20000 Evidence Records.yml
  * Processing
  * Average [...] detections per second.
  * Average [...] ms per User-Agent.
@@ -56,7 +56,7 @@ const require51 = (requestedPackage) => {
   }
 };
 
-const LineReader = require('n-readlines');
+const yaml = require('js-yaml');
 
 const DeviceDetectionOnPremisePipelineBuilder =
   require51('fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
@@ -102,11 +102,13 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-contact'
 ].join('\n');
 
-const UA_CSV = '20000 User Agents.csv';
+// This file contains evidence records, each with a User-Agent and the
+// other HTTP header values sent with it.
+const EVIDENCE = '20000 Evidence Records.yml';
 
 const args = parser.parse_args();
 const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
-const uafile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(UA_CSV);
+const evidenceFile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(EVIDENCE);
 const jsonoutput = args.jsonoutput;
 
 // Check if files exists
@@ -119,12 +121,12 @@ if (!fs.existsSync(datafile)) {
   throw ("No data file at '" + datafile + "'");
 }
 
-if (!fs.existsSync(uafile)) {
-  console.error('Failed to find a User-Agents ' +
+if (!fs.existsSync(evidenceFile)) {
+  console.error('Failed to find an evidence ' +
       'file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-  throw ("No User-Agents file at '" + datafile + "'");
+  throw ("No evidence file at '" + evidenceFile + "'");
 }
 
 let userAgentsProcessed = 0;
@@ -135,7 +137,7 @@ let userAgentsCount = 0;
 let startExecutionTime;
 
 // Define an event listener for the 'FinishProcessing' event.
-// This listener is triggered once the processing of User-Agents is completed.
+// This listener is triggered once the processing of the evidence is completed.
 // It calculates and displays benchmark results and, if specified, writes them to a JSON file.
 const eventEmitter = new events.EventEmitter();
 eventEmitter.on('FinishProcessing', () => {
@@ -180,8 +182,8 @@ eventEmitter.on('WarmupFinished', () => {
   console.log('Warmup finished');
   console.log('-----------------------------------------');
   console.log('Processing started');
-  run(function (userAgent) {
-    processUA(userAgent, false);
+  run(function (evidence) {
+    processEvidence(evidence, false);
   });
 });
 
@@ -207,17 +209,19 @@ const reportProgress = function (uaProcessed) {
     (uaProcessed === userAgentsCount ? '\n' : '\r'));
 };
 
-// Here we make a function that gets a userAgent as evidence and
+// Here we make a function that gets an evidence record and
 // uses the Device Detection Engine to obtain the properties of the
-// device and output it to file.
-const processUA = async function (userAgent, warmup) {
+// device.
+const processEvidence = async function (evidence, warmup) {
   // Create a FlowData element
   // This is used to add evidence and process it through the
   // FlowElements in the Pipeline.
   const flowData = pipeline.createFlowData();
 
-  // Add the User-Agent as evidence
-  flowData.evidence.add('header.user-agent', userAgent);
+  // Add the values of the record as evidence
+  for (const [key, value] of Object.entries(evidence)) {
+    flowData.evidence.add(key, value === null ? '' : value.toString());
+  }
 
   // Run process on the flowData (this returns a promise)
   await flowData.process();
@@ -241,7 +245,7 @@ const processUA = async function (userAgent, warmup) {
       eventEmitter.emit('WarmupFinished');
     }
   } else {
-    // Increment the number of User-Agent processed and
+    // Increment the number of records processed and
     // signal if the required number has been reached
     reportProgress(++userAgentsProcessed);
     if (userAgentsProcessed === userAgentsCount) {
@@ -250,31 +254,30 @@ const processUA = async function (userAgent, warmup) {
   }
 };
 
-// Loop through the User-Agents in the file
-// and execute callback on each User-Agent
-const run = function (callback) {
-  const liner = new LineReader(uafile);
-  let line;
+// The evidence records in the file, each a YAML document of evidence keys
+// and values.
+const evidenceRecords = yaml.loadAll(fs.readFileSync(evidenceFile, 'utf8'))
+  .filter((record) => record);
 
-  // Reset User-Agents processed count and start time
+// Loop through the evidence records
+// and execute callback on each one
+const run = function (callback) {
+  // Reset the processed count and start time
   userAgentsProcessed = 0;
   isMobileTrue = isMobileFalse = isMobileUnknown = 0;
   startExecutionTime = process.hrtime();
-  line = liner.next();
-  while (line) {
-    callback(line.toString('utf8').replace(/\r?\n|\r/g, ''));
-    line = liner.next();
+  for (const record of evidenceRecords) {
+    callback(record);
   }
 };
 
-// Get the number of User-Agents
-run(function () {
-  userAgentsCount++;
-});
-console.log('Processing ' + userAgentsCount + ' User-Agents from ' + uafile);
+// Get the number of evidence records
+userAgentsCount = evidenceRecords.length;
+console.log('Processing ' + userAgentsCount + ' evidence records from ' +
+  evidenceFile);
 
 // Run warmup for pipeline
 console.log('Warmup');
-run(function (userAgent) {
-  processUA(userAgent, true);
+run(function (evidence) {
+  processEvidence(evidence, true);
 });

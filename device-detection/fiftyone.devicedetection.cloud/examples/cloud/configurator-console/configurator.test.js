@@ -39,13 +39,13 @@ const ExampleOutput = shared.exampleOutput.ExampleOutput;
 describe('Examples', () => {
   test('cloud configurator', async () => {
     const resourceKey = keyUtils.getResourceKey(
-      tc.envVars.superResourceKeyEnvVar);
+      tc.envVars.resourceKeyBespokeEnvVar);
 
     if (!resourceKey) {
       // The message names the variable that was wanted, so whoever reads
       // the run knows what to set.
       throw new Error(keyUtils.missingResourceKeyMessage(
-        tc.envVars.superResourceKeyEnvVar));
+        tc.envVars.resourceKeyBespokeEnvVar));
     }
 
     const output = new ExampleOutput();

@@ -84,7 +84,7 @@ npm test
 ```
 
 The integration tests read the resource key from the
-`_51DEGREES_RESOURCE_KEY` environment variable.
+`_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable.
 
 ## Pointing the engine at another host
 
@@ -95,9 +95,6 @@ missing trailing slash is added). Every engine and example built on this
 package, in this repository and in the device detection and geolocation
 packages, inherits that choice, so setting the variable once points all of
 them at the same place.
-
-`FOD_CLOUD_API_URL`, the old name of the same variable, is no longer read.
-Set `_51DEGREES_CLOUD_ENDPOINT` instead.
 
 A host other than `cloud.51degrees.com` would be used to (a) use an on
 premise web server, or (b) use a privately hosted version of the 51Degrees

@@ -36,7 +36,7 @@ const require51 = (requestedPackage) => {
 const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const DataFile = path.resolve((process.env.directory || __dirname) +
+const DataFile = path.resolve(__dirname +
   '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 const testWithLite = fs.existsSync(DataFile) ? test : test.skip;
 

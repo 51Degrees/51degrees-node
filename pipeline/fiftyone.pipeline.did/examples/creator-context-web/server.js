@@ -70,7 +70,8 @@
  *   _51DEGREES_CLOUD_ENDPOINT. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
- *   PORT. Optional, defaults to 5151.
+ *   _51DEGREES_EXAMPLE_HTTP_PORTS. Optional. The port to listen on,
+ *     defaulting to 5151.
  *
  * Node 18 or later (built-in fetch). Depends only on this package, which
  * is reached by path so the demo runs against the code beside it. Run:
@@ -225,7 +226,7 @@ function redeemRoute (client) {
 function main () {
   const resource = process.env._51DEGREES_RESOURCE_KEY;
   const licence = process.env._51DEGREES_LICENSE_KEY || '';
-  const port = Number(process.env.PORT || 5151);
+  const port = Number(process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151);
   if (!resource) {
     // With no resource key the demo has nothing to serve, so it says how
     // to get one and ends.

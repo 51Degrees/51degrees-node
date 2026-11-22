@@ -2,14 +2,15 @@
 # Tests of ci/publish-package.ps1 against a small repository of three
 # packages, with npm and gh replaced by functions that keep a registry and the
 # releases in memory. git is real, with a bare repository as origin. Needs
-# COMMON_CI to name a checkout of common-ci, as ci/release-plan.ps1 does.
+# _51DEGREES_COMMON_CI_DIR to name a checkout of common-ci, as
+# ci/release-plan.ps1 does.
 #
 # The packages are named so that name order and dependency order differ:
 # alpha.app depends on zeta.base, and mid.tool stands alone.
 
 BeforeAll {
     $script:Ci = $PSScriptRoot
-    $script:CommonCi = (Resolve-Path $env:COMMON_CI).Path
+    $script:CommonCi = (Resolve-Path $env:_51DEGREES_COMMON_CI_DIR).Path
 
     function Invoke-Git([string]$Path) {
         $gitArgs = $args
@@ -115,7 +116,7 @@ BeforeAll {
         Push-Location $Test.Work
         try {
             & "$script:Ci/publish-package.ps1" -RepoName $Test.Repo -OrgName test `
-                -Keys @{ NPMAuthToken = 'token' } -DryRun $DryRun
+                -Keys @{ _51DEGREES_NPM_AUTH_TOKEN = 'token' } -DryRun $DryRun
         } finally {
             Pop-Location
         }

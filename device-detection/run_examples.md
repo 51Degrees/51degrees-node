@@ -57,7 +57,7 @@ The `require` statement will need to pick the corresponding module instead of us
 For example, if your example contains the below line:
 
 ```
-const HardwareProfileCloudEngine = require((process.env.directory || __dirname) +
+const HardwareProfileCloudEngine = require(__dirname +
   '/../../hardwareProfileCloudEngine');
 ```
 

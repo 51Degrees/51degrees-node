@@ -41,7 +41,7 @@ const {
 } = require51('fiftyone.devicedetection.onpremise');
 
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const haveLiteDataFile = fs.existsSync(LiteDataFile);

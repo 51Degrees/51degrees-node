@@ -246,7 +246,7 @@ describe('creator context example endpoint', () => {
     const child = spawn(process.execPath, [serverPath], {
       env: Object.assign(environment, endpointVariables, {
         _51DEGREES_RESOURCE_KEY: 'AQTestResourceKey',
-        PORT: String(port)
+        _51DEGREES_EXAMPLE_HTTP_PORTS: String(port)
       }),
       stdio: ['ignore', 'pipe', 'ignore']
     });

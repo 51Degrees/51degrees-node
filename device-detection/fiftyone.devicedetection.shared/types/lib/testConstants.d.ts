@@ -1,12 +1,6 @@
 export namespace envVars {
-    let resourceKeyEnvVar: string;
-    let superResourceKeyEnvVar: string;
+    let resourceKeyBespokeEnvVar: string;
     let licenseKeyBespokeEnvVar: string;
-    let licenseKeyEnvVar: string;
-}
-export namespace legacyEnvVars {
-    let _51DEGREES_RESOURCE_KEY: string;
-    let _51DEGREES_RESOURCE_KEY_SUPER: string;
 }
 export namespace userAgents {
     let chromeUA: string;

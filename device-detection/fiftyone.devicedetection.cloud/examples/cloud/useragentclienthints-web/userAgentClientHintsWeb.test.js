@@ -53,7 +53,7 @@ const example = require(path.join(__dirname, '/userAgentClientHintsWeb.js'));
 const cases = [
   ['All available properties',
     {
-      keyEnvVar: tc.envVars.superResourceKeyEnvVar,
+      keyEnvVar: tc.envVars.resourceKeyBespokeEnvVar,
       userAgents: [
         tc.userAgents.chromeUA,
         tc.userAgents.edgeUA
@@ -110,7 +110,7 @@ const cases = [
   ],
   ['No UACH supports',
     {
-      keyEnvVar: tc.envVars.superResourceKeyEnvVar,
+      keyEnvVar: tc.envVars.resourceKeyBespokeEnvVar,
       userAgents: [
         tc.userAgents.firefoxUA,
         tc.userAgents.safariUA,

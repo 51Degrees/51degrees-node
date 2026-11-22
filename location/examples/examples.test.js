@@ -30,7 +30,10 @@
 const childProcess = require('child_process');
 
 const TIMEOUT_MS = 60000;
+// The name the examples read their resource key from, and the name the
+// tests take the key to run them with from.
 const RESOURCE_KEY = '_51DEGREES_RESOURCE_KEY';
+const TEST_RESOURCE_KEY = '_51DEGREES_RESOURCE_KEY_BESPOKE';
 
 const COUNTRY = 'Which country is the location ' +
   '[51.458048,-0.9822207999999999] in? United Kingdom';
@@ -42,7 +45,8 @@ const NEEDS_KEY = expect.stringMatching(
 const NEEDS_ISMOBILE = 'Make sure to include the ismobile property as it ' +
   'is used by this example.';
 
-const hasKey = Boolean(process.env[RESOURCE_KEY]);
+const testKey = process.env[TEST_RESOURCE_KEY];
+const hasKey = Boolean(testKey);
 
 // Every example ends with the Find out more section, which is a rule of 79
 // equals signs, the heading, then one line per link, each a tab, a label
@@ -69,6 +73,10 @@ const expectFindOutMore = (file, lines) => {
 // lines of its output.
 const runExample = (file) => {
   const env = Object.assign({}, process.env);
+  delete env[RESOURCE_KEY];
+  if (hasKey) {
+    env[RESOURCE_KEY] = testKey;
+  }
   const result = childProcess.spawnSync(process.execPath, [file], {
     cwd: __dirname,
     env,

@@ -38,7 +38,7 @@ const os = require('os');
 const zlib = require('zlib');
 let server;
 
-const DataFile = path.resolve((process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const DataFile = path.resolve(__dirname + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 describe('deviceDetectionOnPremise', () => {
   // As data-updates.md says at specifications d79bbe3b, lines 114 to 116
@@ -303,7 +303,7 @@ describe('deviceDetectionOnPremise', () => {
   // Check if dataUpdateUseUrlFormatter property does not append query params to update url - default value = true
 
   // test('Properties for on-premise engine - Data File Update', done => {
-  //   const DataFileOutput = path.resolve(process.env.directory || __dirname + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.gz');
+  //   const DataFileOutput = path.resolve(__dirname + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.gz');
   //
   //   let requestReceived = false;
   //   let requestUrl = '';

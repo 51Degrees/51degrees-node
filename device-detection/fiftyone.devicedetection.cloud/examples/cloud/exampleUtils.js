@@ -24,14 +24,6 @@
 // running examples.
 const RESOURCE_KEY_ENV_VAR = '_51DEGREES_RESOURCE_KEY';
 
-/**
- * The name the resource key variable had before.
- *
- * @deprecated Set the variable RESOURCE_KEY_ENV_VAR names. This name is
- * no longer read.
- */
-const LEGACY_RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
-
 // Get the resource key from the environment.
 const getResourceKeyFromEnv = function () {
   return process.env[RESOURCE_KEY_ENV_VAR] || undefined;
@@ -45,7 +37,6 @@ const PRICING_MESSAGE = 'Some properties used by this example are not ' +
 
 module.exports = {
   RESOURCE_KEY_ENV_VAR,
-  LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,
   getResourceKeyFromEnv
 };

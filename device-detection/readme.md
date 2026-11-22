@@ -199,10 +199,9 @@ npm install jest --global
 
 You will also need to install any required packages for the examples in the **Examples** section.
 
-Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+The cloud tests need a 51Degrees cloud resource key that carries every property they ask for, including the `SetHeader*` properties. You can obtain a resource key from the [51Degrees configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY_BESPOKE` in your test environment.
 
-There are other environment variables that you will also need to set in your test environment before running all tests:
-- `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.
+There is one other environment variable that you will also need to set in your test environment before running all tests:
 - `_51DEGREES_LICENSE_KEY_BESPOKE`: A cloud license key. The Accept-CH tests use it with `values=` naming the one property each needs, such as `device.SetHeaderBrowserAccept-CH`, or `device.IsMobile` for the case that sets no header. When it is not set, those tests are skipped, and their names say which variable to set.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
@@ -230,7 +229,7 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 
 ## TypeScript
 
-Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/common-ci/blob/main/node/generate-types.ps1#L10). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
+Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/51degrees-node/blob/main/ci/generate-types.ps1). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
 
 The TypeScript example with typechecking enabled is available under `onpremise/gettingstarted-console/gettingStarted.ts`.
 

@@ -2,14 +2,13 @@ name: CI script tests
 
 # Runs the Pester tests of the scripts in ci/, which decide what a publish
 # releases and in what order. common-ci's main is checked out beside this
-# repository, and the scripts find its steps through COMMON_CI.
+# repository, and the scripts find its steps through
+# _51DEGREES_COMMON_CI_DIR.
 on:
   pull_request:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
-      # ci/cloud-51did.Tests.ps1 tests the step script read from this file.
-      - '.github/workflows/cloud-51did.yml'
   push:
     branches:
       - main
@@ -17,7 +16,6 @@ on:
     paths:
       - 'ci/**'
       - '.github/workflows/ci-script-tests.yml'
-      - '.github/workflows/cloud-51did.yml'
   workflow_dispatch:
 
 permissions:
@@ -50,7 +48,7 @@ jobs:
         shell: pwsh
         working-directory: 51degrees-node
         env:
-          COMMON_CI: ${{ github.workspace }}/common-ci
+          _51DEGREES_COMMON_CI_DIR: ${{ github.workspace }}/common-ci
         run: |
           $configuration = New-PesterConfiguration
           $configuration.Run.Path = @(Get-ChildItem ci -Filter *.Tests.ps1 |

@@ -21,10 +21,7 @@ export let errorMessages: {
 };
 export let testConstants: {
     envVars: {
-        superResourceKeyVariable: string;
-        superResourceKeyEnvVar: string;
-        ipiResourceKeyEnvVar: string;
-        licenseKeyEnvVar: string;
+        resourceKeyBespokeVariable: string;
     };
     ipAddresses: {
         switzerlandIpv4: string;
@@ -36,12 +33,10 @@ export let testConstants: {
     };
 };
 export let keyUtils: {
-    resourceKeyNames: (...extraNames: string[]) => Array<string>;
-    getResourceKey: (names: Array<string>) => string;
-    missingResourceKeyMessage: (names: Array<string>, products: string | Array<string>, asksFor: string, plural?: boolean) => string;
+    getResourceKey: (name: string) => string;
+    missingResourceKeyMessage: (name: string, products: string | Array<string>, asksFor: string, plural?: boolean) => string;
     missingFromAnswerMessage: (thing: string, reason: string, product: string) => string;
     requireProduct: (cloudRequestEngine: object, product: string) => Promise<void>;
-    getNamedKey: (keyName: string) => string;
     isInvalidKey: (keyValue: string) => boolean;
 };
 export let exampleOutput: typeof import("./lib/exampleOutput");
@@ -51,7 +46,6 @@ export let exampleConstants: {
         enterpriseDataFileName: string;
         liteDataFileName: string;
         evidenceFileName: string;
-        evidenceCsvFileName: string;
     };
 };
 export let optionsExtension: typeof import("./lib/optionsExtension");

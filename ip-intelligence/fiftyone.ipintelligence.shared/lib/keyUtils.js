@@ -24,12 +24,6 @@
 // 'no key has been set here'.
 const PLACEHOLDER = '!!YOUR_RESOURCE_KEY!!';
 
-// The names every cloud test reads its resource key from first, in order.
-const SHARED_RESOURCE_KEY_NAMES = [
-  '_51DEGREES_RESOURCE_KEY',
-  '_51DEGREES_RESOURCE_KEY_BESPOKE'
-];
-
 // Where to see the products a resource key carries.
 const ACCESSIBLE_PROPERTIES_URL =
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>';
@@ -54,30 +48,15 @@ const missingFromAnswerMessage = function (thing, reason, product) {
 
 module.exports = {
   /**
-   * The environment variable names a cloud test reads its resource key
-   * from, in order. The two shared names come first, then any name the
-   * test takes its own key from.
+   * The resource key set under the given name.
    *
-   * @param {...string} extraNames further names, in the order to try
-   * @returns {Array<string>} the names to try, in order
+   * @param {string} name the environment variable name
+   * @returns {string} the key, or undefined when it is not set
    */
-  resourceKeyNames: function (...extraNames) {
-    return SHARED_RESOURCE_KEY_NAMES.concat(extraNames)
-      .filter((name, index, all) => all.indexOf(name) === index);
-  },
-
-  /**
-   * The first resource key set under the given names.
-   *
-   * @param {Array<string>} names the environment variable names, in order
-   * @returns {string} the key, or undefined when none of them is set
-   */
-  getResourceKey: function (names) {
-    for (const name of names) {
-      const value = process.env[name];
-      if (value && value.trim() && value !== PLACEHOLDER) {
-        return value.trim();
-      }
+  getResourceKey: function (name) {
+    const value = process.env[name];
+    if (value && value.trim() && value !== PLACEHOLDER) {
+      return value.trim();
     }
     return undefined;
   },
@@ -85,14 +64,14 @@ module.exports = {
   /**
    * The message a cloud test fails with when no resource key is set.
    *
-   * @param {Array<string>} names the environment variable names tried
+   * @param {string} name the environment variable name
    * @param {string|Array<string>} products the products the key has to
    * carry
    * @param {string} asksFor what the test asks the cloud service for
    * @param {boolean} [plural] true for a group of tests
    * @returns {string} the message
    */
-  missingResourceKeyMessage: function (names, products, asksFor, plural) {
+  missingResourceKeyMessage: function (name, products, asksFor, plural) {
     const start = plural
       ? 'These tests call the live 51Degrees cloud service, so they need'
       : 'This test calls the live 51Degrees cloud service, so it needs';
@@ -101,7 +80,7 @@ module.exports = {
     const carried = list.join(' and ') +
       (list.length > 1 ? ' products' : ' product');
     return `${start} a resource key and there is nothing to fall back on. ` +
-      `None of ${names.join(', ')} is set, tried in that order. The key ` +
+      `${name} is not set. The key ` +
       `has to carry the ${carried}, because ${asker} the service ` +
       `for ${asksFor}. To see the products a key carries, open ` +
       `${ACCESSIBLE_PROPERTIES_URL}. Create a key at ${CONFIGURE_URL}.`;
@@ -127,21 +106,6 @@ module.exports = {
       throw new Error(missingFromAnswerMessage(
         `the ${product} properties`, undefined, product));
     }
-  },
-
-  /**
-   * Get a key value from the environment, trying both the
-   * supplied name and the upper-case form.
-   *
-   * @param {string} keyName name of the environment variable
-   * @returns {string} the value of the environment variable
-   */
-  getNamedKey: function (keyName) {
-    let value = process.env[keyName];
-    if (!value) {
-      value = process.env[keyName.toUpperCase()];
-    }
-    return value;
   },
 
   /**

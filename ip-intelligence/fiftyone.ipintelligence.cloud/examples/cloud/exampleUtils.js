@@ -28,22 +28,6 @@ const path = require('path');
 // running examples.
 const RESOURCE_KEY_VARIABLE = '_51DEGREES_RESOURCE_KEY';
 
-/**
- * The name the resource key variable had when it began with the digit.
- *
- * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
- * no longer read.
- */
-const RESOURCE_KEY_ENV_VAR = '51DEGREES_RESOURCE_KEY';
-
-/**
- * The name the resource key variable had first.
- *
- * @deprecated Set the variable RESOURCE_KEY_VARIABLE names. This name is
- * no longer read.
- */
-const LEGACY_RESOURCE_KEY_ENV_VAR = 'RESOURCE_KEY';
-
 // Get the resource key from the environment.
 const getResourceKeyFromEnv = function () {
   return process.env[RESOURCE_KEY_VARIABLE] || undefined;
@@ -107,8 +91,6 @@ const serveStaticAsset = (req, res, publicDir) => {
 
 module.exports = {
   RESOURCE_KEY_VARIABLE,
-  RESOURCE_KEY_ENV_VAR,
-  LEGACY_RESOURCE_KEY_ENV_VAR,
   PRICING_MESSAGE,
   getResourceKeyFromEnv,
   serveStaticAsset

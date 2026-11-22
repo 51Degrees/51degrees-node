@@ -31,8 +31,8 @@ const datafiles = [enterpriseDataFileName, liteDataFileName];
 
 // Directories to search for data files. Ordered based on priorities.
 const fileDirs = [
-  (process.env.directory || __dirname) + '/../tests/',
-  (process.env.directory || __dirname) +
+  __dirname + '/../tests/',
+  __dirname +
   '/../../../cxx/data/device-detection/'];
 
 let testDataFile;

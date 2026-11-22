@@ -73,7 +73,7 @@ const get = (port, urlPath) => new Promise((resolve) => {
 const getFromExample = async (file, urlPath) => {
   const port = await freePort();
   const env = exampleEnvironment();
-  env.PORT = String(port);
+  env._51DEGREES_EXAMPLE_HTTP_PORTS = String(port);
   const child = childProcess.spawn(
     process.execPath, [path.basename(file)], {
       cwd: path.dirname(file),

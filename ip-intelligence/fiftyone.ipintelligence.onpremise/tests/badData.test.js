@@ -35,9 +35,9 @@ const errorMessages = require51('fiftyone.ipintelligence.shared').errorMessages;
 
 const FiftyOneDegreesIpIntelligenceOnPremise = require51('fiftyone.ipintelligence.onpremise');
 
-const BadVersionDataFile = (process.env.directory || __dirname) + '/BadVersionDataFile.ipi';
-const BadHeaderDataFile = (process.env.directory || __dirname) + '/BadHeaderDataFile.ipi';
-const SmallDataFile = (process.env.directory || __dirname) + '/SmallDataFile.ipi';
+const BadVersionDataFile = __dirname + '/BadVersionDataFile.ipi';
+const BadHeaderDataFile = __dirname + '/BadHeaderDataFile.ipi';
+const SmallDataFile = __dirname + '/SmallDataFile.ipi';
 
 const badVersion = [1, 2, 3, 4];
 const goodVersion = [4, 1, 0, 0];

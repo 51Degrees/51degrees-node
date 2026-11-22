@@ -111,7 +111,7 @@ npm run tsc
 ```
 
 The tests that use the cloud need a Resource Key, which is read from the
-`_51DEGREES_RESOURCE_KEY` environment variable. See each folder's readme for
+`_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable. See each folder's readme for
 the keys and data files its tests use.
 
 Every environment variable name that the packages, tests, examples and CI
