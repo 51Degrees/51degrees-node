@@ -41,7 +41,7 @@ const { demoRoutes } = require('../examples/human-confidence-web/server');
 
 const API = 'https://cloud.example/api/v4/';
 const RESOURCE = 'AQTestResourceKey';
-const LICENSE = 'TestLicenseKey';
+const LICENSE = 'AQTestLicenseKey';
 
 // What the cloud's accessibleproperties answers for a key, with the
 // properties named under one product.
