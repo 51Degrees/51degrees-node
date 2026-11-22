@@ -45,6 +45,11 @@ const PERFORMANCE_EXAMPLES = [
   ]
 ];
 
+// The benchmark of the on-premise engine behind a web server, which sends
+// the evidence records as request headers.
+const WEB_BENCHMARK = path.join('device-detection',
+  'fiftyone.devicedetection.onpremise', 'tests', 'cloud-performance-test');
+
 // The only CSV file the CI scripts name, which lists property names for
 // the cloud tests and holds no evidence.
 const PROPERTIES_CSV = '51Degrees.csv';
@@ -78,6 +83,14 @@ describe('evidence files', () => {
         evidenceFileName: 'evidence.yml'
       }
     ]);
+  });
+
+  test('the web server benchmark sends the YAML evidence records', () => {
+    const build = read(WEB_BENCHMARK, 'CMakeLists.txt');
+    expect(build).toContain('"20000 Evidence Records.yml"');
+    expect(build).not.toMatch(/\.csv\b/);
+    const run = read(WEB_BENCHMARK, 'runPerf.sh');
+    expect(run).toContain(' -E "$PWD/evidence.yml"');
   });
 
   test('the CI scripts fetch and pass no CSV evidence', () => {
