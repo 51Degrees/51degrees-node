@@ -28,10 +28,16 @@ on:
     - cron: '30 6 * * *'
   pull_request:
     branches: [main, rc]
+    # Every file the staging tests load, the jest settings the run uses
+    # (the pipeline project in the root package.json and its setup file),
+    # and this workflow.
     paths:
       - 'pipeline/fiftyone.pipeline.cloudrequestengine/examples/human-confidence-web/**'
       - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/humanConfidenceLive.js'
+      - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/liveCloudKeys.js'
       - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/*.staging.integration.test.js'
+      - 'pipeline/setup.js'
+      - 'package.json'
       - '.github/workflows/cloud-human-confidence.yml'
 
 permissions:

@@ -262,9 +262,9 @@ check, [`ci/tests/environmentVariableNames.test.js`](ci/tests/environmentVariabl
 list of its own. Where the two differ, common-ci's list is the one to
 follow.
 
-Two names are CI-only and have no `_51DEGREES_` prefix, because no customer
-sets them. `CLOUD_STAGING_ENDPOINT` is an organization variable holding the
-staging cloud's API base, ending `/api/v4/`, and
+The staging tests read two CI-only names, which have no `_51DEGREES_` prefix
+because no customer sets them. `CLOUD_STAGING_ENDPOINT` is an organization
+variable holding the staging cloud's API base, ending `/api/v4/`, and
 `RESOURCE_KEY_BESPOKE_STAGING` is an organization secret holding a Bespoke
 resource key the staging cloud resolves. Only the Human Confidence tests that
 call the staging cloud read them, and only
