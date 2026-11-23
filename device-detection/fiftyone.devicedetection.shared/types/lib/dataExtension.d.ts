@@ -25,4 +25,10 @@ declare class DataExtension {
      * @returns {Array} The profiles, or an empty array
      * */
     static getProfilesHelper(hardware: object): any[];
+    /**
+     * The line printed when a lookup returned no device profiles at all.
+     *
+     * @returns {string} The message to print
+     * */
+    static getNoProfilesMessage(): string;
 }

@@ -93,6 +93,17 @@ class DataExtension {
 
     return Array.isArray(profiles) ? profiles : [];
   };
+
+  /**
+   * The line printed when a lookup returned no device profiles at all.
+   *
+   * @returns {string} The message to print
+   * */
+  static getNoProfilesMessage () {
+    return '\tNo device profiles were returned. The current resource key ' +
+      'does not include the hardware properties this example needs. See ' +
+      'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.shared-lib-dataextension.js&utm_term=no-profiles\n';
+  };
 }
 
 module.exports = DataExtension;
