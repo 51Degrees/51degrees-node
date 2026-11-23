@@ -25,28 +25,64 @@
  */
 
 /*
+ * Override the overloaded constructor dispatcher template. This is the
+ * SWIG template without the unused "self" local, which compilers report
+ * as an unused variable.
+ */
+%fragment ("js_ctor_dispatcher", "templates")
+%{
+static SwigV8ReturnValue $jswrapper(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+
+  OverloadErrorHandler errorHandler;
+
+  // switch all cases by means of series of if-returns.
+  $jsdispatchcases
+
+  // default:
+  SWIG_exception_fail(SWIG_ERROR, "Illegal arguments for construction of $jsmangledname");
+
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+%}
+
+/*
  * Override the overloaded constructor template to
- * carry though the correct error message. The additions are the
- * two "goto fail"'s.
+ * carry through the correct error message. The addition is the
+ * "goto fail". The branch for V8 versions before 4 is left out, as no
+ * supported Node version uses one.
  */
 %fragment ("js_ctor_dispatch_case", "templates")
 %{
 	if(args.Length() == $jsargcount) {
 		errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-		self = $jswrapper(args, errorHandler);
-		if(errorHandler.err.IsEmpty()) {
-			SWIGV8_ESCAPE(self);
-		} else {
-			goto fail;
-		}
-#else
 		$jswrapper(args, errorHandler);
 		if(errorHandler.err.IsEmpty()) {
 			return;
 		} else {
 			goto fail;
 		}
-#endif
 	}
+%}
+
+/*
+ * Override the overloaded function dispatcher template. This is the SWIG
+ * template without the unused "jsresult" local, which compilers report as
+ * an unused variable.
+ */
+%fragment("js_function_dispatcher", "templates")
+%{
+static SwigV8ReturnValue $jswrapper(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+
+  OverloadErrorHandler errorHandler;
+  $jscode
+
+  SWIG_exception_fail(SWIG_ERROR, "Illegal arguments for function $jsname.");
+
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
 %}
