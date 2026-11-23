@@ -1,0 +1,407 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const CloudRequestEngine = require('../cloudRequestEngine');
+const CloudEngine = require('../cloudEngine');
+const sharedValues = require('../sharedValues');
+const MockRequestClient = require('./classes/mockRequestClient');
+const AcceptEveryKeyElement = require('./classes/acceptEveryKeyElement');
+const each = require('jest-each').default;
+const util = require('util');
+const errorMessages = require('../errorMessages');
+
+// Invalid resource key
+const testResourceKey = 'AAAAAAAAAAAA';
+
+const testEnvVarEndPoint = 'https://testhost/';
+
+afterEach(() => { // eslint-disable-line
+  // Reset the endpoint environment variable
+  process.env._51DEGREES_CLOUD_ENDPOINT = '';
+});
+
+// The endpoint tests give each engine a stand-in client, because an engine
+// asks the cloud service at its endpoint when it is built, and these tests
+// only read which endpoint it chose.
+
+// Check that explicitly setting of the baseURL will take precedence over
+// environment variable setting.
+test('custom end point - config precedence', done => {
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
+  const testEndPoint = 'testEndPoint/';
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    baseURL: testEndPoint,
+    requestClient: new MockRequestClient()
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(testEndPoint);
+
+  done();
+});
+
+// Check that environment variable setting will take precedence over default
+// setting
+test('custom end point - environment precedence', done => {
+  process.env._51DEGREES_CLOUD_ENDPOINT = testEnvVarEndPoint;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(testEnvVarEndPoint);
+
+  done();
+});
+
+// Check that default setting is used if nothing else is set
+test('custom end point - default value', done => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  const testCloudRequestEngine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  });
+
+  expect(testCloudRequestEngine.baseURL).toBe(sharedValues.baseURLDefault);
+
+  done();
+});
+
+/**
+ * Builds an engine on a stand-in client, processes twice in one Pipeline
+ * and returns the warnings the Pipeline logged.
+ *
+ * @param {object} options further options for the engine
+ * @returns {Promise<string[]>} the warnings logged
+ */
+const warningsFromTwoProcesses = async (options = {}) => {
+  const engine = new CloudRequestEngine(Object.assign({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  }, options));
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const warnings = [];
+  pipeline.on('warn', (warning) => warnings.push(String(warning)));
+
+  await pipeline.createFlowData().process();
+  await pipeline.createFlowData().process();
+
+  return warnings;
+};
+
+// Check that nothing is logged when the variable is not set
+test('custom end point - nothing logged for the default', async () => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+
+  expect(await warningsFromTwoProcesses()).toEqual([]);
+});
+
+// Check that values from the http response are populated in the
+// error object.
+test('HTTP data set in error', async () => {
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey
+  });
+
+  const builder = new PipelineBuilder();
+  const pipeline = builder.add(engine).build();
+  const flowData = pipeline.createFlowData();
+  const expectedError = '\'' + testResourceKey + '\' could not be read as a valid resource key.';
+
+  // When an error occurs, check that the message is logged.
+  const logged = [];
+  pipeline.on('error', (e) => logged.push(e));
+
+  const rejection = await flowData.process().then(
+    () => undefined, (e) => e);
+  expect(logged.length).toBeGreaterThan(0);
+
+  // Every recorded error is in the rejection. The cloud request engine
+  // records its errors as one array.
+  expect(rejection).toHaveProperty('name', 'AggregateError');
+  const errors = flowData.errors.cloud;
+  expect(rejection.errors[0]).toBe(errors);
+
+  // When an error occurs, check that the expected values are populated.
+  expect(errors[0].errorMessage.indexOf(expectedError) !== -1).toBe(true);
+  expect(errors[0].httpStatusCode).toEqual(400);
+  // Every 4xx answer carries Date (RFC 9110 section 6.6.1). Only some
+  // cloud servers send ETag.
+  expect(errors[0].responseHeaders.date).toBeDefined();
+});
+
+/**
+ * Test cloud request engine adds correct information to post request
+ * following the order of precedence when processing evidence and
+ * returns the response in the ElementData. Evidence parameters
+ * should be added in descending order of precedence.
+ */
+each([
+  ['query+header (no conflict)', false, 'query.User-Agent=iPhone', 'header.User-Agent=iPhone'],
+  ['query+cookie (no conflict)', false, 'query.User-Agent=iPhone', 'cookie.User-Agent=iPhone'],
+  ['header+cookie (conflict)', true, 'header.User-Agent=iPhone', 'cookie.User-Agent=iPhone'],
+  ['query+a (no conflict)', false, 'query.value=1', 'a.value=1'],
+  ['a+b (conflict)', true, 'a.value=1', 'b.value=1'],
+  ['e+f (conflict)', true, 'e.value=1', 'f.value=1']
+])
+  .test('evidence precidence - %s', (name, shouldWarn, evidence1, evidence2) => {
+    const evidence1Parts = evidence1.split('=');
+    const evidence2Parts = evidence2.split('=');
+    const client = new MockRequestClient();
+
+    const engine = new CloudRequestEngine({
+      resourceKey: testResourceKey,
+      requestClient: client
+    });
+
+    // The stand-in service lists only some keys, so an element that accepts
+    // every key keeps the rest of the evidence for the engine to order.
+    const builder = new PipelineBuilder();
+    const pipeline = builder.add(new AcceptEveryKeyElement())
+      .add(engine).build();
+
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add(evidence1Parts[0], evidence1Parts[1]);
+
+    flowData.evidence.add(evidence2Parts[0], evidence2Parts[1]);
+
+    const warnings = [];
+    // Store warnings for checking.
+    pipeline.on('warn', (w) => { warnings[warnings.length] = w; });
+    return flowData.process().then(function (data) {
+    // If warn is expected then check for warnings from cloud request
+      // engine.
+      if (shouldWarn === true) {
+      // Verify warning is thrown.
+        expect(warnings.length).toBe(1);
+        expect(warnings[0]).toContain(
+          util.format(errorMessages.evidenceConflict,
+            evidence1Parts[0],
+            evidence1Parts[1],
+            util.format('%s:%s', evidence2Parts[0], evidence2Parts[1])));
+      } else {
+        expect(warnings.length).toBe(0);
+      }
+    });
+  });
+
+/**
+ * Test evidence of specific type is returned from all
+ * the evidence passed, if type is not from query, header
+ * or cookie then evidences are returned sorted in descensing order
+ */
+each([
+  ['query', { 'query.User-Agent': 'iPhone', 'header.User-Agent': 'iPhone' }, 'query', { 'query.User-Agent': 'iPhone' }],
+  ['other', { 'header.User-Agent': 'iPhone', 'a.User-Agent': 'iPhone', 'z.User-Agent': 'iPhone' }, 'other', { 'z.User-Agent': 'iPhone', 'a.User-Agent': 'iPhone' }]
+])
+  .test('get selected evidence - %s', (name, evidence, type, expectedValue) => {
+    const client = new MockRequestClient();
+    const engine = new CloudRequestEngine({
+      resourceKey: testResourceKey,
+      requestClient: client
+    });
+
+    const result = engine.getSelectedEvidence(evidence, type);
+    expect(result).toStrictEqual(expectedValue);
+  });
+
+/**
+ * Test Content to send in the POST request is generated as
+ * per the precedence rule of The evidence keys. These are
+ * added to the evidence in reverse order, if there is conflict then
+ * the queryData value is overwritten.
+ */
+each([
+  ['query > header', { 'query.User-Agent': 'query-iPhone', 'header.User-Agent': 'header-iPhone' }, 'query-iPhone'],
+  ['header > cookie', { 'header.User-Agent': 'header-iPhone', 'cookie.User-Agent': 'cookie-iPhone' }, 'header-iPhone'],
+  ['a > b > z', { 'a.User-Agent': 'a-iPhone', 'b.User-Agent': 'b-iPhone', 'z.User-Agent': 'z-iPhone' }, 'a-iPhone']
+])
+  .test('get content - %s', (name, evidence, expectedValue) => {
+    const client = new MockRequestClient();
+    const engine = new CloudRequestEngine({
+      resourceKey: testResourceKey,
+      requestClient: client
+    });
+
+    const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
+      .add(engine)
+      .build();
+
+    const data = pipeline.createFlowData();
+
+    for (const [key, value] of Object.entries(evidence)) {
+      data.evidence.add(key, value);
+    }
+
+    const result = engine.getContent(data);
+    expect(result['User-Agent']).toBe(expectedValue);
+  });
+
+/**
+ * Test that an evidence name which itself contains a dot keeps every part
+ * after the prefix. The cloud service reads the 51Did usage from id.usage,
+ * so evidence named query.id.usage must be sent as id.usage and not cut
+ * down to id, otherwise the service never creates a 51Did.
+ */
+each([
+  ['query.id.usage', 'standard', 'id.usage'],
+  ['header.id.usage', 'standard', 'id.usage'],
+  ['query.id.email', 'someone@example.com', 'id.email'],
+  ['server.client-ip', '81.2.69.142', 'client-ip'],
+  ['query.user-agent', 'iPhone', 'user-agent']
+])
+  .test('get content keeps the full name - %s', (key, value, expectedName) => {
+    const client = new MockRequestClient();
+    const engine = new CloudRequestEngine({
+      resourceKey: testResourceKey,
+      requestClient: client
+    });
+
+    const pipeline = new PipelineBuilder()
+      .add(new AcceptEveryKeyElement())
+      .add(engine)
+      .build();
+
+    const data = pipeline.createFlowData();
+    data.evidence.add(key, value);
+
+    const result = engine.getContent(data);
+    expect(result).toStrictEqual({ [expectedName]: value });
+  });
+
+/**
+ * Test that two dotted names which share their first part after the prefix
+ * are sent as two separate parameters rather than one overwriting the other.
+ */
+test('get content keeps dotted names apart', () => {
+  const client = new MockRequestClient();
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: client
+  });
+
+  const pipeline = new PipelineBuilder()
+    .add(engine)
+    .build();
+
+  const data = pipeline.createFlowData();
+  data.evidence.add('query.id.usage', 'standard');
+  data.evidence.add('query.id.email', 'someone@example.com');
+
+  const result = engine.getContent(data);
+  expect(result).toStrictEqual({
+    'id.usage': 'standard',
+    'id.email': 'someone@example.com'
+  });
+});
+
+/**
+ * The cloud service's keys are fetched when the Pipeline first processes, so
+ * evidence set before then is kept, and once they arrive the engine accepts
+ * only the keys the service lists.
+ */
+test('evidence set before the keys arrive is kept', () => {
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    requestClient: new MockRequestClient()
+  });
+  // A cloud engine is what asks the request engine to fetch the keys.
+  const device = new CloudEngine();
+  device.dataKey = 'device';
+  const pipeline = new PipelineBuilder().add(engine).add(device).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('header.user-agent', 'iPhone');
+  expect(data.evidence.get('header.user-agent')).toBe('iPhone');
+
+  return data.process().then(function () {
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeTruthy();
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.x-test'))
+      .toBeFalsy();
+  });
+});
+
+/**
+ * Test that Evidence never supplies resource, license, licence or values,
+ * under any prefix and in any letter case, as the Processing section of
+ * cloud-request-engine.md says, and that the engine's own keys are sent.
+ * Other Evidence is sent with the usual precedence.
+ */
+test('evidence never supplies resource, license or values', async () => {
+  const posts = [];
+  const client = new MockRequestClient({
+    keys: [
+      'query.resource', 'query.license', 'query.licence', 'query.values',
+      'header.resource', 'cookie.license', 'query.other',
+      'header.other', 'cookie.cookie-only'
+    ]
+  });
+  client.post = (url, content) => {
+    // A license key asks for the accessible properties by post before the
+    // first process, which is not the request this test reads.
+    if (url.includes('accessibleproperties')) {
+      return Promise.resolve(JSON.stringify(client.properties));
+    }
+    posts.push({ url, content });
+    return Promise.resolve(JSON.stringify({}));
+  };
+  const engine = new CloudRequestEngine({
+    resourceKey: testResourceKey,
+    licenseKey: 'LICENSEKEY',
+    requestClient: client
+  });
+  const pipeline = new PipelineBuilder().add(engine).build();
+  const data = pipeline.createFlowData();
+  data.evidence.add('query.Resource', 'evidence_resource');
+  data.evidence.add('query.LICENSE', 'evidence_license');
+  data.evidence.add('query.Licence', 'evidence_licence');
+  data.evidence.add('query.Values', 'evidence_values');
+  data.evidence.add('header.resource', 'header_resource');
+  data.evidence.add('cookie.License', 'cookie_license');
+  data.evidence.add('query.other', 'query_other');
+  data.evidence.add('header.other', 'header_other');
+  data.evidence.add('cookie.cookie-only', 'cookie_only');
+  // A key with no prefix is its own name.
+  data.evidence.add('Licence', 'evidence_bare_licence');
+
+  await data.process();
+
+  expect(posts).toHaveLength(1);
+  const { url, content } = posts[0];
+  expect(url).toContain(testResourceKey + '.json');
+  expect(url).not.toContain('license=');
+  expect(url).not.toContain('evidence_');
+  // The engine's own keys are the only reserved fields in the body.
+  expect(Object.keys(content).filter(
+    name => ['resource', 'license', 'licence', 'values']
+      .includes(name.toLowerCase())
+  )).toStrictEqual(['resource', 'license']);
+  expect(content.resource).toBe(testResourceKey);
+  expect(content.license).toBe('LICENSEKEY');
+  expect(JSON.stringify(content)).not.toContain('evidence_');
+  expect(JSON.stringify(content)).not.toContain('header_resource');
+  expect(JSON.stringify(content)).not.toContain('cookie_license');
+  expect(content.other).toBe('query_other');
+  expect(content['cookie-only']).toBe('cookie_only');
+});

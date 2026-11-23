@@ -1,0 +1,35 @@
+{
+  "PipelineOptions": {
+    "Elements": [
+      {
+        "elementName": "fiftyone.devicedetection.onpremise/deviceDetectionOnPremise",
+        "elementParameters": {
+          "performanceProfile": "MaxPerformance",
+          "dataFilePath": "51Degrees-LiteV4.1.hash",
+          "autoUpdate": false,
+          "licenceKeys": "!!YOUR_LICENCE_KEY!!"
+        }
+      },
+      {
+        "elementName": "fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise",
+        "elementParameters": {
+          "performanceProfile": "MaxPerformance",
+          "dataFilePath": "../../../../../../cxx/data/ip-intelligence/51Degrees-LiteV41.ipi",
+          "autoUpdate": false,
+          "licenceKeys": "!!YOUR_LICENCE_KEY!!"
+        }
+      },
+      {
+        "elementName": "fiftyone.pipeline.engines.fiftyone/shareUsage",
+        "elementParameters": {
+          "sharePercentage": 100,
+          "interval": 1200000,
+          "requestedPackageSize": 50,
+          "cookie": "",
+          "queryWhitelist": [],
+          "headerBlacklist": []
+        }
+      }
+    ]
+  }
+}

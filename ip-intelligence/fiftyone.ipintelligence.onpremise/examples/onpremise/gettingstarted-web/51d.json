@@ -1,0 +1,26 @@
+{
+  "PipelineOptions": {
+    "Elements": [
+      {
+        "elementName": "fiftyone.ipintelligence.onpremise/ipIntelligenceOnPremise",
+        "elementParameters": {
+          "performanceProfile": "Balanced",
+          "dataFilePath": "../../../../../cxx/data/ip-intelligence/51Degrees-LiteV41.ipi",
+          "autoUpdate": false,
+          "licenceKeys": "!!YOUR_LICENCE_KEY!!"
+        }
+      },
+      {
+        "elementName": "fiftyone.pipeline.engines.fiftyone/shareUsage",
+        "elementParameters": {
+          "sharePercentage": 100,
+          "interval": 1200000,
+          "requestedPackageSize": 50,
+          "cookie": "",
+          "queryWhitelist": [],
+          "headerBlacklist": []
+        }
+      }
+    ]
+  }
+}

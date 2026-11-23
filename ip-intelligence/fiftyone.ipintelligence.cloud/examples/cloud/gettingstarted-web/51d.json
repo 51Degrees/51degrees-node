@@ -1,0 +1,26 @@
+{
+  "PipelineOptions": {
+    "Elements": [
+      {
+        "elementName": "fiftyone.pipeline.cloudrequestengine/cloudRequestEngine",
+        "elementParameters": {
+          "resourceKey": "!!YOUR_RESOURCE_KEY!!"
+        }
+      },
+      {
+        "elementName": "fiftyone.ipintelligence.cloud/ipIntelligenceCloud"
+      },
+      {
+        "elementName": "fiftyone.pipeline.engines.fiftyone/shareUsage",
+        "elementParameters": {
+          "sharePercentage": 100,
+          "interval": 1200000,
+          "requestedPackageSize": 50,
+          "cookie": "",
+          "queryWhitelist": [],
+          "headerBlacklist": []
+        }
+      }
+    ]
+  }
+}

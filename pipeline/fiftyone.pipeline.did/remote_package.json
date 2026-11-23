@@ -1,0 +1,63 @@
+{
+  "name": "fiftyone.pipeline.did",
+  "version": "4.5.0",
+  "description": "Strongly typed reader for the 51Did (51Degrees Identifier) value returned by the 51Degrees Cloud service. Parses the OWID envelope and exposes the usage, licence id, match key and terms document plus the identifier type. Compare match keys, never envelopes.",
+  "keywords": [
+    "51degrees",
+    "51did",
+    "fodid",
+    "owid",
+    "pipeline"
+  ],
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./index.js"
+    },
+    "./reader": {
+      "types": "./types/reader.d.ts",
+      "default": "./reader.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "/*.js",
+    "internal/",
+    "types/",
+    "examples/",
+    "tests/",
+    "!tests/packaging.test.js",
+    "tsconfig.json",
+    "owid-js/v1.js",
+    "owid-js/LICENSE"
+  ],
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "51Degrees Engineering <engineering@51degrees.com>",
+  "license": "EUPL-1.2",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "typescript": "^5.9.3"
+  },
+  "jest": {
+    "setupFiles": [
+      "./tests/setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/owid-js/"
+    ]
+  },
+  "homepage": "https://51degrees.com/developers/51did?utm_source=npm&utm_medium=package&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did&utm_term=homepage",
+  "bugs": {
+    "url": "https://github.com/51Degrees/51degrees-node/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/51Degrees/51degrees-node",
+    "directory": "pipeline/fiftyone.pipeline.did"
+  }
+}

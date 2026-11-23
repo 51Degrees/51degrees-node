@@ -1,0 +1,153 @@
+/* *********************************************************************
+ * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
+ * Copyright 2026 51 Degrees Mobile Experts Limited, Davidson House,
+ * Forbury Square, Reading, Berkshire, United Kingdom RG1 3EU.
+ *
+ * This Original Work is licensed under the European Union Public Licence
+ * (EUPL) v.1.2 and is subject to its terms as set out below.
+ *
+ * If a copy of the EUPL was not distributed with this file, You can obtain
+ * one at https://opensource.org/licenses/EUPL-1.2.
+ *
+ * The 'Compatible Licences' set out in the Appendix to the EUPL (as may be
+ * amended by the European Commission) shall be deemed incompatible for
+ * the purposes of the Work and the provisions of the compatibility
+ * clause in Article 5 of the EUPL shall not apply.
+ *
+ * If using the Work as, or as part of, a network application, by
+ * including the attribution notice(s) required under Article 5 of the EUPL
+ * in the end user terms of the application under an appropriate heading,
+ * such notice(s) shall fulfill the requirements of that article.
+ * ********************************************************************* */
+
+const path = require('path');
+const require51 = (requestedPackage) => {
+  try {
+    return require(path.join(__dirname, '/../../../node_modules/', requestedPackage));
+  } catch (e) {
+    return require(requestedPackage);
+  }
+};
+
+const request = require('supertest');
+
+const fs = require('fs');
+
+const OptionsExtension =
+  require51('fiftyone.devicedetection.shared').optionsExtension;
+
+// Test constants
+const tc = require51('fiftyone.devicedetection.shared').testConstants;
+
+const keyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
+
+// Load the example module
+const example = require(path.join(__dirname, '/gettingStarted.js'));
+
+describe('Examples', () => {
+  test('cloud getting started web', async () => {
+    // Load configuration options
+    const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
+    // Update element path with a full path
+    OptionsExtension.updateElementPath(options, __dirname);
+    const resourceKey = keyUtils.getResourceKey(
+      tc.envVars.resourceKeyBespokeEnvVar);
+
+    if (!resourceKey) {
+      // The message names the variable that was wanted, so whoever reads
+      // the run knows what to set.
+      throw new Error(keyUtils.missingResourceKeyMessage(
+        tc.envVars.resourceKeyBespokeEnvVar));
+    }
+
+    OptionsExtension.setResourceKey(options, resourceKey);
+
+    example.setPipeline(options);
+    const response = await request(example.server)
+      .get('/')
+      .set('User-Agent', 'abc');
+    expect(response.statusCode).toBe(200);
+    expect(response.text).toContain('src="/51Degrees.core.js"');
+
+    // The script referenced by the page must be served as JavaScript rather
+    // than falling through to the page itself.
+    const script = await request(example.server)
+      .get('/51Degrees.core.js')
+      .set('User-Agent', 'abc');
+    expect(script.statusCode).toBe(200);
+    expect(script.headers['content-type']).toContain('javascript');
+    expect(script.text).toContain('fiftyoneDegreesManager');
+
+    // A recognised User-Agent must produce a device id in the rendered page.
+    // A device id of all zeros means nothing was matched.
+    const detected = await request(example.server)
+      .get('/')
+      .set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    expect(detected.statusCode).toBe(200);
+    const deviceId = /Device Id:.*?c-eg-table__cell">([\d-]+)</s
+      .exec(detected.text);
+    expect(deviceId).not.toBeNull();
+    expect(deviceId[1]).toMatch(/^\d+-\d+-\d+-\d+$/);
+    expect(deviceId[1]).not.toBe('0-0-0-0');
+
+    // The client script sends the results of its snippets as a posted form
+    // body, so a value posted that way must reach the pipeline exactly as
+    // the same value in the query string does. Screen width is used because
+    // the answer repeats the number the caller sent, so a value that never
+    // arrived reads as zero.
+    const posted = await request(example.server)
+      .post('/json')
+      .set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+      .type('form')
+      .send({ '51D_ScreenPixelsWidth': '1920' });
+    expect(posted.statusCode).toBe(200);
+    expect(JSON.parse(posted.text).device.screenpixelswidth).toBe(1920);
+  });
+
+  // The client-side endpoints carry the caching headers of the web
+  // integration specification, and the script endpoint answers a matching
+  // If-None-Match with a 304. supertest listens on a new port for each
+  // request and the host is evidence, so each request names the same host.
+  test('cloud getting started web caching headers', async () => {
+    const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
+    OptionsExtension.updateElementPath(options, __dirname);
+    const resourceKey = keyUtils.getResourceKey(
+      tc.envVars.resourceKeyBespokeEnvVar);
+    if (!resourceKey) {
+      throw new Error(keyUtils.missingResourceKeyMessage(
+        tc.envVars.resourceKeyBespokeEnvVar));
+    }
+    OptionsExtension.setResourceKey(options, resourceKey);
+    example.setPipeline(options);
+
+    const script = await request(example.server)
+      .get('/51Degrees.core.js')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc');
+    expect(script.statusCode).toBe(200);
+    expect(script.headers['cache-control']).toBe('private, max-age=1800');
+    expect(script.headers.vary).toMatch(/user-agent/i);
+    expect(script.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
+
+    const again = await request(example.server)
+      .get('/51Degrees.core.js')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc')
+      .set('If-None-Match', script.headers.etag);
+    expect(again.statusCode).toBe(304);
+    expect(again.text).toBe('');
+    expect(again.headers.etag).toBe(script.headers.etag);
+
+    const json = await request(example.server)
+      .post('/json')
+      .set('Host', 'example.test')
+      .set('User-Agent', 'abc')
+      .type('form')
+      .send({ '51D_ScreenPixelsWidth': '1920' });
+    expect(json.statusCode).toBe(200);
+    expect(json.headers['cache-control']).toBe('private, max-age=1800');
+    expect(json.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/);
+  });
+});

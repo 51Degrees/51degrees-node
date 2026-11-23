@@ -1,0 +1,71 @@
+![51Degrees](https://raw.githubusercontent.com/51Degrees/51degrees-node/main/.github/images/logo-160.png "Data rewards the curious") **Node IP Intelligence**
+
+[Developer Documentation](https://51degrees.com/documentation/_ip_intelligence__quickstart.html?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=top "developer documentation")
+
+# Running examples
+
+The examples can be run either with modules included in the GitHub repository or with the **IP Intelligence** packages from `npm` repository.
+
+Usage examples are available for Cloud and OnPremise [`fiftyone.ipintelligence`](fiftyone.ipintelligence/examples), [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud/examples/cloud) and [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise/examples/onpremise).
+
+## Run with modules in GitHub repository
+
+First of all, you need to build the binaries for the on-premise examples to work as described in the **On-Premise** section of the [readme](readme.md). **Skip** this part if you just want to run the cloud examples.
+
+The `mixed` examples combine device detection and IP intelligence in a single pipeline. These use the `fiftyone.devicedetection.cloud` and `fiftyone.devicedetection.onpremise` packages, which are installed by `npm install` in the repository root. The on-premise mixed examples also need a device detection data file (`.hash` format). A lite data file is linked from the [data](https://github.com/51Degrees/data) repository, which is the `cxx/data` submodule, and the examples download it when it is missing. The path to another file can be supplied as a command line argument or set in the `_51DEGREES_DD_PATH` environment variable. The path to the IP intelligence data file can likewise be set in the `_51DEGREES_IPI_PATH` environment variable.
+
+The on-premise examples need no settings. They use the free data files, which are linked from the [data](https://github.com/51Degrees/data) repository and downloaded when they are missing. Most use the Lite data file, which has the registration properties, and the performance and data file update examples use the far smaller ASN data file. Each example also asks for properties that only the Enterprise data file has, such as the location and IP range properties, and shows each one the data file in use does not have as needing the Enterprise data file, with a link to [contact us](https://51degrees.com/contact-us?utm_source=github&utm_medium=docs&utm_campaign=51degrees-node&utm_content=run_examples.md&utm_term=enterprise-data-file) for a copy. The compare, country translation, metrics and suspicious examples need those properties to do their work, so on a free data file they say which they need and stop. The examples that update the data file need a licence key, and without one they say so and give the same link.
+
+Then navigate to the root folder that contains the examples that you want to run. This folder can be either [`fiftyone.ipintelligence`](fiftyone.ipintelligence), [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud) or [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise)
+
+Install the required packages:
+
+```
+npm install
+```
+
+Navigate to the sub folder `examples/[cloud|onpremise]` and run the example:
+
+e.g.
+
+```
+node gettingStarted.js
+```
+
+## Run with npm packages
+
+These examples can also be run with `npm` packages ``fiftyone.ipintelligence.*`` modules.
+
+First of all, create a folder outside of the checkout directory (`npm` does not allow package to be installed under the same package name) and copy the example that you want to run to that folder. For examples where there is an associated `JSON` `51d.json`, you will also need to copy the file.
+
+Create a `package.json` file and make sure to include the package that you wish to use in the `dependencies` section. For examples:
+
+```
+  "dependencies": {
+      "fiftyone.ipintelligence.cloud": "^1.0.0",
+      ...
+  }
+```
+
+Packages usage:
+- [`fiftyone.ipintelligence`](fiftyone.ipintelligence): contains pipeline builder which can be used to build both `Cloud` and `On-Premise` engines pipeline.
+- [`fiftyone.ipintelligence.cloud`](fiftyone.ipintelligence.cloud): contains cloud engine and cloud pipeline builder.
+- [`fiftyone.ipintelligence.onpremise`](fiftyone.ipintelligence.onpremise): contains on-premise engine and on-premise pipeline builder.
+
+Next, you will need to update the `require` statement, the data file path and the `51d.json` file if the example require to.
+
+The `require` statement will need to pick the corresponding module instead of using the relative path.
+
+Updated the data file path to point to where the data file is stored.
+
+Each `51d.json` names its engines by package, for example `fiftyone.devicedetection.cloud/deviceDetectionCloud`, so it works unchanged with the installed packages.
+
+If the `51d.json` contains the data file for on-premise example, it will also need to be updated to point to the correct location.
+
+Once you have finished setting up, run the example:
+
+e.g.
+
+```
+node gettingStarted.js
+```
