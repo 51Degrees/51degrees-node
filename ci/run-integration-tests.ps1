@@ -85,6 +85,8 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
+        Remove-Item env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+            -ErrorAction SilentlyContinue
         foreach ($variable in $Environment.Keys) {
             [Environment]::SetEnvironmentVariable($variable, $null)
         }

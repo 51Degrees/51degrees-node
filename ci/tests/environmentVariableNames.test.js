@@ -219,11 +219,66 @@ describe('environment variable names', () => {
 
   // A 51Did license redeems only with a resource key of the same account,
   // and the Basic tier test needs a key on that tier alone, so each key in
-  // a workflow comes from the secret of its own name.
-  it('fills each key in a workflow from the secret of the same name', () => {
-    const assignment =
-      /^\s*(_51DEGREES_(?:RESOURCE|LICENSE)_KEY[A-Z0-9_]*)\s*:\s*(.*?)\s*$/;
+  // a workflow comes from the value of its own name. Every resource key and
+  // every license key is an organization secret.
+  const assignment =
+    /^\s*(_51DEGREES_(?:RESOURCE|LICENSE)_KEY[A-Z0-9_]*)\s*:\s*(.*?)\s*$/;
+
+  /**
+   * The value a workflow must fill a key from.
+   *
+   * @param {string} name the key's name
+   * @returns {string} the secret of the same name
+   */
+  const keySource = (name) => '$' + '{{ secrets.' + name + ' }}';
+
+  it('expects every key from secrets', () => {
+    // The dollar sign is kept apart, as above.
+    for (const name of [
+      '_51DEGREES_RESOURCE_KEY',
+      '_51DEGREES_RESOURCE_KEY_51DID',
+      '_51DEGREES_RESOURCE_KEY_BASIC',
+      '_51DEGREES_RESOURCE_KEY_BESPOKE',
+      '_51DEGREES_RESOURCE_KEY_PRO',
+      '_51DEGREES_RESOURCE_KEY_ESSENTIALS',
+      '_51DEGREES_RESOURCE_KEY_V4_COMPLETE',
+      '_51DEGREES_RESOURCE_KEY_V4_FREE',
+      '_51DEGREES_RESOURCE_KEY_DOMAIN_RESTRICTED',
+      '_51DEGREES_RESOURCE_KEY_DOMAIN_RESTRICTED_51DEGREES',
+      '_51DEGREES_LICENSE_KEY_51DID'
+    ]) {
+      expect(keySource(name)).toBe('$' + '{{ secrets.' + name + ' }}');
+    }
+  });
+
+  it('reads no key from an organization variable in any file', () => {
+    // The dot is kept apart so this file does not match itself.
+    const keyVariable = new RegExp(
+      '\\bvars' + '\\.' + PREFIX + '(?:RESOURCE|LICENSE)_KEY');
     const found = [];
+
+    for (const file of trackedFiles()) {
+      const full = path.join(REPOSITORY_ROOT, file);
+      if (SKIPPED_EXTENSIONS.has(path.extname(file).toLowerCase()) ||
+        !fs.existsSync(full) || !fs.statSync(full).isFile()) {
+        continue;
+      }
+      fs.readFileSync(full, 'utf8').split('\n').forEach((line, index) => {
+        if (keyVariable.test(line)) {
+          found.push(`${file}:${index + 1}`);
+        }
+      });
+    }
+
+    expect(keyVariable.test(
+      '$' + '{{ vars' + '.' + PREFIX + 'RESOURCE_KEY_BASIC }}')).toBe(true);
+    expect(keyVariable.test(
+      '$' + '{{ secrets.' + PREFIX + 'RESOURCE_KEY_BASIC }}')).toBe(false);
+    expect(found).toEqual([]);
+  });
+
+  it('fills each key in a workflow from the secret of the same name', () => {
+    const names = [];
     const wrong = [];
 
     for (const file of trackedFiles()) {
@@ -235,18 +290,20 @@ describe('environment variable names', () => {
       lines.forEach((line, index) => {
         const match = line.match(assignment);
         if (match) {
-          const entry = `${file}:${index + 1}: ${match[1]}: ${match[2]}`;
-          found.push(entry);
-          if (match[2] !== '$' + '{{ secrets.' + match[1] + ' }}') {
-            wrong.push(entry);
+          names.push(match[1]);
+          if (match[2] !== keySource(match[1])) {
+            wrong.push(`${file}:${index + 1}: ${match[1]}: ${match[2]}`);
           }
         }
       });
     }
 
-    // The Cloud 51Did workflow fills its keys, so the test cannot pass by
-    // finding nothing.
-    expect(found.length).toBeGreaterThan(0);
+    // The Cloud 51Did workflow fills both kinds of key, so the test cannot
+    // pass by finding none of either.
+    expect(names.some((name) => name.startsWith(PREFIX + 'RESOURCE_KEY')))
+      .toBe(true);
+    expect(names.some((name) => name.startsWith(PREFIX + 'LICENSE_KEY')))
+      .toBe(true);
     expect(wrong).toEqual([]);
   });
 });

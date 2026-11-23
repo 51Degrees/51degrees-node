@@ -229,6 +229,29 @@ describe('Human Confidence example /passive route', () => {
       .toEqual({ source: null, humanConfidence: null });
   });
 
+  // A key outside the Bespoke product is answered with no source, with or
+  // without a level. The route gives what the cloud gave and makes up
+  // neither.
+  test.each([null, 'Medium'])(
+    'an answer for a key outside Bespoke gives no source (level %p)',
+    async (level) => {
+      const derived = {
+        humanconfidence: level,
+        humanconfidencesource: null,
+        humanconfidencesourcenullreason:
+          'The key does not give this property a value.'
+      };
+      if (level === null) {
+        derived.humanconfidencenullreason =
+          'The key does not give this property a value.';
+      }
+      const cloud = passiveCloud({ body: JSON.stringify({ derived }) });
+      const response = fakeResponse();
+      await routesWith(cloud).passive(visitor(), response);
+      expect(JSON.parse(response.body))
+        .toEqual({ source: null, humanConfidence: level });
+    });
+
   test('a cloud failure answers with the status and the body', async () => {
     const cloud = passiveCloud({ status: 403, body: 'Forbidden' });
     const response = fakeResponse();

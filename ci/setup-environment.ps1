@@ -14,8 +14,8 @@ if ($IsLinux -and $env:GITHUB_ACTIONS -eq "true") {
 }
 
 # The keys are not set here. Each one is in the environment under its
-# _51DEGREES_ name before this script runs, and the tests read them from
-# there.
+# _51DEGREES_ name before this script runs, from the organization secret of
+# the same name, and the examples and tests read them from there.
 
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
