@@ -90,12 +90,48 @@ const NO_HARDWARE_LOOKUP =
 
 // Whether the resource key carries the hardware lookup. The hardware
 // engine's properties come from the cloud service's list of the properties
-// the key can access, so this is known before any lookup is made.
+// the key can access, so this is known before any lookup is made. The first
+// wait can share the request made as the engine was built, so when it fails
+// the cloud request engine is asked once more before anything is decided. A
+// second failure is the cloud service's error, and is thrown.
 const hasHardwareLookup = async function (hardwareEngine) {
-  await hardwareEngine.ready();
+  try {
+    await hardwareEngine.ready();
+  } catch (errors) {
+    await hardwareEngine.ready();
+  }
   const properties = hardwareEngine.properties;
   return properties !== undefined && properties !== null &&
     properties.profiles !== undefined;
+};
+
+// The messages of the errors a cloud request gave, which arrive as a list,
+// as lists within a list, or as an error that holds a list.
+const errorMessages = function (reason) {
+  if (Array.isArray(reason)) {
+    return [].concat(...reason.map(errorMessages));
+  }
+  if (reason !== null && typeof reason === 'object' &&
+    Array.isArray(reason.errors)) {
+    return errorMessages(reason.errors);
+  }
+  if (reason instanceof Error) {
+    const status = reason.httpStatusCode;
+    return [typeof status === 'number' &&
+      !reason.message.includes(String(status))
+      ? `${reason.message} (status code ${status})`
+      : reason.message];
+  }
+  return [String(reason)];
+};
+
+// Ends the example with the error the cloud request gave, as a message
+// rather than a stack trace, and an exit code that says it failed.
+const endWithError = function (reason) {
+  console.error('The example stopped because the request to the cloud ' +
+    `service failed. ${errorMessages(reason).join(' ')}`);
+  console.log(FIND_OUT_MORE);
+  process.exitCode = 1;
 };
 
 const analyseNativeModel = async function (nativemodel, pipeline, output) {
@@ -183,7 +219,9 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const resourceKey = args.length > 0 ? args[0] : ExampleUtils.getResourceKeyFromEnv();
 
   if (resourceKey) {
-    run(resourceKey, process.stdout).then(() => console.log(FIND_OUT_MORE));
+    run(resourceKey, process.stdout)
+      .then(() => console.log(FIND_OUT_MORE))
+      .catch(endWithError);
   } else {
     console.error('No resource key specified on the command line or in the ' +
     `the environment variable '${ExampleUtils.RESOURCE_KEY_ENV_VAR}'. ` +

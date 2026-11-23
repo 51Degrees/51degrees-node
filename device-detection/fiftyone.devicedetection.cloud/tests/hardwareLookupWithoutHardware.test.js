@@ -27,35 +27,21 @@
 // must say so in one line and end normally without making a lookup. No real
 // key and no network are used.
 
-const childProcess = require('child_process');
-const fs = require('fs');
-const http = require('http');
 const path = require('path');
 
-const EXAMPLES = path.join(__dirname, '..', 'examples', 'cloud');
-const FIXTURES = path.join(__dirname, 'fixtures');
+const {
+  EXAMPLE_FILES,
+  JEST_MARGIN_MS,
+  TIMEOUT_MS,
+  fixture,
+  printed,
+  runAgainstStandIn
+} = require(path.join(__dirname, 'hardwareLookupStandIn.js'));
 
-// Answers captured from the cloud service, with no key in them.
-const ACCESSIBLE_PROPERTIES = fs.readFileSync(
-  path.join(FIXTURES, 'accessibleproperties-no-hardware.json'), 'utf8');
-const EVIDENCE_KEYS = fs.readFileSync(
-  path.join(FIXTURES, 'evidencekeys.json'), 'utf8');
-
-// Any key that is not empty, as the stand-in accepts every key.
-const STAND_IN_KEY = 'stand-in-key';
-
-// Long enough for an example to start and stop.
-const TIMEOUT_MS = 30000;
-
-// Jest waits this much longer than the run, so that it can report a run the
-// timeout stopped.
-const JEST_MARGIN_MS = 5000;
-
-// Each example, by its folder and file.
-const EXAMPLE_FILES = [
-  ['taclookup-console', 'tacLookup.js'],
-  ['nativemodellookup-console', 'nativeModelLookup.js']
-];
+const ANSWERS = {
+  accessibleProperties: fixture('accessibleproperties-no-hardware.json'),
+  evidenceKeys: fixture('evidencekeys.json')
+};
 
 // The line the example prints, with its links tagged with the example's
 // file.
@@ -71,93 +57,17 @@ const expectedLine = (folder, file) => {
     `about it at https://51degrees.com/contact-us${query}.`;
 };
 
-// Whether a variable is left out of the example's environment: every name a
-// key could be read from, the endpoint, which is set to the stand-in, and
-// jest's own variable, which the examples read to tell a test run apart.
-// Names are matched without regard to case, as Windows matches them.
-const removed = (name) => {
-  const upper = name.toUpperCase();
-  return upper.includes('RESOURCE_KEY') || upper.includes('LICENSE_KEY') ||
-    upper === '_51DEGREES_CLOUD_ENDPOINT' || upper === 'JEST_WORKER_ID';
-};
-
-// Starts the stand-in on a free port. It answers the two discovery requests
-// and gives 404 for anything else, and records the method and path of
-// every request.
-const startStandIn = () => new Promise((resolve, reject) => {
-  const requests = [];
-  const server = http.createServer((req, res) => {
-    const pathname = new URL(req.url, 'http://127.0.0.1').pathname;
-    requests.push(`${req.method} ${pathname}`);
-    let body;
-    if (req.method === 'GET' && pathname.endsWith('/accessibleproperties')) {
-      body = ACCESSIBLE_PROPERTIES;
-    } else if (req.method === 'GET' && pathname.endsWith('/evidencekeys')) {
-      body = EVIDENCE_KEYS;
-    }
-    if (body === undefined) {
-      res.writeHead(404);
-      res.end();
-      return;
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(body);
-  });
-  server.on('error', reject);
-  server.listen(0, '127.0.0.1', () => resolve({
-    server,
-    requests,
-    endpoint: `http://127.0.0.1:${server.address().port}/api/v4/`
-  }));
-});
-
-// Runs the example from its own folder, pointed at the stand-in, and gives
-// what it printed and how it ended.
-const runExample = (folder, file, endpoint) => new Promise((resolve) => {
-  const env = {};
-  for (const [name, value] of Object.entries(process.env)) {
-    if (!removed(name)) {
-      env[name] = value;
-    }
-  }
-  env._51DEGREES_RESOURCE_KEY = STAND_IN_KEY;
-  env._51DEGREES_CLOUD_ENDPOINT = endpoint;
-  const child = childProcess.spawn(process.execPath, [file], {
-    cwd: path.join(EXAMPLES, folder),
-    env
-  });
-  let stdout = '';
-  let stderr = '';
-  child.stdout.setEncoding('utf8');
-  child.stderr.setEncoding('utf8');
-  child.stdout.on('data', (chunk) => { stdout += chunk; });
-  child.stderr.on('data', (chunk) => { stderr += chunk; });
-  const timer = setTimeout(() => child.kill(), TIMEOUT_MS);
-  child.on('close', (status, signal) => {
-    clearTimeout(timer);
-    resolve({ status, signal, stdout, stderr });
-  });
-});
-
 describe('hardware lookup examples with a key that has no hardware lookup',
   () => {
     for (const [folder, file] of EXAMPLE_FILES) {
       test(`${file} says what the key needs and makes no lookup`, async () => {
-        const standIn = await startStandIn();
-        let result;
-        try {
-          result = await runExample(folder, file, standIn.endpoint);
-        } finally {
-          await new Promise((resolve) => standIn.server.close(resolve));
-        }
+        const result = await runAgainstStandIn(folder, file, ANSWERS);
 
         // What the example printed is shown when it did not end normally.
         expect({
           status: result.status,
           signal: result.signal,
-          printed: result.status === 0
-            ? ''
-            : `${result.stdout}\n${result.stderr}`
+          printed: result.status === 0 ? '' : printed(result)
         }).toEqual({ status: 0, signal: null, printed: '' });
 
         // Nothing was logged as an error or with a stack trace.
@@ -174,8 +84,8 @@ describe('hardware lookup examples with a key that has no hardware lookup',
 
         // The example asked the stand-in for the properties, and made no
         // lookup, which is the request for the key's JSON.
-        expect(standIn.requests).toContain('GET /api/v4/accessibleproperties');
-        expect(standIn.requests.filter((request) => request.endsWith('json')))
+        expect(result.requests).toContain('GET /api/v4/accessibleproperties');
+        expect(result.requests.filter((request) => request.endsWith('json')))
           .toEqual([]);
       }, TIMEOUT_MS + JEST_MARGIN_MS);
     }
