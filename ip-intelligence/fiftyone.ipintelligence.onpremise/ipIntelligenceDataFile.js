@@ -50,12 +50,21 @@ class IpIntelligenceDataFile extends DataFile {
    * was constructed with to generate a querystring used in the datafile
    * update service.
    *
+   * The Product parameter is added only when a product is configured, and
+   * then every request carries it, whether or not the default parameters
+   * are added. With none configured the URL names no product, so license
+   * keys that hold one product get its data file.
+   *
    * @returns {string} url
    */
   urlFormatter () {
-    const queryParams = {
-      Type: this.updateURLParams.Type
-    };
+    const product = this.updateURLParams.product;
+    const queryParams = {};
+
+    if (product) {
+      queryParams.Product = product;
+    }
+    queryParams.Type = this.updateURLParams.Type;
 
     let URL = this.updateURLParams.baseURL;
 
@@ -65,9 +74,30 @@ class IpIntelligenceDataFile extends DataFile {
 
     if (this.useUrlFormatter) {
       URL += '?' + querystring.stringify(queryParams);
+    } else if (product) {
+      URL += (URL.includes('?') ? '&' : '?') +
+        querystring.stringify({ Product: product });
     }
 
     return URL;
+  }
+
+  /**
+   * The name the Distributor gives the product of the data file the engine
+   * has loaded, which is 'IPIV4' and then the tier of the data file, so
+   * 'IPIV4Enterprise' for the Enterprise data file. A tier that already
+   * starts that way is given as it is. It is empty where the engine has no
+   * data file yet.
+   *
+   * @returns {string} the product name
+   */
+  getUpdateProduct () {
+    const engine = this.flowElement && this.flowElement.engine;
+    const tier = engine ? String(engine.getProduct() || '') : '';
+    if (tier === '') {
+      return '';
+    }
+    return /^IPIV4/i.test(tier) ? tier : 'IPIV4' + tier;
   }
 }
 

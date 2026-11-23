@@ -68,9 +68,26 @@ declare class DataFileUpdateService {
      * The message for a data update service that could not be reached.
      *
      * @param {DataFile} dataFile the data file being updated
+     * @param {string} [updateUrl] the URL that was asked, where it is not the
+     * update URL of the data file
      * @returns {string} the message to log
      */
-    accessError(dataFile: DataFile): string;
+    accessError(dataFile: DataFile, updateUrl?: string): string;
+    /**
+     * Reads the products the data update service lists for license keys that
+     * hold several, and sends the first request again with the product of the
+     * loaded data file added. Only the product is taken from the response.
+     * Where the product is not listed the check fails with an error that
+     * names it and the products listed.
+     *
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} updateUrl the URL of the first request
+     * @param {string | undefined} modifiedSince the If-Modified-Since header
+     * of the first request, if it had one
+     * @param {import('http').IncomingMessage} response the response that
+     * lists the products
+     */
+    chooseProduct(dataFile: DataFile, updateUrl: string, modifiedSince: string | undefined, response: import("http").IncomingMessage): void;
     /**
      * Refreshes the engine of a data file with the data now in place, and
      * logs a failure. The caller reports the outcome.
@@ -99,6 +116,22 @@ declare class DataFileUpdateService {
      * or request failed
      */
     updateDataFile(dataFile: DataFile, automatic?: boolean): boolean | void;
+    /**
+     * Asks the data update service for new data and applies what it sends.
+     * License keys that hold several products get a list of the products in
+     * place of the data. The request is then sent again, once, with the
+     * product of the loaded data file added.
+     *
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} updateUrl the URL to ask
+     * @param {{modifiedSince: (string | undefined)}} [repeat] given where the
+     * request is the first one sent again with the product added, with the
+     * If-Modified-Since header of the first request
+     * @returns {boolean | void} returns false if the request failed
+     */
+    requestUpdate(dataFile: DataFile, updateUrl: string, repeat?: {
+        modifiedSince: (string | undefined);
+    }): boolean | void;
     /**
      * Logs an error that has no message of its own, with its cause.
      *

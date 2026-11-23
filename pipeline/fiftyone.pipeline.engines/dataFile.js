@@ -175,6 +175,18 @@ class DataFile {
     // by default just return the url
     return this.updateURLParams.url;
   }
+
+  /**
+   * The name the data update service gives the product of the data file the
+   * engine has loaded. The update service asks for it when the license keys
+   * hold several products. It is empty where no data file is loaded, or the
+   * data file comes as one product.
+   *
+   * @returns {string} the product name
+   */
+  getUpdateProduct () {
+    return '';
+  }
 }
 
 module.exports = DataFile;

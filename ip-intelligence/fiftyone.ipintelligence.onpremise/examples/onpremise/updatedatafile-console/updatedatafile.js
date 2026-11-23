@@ -223,7 +223,31 @@ const explainLicenseKey = function (dataFilePath, output) {
     `at ${CONTACT_US}\n`);
 };
 
-const run = async function (dataFilePath, licenseKey, interactive, output) {
+// The address the data file is downloaded from.
+const DATA_UPDATE_URL = 'https://distributor.51degrees.com/api/v2/download';
+
+// The settings that name the product to download, such as IPIV4Enterprise,
+// which a licence key that holds several products needs. With no product
+// given there are none, so the request names no product and a licence key
+// that holds one product gets its data file. A product is named by giving
+// the whole update URL, with the default parameters turned off.
+const productSettings = function (licenseKey, product) {
+  if (!product) {
+    return {};
+  }
+  return {
+    dataUpdateUrl: DATA_UPDATE_URL + '?' + new URLSearchParams({
+      Product: product,
+      Type: 'IPIV41',
+      Download: 'True',
+      licenseKeys: licenseKey
+    }).toString(),
+    dataUpdateUseUrlFormatter: false
+  };
+};
+
+const run = async function (dataFilePath, licenseKey, interactive, output,
+  product) {
   output.write('Starting example\n');
   // try to find a license key
   if (!licenseKey) {
@@ -392,6 +416,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // For automatic updates to work you will need to provide a license key.
     // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
     licenceKeys: licenseKey,
+    // Name the product to download only when one was given. A licence key
+    // that holds several products needs it.
+    ...productSettings(licenseKey, product),
     // Enable update on startup, the auto update system
     // will be used to check for an update before the
     // IP intelligence engine is created. This will block
@@ -418,9 +445,12 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // file that is included in the repository.
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
+  // The product to download, such as IPIV4Enterprise, for a licence key
+  // that holds several products. With none given, no product is named.
+  const product = args.length > 2 ? args[2] : null;
 
-  run(dataFilePath, licenseKey, true, process.stdout)
+  run(dataFilePath, licenseKey, true, process.stdout, product)
     .then(() => console.log(FIND_OUT_MORE));
 };
 
-module.exports = { run, getLicenseKey };
+module.exports = { run, getLicenseKey, productSettings };
