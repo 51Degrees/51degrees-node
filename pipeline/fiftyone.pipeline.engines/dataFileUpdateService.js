@@ -26,6 +26,7 @@ const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const url = require('url');
+const querystring = require('querystring');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
@@ -52,11 +53,18 @@ const WatchedFileRetryMilliseconds = 500;
 // key. A list is a few hundred bytes for each product.
 const MaximumProductListBytes = 65536;
 
+// The responses that send a request on to another address, which a check
+// follows itself, up to this many times. A redirect from https to http is
+// not followed.
+const RedirectStatuses = [301, 302, 303, 307, 308];
+const MaximumRedirects = 20;
+
 /**
  * The products a data update service lists for license keys that hold
  * several, from the AvailableUris of its response. Each is the value of the
  * Product parameter of a URI in the list. Only that value is read from a
- * URI, and a URI that names no product is ignored.
+ * URI, and a URI that names no product, or an entry that is not a string,
+ * is ignored.
  *
  * @param {string} body the body of the response
  * @param {string} updateUrl the URL that was asked
@@ -75,6 +83,9 @@ const offeredProducts = function (body, updateUrl) {
   }
   const offered = [];
   for (const uri of uris) {
+    if (typeof uri !== 'string') {
+      continue;
+    }
     let parsed;
     try {
       parsed = new url.URL(uri, updateUrl);
@@ -114,23 +125,33 @@ const namedProduct = function (parsed) {
 };
 
 /**
- * The URL of a request with the product to ask for added to its query. A
- * Product parameter the URL already has is replaced, so the product is named
- * once.
+ * The URL of a request with the product to ask for added, percent-encoded,
+ * as the last parameter of its query. The rest of the URL is kept as it is
+ * written, apart from a Product parameter the URL already has, which is
+ * taken out so the product is named once. Such a parameter is empty, as
+ * one with a value is a product named already.
  *
  * @param {string} updateUrl the URL of the first request
  * @param {string} product the product to ask for
  * @returns {string} the URL of the request that names the product
  */
 const urlForProduct = function (updateUrl, product) {
-  const parsed = new url.URL(updateUrl);
-  for (const name of Array.from(parsed.searchParams.keys())) {
-    if (name.toLowerCase() === 'product') {
-      parsed.searchParams.delete(name);
-    }
+  const hash = updateUrl.indexOf('#');
+  const end = hash < 0 ? updateUrl.length : hash;
+  const start = updateUrl.indexOf('?');
+  const added = 'Product=' + encodeURIComponent(product);
+  if (start < 0 || start > end) {
+    return updateUrl.substring(0, end) + '?' + added +
+      updateUrl.substring(end);
   }
-  parsed.searchParams.append('Product', product);
-  return parsed.href;
+  const query = updateUrl.substring(start + 1, end);
+  const kept = query === ''
+    ? []
+    : query.split('&').filter((parameter) => querystring.unescape(
+      parameter.split('=')[0]).toLowerCase() !== 'product');
+  kept.push(added);
+  return updateUrl.substring(0, start) + '?' + kept.join('&') +
+    updateUrl.substring(end);
 };
 
 /**
@@ -542,8 +563,10 @@ class DataFileUpdateService {
    * of the first request, if it had one
    * @param {import('http').IncomingMessage} response the response that
    * lists the products
+   * @param {number} [redirects] the redirects the check has followed
    */
-  chooseProduct (dataFile, updateUrl, modifiedSince, response) {
+  chooseProduct (dataFile, updateUrl, modifiedSince, response,
+    redirects = 0) {
     const dataFileUpdateService = this;
     const forEngine = "' for engine '" + engineName(dataFile) + "'";
     const chunks = [];
@@ -606,7 +629,8 @@ class DataFileUpdateService {
         "' from '" + updateUrl + "' for Engine '" + engineName(dataFile) +
         "'");
       dataFileUpdateService.requestUpdate(
-        dataFile, urlForProduct(updateUrl, product), { modifiedSince });
+        dataFile, urlForProduct(updateUrl, product),
+        { modifiedSince, redirects });
     });
     response.on('close', function () {
       if (!ended) {
@@ -692,12 +716,17 @@ class DataFileUpdateService {
    * product of the loaded data file added. A request whose URL names a
    * product already, as it does when one is configured for the data file,
    * is sent once, and a list of products in answer to it is an error.
+   * A response that sends the request on to another address is followed,
+   * and the address that answers is then the URL of the request.
    *
    * @param {DataFile} dataFile the data file being updated
    * @param {string} updateUrl the URL to ask
-   * @param {{modifiedSince: (string | undefined)}} [repeat] given where the
-   * request is the first one sent again with the product added, with the
-   * If-Modified-Since header of the first request
+   * @param {{modifiedSince: (string | undefined), chooseProduct: (boolean |
+   * undefined), redirects: (number | undefined)}} [repeat] given where the
+   * request is not the first of the check, with the If-Modified-Since
+   * header of the first request, whether a product may still be chosen,
+   * which is not the case once the request names the product chosen, and
+   * the number of redirects followed
    * @returns {boolean | void} returns false if the request failed
    */
   requestUpdate (dataFile, updateUrl, repeat) {
@@ -716,6 +745,8 @@ class DataFileUpdateService {
     // A request that names a product already, because one is configured for
     // the data file, has no product to choose.
     const namesProduct = namedProduct(urlParts) !== '';
+    const mayChoose = !repeat || repeat.chooseProduct === true;
+    const redirects = (repeat && repeat.redirects) || 0;
 
     const requestOptions = urlParts;
 
@@ -741,9 +772,9 @@ class DataFileUpdateService {
         "' for Engine '" + engineName(dataFile) + "'");
 
       // The requests are made with the http and https modules of Node.js,
-      // which do not follow a Location header. A 300 that carries one is
-      // handled below as any other 300, so the product is the one chosen
-      // and not the first one listed.
+      // which do not follow a Location header. A redirect is followed
+      // below, but the Location header of a 300 never is, so the product is
+      // the one chosen and not the first one listed.
       if (urlParts.protocol === 'https:') {
         request = https.get(requestOptions);
       } else {
@@ -787,10 +818,35 @@ class DataFileUpdateService {
       // A 300 response to a request that names a product is not followed,
       // whether the product was configured or read from an earlier 300. It
       // is any other response.
-      if (response.statusCode === 300 && !repeat && !namesProduct) {
+      if (response.statusCode === 300 && mayChoose && !namesProduct) {
         dataFileUpdateService.chooseProduct(
-          dataFile, updateUrl, modifiedSince, response);
+          dataFile, updateUrl, modifiedSince, response, redirects);
         return false;
+      }
+      // A request sent on to another address is sent there with the same
+      // If-Modified-Since header, and is logged as a request is. A 300
+      // from there is read as it would be from the first address.
+      if (RedirectStatuses.includes(response.statusCode) &&
+        response.headers.location && redirects < MaximumRedirects) {
+        let next;
+        try {
+          next = new url.URL(response.headers.location, updateUrl);
+        } catch (e) {
+          next = undefined;
+        }
+        // A redirect from https to http is not followed, so the license
+        // keys in the URL stay on https.
+        if (next && !(urlParts.protocol === 'https:' &&
+          next.protocol !== 'https:')) {
+          next = next.href;
+          response.resume();
+          dataFileUpdateService.requestUpdate(dataFile, next, {
+            modifiedSince,
+            chooseProduct: mayChoose,
+            redirects: redirects + 1
+          });
+          return false;
+        }
       }
       if (response.statusCode !== 200) {
         response.resume();

@@ -26,6 +26,82 @@ const engines = require('fiftyone.pipeline.engines');
 const DataFile = engines.DataFile;
 
 /**
+ * The parameters in the query of a URL, as they are written.
+ *
+ * @param {string} url the URL
+ * @returns {{start: number, end: number, parameters: string[]}} where the
+ * query starts and ends in the URL, and its parameters, or undefined where
+ * the URL has no query
+ */
+const queryOf = function (url) {
+  const start = url.indexOf('?');
+  if (start < 0) {
+    return undefined;
+  }
+  const hash = url.indexOf('#', start);
+  const end = hash < 0 ? url.length : hash;
+  return {
+    start,
+    end,
+    parameters: url.substring(start + 1, end).split('&')
+  };
+};
+
+/**
+ * Whether a query parameter, as it is written, is a Product parameter. The
+ * name is matched ignoring case.
+ *
+ * @param {string} parameter the parameter
+ * @returns {boolean} true for a Product parameter
+ */
+const isProduct = function (parameter) {
+  const name = parameter.split('=')[0];
+  return querystring.unescape(name).toLowerCase() === 'product';
+};
+
+/**
+ * The product a URL names in its Product parameter.
+ *
+ * @param {string} url the URL
+ * @returns {string | undefined} the first product named, an empty string
+ * where each Product parameter is empty, or undefined where the URL has
+ * none
+ */
+const productInUrl = function (url) {
+  const query = url ? queryOf(url) : undefined;
+  if (!query) {
+    return undefined;
+  }
+  let product;
+  for (const parameter of query.parameters) {
+    if (isProduct(parameter)) {
+      const value = querystring.unescape(
+        parameter.substring(parameter.indexOf('=') + 1).replace(/\+/g, ' '));
+      if (parameter.includes('=') && value !== '') {
+        return value;
+      }
+      product = '';
+    }
+  }
+  return product;
+};
+
+/**
+ * A URL with its Product parameters taken out. The rest of the URL is kept
+ * as it is written.
+ *
+ * @param {string} url the URL
+ * @returns {string} the URL with no Product parameter
+ */
+const withoutProduct = function (url) {
+  const query = queryOf(url);
+  const kept = query.parameters.filter((parameter) => !isProduct(parameter));
+  return url.substring(0, query.start) +
+    (kept.length > 0 ? '?' + kept.join('&') : '') +
+    url.substring(query.end);
+};
+
+/**
  * Instance of DataFile class for the Device Detection Engine
  * Extends datafile by providing a formatter for the DataFileUpdateService
  * update url which contains the product, type and licensekeys.
@@ -52,27 +128,39 @@ class DeviceDetectionDataFile extends DataFile {
    * The Product parameter is added only when a product is configured, and
    * then every request carries it, whether or not the default parameters
    * are added. With none configured the URL names no product, so license
-   * keys that hold one product get its data file.
+   * keys that hold one product get its data file. A product named in the
+   * base URL is the product asked for, and no other is added. Download=True
+   * is added with the default parameters.
    *
    * @returns {string} url
    */
   urlFormatter () {
-    const product = this.updateURLParams.product;
     const queryParams = {};
+    let URL = this.updateURLParams.baseURL;
+    let product = this.updateURLParams.product;
+
+    // A product in the base URL is the product asked for, and an empty one
+    // is no product.
+    const named = productInUrl(URL);
+    if (named) {
+      product = undefined;
+    } else if (named === '' && product) {
+      URL = withoutProduct(URL);
+    }
 
     if (product) {
       queryParams.Product = product;
     }
     queryParams.Type = this.updateURLParams.Type;
-
-    let URL = this.updateURLParams.baseURL;
+    queryParams.Download = 'True';
 
     if (this.updateURLParams.licenseKeys) {
       queryParams.licenseKeys = this.updateURLParams.licenseKeys;
     }
 
     if (this.useUrlFormatter) {
-      URL += '?' + querystring.stringify(queryParams);
+      URL += (URL.includes('?') ? '&' : '?') +
+        querystring.stringify(queryParams);
     } else if (product) {
       URL += (URL.includes('?') ? '&' : '?') +
         querystring.stringify({ Product: product });

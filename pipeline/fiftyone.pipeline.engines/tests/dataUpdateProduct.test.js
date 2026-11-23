@@ -27,8 +27,10 @@
 // tests run against a stand-in for the Distributor, so they need no license
 // key.
 
+const { EventEmitter } = require('events');
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const os = require('os');
 const path = require('path');
 
@@ -52,6 +54,8 @@ const QUERY = '/api/v2/download?Type=HashV41&Download=True' +
   '&licenseKeys=' + KEY;
 const QUERY_WITH_PRODUCT = '/api/v2/download?Type=HashV41&Download=True' +
   '&licenseKeys=' + KEY + '&Product=V4TAC';
+// The data the stand-in sends for a product, where it names it.
+const dataOf = (product) => 'data of ' + product;
 
 class TestEngine {
   constructor () {
@@ -71,7 +75,9 @@ class TestEngine {
 // the list, 'uris' are listed in place of one for each product, 'always300'
 // answers 300 to a request that names a product too, 'notModified'
 // answers 304 to one, and 'cutShort' closes the connection part way through
-// the 300.
+// the 300. 'statuses' gives the status a request for a product gets in place
+// of the data, 'named' sends data that names the product asked for, and
+// 'productMoved' sends a request for a product on to the address given.
 const distributor = (products, options = {}) => new Promise((resolve) => {
   const requests = [];
   const server = http.createServer((request, response) => {
@@ -108,13 +114,20 @@ const distributor = (products, options = {}) => new Promise((resolve) => {
     };
     if (product && options.always300) {
       multipleChoices();
+    } else if (product && options.productMoved) {
+      response.statusCode = 307;
+      response.setHeader('Location', options.productMoved + request.url);
+      response.end();
+    } else if (product && options.statuses && options.statuses[product]) {
+      response.statusCode = options.statuses[product];
+      response.end();
     } else if (product && options.notModified && products.includes(product)) {
       response.statusCode = 304;
       response.end();
     } else if (products.includes(product) ||
       (!product && products.length === 1)) {
       response.statusCode = 200;
-      response.end(NEW_DATA);
+      response.end(options.named ? dataOf(product || products[0]) : NEW_DATA);
     } else if (!product) {
       multipleChoices();
     } else {
@@ -124,6 +137,27 @@ const distributor = (products, options = {}) => new Promise((resolve) => {
           'product.'
       }));
     }
+  });
+  server.listen(0, '127.0.0.1', () => resolve({
+    server,
+    requests,
+    address: 'http://127.0.0.1:' + server.address().port
+  }));
+});
+
+// Stands in for an address that has moved. Every request gets the status
+// given with a Location header naming the same path and query at the
+// address given, which is the same address when it is empty.
+const moved = (status, to) => new Promise((resolve) => {
+  const requests = [];
+  const server = http.createServer((request, response) => {
+    requests.push({
+      url: request.url,
+      modifiedSince: request.headers['if-modified-since']
+    });
+    response.statusCode = status;
+    response.setHeader('Location', to.address + request.url);
+    response.end();
   });
   server.listen(0, '127.0.0.1', () => resolve({
     server,
@@ -258,6 +292,238 @@ describe('license keys that hold several products', () => {
       .toEqual([QUERY, QUERY_WITH_PRODUCT]);
     expect(fs.readFileSync(file, 'utf8')).toBe(NEW_DATA);
   });
+
+  test('installs the product of the data file when the Location header ' +
+    'names another product that is not found', async () => {
+    // The Location header names the first product listed, at the same
+    // address, and a request for it would get 404. Only the product of the
+    // loaded data file is asked for, and its data is installed.
+    const options = { statuses: { IPIV4Enterprise: 404 }, named: true };
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC'], options);
+    options.location = remote.address + '/api/v2/download?LicenseKeys=' +
+      KEY + '&Type=HashV41&Download=True&Product=IPIV4Enterprise';
+
+    const status = await update(remote, 'V4TAC', true);
+
+    expect(errors()).toEqual([]);
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    expect(remote.requests.map((request) => request.url))
+      .toEqual([QUERY, QUERY_WITH_PRODUCT]);
+    expect(fs.readFileSync(file, 'utf8')).toBe(dataOf('V4TAC'));
+    expectNoKeyLogged();
+  });
+
+  // A first request that is redirected before the 300 arrives is followed.
+  // The URL of the first request is then the address that answered 300.
+  test.each([301, 302, 307, 308])(
+    'asks the address that answered 300 after a %i redirect',
+    async (redirect) => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+      const old = await moved(redirect, remote);
+      remotes.push(old);
+
+      const status = await update(remote, 'V4TAC', true, old.address + QUERY);
+
+      expect(errors()).toEqual([]);
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(fs.readFileSync(file, 'utf8')).toBe(NEW_DATA);
+      expect(old.requests.map((request) => request.url)).toEqual([QUERY]);
+      expect(remote.requests.map((request) => request.url))
+        .toEqual([QUERY, QUERY_WITH_PRODUCT]);
+      // Every request carries the If-Modified-Since header of the first.
+      expect(old.requests.concat(remote.requests)
+        .map((request) => request.modifiedSince))
+        .toEqual(Array(3).fill('Thu, 01 Jan 2026 00:00:00 GMT'));
+      expect(messages('info').filter((message) =>
+        /^(Checking for update from|Requesting product) /.test(message)))
+        .toEqual([
+          "Checking for update from '" + logged(old) +
+            "' for Engine 'TestEngine'",
+          "Checking for update from '" + logged(remote) +
+            "' for Engine 'TestEngine'",
+          "Requesting product 'V4TAC' from '" + logged(remote) +
+            "' for Engine 'TestEngine'",
+          "Checking for update from '" +
+            logged(remote, QUERY_WITH_PRODUCT) + "' for Engine 'TestEngine'"
+        ]);
+      expectNoKeyLogged();
+    });
+
+  test('names the address that answered 300 when the product is not offered',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+      const old = await moved(301, remote);
+      remotes.push(old);
+
+      const status = await update(remote, 'V4Enterprise', false,
+        old.address + QUERY);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(errors()).toEqual([
+        CHECK_ERROR + "Product 'V4Enterprise' is not offered by data " +
+          "update service at '" + logged(remote) + "' for engine " +
+          "'TestEngine'. Products offered: 'IPIV4Enterprise,V4TAC'"
+      ]);
+      expect(remote.requests).toHaveLength(1);
+      expectNoKeyLogged();
+    });
+
+  test('names the address that answered 300 in the status error',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC'],
+        { body: 'Multiple choices' });
+      const old = await moved(302, remote);
+      remotes.push(old);
+
+      const status = await update(remote, 'V4TAC', false,
+        old.address + QUERY);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(errors()).toEqual([
+        CHECK_ERROR + "HTTP status code '300' from data update service at '" +
+          logged(remote) + "' for engine 'TestEngine'"
+      ]);
+      expect(remote.requests).toHaveLength(1);
+      expectNoKeyLogged();
+    });
+
+  test('follows a redirect of the request that names the product',
+    async () => {
+      const other = await serve(['V4TAC']);
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC'],
+        { productMoved: other.address });
+
+      const status = await update(remote, 'V4TAC', true);
+
+      expect(errors()).toEqual([]);
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(remote.requests.map((request) => request.url))
+        .toEqual([QUERY, QUERY_WITH_PRODUCT]);
+      expect(other.requests.map((request) => request.url))
+        .toEqual([QUERY_WITH_PRODUCT]);
+      expect(other.requests[0].modifiedSince)
+        .toBe('Thu, 01 Jan 2026 00:00:00 GMT');
+      expect(fs.readFileSync(file, 'utf8')).toBe(NEW_DATA);
+    });
+
+  test('follows no more than 20 redirects', async () => {
+    // Sends each request back to the same address.
+    const loop = await moved(302, { address: '' });
+    remotes.push(loop);
+
+    const status = await update(loop, 'V4TAC', false, loop.address + QUERY);
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    // The first request and 20 that follow a redirect.
+    expect(loop.requests).toHaveLength(21);
+    expect(errors()).toEqual([
+      CHECK_ERROR + "HTTP status code '302' from data update service at '" +
+        logged(loop) + "' for engine 'TestEngine'"
+    ]);
+    expectNoKeyLogged();
+  });
+
+  test('does not follow a redirect from https to http', async () => {
+    const plain = await serve(['V4TAC']);
+    const secure = 'https://127.0.0.1:1' + QUERY;
+    // Answers the https request with a redirect to the plain address.
+    const get = jest.spyOn(https, 'get').mockImplementation(() => {
+      const request = new EventEmitter();
+      process.nextTick(() => {
+        const response = new EventEmitter();
+        response.statusCode = 301;
+        response.headers = { location: plain.address + QUERY };
+        response.resume = () => {};
+        request.emit('response', response);
+      });
+      return request;
+    });
+    try {
+      const status = await update(plain, 'V4TAC', false, secure);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(get).toHaveBeenCalledTimes(1);
+      expect(plain.requests).toEqual([]);
+      expect(errors()).toEqual([
+        CHECK_ERROR + "HTTP status code '301' from data update service at '" +
+          LicenseKeys.mask(secure) + "' for engine 'TestEngine'"
+      ]);
+    } finally {
+      get.mockRestore();
+    }
+  });
+
+  test('adds the product last and leaves the rest of the query as it is',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+      const own = QUERY + '&Note=a%20b+c';
+
+      const status = await update(remote, 'V4TAC', false,
+        remote.address + own);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(remote.requests.map((request) => request.url))
+        .toEqual([own, own + '&Product=V4TAC']);
+    });
+
+  test('sets the product in place of an empty one', async () => {
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+
+    const status = await update(remote, 'V4TAC', false,
+      remote.address + QUERY + '&product=&Note=x');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    expect(remote.requests.map((request) => request.url)).toEqual([
+      QUERY + '&product=&Note=x',
+      QUERY + '&Note=x&Product=V4TAC'
+    ]);
+  });
+
+  test('percent-encodes the product it adds', async () => {
+    const remote = await serve(['IPIV4Enterprise', 'V4 TAC']);
+
+    const status = await update(remote, 'V4 TAC');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    expect(remote.requests.map((request) => request.url))
+      .toEqual([QUERY, QUERY + '&Product=V4%20TAC']);
+  });
+
+  test('ignores an entry of the list that is not a string', async () => {
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC'], {
+      uris: [['http://127.0.0.1:9/api/v2/download?Product=V4TAC'],
+        { Product: 'V4TAC' }]
+    });
+
+    const status = await update(remote, 'V4TAC');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    expect(errors()).toEqual([
+      CHECK_ERROR + "HTTP status code '300' from data update service at '" +
+        logged(remote) + "' for engine 'TestEngine'"
+    ]);
+    expect(remote.requests).toHaveLength(1);
+  });
+
+  test('reads the list only from AvailableUris spelled in that case',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC'], {
+        body: JSON.stringify({
+          availableUris: [
+            'http://127.0.0.1:9/api/v2/download?Product=V4TAC'
+          ]
+        })
+      });
+
+      const status = await update(remote, 'V4TAC');
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(errors()).toEqual([
+        CHECK_ERROR + "HTTP status code '300' from data update service " +
+          "at '" + logged(remote) + "' for engine 'TestEngine'"
+      ]);
+      expect(remote.requests).toHaveLength(1);
+    });
 
   test('sends no If-Modified-Since header again when the first had none',
     async () => {
@@ -594,6 +860,49 @@ describe('license keys that hold several products', () => {
       ]);
       expectNoKeyLogged();
     });
+
+  test('a product in the update URL of the caller is the product asked for',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC'],
+        { always300: true });
+      const updateUrl = remote.address + QUERY + '&Product=V4TAC';
+
+      const status = await update(remote, 'V4TAC', false, updateUrl);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(productsAsked(remote)).toEqual([['V4TAC']]);
+      expect(errors()).toEqual([
+        CHECK_ERROR + "HTTP status code '300' from data update service at '" +
+          LicenseKeys.mask(updateUrl) + "' for engine 'TestEngine'"
+      ]);
+      expectNoKeyLogged();
+    });
+
+  test('a product in the update URL of the caller is matched ignoring case',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC'],
+        { always300: true });
+      const updateUrl = remote.address + QUERY + '&product=V4TAC';
+
+      const status = await update(remote, 'V4TAC', false, updateUrl);
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+      expect(remote.requests.map((request) => request.url))
+        .toEqual([QUERY + '&product=V4TAC']);
+    });
+
+  test('an empty product in the update URL of the caller names no product',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+
+      const status = await update(remote, 'V4TAC', false,
+        remote.address + QUERY + '&Product=');
+
+      expect(errors()).toEqual([]);
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      expect(productsAsked(remote)).toEqual([[''], ['V4TAC']]);
+      expect(fs.readFileSync(file, 'utf8')).toBe(NEW_DATA);
+    });
 });
 
 // A data file names a product in its update URL only when one is
@@ -615,7 +924,7 @@ describe('the update URL of a data file', () => {
     ['IP Intelligence', IpIntelligenceDataFile]
   ])('names no product for %s with none configured', (name, DataFile) => {
     expect(updateUrl(DataFile, undefined, true)).toBe(
-      'https://example.com/download?Type=T&licenseKeys=' + KEY);
+      'https://example.com/download?Type=T&Download=True&licenseKeys=' + KEY);
     expect(updateUrl(DataFile, '', true)).not.toMatch(/product/i);
     expect(updateUrl(DataFile, undefined, false))
       .toBe('https://example.com/download');
@@ -628,6 +937,7 @@ describe('the update URL of a data file', () => {
     const parsed = new URL(updateUrl(DataFile, 'V4TAC', true));
     expect(parsed.searchParams.getAll('Product')).toEqual(['V4TAC']);
     expect(parsed.searchParams.get('Type')).toBe('T');
+    expect(parsed.searchParams.get('Download')).toBe('True');
     expect(parsed.searchParams.get('licenseKeys')).toBe(KEY);
     // Without the default parameters the product is still named.
     expect(updateUrl(DataFile, 'V4TAC', false))
@@ -636,6 +946,34 @@ describe('the update URL of a data file', () => {
       'https://example.com/download?a=b'))
       .toBe('https://example.com/download?a=b&Product=V4TAC');
   });
+
+  // A product in the update URL of the caller is a configured product, and
+  // the URL then names no other.
+  test.each([
+    ['Device Detection', DeviceDetectionDataFile],
+    ['IP Intelligence', IpIntelligenceDataFile]
+  ])('keeps the product in the URL of the caller for %s', (name, DataFile) => {
+    const own = 'https://example.com/download?Product=V4Enterprise';
+    expect(updateUrl(DataFile, 'V4TAC', false, own)).toBe(own);
+    expect(updateUrl(DataFile, undefined, false, own)).toBe(own);
+    const lower = 'https://example.com/download?PRODUCT=V4Enterprise';
+    expect(updateUrl(DataFile, 'V4TAC', false, lower)).toBe(lower);
+    const parsed = new URL(updateUrl(DataFile, 'V4TAC', true, own));
+    expect(parsed.searchParams.getAll('Product')).toEqual(['V4Enterprise']);
+    expect(parsed.searchParams.get('Type')).toBe('T');
+  });
+
+  test.each([
+    ['Device Detection', DeviceDetectionDataFile],
+    ['IP Intelligence', IpIntelligenceDataFile]
+  ])('an empty product in the URL of the caller is no product for %s',
+    (name, DataFile) => {
+      const own = 'https://example.com/download?Product=';
+      for (const useUrlFormatter of [false, true]) {
+        expect(new URL(updateUrl(DataFile, 'V4TAC', useUrlFormatter, own))
+          .searchParams.getAll('Product')).toEqual(['V4TAC']);
+      }
+    });
 });
 
 // The product name of a data file is a prefix for the kind of data file,

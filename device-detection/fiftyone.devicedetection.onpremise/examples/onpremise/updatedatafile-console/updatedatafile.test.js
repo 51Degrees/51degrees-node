@@ -20,10 +20,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// The example names the product to download only when it is given one, so
-// a licence key that holds one product downloads as before. Nothing is
-// downloaded here. The settings the example gives the Pipeline builder are
-// read as they are.
+// The example names the product to download only when it is given one, or
+// one is set in _51DEGREES_DD_PRODUCT, so a license key that holds one
+// product downloads as before. Nothing is downloaded here. The settings the
+// example gives the Pipeline builder are read as they are.
 
 const path = require('path');
 
@@ -32,6 +32,22 @@ const example = require(path.join(__dirname, 'updatedatafile.js'));
 const KEY = 'ABCDEFGH1234';
 
 describe('the product the update example asks for', () => {
+  const variable = '_51DEGREES_DD_PRODUCT';
+  let saved;
+
+  beforeEach(() => {
+    saved = process.env[variable];
+    delete process.env[variable];
+  });
+
+  afterEach(() => {
+    if (saved === undefined) {
+      delete process.env[variable];
+    } else {
+      process.env[variable] = saved;
+    }
+  });
+
   test.each([undefined, null, ''])(
     'is not named when none is given (%p)', (product) => {
       expect(example.productSettings(KEY, product)).toEqual({});
@@ -49,4 +65,19 @@ describe('the product the update example asks for', () => {
     expect(url.searchParams.get('Download')).toBe('True');
     expect(url.searchParams.get('licenseKeys')).toBe(KEY);
   });
+
+  test('is read from _51DEGREES_DD_PRODUCT', () => {
+    process.env[variable] = 'V4TAC';
+
+    expect(example.getProduct()).toBe('V4TAC');
+  });
+
+  test.each([undefined, ''])(
+    'is not read when _51DEGREES_DD_PRODUCT is %p', (value) => {
+      if (value !== undefined) {
+        process.env[variable] = value;
+      }
+
+      expect(example.getProduct()).toBeUndefined();
+    });
 });

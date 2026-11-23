@@ -170,17 +170,26 @@ const KeyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
  * - [fiftyone.devicedetection.onpremise](https://www.npmjs.com/package/fiftyone.devicedetection.onpremise)
  */
 
-// The variable that holds the licence key.
+// The variable that holds the license key.
 const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
 
-// Reads the licence key from the environment.
+// Reads the license key from the environment.
 const getLicenseKey = function () {
   return process.env[LICENSE_KEY_VARIABLE] || undefined;
+};
+
+// The variable that holds the product to download, such as V4TAC.
+const PRODUCT_VARIABLE = '_51DEGREES_DD_PRODUCT';
+
+// Reads the product to download from the environment, or undefined when it
+// is not set.
+const getProduct = function () {
+  return process.env[PRODUCT_VARIABLE] || undefined;
 };
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
 
-// Where to ask for a licence key and a copy of the Enterprise data file,
+// Where to ask for a license key and a copy of the Enterprise data file,
 // tagged with this example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licence-key';
 
@@ -197,7 +206,7 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-contact'
 ].join('\n');
 
-// Without a licence key the example cannot download a data file, so it
+// Without a license key the example cannot download a data file, so it
 // shows the data file it would start from, the free Lite data file unless
 // another is given, and says what an update needs.
 const explainLicenseKey = function (dataFilePath, output) {
@@ -226,8 +235,8 @@ const explainLicenseKey = function (dataFilePath, output) {
 const DATA_UPDATE_URL = 'https://distributor.51degrees.com/api/v2/download';
 
 // The settings that name the product to download, such as V4TAC, which a
-// licence key that holds several products needs. With no product given
-// there are none, so the request names no product and a licence key that
+// license key that holds several products needs. With no product given
+// there are none, so the request names no product and a license key that
 // holds one product gets its data file. A product is named by giving the
 // whole update URL, with the default parameters turned off.
 const productSettings = function (licenseKey, product) {
@@ -251,6 +260,10 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
   // try to find a license key
   if (!licenseKey) {
     licenseKey = getLicenseKey();
+  }
+  // Name a product only when one was given or is set in the environment.
+  if (!product) {
+    product = getProduct();
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
     explainLicenseKey(dataFilePath, output);
@@ -407,9 +420,9 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     // Enable automatic updates once the pipeline has started
     autoUpdate: true,
     // For automatic updates to work you will need to provide a license key.
-    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
+    // Contact us for a license key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
     licenceKeys: licenseKey,
-    // Name the product to download only when one was given. A licence key
+    // Name the product to download only when one was given. A license key
     // that holds several products needs it.
     ...productSettings(licenseKey, product),
     // Enable update on startup, the auto update system
@@ -438,12 +451,13 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // file that is included in the repository.
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
-  // The product to download, such as V4TAC, for a licence key that holds
-  // several products. With none given, no product is named.
+  // The product to download, such as V4TAC, for a license key that holds
+  // several products. With none given, the product in
+  // _51DEGREES_DD_PRODUCT is named. With neither, no product is named.
   const product = args.length > 2 ? args[2] : null;
 
   run(dataFilePath, licenseKey, true, process.stdout, product)
     .then(() => console.log(FIND_OUT_MORE));
 };
 
-module.exports = { run, getLicenseKey, productSettings };
+module.exports = { run, getLicenseKey, getProduct, productSettings };

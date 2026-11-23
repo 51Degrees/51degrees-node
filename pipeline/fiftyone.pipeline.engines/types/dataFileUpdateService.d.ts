@@ -87,8 +87,9 @@ declare class DataFileUpdateService {
      * of the first request, if it had one
      * @param {import('http').IncomingMessage} response the response that
      * lists the products
+     * @param {number} [redirects] the redirects the check has followed
      */
-    chooseProduct(dataFile: DataFile, updateUrl: string, modifiedSince: string | undefined, response: import("http").IncomingMessage): void;
+    chooseProduct(dataFile: DataFile, updateUrl: string, modifiedSince: string | undefined, response: import("http").IncomingMessage, redirects?: number): void;
     /**
      * Refreshes the engine of a data file with the data now in place, and
      * logs a failure. The caller reports the outcome.
@@ -121,17 +122,24 @@ declare class DataFileUpdateService {
      * Asks the data update service for new data and applies what it sends.
      * License keys that hold several products get a list of the products in
      * place of the data. The request is then sent again, once, with the
-     * product of the loaded data file added.
+     * product of the loaded data file added. A response that sends the
+     * request on to another address is followed, and the address that
+     * answers is then the URL of the request.
      *
      * @param {DataFile} dataFile the data file being updated
      * @param {string} updateUrl the URL to ask
-     * @param {{modifiedSince: (string | undefined)}} [repeat] given where the
-     * request is the first one sent again with the product added, with the
-     * If-Modified-Since header of the first request
+     * @param {{modifiedSince: (string | undefined), chooseProduct: (boolean |
+     * undefined), redirects: (number | undefined)}} [repeat] given where the
+     * request is not the first of the check, with the If-Modified-Since
+     * header of the first request, whether a product may still be chosen,
+     * which is not the case once the request names the product chosen, and
+     * the number of redirects followed
      * @returns {boolean | void} returns false if the request failed
      */
     requestUpdate(dataFile: DataFile, updateUrl: string, repeat?: {
         modifiedSince: (string | undefined);
+        chooseProduct?: (boolean | undefined);
+        redirects?: (number | undefined);
     }): boolean | void;
     /**
      * Logs an error that has no message of its own, with its cause.
