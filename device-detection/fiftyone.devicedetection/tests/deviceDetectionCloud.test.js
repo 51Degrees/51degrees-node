@@ -29,9 +29,9 @@ const require51 = (requestedPackage) => {
 };
 
 const DeviceDetectionPipelineBuilder = require51('fiftyone.devicedetection').DeviceDetectionPipelineBuilder;
-// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY_BESPOKE'
 // environment variable.
-const myResourceKey = process.env._51DEGREES_RESOURCE_KEY;
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY_BESPOKE;
 const errorMessages = require51('fiftyone.devicedetection.shared').errorMessages;
 
 describe('deviceDetectionCloud', () => {

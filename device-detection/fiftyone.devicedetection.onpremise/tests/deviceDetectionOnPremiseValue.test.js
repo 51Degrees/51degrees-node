@@ -36,8 +36,8 @@ const EngineBuilder = require51('fiftyone.devicedetection.onpremise').DeviceDete
 const constants = require(path.join(__dirname, '/../constants'));
 const fs = require('fs');
 
-const LiteDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
-const EnterpriseDataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
+const LiteDataFile = __dirname + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
+const EnterpriseDataFile = __dirname + '/../../../cxx/data/device-detection/Enterprise-HashV41.hash';
 // The Enterprise data file where CI has linked it in, otherwise the free
 // Lite one. Nothing is written under the Enterprise name, so another test
 // never takes a copy of the Lite file for the Enterprise one.

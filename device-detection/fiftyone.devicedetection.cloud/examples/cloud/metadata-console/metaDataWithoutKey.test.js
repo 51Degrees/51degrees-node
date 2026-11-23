@@ -27,15 +27,14 @@ const childProcess = require('child_process');
 const path = require('path');
 
 const {
-  RESOURCE_KEY_ENV_VAR,
-  LEGACY_RESOURCE_KEY_ENV_VAR
+  RESOURCE_KEY_ENV_VAR
 } = require(path.join(__dirname, '..', 'exampleUtils'));
 
 // The example does not run under jest, so the jest variable is removed with
-// the resource key names. Names are matched without regard to case, as
+// the resource key name. Names are matched without regard to case, as
 // Windows matches them.
 const REMOVE = new Set([
-  RESOURCE_KEY_ENV_VAR, LEGACY_RESOURCE_KEY_ENV_VAR, 'JEST_WORKER_ID'
+  RESOURCE_KEY_ENV_VAR, 'JEST_WORKER_ID'
 ].map((name) => name.toUpperCase()));
 
 describe('Examples', () => {

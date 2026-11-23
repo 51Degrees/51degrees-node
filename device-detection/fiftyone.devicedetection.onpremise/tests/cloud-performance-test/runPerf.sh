@@ -9,4 +9,4 @@ PRO=process
 PERF=./ApacheBench-prefix/src/ApacheBench-build/bin/runPerf.sh
 
 
-$PERF -n $PASSES -s "node $PWD/../process.js $PROFILE" -c $CAL -p $PRO -h $HOST
+$PERF -n $PASSES -s "node $PWD/../process.js $PROFILE" -c $CAL -p $PRO -h $HOST -E "$PWD/evidence.yml"

@@ -41,7 +41,7 @@ const RequestClient = require51(
   'fiftyone.pipeline.cloudrequestengine/requestClient');
 
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/ip-intelligence/51Degrees-LiteV41.ipi');
 const testWithLite = fs.existsSync(LiteDataFile) ? test : test.skip;
 

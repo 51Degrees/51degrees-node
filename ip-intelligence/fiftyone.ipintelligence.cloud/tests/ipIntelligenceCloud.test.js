@@ -32,8 +32,9 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceCloudPipelineBuilder =
   require51('fiftyone.ipintelligence.cloud').IpIntelligenceCloudPipelineBuilder;
 const keyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
+const tc = require51('fiftyone.ipintelligence.shared').testConstants;
 
-const resourceKeyNames = keyUtils.resourceKeyNames();
+const resourceKeyName = tc.envVars.resourceKeyBespokeVariable;
 
 describe('ipIntelligenceCloud', () => {
   // Check that the cloud engine sets its data key correctly so
@@ -48,9 +49,9 @@ describe('ipIntelligenceCloud', () => {
   // Process an IP address using the live cloud service, which fails
   // rather than skips when no resource key is set.
   test('process IP address', async () => {
-    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    const resourceKey = keyUtils.getResourceKey(resourceKeyName);
     if (!resourceKey) {
-      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyName,
         'ip', 'the registered country of 8.8.8.8'));
     }
     const pipeline = new IpIntelligenceCloudPipelineBuilder({

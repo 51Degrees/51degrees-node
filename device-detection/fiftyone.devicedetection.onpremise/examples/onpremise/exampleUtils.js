@@ -71,21 +71,6 @@ const DATA_FILE_AGE_WARNING = 30;
 const DATA_FILE_PATH_VARIABLE = '_51DEGREES_DD_PATH';
 
 /**
- * The name the variable had when it began with the digit.
- *
- * @deprecated Set the variable DATA_FILE_PATH_VARIABLE names. This name
- * is no longer read.
- */
-const DATA_FILE_PATH_ENV_VAR = '51DEGREES_DD_PATH';
-
-/**
- * The second name the data file path was read from.
- *
- * @deprecated Use DATA_FILE_PATH_VARIABLE, which holds the same name.
- */
-const LEGACY_DATA_FILE_PATH_ENV_VAR = '_51DEGREES_DD_PATH';
-
-/**
  * Get the command that downloads one of the data submodule's files.
  *
  * @param {string} fileName the name of the file
@@ -326,7 +311,5 @@ module.exports = {
   ExampleUtils,
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
-  DATA_FILE_PATH_VARIABLE,
-  DATA_FILE_PATH_ENV_VAR,
-  LEGACY_DATA_FILE_PATH_ENV_VAR
+  DATA_FILE_PATH_VARIABLE
 };

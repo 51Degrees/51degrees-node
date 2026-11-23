@@ -108,7 +108,6 @@ module.exports = {
   fileNames: {
     enterpriseDataFileName: 'Enterprise-HashV41.hash',
     liteDataFileName: '51Degrees-LiteV4.1.hash',
-    uaFileName: '20000 User Agents.csv',
     evidenceFileName: '20000 Evidence Records.yml'
   }
 };

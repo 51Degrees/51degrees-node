@@ -23,15 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const testExample = function ({ file, portNumber }) {
-  if (portNumber) {
-    process.env.PORT = portNumber;
-  }
-
-  // Change the working directory of the example to be the example itself
-
-  process.env.directory = path.dirname(file);
-
+const testExample = function ({ file }) {
   let code = fs.readFileSync(file, 'utf8');
 
   // Add in closer of any apps

@@ -24,18 +24,13 @@ const path = require('path');
 
 const GeoLocation = require(path.resolve(__dirname, '..'));
 // These tests call the live cloud service, so each fails rather than skips
-// when no resource key is set. The names are tried in this order.
-const resourceKeyNames = [
-  '_51DEGREES_RESOURCE_KEY',
-  '_51DEGREES_RESOURCE_KEY_BESPOKE'
-];
-const currentResourceKey = resourceKeyNames
-  .map((name) => process.env[name])
-  .find((value) => value && value.trim());
+// when no resource key is set.
+const resourceKeyName = '_51DEGREES_RESOURCE_KEY_BESPOKE';
+const currentResourceKey = (process.env[resourceKeyName] || '').trim();
 const myResourceKey = currentResourceKey || '!!YOUR_RESOURCE_KEY!!';
 const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
-  'so it needs a resource key and there is nothing to fall back on. None ' +
-  'of ' + resourceKeyNames.join(', ') + ' is set, tried in that order. The ' +
+  'so it needs a resource key and there is nothing to fall back on. ' +
+  resourceKeyName + ' is not set. The ' +
   'key has to carry the location product, because the test asks the ' +
   'service for the location properties of a latitude and longitude. To ' +
   'see the products a key carries, open ' +

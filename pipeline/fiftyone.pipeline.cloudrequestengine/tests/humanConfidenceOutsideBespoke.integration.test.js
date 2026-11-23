@@ -32,16 +32,16 @@ const { demoRoutes } = require('../examples/human-confidence-web/server');
 const keys = require('./liveCloudKeys');
 const live = require('./humanConfidenceLive');
 
-const BASIC_KEY_NAMES = ['_51DEGREES_RESOURCE_KEY_BASIC'];
+const BASIC_KEY_NAME = '_51DEGREES_RESOURCE_KEY_BASIC';
 
-const resource = keys.findKey(BASIC_KEY_NAMES);
+const resource = keys.findKey(BASIC_KEY_NAME);
 
 describe('Human Confidence example with a key outside Bespoke', () => {
   jest.setTimeout(30000);
 
   test('the passive answer carries no source', async () => {
     if (!resource) {
-      throw new Error(keys.noKeyMessage(BASIC_KEY_NAMES, 'Basic',
+      throw new Error(keys.noKeyMessage(BASIC_KEY_NAME, 'Basic',
         'HumanConfidenceSource, to check that a key outside Bespoke gets ' +
         'none'));
     }

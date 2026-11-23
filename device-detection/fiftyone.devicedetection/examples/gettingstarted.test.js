@@ -27,8 +27,10 @@
 const childProcess = require('child_process');
 
 const TIMEOUT_MS = 60000;
-// The names the example reads its resource key from.
-const KEY_NAMES = ['_51DEGREES_RESOURCE_KEY'];
+// The name the example reads its resource key from, and the name the test
+// takes the key to run it with from.
+const EXAMPLE_KEY_NAME = '_51DEGREES_RESOURCE_KEY';
+const TEST_KEY_NAME = '_51DEGREES_RESOURCE_KEY_BESPOKE';
 
 // The line the example writes after the first line that starts with the
 // text given.
@@ -42,6 +44,11 @@ describe('Examples', () => {
   test('cloud getting started', () => {
     const env = Object.assign({}, process.env);
     delete env.JEST_WORKER_ID;
+    const key = process.env[TEST_KEY_NAME];
+    delete env[EXAMPLE_KEY_NAME];
+    if (key) {
+      env[EXAMPLE_KEY_NAME] = key;
+    }
     const result = childProcess.spawnSync(
       process.execPath, ['gettingStarted.js'], {
         cwd: __dirname,
@@ -55,7 +62,7 @@ describe('Examples', () => {
       status: result.status,
       stderr: result.status === 0 ? '' : result.stderr
     }).toEqual({ status: 0, stderr: '' });
-    if (KEY_NAMES.some((name) => process.env[name])) {
+    if (key) {
       expect(answerTo(result.stdout,
         "Is user agent 'Mozilla/5.0 (iPhone")).toBe('true');
       expect(answerTo(result.stdout,

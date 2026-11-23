@@ -2,14 +2,15 @@
 # Tests of ci/publish-package.ps1 against a small repository of three
 # packages, with npm and gh replaced by functions that keep a registry and the
 # releases in memory. git is real, with a bare repository as origin. Needs
-# COMMON_CI to name a checkout of common-ci, as ci/release-plan.ps1 does.
+# _51DEGREES_COMMON_CI_DIR to name a checkout of common-ci, as
+# ci/release-plan.ps1 does.
 #
 # The packages are named so that name order and dependency order differ:
 # alpha.app depends on zeta.base, and mid.tool stands alone.
 
 BeforeAll {
     $script:Ci = $PSScriptRoot
-    $script:CommonCi = (Resolve-Path $env:COMMON_CI).Path
+    $script:CommonCi = (Resolve-Path $env:_51DEGREES_COMMON_CI_DIR).Path
 
     function Invoke-Git([string]$Path) {
         $gitArgs = $args
@@ -61,6 +62,7 @@ BeforeAll {
         $global:TestNpmPublishes = [Collections.Generic.List[string]]::new()
         $global:TestNpmFailOn = [Collections.Generic.HashSet[string]]::new([string[]]$FailOn)
         $global:TestReleases = [Collections.Generic.List[string]]::new()
+        $global:TestNpmConfig = [Collections.Generic.List[string]]::new()
     }
 
     # Stands in for npm. A publish of a name and version the registry already
@@ -69,6 +71,10 @@ BeforeAll {
         $global:LASTEXITCODE = 0
         switch ($args[0]) {
             'whoami' { return 'tester' }
+            'config' {
+                $global:TestNpmConfig.Add(($args[1..($args.Count - 1)] -join ' '))
+                return
+            }
             'view' {
                 if ($global:TestNpmRegistry.Contains($args[1])) {
                     return $args[1].Split('@')[-1]
@@ -111,13 +117,18 @@ BeforeAll {
         }
     }
 
-    function Invoke-Publish($Test, [bool]$DryRun = $false) {
+    # The script reads the npm token from the environment, so it's set for
+    # the call and put back afterwards. An empty token leaves it unset.
+    function Invoke-Publish($Test, [bool]$DryRun = $false, [string]$Token = 'token') {
+        $before = $env:NPM_AUTH_TOKEN
+        $env:NPM_AUTH_TOKEN = $Token ? $Token : $null
         Push-Location $Test.Work
         try {
             & "$script:Ci/publish-package.ps1" -RepoName $Test.Repo -OrgName test `
-                -Keys @{ NPMAuthToken = 'token' } -DryRun $DryRun
+                -DryRun $DryRun
         } finally {
             Pop-Location
+            $env:NPM_AUTH_TOKEN = $before
         }
     }
 
@@ -183,6 +194,26 @@ Describe 'publish-package.ps1' {
         Invoke-Publish $script:Test | Out-Null
         @($global:TestNpmPublishes) | Should -Be @('alpha.app@1.0.1')
         Get-OriginTags $script:Test | Should -Be $script:AllTags
+    }
+
+    It 'gives npm the token from NPM_AUTH_TOKEN' {
+        Reset-Registry
+        Invoke-Publish $script:Test -Token 'from-the-environment' | Out-Null
+        @($global:TestNpmConfig) |
+            Should -Be @('set //registry.npmjs.org/:_authToken from-the-environment')
+    }
+
+    It 'publishes nothing when NPM_AUTH_TOKEN is not set' {
+        Reset-Registry
+        { Invoke-Publish $script:Test -Token '' } |
+            Should -Throw 'NPM_AUTH_TOKEN is not set*'
+        @($global:TestNpmPublishes) | Should -HaveCount 0
+        Get-OriginTags $script:Test | Should -Be ''
+    }
+
+    It 'takes no key as a parameter' {
+        $parameters = (Get-Command "$script:Ci/publish-package.ps1").Parameters
+        $parameters.ContainsKey('Keys') | Should -BeFalse
     }
 
     It 'publishes nothing and pushes no tag in a dry run' {

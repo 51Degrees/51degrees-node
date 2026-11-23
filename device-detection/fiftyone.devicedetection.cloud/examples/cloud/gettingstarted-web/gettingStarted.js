@@ -340,7 +340,7 @@ if (process.env.JEST_WORKER_ID === undefined) {
     console.log(FIND_OUT_MORE);
   } else {
     setPipeline(options);
-    const port = process.env.PORT || 5151;
+    const port = process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151;
     const hostname = 'localhost';
     server.listen(port, hostname);
     console.log(`Server listening on: http://${hostname}:${port}`);

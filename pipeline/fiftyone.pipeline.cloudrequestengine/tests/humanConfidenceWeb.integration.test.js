@@ -31,7 +31,7 @@ const { demoRoutes } = require('../examples/human-confidence-web/server');
 const keys = require('./liveCloudKeys');
 const live = require('./humanConfidenceLive');
 
-const resource = keys.findKey(keys.RESOURCE_KEY_NAMES);
+const resource = keys.findKey(keys.RESOURCE_KEY_NAME);
 
 // Every value the level has.
 const LEVELS = ['High', 'Medium', 'Low', 'Unknown'];
@@ -42,7 +42,7 @@ describe('Human Confidence example against the cloud service', () => {
   test('the passive answer carries the source Passive and a level',
     async () => {
       if (!resource) {
-        throw new Error(keys.noKeyMessage(keys.RESOURCE_KEY_NAMES,
+        throw new Error(keys.noKeyMessage(keys.RESOURCE_KEY_NAME,
           'Bespoke', 'HumanConfidence and HumanConfidenceSource'));
       }
       const response = live.fakeResponse();

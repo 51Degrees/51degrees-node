@@ -69,7 +69,7 @@ const runWithoutKey = (file) => {
       env[name] = value;
     }
   }
-  env.PORT = '0';
+  env._51DEGREES_EXAMPLE_HTTP_PORTS = '0';
   const full = path.join(PRODUCT, file);
   return childProcess.spawnSync(process.execPath, [path.basename(full)], {
     cwd: path.dirname(full),

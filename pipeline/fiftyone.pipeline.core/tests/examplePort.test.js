@@ -21,20 +21,21 @@
  * ********************************************************************* */
 
 // Every web example listens on port 5151 unless it is told otherwise, and
-// an example that reads the PORT environment variable still does, so that
-// CI can choose its own port. The source is read rather than run, so no
-// server is started.
+// an example that reads the _51DEGREES_EXAMPLE_HTTP_PORTS environment
+// variable still does, so that CI can choose its own port. The source is
+// read rather than run, so no server is started.
 
 const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_PORT = 5151;
 
-// The port an example's source chooses, with PORT before it if it is read.
+// The port an example's source chooses, with the variable before it if it
+// is read.
 const PORT_PATTERN =
-  /\b(?:const|let)\s+(?:port|portNum)\s*=\s*(?:Number\(\s*)?(process\.env\.PORT\s*\|\|\s*)?(\d+)/;
+  /\b(?:const|let)\s+(?:port|portNum)\s*=\s*(?:Number\(\s*)?(process\.env\._51DEGREES_EXAMPLE_HTTP_PORTS\s*\|\|\s*)?(\d+)/;
 
-// The web examples, each of which reads PORT.
+// The web examples, each of which reads the variable.
 const EXAMPLES = [
   'examples/customFlowElements/clientSideEvidenceFlowElement.js'
 ];
@@ -49,7 +50,7 @@ for (const file of EXAMPLES) {
     expect(Number(match[2])).toBe(DEFAULT_PORT);
   });
 
-  test(`${file} still reads the PORT environment variable`, () => {
+  test(`${file} reads its port from the environment variable`, () => {
     expect(portOf(file)[1]).toBeDefined();
   });
 }

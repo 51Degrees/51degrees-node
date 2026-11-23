@@ -28,9 +28,10 @@ const path = require('path');
 
 const DEFAULT_PORT = 5151;
 
-// The port an example's source chooses, with PORT before it if it is read.
+// The port an example's source chooses, with the variable before it if it
+// is read.
 const PORT_PATTERN =
-  /\b(?:const|let)\s+(?:port|portNum)\s*=\s*(?:Number\(\s*)?(process\.env\.PORT\s*\|\|\s*)?(\d+)/;
+  /\b(?:const|let)\s+(?:port|portNum)\s*=\s*(?:Number\(\s*)?(process\.env\._51DEGREES_EXAMPLE_HTTP_PORTS\s*\|\|\s*)?(\d+)/;
 
 // The web examples.
 const EXAMPLES = [

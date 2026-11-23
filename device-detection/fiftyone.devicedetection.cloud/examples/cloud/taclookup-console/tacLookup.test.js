@@ -43,13 +43,13 @@ const OptionsExtension = shared.optionsExtension;
 describe('Examples', () => {
   test('cloud tac lookup', async () => {
     const resourceKey = keyUtils.getResourceKey(
-      tc.envVars.superResourceKeyEnvVar);
+      tc.envVars.resourceKeyBespokeEnvVar);
 
     if (!resourceKey) {
       // The message names the variable that was wanted, so whoever reads
       // the run knows what to set.
       throw new Error(keyUtils.missingResourceKeyMessage(
-        tc.envVars.superResourceKeyEnvVar));
+        tc.envVars.resourceKeyBespokeEnvVar));
     }
 
     // Load the configuration from a config file to a JSON object.

@@ -49,7 +49,6 @@ module.exports = {
   fileNames: {
     enterpriseDataFileName: '51Degrees-EnterpriseIpiV41.ipi',
     liteDataFileName: '51Degrees-LiteV41.ipi',
-    evidenceFileName: 'evidence.yml',
-    evidenceCsvFileName: 'evidence.csv'
+    evidenceFileName: 'evidence.yml'
   }
 };

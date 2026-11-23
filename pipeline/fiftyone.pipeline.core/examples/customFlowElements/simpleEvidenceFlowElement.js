@@ -38,7 +38,7 @@
 // then you'll need to replace the require below with the commented
 // out version below it.
 const FiftyOnePipelineCore = require(
-  (process.env.directory || __dirname) + '/../../'
+  __dirname + '/../../'
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
 

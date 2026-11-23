@@ -1,7 +1,6 @@
 param (
     [Parameter(Mandatory)][string]$RepoName,
     [Parameter(Mandatory)][string]$OrgName,
-    [Parameter(Mandatory)][hashtable]$Keys,
     [Parameter(Mandatory)][boolean]$DryRun
 )
 $ErrorActionPreference = "Stop"
@@ -29,18 +28,20 @@ foreach ($tarball in (Get-ChildItem package -Filter *.tgz)) {
     }
 }
 
+# The npm token comes from the environment of the job that publishes.
 # npm answers an unauthorised publish with '404 Not Found', so a failure here
 # names the token rather than leaving a missing package to be suspected.
 $registryUrl = 'https://registry.npmjs.org/'
-$authTokenHint = "The NPMAuthToken secret is missing, expired, revoked, or has " +
-    "lost publish rights on the fiftyone.* packages. npm answers an " +
+$authTokenHint = "The NPM_AUTH_TOKEN secret is missing, expired, " +
+    "revoked, or has lost publish rights on the fiftyone.* packages. npm answers an " +
     "unauthorised publish with '404 Not Found', so a 404 here does not mean " +
     "the package is absent."
-if ([string]::IsNullOrWhiteSpace($Keys.NPMAuthToken)) {
-    $message = "NPMAuthToken is not set, so publishing cannot succeed. $authTokenHint"
+if ([string]::IsNullOrWhiteSpace($env:NPM_AUTH_TOKEN)) {
+    $message = "NPM_AUTH_TOKEN is not set, so publishing cannot " +
+        "succeed. $authTokenHint"
     if ($DryRun) { Write-Warning $message } else { throw $message }
 }
-npm config set '//registry.npmjs.org/:_authToken' $Keys.NPMAuthToken
+npm config set '//registry.npmjs.org/:_authToken' $env:NPM_AUTH_TOKEN
 try {
     $npmUser = npm whoami --registry $registryUrl
     Write-Output "Authenticated with $registryUrl as '$npmUser'"

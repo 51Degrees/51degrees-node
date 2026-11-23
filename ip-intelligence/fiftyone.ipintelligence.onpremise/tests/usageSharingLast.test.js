@@ -41,7 +41,7 @@ const { ShareUsage } = require51('fiftyone.pipeline.engines.fiftyone');
 
 // The small ASN file, as the test needs only a Pipeline to be built.
 const AsnDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
 const testWithAsn = fs.existsSync(AsnDataFile) ? test : test.skip;
 

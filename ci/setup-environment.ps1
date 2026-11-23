@@ -13,13 +13,14 @@ if ($IsLinux -and $env:GITHUB_ACTIONS -eq "true") {
     df -h /
 }
 
-# The keys are not set here. common-ci exports each one under its agreed
-# _51DEGREES_ name, from the organization variable (resource keys) or secret
-# (license keys) of the same name, before this script runs, and the examples
-# and tests read them from there.
+# The keys are not set here. Each one is in the environment under its
+# _51DEGREES_ name before this script runs, from the organization secret of
+# the same name, and the examples and tests read them from there.
 
-./node/setup-environment.ps1 -RepoName $RepoName
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
 
-if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
-}
+Push-Location $RepoName
+try {
+    npm install
+} finally { Pop-Location }

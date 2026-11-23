@@ -29,21 +29,6 @@ const PLACEHOLDER = '!!YOUR_RESOURCE_KEY!!';
  */
 module.exports = {
   /**
-   * Obtain a key either from environment variable or from a property.
-   * Try resource key as env var, then as upper case env var, the system property
-   *
-   * @param {string} keyName Name of the key
-   * @returns {string} Key value
-   */
-  getNamedKey: function (keyName) {
-    let value = process.env[keyName];
-    if (!value) {
-      value = process.env[keyName.toUpperCase()];
-    }
-    return value;
-  },
-
-  /**
    * Obtain a resource key from the environment.
    *
    * @param {string} envVarName One of testConstants.envVars

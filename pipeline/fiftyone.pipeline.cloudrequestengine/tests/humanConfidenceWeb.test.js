@@ -380,7 +380,7 @@ describe('Human Confidence example as a process', () => {
       env: Object.assign(environment, endpointVariables, {
         _51DEGREES_RESOURCE_KEY: RESOURCE,
         _51DEGREES_LICENSE_KEY: LICENSE,
-        PORT: String(port)
+        _51DEGREES_EXAMPLE_HTTP_PORTS: String(port)
       }),
       stdio: ['ignore', 'pipe', 'ignore']
     });
@@ -408,9 +408,9 @@ describe('Human Confidence example as a process', () => {
 
   test('the endpoint variable set gives its endpoint', async () => {
     const page = await pageServedWith({
-      _51DEGREES_CLOUD_ENDPOINT: 'https://cloud-staging.example/api/v4'
+      _51DEGREES_CLOUD_ENDPOINT: 'https://cloud.example/api/v4'
     });
-    expect(page).toContain(apiLine('https://cloud-staging.example/api/v4/'));
+    expect(page).toContain(apiLine('https://cloud.example/api/v4/'));
   }, 30000);
 
   test('the endpoint variable not set gives the public cloud', async () => {
@@ -433,7 +433,7 @@ describe('Human Confidence example as a process', () => {
           env[name] = value;
         }
       }
-      env.PORT = '0';
+      env._51DEGREES_EXAMPLE_HTTP_PORTS = '0';
       const result = spawnSync(process.execPath, [path.basename(SERVER)], {
         cwd: FOLDER,
         env,
@@ -464,9 +464,9 @@ describe('Human Confidence example as a process', () => {
 describe('Human Confidence example files', () => {
   const read = (name) => fs.readFileSync(path.join(FOLDER, name), 'utf8');
 
-  test('the server listens on port 5151 unless PORT says otherwise', () => {
+  test('the server listens on port 5151 unless the variable says otherwise', () => {
     const match =
-      /\bconst\s+port\s*=\s*Number\(\s*(process\.env\.PORT\s*\|\|\s*)(\d+)/
+      /\bconst\s+port\s*=\s*Number\(\s*(process\.env\._51DEGREES_EXAMPLE_HTTP_PORTS\s*\|\|\s*)(\d+)/
         .exec(read('server.js'));
     expect(match).not.toBeNull();
     expect(Number(match[2])).toBe(5151);

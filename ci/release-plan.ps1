@@ -4,14 +4,14 @@
 # repository needs on top of it.
 #
 # common-ci runs these scripts from its own root, with this repository checked
-# out inside it, which is where this looks. COMMON_CI, when set, names another
-# checkout of common-ci and is looked at first.
-$CommonCi = @($env:COMMON_CI, (Join-Path $PSScriptRoot '..' '..')) |
+# out inside it, which is where this looks. _51DEGREES_COMMON_CI_DIR, when
+# set, names another checkout of common-ci and is looked at first.
+$CommonCi = @($env:_51DEGREES_COMMON_CI_DIR, (Join-Path $PSScriptRoot '..' '..')) |
     Where-Object { $_ -and (Test-Path (Join-Path $_ 'steps' 'release-plan.ps1')) } |
     Select-Object -First 1
 if ($null -eq $CommonCi) {
-    throw "common-ci's steps/release-plan.ps1 was not found. Set COMMON_CI " +
-        "to a checkout of common-ci."
+    throw "common-ci's steps/release-plan.ps1 was not found. Set " +
+        "_51DEGREES_COMMON_CI_DIR to a checkout of common-ci."
 }
 $CommonCi = (Resolve-Path $CommonCi).Path
 . (Join-Path $CommonCi 'steps' 'release-plan.ps1')

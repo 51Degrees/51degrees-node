@@ -40,7 +40,7 @@
 // then you'll need to replace the require below with the commented
 // out version below it.
 const FiftyOnePipelineCore = require(
-  (process.env.directory || __dirname) + '/../../'
+  __dirname + '/../../'
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
 
@@ -311,7 +311,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const portNum = process.env.PORT || 5151;
+const portNum = process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151;
 console.info('To test this example, browse to http://localhost:' + portNum);
 // Only the machine the example runs on, at 127.0.0.1 rather than
 // localhost, which can resolve to the IPv6 loopback alone.

@@ -33,44 +33,36 @@ const ACCESSIBLE_PROPERTIES_URL =
 const CONFIGURE_URL = 'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-tests-livecloudkeys.js&utm_term=resource-key-required';
 
 module.exports = {
-  // The names the resource key is read from, in order.
-  RESOURCE_KEY_NAMES: [
-    '_51DEGREES_RESOURCE_KEY',
-    '_51DEGREES_RESOURCE_KEY_BESPOKE'
-  ],
+  // The name the resource key is read from.
+  RESOURCE_KEY_NAME: '_51DEGREES_RESOURCE_KEY_BESPOKE',
 
   /**
-   * The first value set under the given names.
+   * The value set under the given name.
    *
-   * @param {Array<string>} names the environment variable names, in order
-   * @returns {string} the value, or an empty string when none is set
+   * @param {string} name the environment variable name
+   * @returns {string} the value, or an empty string when it is not set
    */
-  findKey: function (names) {
-    for (const name of names) {
-      const value = process.env[name];
-      if (value && value.trim()) {
-        return value.trim();
-      }
-    }
-    return '';
+  findKey: function (name) {
+    const value = process.env[name];
+    return value && value.trim() ? value.trim() : '';
   },
 
   /**
    * The message a cloud test fails with when no resource key is set.
    *
-   * @param {Array<string>} names the environment variable names tried
+   * @param {string} name the environment variable name
    * @param {string} product the product the key has to carry
    * @param {string} asksFor what the tests ask the cloud service for
    * @param {boolean} [plural] true for a group of tests
    * @returns {string} the message
    */
-  noKeyMessage: function (names, product, asksFor, plural) {
+  noKeyMessage: function (name, product, asksFor, plural) {
     const start = plural
       ? 'These tests call the live 51Degrees cloud service, so they need'
       : 'This test calls the live 51Degrees cloud service, so it needs';
     const asker = plural ? 'the tests ask' : 'the test asks';
     return `${start} a resource key and there is nothing to fall back on. ` +
-      `None of ${names.join(', ')} is set, tried in that order. The key ` +
+      `${name} is not set. The key ` +
       `has to carry the ${product} product, because ${asker} the service ` +
       `for ${asksFor}. To see the products a key carries, open ` +
       `${ACCESSIBLE_PROPERTIES_URL}. Create a key at ${CONFIGURE_URL}.`;

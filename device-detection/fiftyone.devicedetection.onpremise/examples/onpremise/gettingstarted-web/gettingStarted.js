@@ -322,9 +322,10 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const options = JSON.parse(fs.readFileSync(path.join(__dirname, '/51d.json')));
 
   setPipeline(options);
-  // The port can be set with the 'PORT' environment variable, as in the
-  // cloud example, so that the example can be run alongside others.
-  const port = process.env.PORT || 5151;
+  // The port can be set with the '_51DEGREES_EXAMPLE_HTTP_PORTS'
+  // environment variable, as in the cloud example, so that the example can
+  // be run alongside others.
+  const port = process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);

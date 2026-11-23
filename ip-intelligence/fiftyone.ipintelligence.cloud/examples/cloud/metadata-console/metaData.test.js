@@ -31,8 +31,6 @@ const require51 = (requestedPackage) => {
 
 const example = require(path.join(__dirname, '/metaData.js'));
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
-
 const shared = require51('fiftyone.ipintelligence.shared');
 const tc = shared.testConstants;
 const keyUtils = shared.keyUtils;
@@ -40,18 +38,16 @@ const ExampleOutput = shared.exampleOutput.ExampleOutput;
 const CloudRequestEngine =
   require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  tc.envVars.superResourceKeyVariable,
-  ExampleUtils.RESOURCE_KEY_VARIABLE);
+const resourceKeyName = tc.envVars.resourceKeyBespokeVariable;
 
 // The cloud service can drop a connection, which is not what these tests check.
 jest.retryTimes(2);
 
 describe('Examples', () => {
   test('cloud metadata', async () => {
-    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    const resourceKey = keyUtils.getResourceKey(resourceKeyName);
     if (!resourceKey) {
-      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyName,
         'ip', 'the IP Intelligence properties the key gives access to'));
     }
     await keyUtils.requireProduct(

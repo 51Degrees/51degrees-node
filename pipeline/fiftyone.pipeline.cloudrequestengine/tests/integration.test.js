@@ -38,7 +38,7 @@ const PipelineBuilder = require(pipelineBuilderPath);
 
 // These tests call the live cloud service, so each fails rather than
 // skips when no resource key is set.
-const myResourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
+const myResourceKey = keys.findKey(keys.RESOURCE_KEY_NAME);
 
 /**
  * Fails with the message for a missing key when no key is set.
@@ -48,7 +48,7 @@ const myResourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
  */
 const requireKey = function (product, asksFor) {
   if (!myResourceKey) {
-    throw new Error(keys.noKeyMessage(keys.RESOURCE_KEY_NAMES, product,
+    throw new Error(keys.noKeyMessage(keys.RESOURCE_KEY_NAME, product,
       asksFor));
   }
 };
@@ -62,8 +62,7 @@ const requireKey = function (product, asksFor) {
 test('valid response', async () => {
   requireKey('device', 'the IsMobile property of a User-Agent');
   const cloud = new CloudRequestEngine({
-    resourceKey: myResourceKey,
-    baseURL: 'http://cloud.51degrees.com/api/v4'
+    resourceKey: myResourceKey
   });
   const engine = new CloudEngine();
   engine.dataKey = 'device';

@@ -40,7 +40,7 @@ const { FlowElement } = require51('fiftyone.pipeline.core');
 const { ShareUsage } = require51('fiftyone.pipeline.engines.fiftyone');
 
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 const testWithLite = fs.existsSync(LiteDataFile) ? test : test.skip;
 

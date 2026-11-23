@@ -41,8 +41,7 @@ const testResourceKey = 'AAAAAAAAA';
 const testCloudRequestEngine = new CloudRequestEngine(
   {
     resourceKey: testResourceKey,
-    licenseKey: undefined,
-    baseURL: 'https://cloud.51degrees.com/api/v4/'
+    licenseKey: undefined
   });
 
 const testCloudEngine = new CloudEngine();
