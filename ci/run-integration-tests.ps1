@@ -112,16 +112,16 @@ if (-not (Test-Path selenium-api-tests)) {
 $failed = @()
 
 # Cloud example, pointed at the live cloud.
-if ($env:_51DEGREES_RESOURCE_KEY) {
-    # The example reads _51DEGREES_RESOURCE_KEY from the environment it
-    # inherits. It is not in the list below, because the variables listed
-    # are cleared after the run.
+# The contract needs every property, so the example is given the key that
+# carries them all, under the name it reads, _51DEGREES_RESOURCE_KEY.
+if ($env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
     try {
         Invoke-ContractTests `
         -Name 'cloud' `
         -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
         -Port 8096 `
         -Environment @{
+            '_51DEGREES_RESOURCE_KEY' = $env:_51DEGREES_RESOURCE_KEY_BESPOKE
             '_51DEGREES_CLOUD_ENDPOINT' = 'https://cloud.51degrees.com/api/v4/'
         }
     } catch { $failed += 'cloud' }
