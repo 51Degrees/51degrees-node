@@ -6,8 +6,8 @@ name: Cloud Human Confidence Tests
 # pipeline/fiftyone.pipeline.cloudrequestengine/tests that end
 # .staging.integration.test.js, which the integration-test script leaves
 # out. humanConfidenceWeb checks that a Bespoke key's passive answer carries
-# the source Passive, and humanConfidenceOutsideBespoke that the Basic key's
-# answer carries no source.
+# the source Passive, and humanConfidenceOutsideBespoke that the cloud
+# answers the Basic key's HumanConfidenceSource as null, with a reason.
 #
 # CLOUD_STAGING_ENDPOINT, the staging cloud's API base ending /api/v4/, is
 # an organization variable, and RESOURCE_KEY_BESPOKE_STAGING, a Bespoke key

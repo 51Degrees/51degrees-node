@@ -25,8 +25,10 @@
 // HumanConfidenceSource yet. They share the names they read, the staging
 // API base, a visitor's request, a response to write to, and a fetch that
 // names the two properties in the request for the passive level, so the
-// answer carries both whatever the key's own list of properties holds. The
-// visitor's evidence is passed on as it is.
+// answer carries both whatever the key's own list of properties holds.
+// Another fetch also keeps the cloud's answer to that request, for a test
+// that has to see the answer as the cloud sent it. The visitor's evidence
+// is passed on as it is.
 //
 // Only CI sets the staging names, in the Cloud Human Confidence workflow,
 // so the integration-test script leaves out these tests, whose files end
@@ -100,6 +102,17 @@ function fakeResponse () {
 }
 
 /**
+ * Whether a request is the route's request for the passive level.
+ *
+ * @param {string} url the address
+ * @param {object} options the fetch options
+ * @returns {boolean} true for the passive request
+ */
+function isPassiveRequest (url, options) {
+  return options.method === 'POST' && String(url).endsWith('.json');
+}
+
+/**
  * The global fetch, adding the properties to the route's request for the
  * passive level.
  *
@@ -108,12 +121,35 @@ function fakeResponse () {
  * @returns {Promise<Response>} the answer
  */
 function namingTheProperties (url, options = {}) {
-  if (options.method === 'POST' && String(url).endsWith('.json')) {
+  if (isPassiveRequest(url, options)) {
     const body = new URLSearchParams(options.body);
     body.set('values', PROPERTIES);
     options = Object.assign({}, options, { body });
   }
   return fetch(url, options);
+}
+
+/**
+ * A fetch that names the properties as namingTheProperties does and keeps
+ * the body of each answer to the request for the passive level, so a test
+ * can read the cloud's answer as well as the route's. The route reads its
+ * own copy of the answer.
+ *
+ * @returns {{fetch: Function, bodies: string[]}} the fetch, and the bodies
+ * it has kept
+ */
+function keepingAnswers () {
+  const bodies = [];
+  return {
+    bodies,
+    async fetch (url, options = {}) {
+      const answer = await namingTheProperties(url, options);
+      if (isPassiveRequest(url, options)) {
+        bodies.push(await answer.clone().text());
+      }
+      return answer;
+    }
+  };
 }
 
 module.exports = {
@@ -122,5 +158,6 @@ module.exports = {
   noKeyMessage,
   visitor,
   fakeResponse,
-  namingTheProperties
+  namingTheProperties,
+  keepingAnswers
 };
