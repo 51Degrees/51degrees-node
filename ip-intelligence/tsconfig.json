@@ -1,8 +1,0 @@
-{
-    "files": [],
-    "references": [
-      { "path": "./fiftyone.ipintelligence.cloud" },
-      { "path": "./fiftyone.ipintelligence.onpremise" },
-      { "path": "./fiftyone.ipintelligence.shared" }
-    ]
-  }

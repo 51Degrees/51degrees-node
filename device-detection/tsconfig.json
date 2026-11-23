@@ -1,8 +1,0 @@
-{
-    "files": [],
-    "references": [
-      { "path": "./fiftyone.devicedetection.cloud" },
-      { "path": "./fiftyone.devicedetection.onpremise" },
-      { "path": "./fiftyone.devicedetection.shared" }
-    ]
-  }

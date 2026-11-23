@@ -1,8 +1,0 @@
-cxx/
-**/node_modules/
-**/types/
-coverage/
-**/*.min.js
-**/javascript-templates/
-**/derived-properties/
-**/owid-js/

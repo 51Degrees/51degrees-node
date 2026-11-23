@@ -1,9 +1,0 @@
-{
-  "files": [],
-  "references": [
-    { "path": "./pipeline" },
-    { "path": "./device-detection" },
-    { "path": "./ip-intelligence" },
-    { "path": "./location" }
-  ]
-}
