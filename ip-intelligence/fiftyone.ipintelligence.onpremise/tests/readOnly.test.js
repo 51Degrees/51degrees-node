@@ -36,8 +36,8 @@ const require51 = (requestedPackage) => {
 const IpIntelligenceOnPremisePipelineBuilder = require51(
   'fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
 
-const DataFile = path.resolve(__dirname +
-  '/../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
+const DataFile = path.resolve(__dirname,
+  '../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
 const testWithFile = fs.existsSync(DataFile) ? test : test.skip;
 
 testWithFile('IpIntelligenceOnPremise Element Data is read only once ' +

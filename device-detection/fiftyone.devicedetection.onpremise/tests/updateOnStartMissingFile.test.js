@@ -41,8 +41,8 @@ const require51 = (requestedPackage) => {
 const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const DataFile = path.resolve(__dirname +
-  '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const DataFile = path.resolve(__dirname,
+  '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +

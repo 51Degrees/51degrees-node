@@ -43,7 +43,7 @@ const errorMessages = require51('fiftyone.devicedetection.shared').errorMessages
 const fs = require('fs');
 const each = require('jest-each').default;
 
-const CSVDataFile = __dirname + '/51Degrees.csv';
+const CSVDataFile = path.join(__dirname, '51Degrees.csv');
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
   'AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile' +
