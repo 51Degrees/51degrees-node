@@ -20,6 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const path = require('path');
+
 const fs = require('fs');
 
 const liteDataFileName = '51Degrees-LiteV4.1.hash';
@@ -31,9 +33,8 @@ const datafiles = [enterpriseDataFileName, liteDataFileName];
 
 // Directories to search for data files. Ordered based on priorities.
 const fileDirs = [
-  __dirname + '/../tests/',
-  __dirname +
-  '/../../../cxx/data/device-detection/'];
+  path.join(__dirname, '../tests/'),
+  path.join(__dirname, '../../../cxx/data/device-detection/')];
 
 let testDataFile;
 

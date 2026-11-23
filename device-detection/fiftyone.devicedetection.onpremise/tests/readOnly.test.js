@@ -36,8 +36,7 @@ const require51 = (requestedPackage) => {
 const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const DataFile = path.resolve(__dirname +
-  '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const DataFile = path.resolve(__dirname, '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 const testWithLite = fs.existsSync(DataFile) ? test : test.skip;
 
 testWithLite('DeviceDetectionOnPremise Element Data is read only once ' +
