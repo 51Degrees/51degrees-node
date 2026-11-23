@@ -136,16 +136,24 @@ const messageOf = function (error) {
     : error.message;
 };
 
-// Ends the example with the error that stopped it, as a message rather than
-// a stack trace, and an exit code that says it failed. Only errors from
-// requests to the cloud service are described as a failed request.
+// Ends the example with the error that stopped it and an exit code that
+// says it failed. Errors from requests to the cloud service are described
+// as a failed request by their messages alone. Any other error is a fault
+// the example did not expect, so its stack trace follows the message.
 const endWithError = function (reason) {
   const errors = errorsIn(reason);
   const messages = errors.map(messageOf).join(' ');
-  console.error(errors.length > 0 && errors.every(isCloudRequestError)
-    ? 'The example stopped because the request to the cloud service ' +
-      `failed. ${messages}`
-    : `The example stopped: ${messages}`);
+  if (errors.length > 0 && errors.every(isCloudRequestError)) {
+    console.error('The example stopped because the request to the cloud ' +
+      `service failed. ${messages}`);
+  } else {
+    console.error(`The example stopped: ${messages}`);
+    for (const error of errors) {
+      if (error instanceof Error && error.stack) {
+        console.error(error.stack);
+      }
+    }
+  }
   console.log(FIND_OUT_MORE);
   process.exitCode = 1;
 };
