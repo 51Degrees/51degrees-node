@@ -35,6 +35,21 @@ const licenseKey = 'LICENSEKEY1234567890';
 const requested = ['device.ismobile', 'device.istablet'];
 const base = sharedValues.baseURLDefault;
 
+// The engine takes its endpoint from _51DEGREES_CLOUD_ENDPOINT when that is
+// set. These tests check the requests to the default endpoint, so each test
+// runs with the variable cleared and puts it back afterwards.
+const savedEndpoint = process.env._51DEGREES_CLOUD_ENDPOINT;
+beforeEach(() => { // eslint-disable-line
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+});
+afterEach(() => { // eslint-disable-line
+  if (savedEndpoint === undefined) {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  } else {
+    process.env._51DEGREES_CLOUD_ENDPOINT = savedEndpoint;
+  }
+});
+
 // The cloud service refuses a license key with an error that names it.
 const refusal = 'Invalid license key(s) supplied: \'' + licenseKey + '\'';
 const maskedLicenseKey = '****************7890';
