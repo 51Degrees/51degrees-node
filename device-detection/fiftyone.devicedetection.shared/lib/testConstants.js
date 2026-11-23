@@ -24,7 +24,7 @@ module.exports = {
   // Resource key environment variables follow the 51Degrees convention,
   // which is that every one of them starts with '_51DEGREES_RESOURCE_KEY'.
   // That prefix is what common-ci's central steps/set-resource-keys.ps1
-  // exports, so a key added as an organization variable under that
+  // exports, so a key added as an organization secret under that
   // convention reaches these tests with no change here.
   envVars: {
     resourceKeyEnvVar: '_51DEGREES_RESOURCE_KEY',

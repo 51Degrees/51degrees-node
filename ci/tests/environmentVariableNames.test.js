@@ -66,8 +66,7 @@ const FALLBACK_NAME =
 const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
 
 // The keys come only under their agreed _51DEGREES_ names, which common-ci
-// exports from the organization variables (resource keys) and secrets
-// (license keys) of the same names. So none of these may appear anywhere,
+// exports from the organization secrets of the same names. So none of these may appear anywhere,
 // read, set or described:
 // - the names that left the agreed list, which nothing fills: the four
 //   header resource keys the Accept-CH tests used, the ACCEPTCH ones, the
@@ -210,17 +209,17 @@ describe('environment variable names', () => {
   });
 
   // A 51Did license redeems only with a resource key of the same account,
-  // so the 51DID resource key must come from the organization variable of
+  // so the 51DID resource key must come from the organization secret of
   // its own name. Filled from another key, such as BESPOKE, the licensed
   // redeem answers unreadable. The Basic tier test needs a key on
   // CloudV5Basic alone, so the BASIC resource key must come from the
-  // organization variable of its own name too.
+  // organization secret of its own name too.
   it.each([
     '_51DEGREES_RESOURCE_KEY_51DID',
     '_51DEGREES_RESOURCE_KEY_BASIC'
-  ])('fills %s only from the organization variable of that name', (name) => {
+  ])('fills %s only from the organization secret of that name', (name) => {
     const assignment = new RegExp('^\\s*' + name + '\\s*:\\s*(.*?)\\s*$');
-    const expected = '$' + '{{ vars.' + name + ' }}';
+    const expected = '$' + '{{ secrets.' + name + ' }}';
     const found = [];
 
     for (const file of trackedFiles()) {
@@ -244,6 +243,35 @@ describe('environment variable names', () => {
       .toEqual([]);
   });
 
+  // Every resource key is an organization secret, so no workflow reads a
+  // _51DEGREES_RESOURCE_KEY name as an organization variable.
+  it('reads no resource key as an organization variable', () => {
+    const variable = new RegExp(
+      '(^|[^A-Za-z0-9_])vars\\.(_51DEGREES_RESOURCE_KEY[A-Za-z0-9_]*)');
+    const found = [];
+
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const lines = fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8')
+        .split('\n');
+      lines.forEach((line, index) => {
+        if (variable.test(line)) {
+          found.push(`${file}:${index + 1}: ${line.trim()}`);
+        }
+      });
+    }
+
+    expect(found).toEqual([]);
+    expect(variable.test('K: $' + '{{ vars._51DEGREES_RESOURCE_KEY_PRO }}'))
+      .toBe(true);
+    expect(variable.test('K: $' + '{{ secrets._51DEGREES_RESOURCE_KEY_PRO }}'))
+      .toBe(false);
+    expect(variable.test('K: $' + '{{ vars._51DEGREES_CLOUD_ENDPOINT }}'))
+      .toBe(false);
+  });
+
   it('matches only a whole old or dropped key name', () => {
     const subject = (text) =>
       [...text.matchAll(OLD_KEY_NAME)].map((match) => match[2]);
@@ -252,7 +280,7 @@ describe('environment variable names', () => {
     expect(subject('process.env._51DEGREES_RESOURCE_KEY')).toEqual([]);
     expect(subject('process.env._51DEGREES_RESOURCE_KEY_SUPER')).toEqual([]);
     expect(subject('_51DEGREES_LICENSE_KEY_BESPOKE')).toEqual([]);
-    expect(subject('vars._51DEGREES_RESOURCE_KEY_BESPOKE')).toEqual([]);
+    expect(subject('secrets._51DEGREES_RESOURCE_KEY_BESPOKE')).toEqual([]);
 
     // Neither is a longer name holding an old one, nor a stand-in key.
     expect(subject("const IPI_DATA_FILE_VARIABLE = '_51DEGREES_IPI_PATH';"))

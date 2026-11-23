@@ -14,8 +14,8 @@ if ($IsLinux -and $env:GITHUB_ACTIONS -eq "true") {
 }
 
 # The keys are not set here. common-ci exports each one under its agreed
-# _51DEGREES_ name, from the organization variable (resource keys) or secret
-# (license keys) of the same name, before this script runs, and the examples
+# _51DEGREES_ name, from the organization secret of the same name, before
+# this script runs, and the examples
 # and tests read them from there.
 
 ./node/setup-environment.ps1 -RepoName $RepoName
