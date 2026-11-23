@@ -2332,46 +2332,27 @@ static SwigV8ReturnValue _wrap_new_MapStringStringSwig(const SwigV8Arguments &ar
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_MapStringStringSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_MapStringStringSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_MapStringStringSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_MapStringStringSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -2751,65 +2732,37 @@ static SwigV8ReturnValue _wrap_new_VectorStringSwig(const SwigV8Arguments &args)
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_VectorStringSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_VectorStringSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_VectorStringSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_VectorStringSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_VectorStringSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_VectorStringSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -3282,65 +3235,37 @@ static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig(const SwigV8Argu
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_RequiredPropertiesConfigSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_RequiredPropertiesConfigSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_RequiredPropertiesConfigSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_RequiredPropertiesConfigSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_RequiredPropertiesConfigSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_RequiredPropertiesConfigSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -5009,7 +4934,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValues(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -5180,7 +5104,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsString(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -5351,7 +5274,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsBool(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -5522,7 +5444,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsInteger(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -5693,7 +5614,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsDouble(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -5864,7 +5784,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsStrictBool(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -6035,7 +5954,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsStrictInteger(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -6206,7 +6124,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsBaseSwig__wrap_ResultsBaseSwig_getValueAsStrictDouble(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -7661,65 +7578,37 @@ static SwigV8ReturnValue _wrap_new_UTF8StringSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_UTF8StringSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_UTF8StringSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_UTF8StringSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_UTF8StringSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_UTF8StringSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_UTF8StringSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -8489,46 +8378,27 @@ static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig(const SwigV8Arguments &a
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 2) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_ValueMetaDataKeySwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_ValueMetaDataKeySwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 3) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_ValueMetaDataKeySwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_ValueMetaDataKeySwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -11095,7 +10965,6 @@ fail:
 static SwigV8ReturnValue _wrap_EngineBaseSwig__wrap_EngineBaseSwig_refreshData(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -13532,46 +13401,27 @@ static SwigV8ReturnValue _wrap_new_IpAddressSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 2) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_IpAddressSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_IpAddressSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_IpAddressSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_IpAddressSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -13901,65 +13751,37 @@ static SwigV8ReturnValue _wrap_new_WeightedStringListSwig(const SwigV8Arguments 
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedStringListSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedStringListSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedStringListSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedStringListSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedStringListSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedStringListSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -14672,65 +14494,37 @@ static SwigV8ReturnValue _wrap_new_WeightedUTF8StringListSwig(const SwigV8Argume
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedUTF8StringListSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedUTF8StringListSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedUTF8StringListSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedUTF8StringListSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedUTF8StringListSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedUTF8StringListSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -15443,65 +15237,37 @@ static SwigV8ReturnValue _wrap_new_WeightedBoolListSwig(const SwigV8Arguments &a
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedBoolListSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedBoolListSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedBoolListSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedBoolListSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedBoolListSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedBoolListSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -16214,65 +15980,37 @@ static SwigV8ReturnValue _wrap_new_WeightedIntListSwig(const SwigV8Arguments &ar
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedIntListSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedIntListSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedIntListSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedIntListSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedIntListSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedIntListSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -16985,65 +16723,37 @@ static SwigV8ReturnValue _wrap_new_WeightedDoubleListSwig(const SwigV8Arguments 
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 0) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedDoubleListSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedDoubleListSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedDoubleListSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedDoubleListSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 1) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_WeightedDoubleListSwig__SWIG_2(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_WeightedDoubleListSwig__SWIG_2(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -19384,7 +19094,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedStringList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -19555,7 +19264,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedUTF8StringList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -19726,7 +19434,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValueAsUTF8String(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -19913,7 +19620,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedWKTStringList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -20084,7 +19790,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedBoolList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -20255,7 +19960,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedIntegerList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -20426,7 +20130,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValuesAsWeightedDoubleList(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -20597,7 +20300,6 @@ fail:
 static SwigV8ReturnValue _wrap_ResultsIpiSwig__wrap_ResultsIpiSwig_getValueAsIpAddress(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -23408,46 +23110,27 @@ static SwigV8ReturnValue _wrap_new_EngineIpiSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
   OverloadErrorHandler errorHandler;
-  SWIGV8_VALUE self;
   
   // switch all cases by means of series of if-returns.
   
   if(args.Length() == 3) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_EngineIpiSwig__SWIG_0(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_EngineIpiSwig__SWIG_0(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   if(args.Length() == 4) {
     errorHandler.err.Clear();
-#if (V8_MAJOR_VERSION-0) < 4 && (SWIG_V8_VERSION < 0x031903)
-    self = _wrap_new_EngineIpiSwig__SWIG_1(args, errorHandler);
-    if(errorHandler.err.IsEmpty()) {
-      SWIGV8_ESCAPE(self);
-    } else {
-      goto fail;
-    }
-#else
     _wrap_new_EngineIpiSwig__SWIG_1(args, errorHandler);
     if(errorHandler.err.IsEmpty()) {
       return;
     } else {
       goto fail;
     }
-#endif
   }
   
   
@@ -23887,7 +23570,6 @@ fail:
 static SwigV8ReturnValue _wrap_EngineIpiSwig__wrap_EngineIpiSwig_refreshData(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
@@ -24141,7 +23823,6 @@ fail:
 static SwigV8ReturnValue _wrap_EngineIpiSwig__wrap_EngineIpiSwig_process(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_VALUE jsresult;
   OverloadErrorHandler errorHandler;
   
   
