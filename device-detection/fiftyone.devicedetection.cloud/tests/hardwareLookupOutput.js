@@ -32,6 +32,10 @@ const NO_HARDWARE_LOOKUP = 'does not include HardwarePlatform.Profiles';
 // follows with the reason in parentheses.
 const NO_VALUE = 'Unknown';
 
+// How a template string shows a value the cloud service gave as null, or one
+// that was never set, neither of which is a value.
+const MISSING_VALUES = ['null', 'undefined'];
+
 /**
  * The tab-indented lines that follow a heading, up to the next line that is
  * not indented.
@@ -54,15 +58,15 @@ const linesUnder = function (text, heading) {
 };
 
 /**
- * Whether a value is empty or is how the examples show a property with no
- * value.
+ * Whether a value is empty, is how the examples show a property with no
+ * value, or is how a null or unset value is printed.
  *
  * @param {string} value The text of the value
  * @returns {boolean} True when there is no value
  */
 const isNoValue = function (value) {
   return value === '' || value === NO_VALUE ||
-    value.startsWith(NO_VALUE + ' (');
+    value.startsWith(NO_VALUE + ' (') || MISSING_VALUES.includes(value);
 };
 
 /**

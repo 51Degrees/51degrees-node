@@ -84,6 +84,11 @@ describe('hardware lookup output', () => {
       .toBe(false);
     expect(hasVendorAndModel('Apple iPhone 6 ()')).toBe(false);
     expect(hasVendorAndModel('Apple (A1586)')).toBe(false);
+    expect(hasVendorAndModel('Apple iPhone 6 (null)')).toBe(false);
+    expect(hasVendorAndModel('Apple iPhone 6 (undefined)')).toBe(false);
+    expect(hasVendorAndModel('null iPhone 6 (A1586)')).toBe(false);
+    expect(hasVendorAndModel('undefined iPhone 6 (A1586)')).toBe(false);
+    expect(hasVendorAndModel('Apple null (A1586)')).toBe(true);
     expect(hasVendorAndModel('No devices are associated with this TAC.'))
       .toBe(false);
   });
