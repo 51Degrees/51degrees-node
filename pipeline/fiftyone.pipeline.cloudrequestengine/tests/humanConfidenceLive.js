@@ -20,15 +20,23 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// What the live Human Confidence tests share: the API base, a visitor's
-// request, a response to write to, and a fetch that names the two
-// properties in the request for the passive level, so the answer carries
-// both whatever the key's own list of properties holds. The visitor's
-// evidence is passed on as it is.
+// What the live Human Confidence tests share. They call the staging cloud
+// service, because the production cloud does not serve
+// HumanConfidenceSource yet. They share the names they read, the staging
+// API base, a visitor's request, a response to write to, and a fetch that
+// names the two properties in the request for the passive level, so the
+// answer carries both whatever the key's own list of properties holds. The
+// visitor's evidence is passed on as it is.
+//
+// Only CI sets the staging names, in the Cloud Human Confidence workflow,
+// so the integration-test script leaves out these tests, whose files end
+// .staging.integration.test.js.
 
-// The API base, read as the example reads it.
-const api = ((process.env._51DEGREES_CLOUD_ENDPOINT || '').trim() ||
-  'https://cloud.51degrees.com/api/v4/').replace(/\/+$/, '') + '/';
+// The CI-only name of the staging cloud's API base, ending /api/v4/.
+const ENDPOINT_NAME = 'CLOUD_STAGING_ENDPOINT';
+
+// The CI-only name of a Bespoke resource key the staging cloud resolves.
+const BESPOKE_KEY_NAME = 'RESOURCE_KEY_BESPOKE_STAGING';
 
 // The properties the tests name in their request.
 const PROPERTIES = 'derived.humanconfidence,derived.humanconfidencesource';
@@ -41,6 +49,41 @@ const visitor = {
   },
   socket: {}
 };
+
+/**
+ * The staging cloud's API base, ending in one slash. There is no default,
+ * so a test never calls another cloud service by mistake.
+ *
+ * @returns {string} the API base
+ * @throws {Error} when the name is not set
+ */
+function stagingApi () {
+  const endpoint = (process.env[ENDPOINT_NAME] || '').trim();
+  if (!endpoint) {
+    throw new Error('This test calls the staging cloud service, because ' +
+      'the production cloud does not serve HumanConfidenceSource yet, and ' +
+      `there is nothing to fall back on. ${ENDPOINT_NAME} is not set. Set ` +
+      'it to the staging cloud\'s API base, ending /api/v4/.');
+  }
+  return endpoint.replace(/\/+$/, '') + '/';
+}
+
+/**
+ * The message a staging test fails with when no resource key is set.
+ *
+ * @param {string} name the environment variable name
+ * @param {string} product the product the key has to carry
+ * @param {string} asksFor what the test asks the cloud service for
+ * @returns {string} the message
+ */
+function noKeyMessage (name, product, asksFor) {
+  return 'This test calls the staging cloud service, so it needs a ' +
+    'resource key the staging cloud resolves, and there is nothing to ' +
+    `fall back on. ${name} is not set. The key has to carry the ` +
+    `${product} product, because the test asks the service for ` +
+    `${asksFor}. To see the products a key carries, open ` +
+    `accessibleproperties?resource=<key> under ${ENDPOINT_NAME}.`;
+}
 
 /**
  * A response for a route to write to, keeping the status and the body.
@@ -73,4 +116,11 @@ function namingTheProperties (url, options = {}) {
   return fetch(url, options);
 }
 
-module.exports = { api, visitor, fakeResponse, namingTheProperties };
+module.exports = {
+  BESPOKE_KEY_NAME,
+  stagingApi,
+  noKeyMessage,
+  visitor,
+  fakeResponse,
+  namingTheProperties
+};

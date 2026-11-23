@@ -112,7 +112,11 @@ npm run tsc
 
 The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable. See each folder's readme for
-the keys and data files its tests use.
+the keys and data files its tests use. The Human Confidence tests that call
+the staging cloud read CI-only names, so `npm run integration-test` leaves
+them out, as the
+[cloud request engine's readme](pipeline/fiftyone.pipeline.cloudrequestengine/readme.md#tests)
+says.
 
 ## Regenerating the SWIG wrappers
 
