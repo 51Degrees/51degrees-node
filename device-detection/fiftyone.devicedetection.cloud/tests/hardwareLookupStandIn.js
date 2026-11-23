@@ -69,31 +69,54 @@ const removed = (name) => {
 };
 
 /**
+ * The answer to one request of a kind, given how many of that kind came
+ * before it. A list gives its answers in turn and then repeats its last.
+ *
+ * @param {string|number|Array<string|number>} answers The answers
+ * @param {number} before The number of earlier requests of the kind
+ * @returns {string|number} The answer
+ */
+const answerFor = function (answers, before) {
+  return Array.isArray(answers)
+    ? answers[Math.min(before, answers.length - 1)]
+    : answers;
+};
+
+/**
  * Starts the stand-in on 127.0.0.1 and a free port. Each answer is JSON
- * text, sent with status 200, or a number, sent as that status with no
- * body. A request with no answer gets 404. The method and path of every
- * request are recorded.
+ * text, sent with status 200, a number, sent as that status with no body,
+ * or a list of those, given in turn. A request with no answer gets 404. The
+ * method and path of every request are recorded.
  *
  * @param {object} answers The answers
- * @param {string|number} answers.accessibleProperties For accessibleproperties
- * @param {string|number} answers.evidenceKeys For evidencekeys
- * @param {string|number} [answers.lookup] For the lookup, whose path ends
- * json
+ * @param {string|number|Array<string|number>} answers.accessibleProperties
+ * For accessibleproperties
+ * @param {string|number|Array<string|number>} answers.evidenceKeys For
+ * evidencekeys
+ * @param {string|number|Array<string|number>} [answers.lookup] For the
+ * lookup, whose path ends json
  * @returns {Promise<object>} The server, the requests and the endpoint
  */
 const startStandIn = function (answers) {
   return new Promise((resolve, reject) => {
     const requests = [];
+    const counts = {};
     const server = http.createServer((req, res) => {
       const pathname = new URL(req.url, 'http://127.0.0.1').pathname;
       requests.push(`${req.method} ${pathname}`);
-      let answer;
+      let kind;
       if (req.method === 'GET' && pathname.endsWith('/accessibleproperties')) {
-        answer = answers.accessibleProperties;
+        kind = 'accessibleProperties';
       } else if (req.method === 'GET' && pathname.endsWith('/evidencekeys')) {
-        answer = answers.evidenceKeys;
+        kind = 'evidenceKeys';
       } else if (pathname.endsWith('json')) {
-        answer = answers.lookup;
+        kind = 'lookup';
+      }
+      let answer;
+      if (kind !== undefined) {
+        const before = counts[kind] || 0;
+        counts[kind] = before + 1;
+        answer = answerFor(answers[kind], before);
       }
       if (answer === undefined) {
         answer = 404;
@@ -116,15 +139,15 @@ const startStandIn = function (answers) {
 };
 
 /**
- * Runs the example from its own folder, pointed at the stand-in, with the
- * stand-in key.
+ * Runs the example from its own folder, pointed at the stand-in.
  *
  * @param {string} folder The example's folder
  * @param {string} file The example's file
  * @param {string} endpoint The stand-in's endpoint
+ * @param {string} resourceKey The resource key the example reads
  * @returns {Promise<object>} The exit status, signal, stdout and stderr
  */
-const runExample = function (folder, file, endpoint) {
+const runExample = function (folder, file, endpoint, resourceKey) {
   return new Promise((resolve) => {
     const env = {};
     for (const [name, value] of Object.entries(process.env)) {
@@ -132,7 +155,7 @@ const runExample = function (folder, file, endpoint) {
         env[name] = value;
       }
     }
-    env._51DEGREES_RESOURCE_KEY = STAND_IN_KEY;
+    env._51DEGREES_RESOURCE_KEY = resourceKey;
     env._51DEGREES_CLOUD_ENDPOINT = endpoint;
     const child = childProcess.spawn(process.execPath, [file], {
       cwd: path.join(EXAMPLES, folder),
@@ -158,13 +181,17 @@ const runExample = function (folder, file, endpoint) {
  * @param {string} folder The example's folder
  * @param {string} file The example's file
  * @param {object} answers The stand-in's answers, as startStandIn takes them
+ * @param {string} [resourceKey] The resource key the example reads, the
+ * stand-in key unless given
  * @returns {Promise<object>} What runExample gives, with the requests the
  * stand-in received
  */
-const runAgainstStandIn = async function (folder, file, answers) {
+const runAgainstStandIn = async function (
+  folder, file, answers, resourceKey = STAND_IN_KEY) {
   const standIn = await startStandIn(answers);
   try {
-    const result = await runExample(folder, file, standIn.endpoint);
+    const result = await runExample(
+      folder, file, standIn.endpoint, resourceKey);
     return Object.assign(result, { requests: standIn.requests });
   } finally {
     await new Promise((resolve) => standIn.server.close(resolve));

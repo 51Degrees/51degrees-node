@@ -26,7 +26,10 @@
 // cannot tell whether the resource key carries the hardware lookup, so it
 // must not say that the key lacks it. It must ask again, then end with a
 // message naming the cloud service's error and exit code 1, rather than an
-// unhandled rejection. No real key and no network are used.
+// unhandled rejection. An error that is not from a request to the cloud
+// service, such as a resource key the cloud request engine refuses before
+// sending anything, must not be described as one, and its stack trace must
+// follow the message. No real key and no network are used.
 
 const path = require('path');
 
@@ -83,10 +86,56 @@ describe('hardware lookup examples when the cloud service fails', () => {
       const last = errors[errors.length - 1] || '';
       expect(last.slice(0, STOPPED.length)).toBe(STOPPED);
       expect(last).toContain('accessibleproperties');
-      expect(last).toContain(String(SERVER_ERROR));
+      expect(last).toContain(`(status code ${SERVER_ERROR})`);
       expect(text).not.toContain('UnhandledPromiseRejection');
       expect(text).not.toContain('[object Array]');
       expect(result.stdout.split(/\r?\n/)).toContain('Find out more:');
     }, TIMEOUT_MS + JEST_MARGIN_MS);
   }
 });
+
+describe('hardware lookup examples when they fail without a cloud request',
+  () => {
+    // Not empty, so the example takes it as a key, but blank, so the cloud
+    // request engine refuses it before sending anything.
+    const BLANK_KEY = ' ';
+
+    // How the example's message starts when the error did not come from a
+    // request to the cloud service.
+    const STOPPED_OTHER = 'The example stopped: ';
+
+    for (const [folder, file] of EXAMPLE_FILES) {
+      test(`${file} does not call the error a failed cloud request`,
+        async () => {
+          const result = await runAgainstStandIn(
+            folder, file, ANSWERS, BLANK_KEY);
+          const text = printed(result);
+
+          // The example failed, and what it printed is shown when it did
+          // not.
+          expect({
+            status: result.status,
+            signal: result.signal,
+            printed: result.status === 1 ? '' : text
+          }).toEqual({ status: 1, signal: null, printed: '' });
+
+          // No request was made, so none is said to have failed.
+          expect(result.requests).toEqual([]);
+          expect(text).not.toContain(STOPPED);
+
+          // The message is followed by the error's stack trace, so that a
+          // fault the example did not expect can be found.
+          const errors = result.stderr.split(/\r?\n/)
+            .filter((line) => line.trim() !== '');
+          const at = errors.findIndex((line) =>
+            line.startsWith(STOPPED_OTHER));
+          expect({ found: at >= 0, printed: at >= 0 ? '' : text })
+            .toEqual({ found: true, printed: '' });
+          expect(errors[at + 1] || '').toMatch(/^\w*Error: /);
+          expect(errors.slice(at + 2).filter((line) => /^\s+at\s/.test(line))
+            .length).toBeGreaterThan(0);
+          expect(text).not.toContain('UnhandledPromiseRejection');
+          expect(result.stdout.split(/\r?\n/)).toContain('Find out more:');
+        }, TIMEOUT_MS + JEST_MARGIN_MS);
+    }
+  });
