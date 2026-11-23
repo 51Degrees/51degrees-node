@@ -184,7 +184,7 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
 
 //! [usage]
 const astrologyElement = new Astrology(
-  { datafile: __dirname + '/astrology.json' }
+  { datafile: path.join(__dirname, 'astrology.json') }
 );
 
 const http = require('http');
