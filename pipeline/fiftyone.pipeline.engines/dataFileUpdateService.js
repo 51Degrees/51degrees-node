@@ -533,7 +533,8 @@ class DataFileUpdateService {
    * hold several, and sends the first request again with the product of the
    * loaded data file added. Only the product is taken from the response.
    * Where the product is not listed the check fails with an error that
-   * names it and the products listed.
+   * names it and the products listed. A response that lists no product is
+   * any other response, and the check fails with its status code.
    *
    * @param {DataFile} dataFile the data file being updated
    * @param {string} updateUrl the URL of the first request
@@ -568,8 +569,9 @@ class DataFileUpdateService {
       ended = true;
       const offered = offeredProducts(
         Buffer.concat(chunks).toString('utf8'), updateUrl);
-      if (!offered) {
-        // No list to choose from, so this is any other response.
+      if (!offered || offered.length === 0) {
+        // No list to choose from, or a list that gives no product, so this
+        // is any other response.
         failed("HTTP status code '" + response.statusCode +
           "' from data update service at '" + updateUrl + forEngine);
         return;
@@ -733,10 +735,10 @@ class DataFileUpdateService {
         requestOptions.headers = { 'If-Modified-Since': modifiedSince };
       }
 
-      if (!repeat) {
-        this.log('info', "Checking for update from '" + updateUrl +
-          "' for Engine '" + engineName(dataFile) + "'");
-      }
+      // The request that names the product is logged as the first one is,
+      // with its own URL. The log masks the license keys in it.
+      this.log('info', "Checking for update from '" + updateUrl +
+        "' for Engine '" + engineName(dataFile) + "'");
 
       // The requests are made with the http and https modules of Node.js,
       // which do not follow a Location header. A 300 that carries one is

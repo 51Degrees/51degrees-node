@@ -78,7 +78,8 @@ declare class DataFileUpdateService {
      * hold several, and sends the first request again with the product of the
      * loaded data file added. Only the product is taken from the response.
      * Where the product is not listed the check fails with an error that
-     * names it and the products listed.
+     * names it and the products listed. A response that lists no product is
+     * any other response, and the check fails with its status code.
      *
      * @param {DataFile} dataFile the data file being updated
      * @param {string} updateUrl the URL of the first request

@@ -69,8 +69,9 @@ class TestEngine {
 //
 // The options change the answers. 'body' is sent with the 300 in place of
 // the list, 'uris' are listed in place of one for each product, 'always300'
-// answers 300 to a request that names a product too, and 'notModified'
-// answers 304 to one.
+// answers 300 to a request that names a product too, 'notModified'
+// answers 304 to one, and 'cutShort' closes the connection part way through
+// the 300.
 const distributor = (products, options = {}) => new Promise((resolve) => {
   const requests = [];
   const server = http.createServer((request, response) => {
@@ -81,6 +82,13 @@ const distributor = (products, options = {}) => new Promise((resolve) => {
     const asked = new URL(request.url, 'http://127.0.0.1');
     const product = asked.searchParams.get('Product');
     const multipleChoices = () => {
+      if (options.cutShort) {
+        // The start of a list, and then the connection closes.
+        response.writeHead(300, { 'content-length': '1000' });
+        response.write('{"AvailableUris":[');
+        setTimeout(() => request.socket.destroy(), 50);
+        return;
+      }
       response.statusCode = 300;
       response.setHeader('Content-Type', 'application/json');
       if (options.location) {
@@ -183,7 +191,10 @@ describe('license keys that hold several products', () => {
       updateUrl
     };
     if (updateProduct !== undefined) {
-      dataFile.getUpdateProduct = () => updateProduct;
+      // A function is the data file's own way of giving its product.
+      dataFile.getUpdateProduct = typeof updateProduct === 'function'
+        ? updateProduct
+        : () => updateProduct;
     }
     const done = new Promise((resolve) => {
       service.once('updateComplete', (status) => resolve(status));
@@ -369,6 +380,109 @@ describe('license keys that hold several products', () => {
         logged(remote) + "' for engine 'TestEngine'"
     ]);
     expect(remote.requests).toHaveLength(1);
+    expectNoKeyLogged();
+  });
+
+  // A list that gives no product is no list to choose from, so the 300 is
+  // any other response and not a product that is not offered.
+  test.each([
+    ['lists no product',
+      ['http://127.0.0.1:9/api/v2/download?Type=HashV41', 7]],
+    ['lists nothing', []]
+  ])('gives the status code when the 300 response %s', async (name, uris) => {
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC'], { uris });
+
+    const status = await update(remote, 'V4TAC');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    expect(errors()).toEqual([
+      CHECK_ERROR + "HTTP status code '300' from data update service at '" +
+        logged(remote) + "' for engine 'TestEngine'"
+    ]);
+    expect(remote.requests).toHaveLength(1);
+    expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+    expectNoKeyLogged();
+  });
+
+  test('logs the second request as a request, with the URL it is sent to',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+
+      const status = await update(remote, 'V4TAC');
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+      // The first request and the choice of the product name the URL of the
+      // first request. The second request names its own URL, which has the
+      // product added.
+      expect(messages('info').filter((message) =>
+        /^(Checking for update from|Requesting product) /.test(message)))
+        .toEqual([
+          "Checking for update from '" + logged(remote) +
+            "' for Engine 'TestEngine'",
+          "Requesting product 'V4TAC' from '" + logged(remote) +
+            "' for Engine 'TestEngine'",
+          "Checking for update from '" +
+            logged(remote, QUERY_WITH_PRODUCT) + "' for Engine 'TestEngine'"
+        ]);
+      expectNoKeyLogged();
+    });
+
+  test('reports an error the data file raises when asked for its product',
+    async () => {
+      const remote = await serve(['IPIV4Enterprise', 'V4TAC']);
+
+      const status = await update(remote, () => {
+        throw new Error('no product');
+      });
+
+      expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
+      expect(errors()).toHaveLength(1);
+      expect(errors()[0]).toContain('An unhandled error occurred while ' +
+        "checking for automatic updates for engine 'TestEngine'");
+      expect(remote.requests).toHaveLength(1);
+      expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
+      expectNoKeyLogged();
+    });
+
+  test('does not read a list of more than 65,536 bytes', async () => {
+    // The list offers the product, and is longer than is read, so what is
+    // read of it is not JSON.
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC'], {
+      body: JSON.stringify({
+        AvailableUris: [
+          'http://127.0.0.1:9/api/v2/download?Type=HashV41&Product=V4TAC'
+        ],
+        Padding: 'x'.repeat(70000)
+      })
+    });
+
+    const status = await update(remote, 'V4TAC');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    expect(errors()).toEqual([
+      CHECK_ERROR + "HTTP status code '300' from data update service at '" +
+        logged(remote) + "' for engine 'TestEngine'"
+    ]);
+    expect(remote.requests).toHaveLength(1);
+    expectNoKeyLogged();
+  });
+
+  test('reports a 300 response that closes before it ends', async () => {
+    const remote = await serve(['IPIV4Enterprise', 'V4TAC'],
+      { cutShort: true });
+    const statuses = [];
+    service.on('updateComplete', (status) => statuses.push(status));
+
+    const status = await update(remote, 'V4TAC');
+
+    expect(status).toBe(AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    expect(statuses).toEqual([AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR]);
+    expect(errors()).toHaveLength(1);
+    expect(errors()[0]).toContain(
+      "Error accessing data update service at '" + logged(remote) +
+      "' for engine 'TestEngine'");
+    expect(remote.requests).toHaveLength(1);
+    expect(fs.readFileSync(file, 'utf8')).toBe('version 1');
     expectNoKeyLogged();
   });
 
