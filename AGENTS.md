@@ -262,6 +262,15 @@ check, [`ci/tests/environmentVariableNames.test.js`](ci/tests/environmentVariabl
 list of its own. Where the two differ, common-ci's list is the one to
 follow.
 
+The staging tests read two CI-only names, which have no `_51DEGREES_` prefix
+because no customer sets them. `CLOUD_STAGING_ENDPOINT` is an organization
+variable holding the staging cloud's API base, ending `/api/v4/`, and
+`RESOURCE_KEY_BESPOKE_STAGING` is an organization secret holding a Bespoke
+resource key the staging cloud resolves. Only the Human Confidence tests that
+call the staging cloud read them, and only
+[`cloud-human-confidence.yml`](.github/workflows/cloud-human-confidence.yml)
+sets them. Never write the staging cloud's address into a file.
+
 ## Package references
 
 `package.json` refers to the other packages here by path, so the workspace links
@@ -362,6 +371,17 @@ when `rc` itself or the release pull request is built, which
 The Selenium contract tests run on .NET, so `ci/setup-environment.ps1` leaves
 it installed when it frees disk space, and `ci/run-integration-tests.ps1`
 fails unless `dotnet test` reports a test that passed.
+
+The Human Confidence web example's live tests call the staging cloud, because
+the production cloud does not serve HumanConfidenceSource yet. Their files end
+`.staging.integration.test.js`, and `npm run integration-test` leaves them
+out. common-ci's export step passes on only `_51DEGREES_` names and the CI
+secrets on its own list, so the staging names never reach the shared flow.
+The Cloud Human Confidence workflow
+(`.github/workflows/cloud-human-confidence.yml`) runs them nightly and on a
+pull request that changes the example or those tests, and fails when a name
+is empty or no test ran. Once production serves HumanConfidenceSource, the
+tests move back to `_51DEGREES_CLOUD_ENDPOINT` and the integration tests.
 
 ## Releases
 

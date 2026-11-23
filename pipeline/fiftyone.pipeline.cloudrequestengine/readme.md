@@ -86,6 +86,15 @@ npm test
 The integration tests read the resource key from the
 `_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable.
 
+The Human Confidence web example's live tests, whose files end
+`.staging.integration.test.js`, call the staging cloud service instead,
+because the production cloud does not serve HumanConfidenceSource yet. They
+read the API base from `CLOUD_STAGING_ENDPOINT`, the Bespoke key from
+`RESOURCE_KEY_BESPOKE_STAGING` and the Basic key from
+`_51DEGREES_RESOURCE_KEY_BASIC`. The first two are CI-only names, set by the
+Cloud Human Confidence workflow, so `npm run integration-test` at the
+repository root leaves these tests out.
+
 ## Pointing the engine at another host
 
 The engine calls `https://cloud.51degrees.com/api/v4/` unless the `baseURL`
