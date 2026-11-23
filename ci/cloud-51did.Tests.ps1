@@ -10,7 +10,7 @@
 BeforeAll {
     $workflow = Join-Path $PSScriptRoot '..' '.github' 'workflows' 'cloud-51did.yml'
     $lines = @(Get-Content -LiteralPath $workflow)
-    $name = $lines | Select-String -SimpleMatch 'name: Cloud 51Did test for each resource key secret' |
+    $name = $lines | Select-String -SimpleMatch 'name: Cloud 51Did test for each resource key' |
         Select-Object -First 1
     $start = $lines[$name.LineNumber..($lines.Count - 1)] |
         Select-String -Pattern '^(\s*)run: \|\s*$' | Select-Object -First 1
@@ -87,7 +87,7 @@ Describe 'the Cloud 51Did step' {
         $result.Calls | Should -BeNullOrEmpty
     }
 
-    # A deployment without 51Did has neither secret. The bespoke pass must
+    # A deployment without 51Did has neither key. The bespoke pass must
     # still run unlicensed and pass, with no 51Did pass and no error.
     It 'runs the bespoke pass alone when both 51Did keys are empty' {
         $env:_51DEGREES_RESOURCE_KEY_51DID = ''
