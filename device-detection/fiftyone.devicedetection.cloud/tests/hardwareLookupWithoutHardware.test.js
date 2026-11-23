@@ -24,8 +24,9 @@
 // person runs them, against a stand-in for the cloud service on this
 // machine. The stand-in's list of accessible properties has no hardware
 // element, as for a resource key without the hardware lookup. Each example
-// must say so in one line and end normally without making a lookup. No real
-// key and no network are used.
+// must say so in one line and end normally without making a lookup, also
+// when the first request for that list failed and the example had to ask
+// again. No real key and no network are used.
 
 const path = require('path');
 
@@ -41,6 +42,15 @@ const {
 const ANSWERS = {
   accessibleProperties: fixture('accessibleproperties-no-hardware.json'),
   evidenceKeys: fixture('evidencekeys.json')
+};
+
+const SERVER_ERROR = 500;
+
+// The first request for the accessible properties fails, and every later
+// one gets the answer for a key without the hardware lookup.
+const FAIL_ONCE_ANSWERS = {
+  accessibleProperties: [SERVER_ERROR, ANSWERS.accessibleProperties],
+  evidenceKeys: ANSWERS.evidenceKeys
 };
 
 // The line the example prints, with its links tagged with the example's
@@ -85,6 +95,36 @@ describe('hardware lookup examples with a key that has no hardware lookup',
         // The example asked the stand-in for the properties, and made no
         // lookup, which is the request for the key's JSON.
         expect(result.requests).toContain('GET /api/v4/accessibleproperties');
+        expect(result.requests.filter((request) => request.endsWith('json')))
+          .toEqual([]);
+      }, TIMEOUT_MS + JEST_MARGIN_MS);
+
+      test(`${file} asks again after a failed request and then says what ` +
+        'the key needs', async () => {
+        const result = await runAgainstStandIn(
+          folder, file, FAIL_ONCE_ANSWERS);
+
+        // What the example printed is shown when it did not end normally.
+        // The failed request is logged, so standard error is not checked.
+        expect({
+          status: result.status,
+          signal: result.signal,
+          printed: result.status === 0 ? '' : printed(result)
+        }).toEqual({ status: 0, signal: null, printed: '' });
+
+        const lines = result.stdout.split(/\r?\n/);
+        expect(lines.filter((line) =>
+          line.includes('HardwarePlatform.Profiles')))
+          .toEqual([expectedLine(folder, file)]);
+        expect(lines.filter((line) =>
+          line.startsWith('Which devices are associated'))).toEqual([]);
+        expect(lines).toContain('Find out more:');
+
+        // The first answer was the failure, so the line came from asking
+        // again.
+        expect(result.requests.filter((request) =>
+          request === 'GET /api/v4/accessibleproperties').length)
+          .toBeGreaterThanOrEqual(2);
         expect(result.requests.filter((request) => request.endsWith('json')))
           .toEqual([]);
       }, TIMEOUT_MS + JEST_MARGIN_MS);
