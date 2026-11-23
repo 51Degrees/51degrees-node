@@ -1,10 +1,10 @@
 name: Cloud 51Did Tests
 
 # Runs the live cloud 51Did integration test
-# (pipeline/fiftyone.pipeline.did/tests/didClient.integration.test.js), which
-# runs once for each resource key passed in below, with the license of the
-# same account where there is one. Both keys carry the FODid product, and
-# the CloudV5FODiD product for the marketing usages. The Basic key is
+# (pipeline/fiftyone.pipeline.did/tests/didClient.integration.test.js) with
+# the 51Did resource key passed in below, and the license of the same
+# account. The key carries the FODid product, and the CloudV5FODiD product
+# for the marketing usages. The Basic key is
 # refused the marketing usages, so it runs only the tier test
 # (tests/tierEntitlement.integration.test.js), which checks that refusal.
 #
@@ -52,9 +52,8 @@ jobs:
           node-version: '20'
       - name: Install
         run: npm install --no-audit --no-fund
-      - name: Cloud 51Did test with each resource key
+      - name: Cloud 51Did test with the 51Did resource key
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
           _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
           # Redeems with the 51Did resource key, which is of the same account.
           _51DEGREES_LICENSE_KEY_51DID: ${{ secrets._51DEGREES_LICENSE_KEY_51DID }}

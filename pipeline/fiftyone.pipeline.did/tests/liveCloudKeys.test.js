@@ -54,9 +54,8 @@ describe('liveCloudKeys', () => {
     }
   });
 
-  test('pairs each resource key with the license of its account', () => {
+  test('pairs the 51Did resource key with the license of its account', () => {
     expect(keys.KEY_PAIRS).toEqual([
-      { resourceKey: '_51DEGREES_RESOURCE_KEY_BESPOKE', licenceKey: null },
       {
         resourceKey: '_51DEGREES_RESOURCE_KEY_51DID',
         licenceKey: '_51DEGREES_LICENSE_KEY_51DID'
@@ -64,21 +63,13 @@ describe('liveCloudKeys', () => {
     ]);
   });
 
-  test('runs once for each resource key that is set', () => {
+  test('runs with the 51Did resource key alone', () => {
+    expect(keys.runs()).toEqual([]);
+    process.env._51DEGREES_RESOURCE_KEY_BESPOKE = 'bespoke-key';
     expect(keys.runs()).toEqual([]);
     process.env._51DEGREES_RESOURCE_KEY_51DID = ' did-key ';
     process.env._51DEGREES_LICENSE_KEY_51DID = 'did-license';
     expect(keys.runs()).toEqual([{
-      name: '_51DEGREES_RESOURCE_KEY_51DID',
-      resourceKey: 'did-key',
-      licenceKey: 'did-license'
-    }]);
-    process.env._51DEGREES_RESOURCE_KEY_BESPOKE = 'bespoke-key';
-    expect(keys.runs()).toEqual([{
-      name: '_51DEGREES_RESOURCE_KEY_BESPOKE',
-      resourceKey: 'bespoke-key',
-      licenceKey: ''
-    }, {
       name: '_51DEGREES_RESOURCE_KEY_51DID',
       resourceKey: 'did-key',
       licenceKey: 'did-license'

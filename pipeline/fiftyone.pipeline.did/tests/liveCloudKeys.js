@@ -32,13 +32,12 @@ const ACCESSIBLE_PROPERTIES_URL =
 // Where to create a resource key.
 const CONFIGURE_URL = 'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-tests-livecloudkeys.js&utm_term=resource-key-required';
 
-// The resource keys the live tests run with, each read under its own name,
+// The resource key the live tests run with, the one for the 51Did service,
 // and the license that redeems with it. A license redeems only within the
-// account of its resource key, so each is paired by name. A key with no
-// license redeems unlicensed. _51DEGREES_LICENSE_KEY is the license for data
-// file downloads, which redeems nothing, so it is not read.
+// account of its resource key, so the two are paired by name. With no
+// license the key redeems unlicensed. _51DEGREES_LICENSE_KEY is the license
+// for data file downloads, which redeems nothing, so it is not read.
 const KEY_PAIRS = [
-  { resourceKey: '_51DEGREES_RESOURCE_KEY_BESPOKE', licenceKey: null },
   {
     resourceKey: '_51DEGREES_RESOURCE_KEY_51DID',
     licenceKey: '_51DEGREES_LICENSE_KEY_51DID'
