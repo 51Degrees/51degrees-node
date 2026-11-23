@@ -56,8 +56,8 @@ jobs:
       - name: Cloud 51Did test for each resource key secret
         shell: pwsh
         env:
-          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ secrets._51DEGREES_RESOURCE_KEY_BESPOKE }}
-          _51DEGREES_RESOURCE_KEY_51DID: ${{ secrets._51DEGREES_RESOURCE_KEY_51DID }}
+          _51DEGREES_RESOURCE_KEY_BESPOKE: ${{ vars._51DEGREES_RESOURCE_KEY_BESPOKE }}
+          _51DEGREES_RESOURCE_KEY_51DID: ${{ vars._51DEGREES_RESOURCE_KEY_51DID }}
           # A license key redeems only with a resource key of the same
           # account, so each is paired with the resource key of the same
           # suffix. With any other resource key the cloud answers unreadable
@@ -113,5 +113,5 @@ jobs:
         # Runs even when the loop above failed, so a run reports both.
         if: ${{ !cancelled() }}
         env:
-          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
+          _51DEGREES_RESOURCE_KEY_BASIC: ${{ vars._51DEGREES_RESOURCE_KEY_BASIC }}
         run: npx jest tests/tierEntitlement.integration.test.js
