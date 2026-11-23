@@ -23,7 +23,8 @@
 // Every environment variable, secret and workflow variable this repository
 // reads or sets is named _51DEGREES_<NAME>, so wherever it appears it is
 // clearly a 51Degrees name. The only others are the names Node, jest,
-// GitHub or PowerShell define, which are listed below.
+// GitHub or PowerShell define, and the secrets only CI uses, which are
+// named for what they do. Both are listed below.
 
 const childProcess = require('child_process');
 const fs = require('fs');
@@ -46,14 +47,17 @@ const NAME_USE = new RegExp('(?:' + [
   '\\bvars\\.'
 ].join('|') + ')([A-Za-z_][A-Za-z0-9_]*)', 'g');
 
-// The names another tool defines, used as that tool requires.
+// The names another tool defines, used as that tool requires, and the
+// secrets only CI uses.
 const PLATFORM_NAMES = new Set([
   // Node
   'NODE_PATH',
   // jest and jest-junit
   'JEST_WORKER_ID', 'JEST_JUNIT_OUTPUT_DIR',
   // GitHub Actions
-  'GITHUB_ACTIONS', 'GITHUB_JOB'
+  'GITHUB_ACTIONS', 'GITHUB_JOB',
+  // The secrets only CI uses, which a customer never sets
+  'NPM_AUTH_TOKEN'
 ]);
 
 // Reading a binary file as text yields no useful name and wastes time, so
@@ -202,6 +206,7 @@ describe('environment variable names', () => {
   it('allows only a 51Degrees name or a platform name', () => {
     expect(isAllowed('_51DEGREES_RESOURCE_KEY_BESPOKE')).toBe(true);
     expect(isAllowed('JEST_WORKER_ID')).toBe(true);
+    expect(isAllowed('NPM_AUTH_TOKEN')).toBe(true);
 
     // The prefix alone names nothing.
     expect(isAllowed('_51DEGREES_')).toBe(false);

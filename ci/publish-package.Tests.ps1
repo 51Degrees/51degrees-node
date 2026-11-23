@@ -120,15 +120,15 @@ BeforeAll {
     # The script reads the npm token from the environment, so it's set for
     # the call and put back afterwards. An empty token leaves it unset.
     function Invoke-Publish($Test, [bool]$DryRun = $false, [string]$Token = 'token') {
-        $before = $env:_51DEGREES_PUBLISH_NPM_AUTH_TOKEN
-        $env:_51DEGREES_PUBLISH_NPM_AUTH_TOKEN = $Token ? $Token : $null
+        $before = $env:NPM_AUTH_TOKEN
+        $env:NPM_AUTH_TOKEN = $Token ? $Token : $null
         Push-Location $Test.Work
         try {
             & "$script:Ci/publish-package.ps1" -RepoName $Test.Repo -OrgName test `
                 -DryRun $DryRun
         } finally {
             Pop-Location
-            $env:_51DEGREES_PUBLISH_NPM_AUTH_TOKEN = $before
+            $env:NPM_AUTH_TOKEN = $before
         }
     }
 
@@ -196,17 +196,17 @@ Describe 'publish-package.ps1' {
         Get-OriginTags $script:Test | Should -Be $script:AllTags
     }
 
-    It 'gives npm the token from _51DEGREES_PUBLISH_NPM_AUTH_TOKEN' {
+    It 'gives npm the token from NPM_AUTH_TOKEN' {
         Reset-Registry
         Invoke-Publish $script:Test -Token 'from-the-environment' | Out-Null
         @($global:TestNpmConfig) |
             Should -Be @('set //registry.npmjs.org/:_authToken from-the-environment')
     }
 
-    It 'publishes nothing when _51DEGREES_PUBLISH_NPM_AUTH_TOKEN is not set' {
+    It 'publishes nothing when NPM_AUTH_TOKEN is not set' {
         Reset-Registry
         { Invoke-Publish $script:Test -Token '' } |
-            Should -Throw '*_51DEGREES_PUBLISH_NPM_AUTH_TOKEN is not set*'
+            Should -Throw 'NPM_AUTH_TOKEN is not set*'
         @($global:TestNpmPublishes) | Should -HaveCount 0
         Get-OriginTags $script:Test | Should -Be ''
     }
