@@ -77,8 +77,11 @@ function Invoke-ContractTests {
         curl -sS -o $(if ($IsWindows) { 'NUL' } else { '/dev/null' }) --retry 20 --retry-delay 3 --retry-max-time 120 --retry-connrefused "http://localhost:$Port"
         if ($LASTEXITCODE -ne 0) { throw "The $Name example did not start on port $Port." }
 
-        $env:EXAMPLE_URL = "http://localhost:$Port"
-        $env:EXAMPLE_LANG = 'node'
+        # The suite reads the running example's address and language under
+        # its _51DEGREES_ names. Without _51DEGREES_EXAMPLE_URL it launches
+        # an example of its own.
+        ${env:_51DEGREES_EXAMPLE_URL} = "http://localhost:$Port"
+        ${env:_51DEGREES_EXAMPLE_LANG} = 'node'
         & $dotnet.Source test selenium-api-tests -c Release --filter TestCategory=Contract |
             Tee-Object -Variable output | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "dotnet test exited with $LASTEXITCODE." }
@@ -93,6 +96,8 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
+        Remove-Item env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+            -ErrorAction SilentlyContinue
         foreach ($variable in $Environment.Keys) {
             [Environment]::SetEnvironmentVariable($variable, $null)
         }
@@ -104,16 +109,10 @@ if (-not (Test-Path selenium-api-tests)) {
     git clone --depth 1 https://github.com/51Degrees/selenium-api-tests.git
 }
 
-# The suite reads the cloud address when it starts, even when the example it
-# drives does not use the cloud.
-$env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-
 $failed = @()
 
 # Cloud example, pointed at the live cloud.
 if ($env:_51DEGREES_RESOURCE_KEY) {
-    # The shared suite reads the key under this name.
-    $env:PAID_RESOURCE_KEY = $env:_51DEGREES_RESOURCE_KEY
     # The example reads _51DEGREES_RESOURCE_KEY from the environment it
     # inherits. It is not in the list below, because the variables listed
     # are cleared after the run.
@@ -137,12 +136,6 @@ if ($env:_51DEGREES_RESOURCE_KEY) {
 # its files in ./assets).
 $tacDataFile = Join-Path $PWD 'assets' 'TAC-HashV41.hash'
 if (Test-Path $tacDataFile) {
-    # The suite requires a resource key to be set, but the on-premise example
-    # never calls the cloud, so the value is not used. Keep the real one if the
-    # cloud run above set it.
-    if (-not $env:PAID_RESOURCE_KEY) {
-        $env:PAID_RESOURCE_KEY = 'not-used-by-the-on-premise-example'
-    }
     try {
         Invoke-ContractTests `
         -Name 'on-premise' `
