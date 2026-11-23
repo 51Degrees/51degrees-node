@@ -105,31 +105,47 @@ const hasHardwareLookup = async function (hardwareEngine) {
     properties.profiles !== undefined;
 };
 
-// The messages of the errors a cloud request gave, which arrive as a list,
-// as lists within a list, or as an error that holds a list.
-const errorMessages = function (reason) {
+// The errors that stopped the example, which arrive as a list, as lists
+// within a list, or as an error that holds a list.
+const errorsIn = function (reason) {
   if (Array.isArray(reason)) {
-    return [].concat(...reason.map(errorMessages));
+    return [].concat(...reason.map(errorsIn));
   }
   if (reason !== null && typeof reason === 'object' &&
     Array.isArray(reason.errors)) {
-    return errorMessages(reason.errors);
+    return errorsIn(reason.errors);
   }
-  if (reason instanceof Error) {
-    const status = reason.httpStatusCode;
-    return [typeof status === 'number' &&
-      !reason.message.includes(String(status))
-      ? `${reason.message} (status code ${status})`
-      : reason.message];
-  }
-  return [String(reason)];
+  return [reason];
 };
 
-// Ends the example with the error the cloud request gave, as a message
-// rather than a stack trace, and an exit code that says it failed.
+// Whether an error came from a request to the cloud service, which the cloud
+// request engine names CloudRequestError.
+const isCloudRequestError = function (error) {
+  return error instanceof Error && error.name === 'CloudRequestError';
+};
+
+// The text of an error, with the status code the cloud service answered with
+// when the text does not already give one.
+const messageOf = function (error) {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+  const status = error.httpStatusCode;
+  return typeof status === 'number' && !/status code/i.test(error.message)
+    ? `${error.message} (status code ${status})`
+    : error.message;
+};
+
+// Ends the example with the error that stopped it, as a message rather than
+// a stack trace, and an exit code that says it failed. Only errors from
+// requests to the cloud service are described as a failed request.
 const endWithError = function (reason) {
-  console.error('The example stopped because the request to the cloud ' +
-    `service failed. ${errorMessages(reason).join(' ')}`);
+  const errors = errorsIn(reason);
+  const messages = errors.map(messageOf).join(' ');
+  console.error(errors.length > 0 && errors.every(isCloudRequestError)
+    ? 'The example stopped because the request to the cloud service ' +
+      `failed. ${messages}`
+    : `The example stopped: ${messages}`);
   console.log(FIND_OUT_MORE);
   process.exitCode = 1;
 };
