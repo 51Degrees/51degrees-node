@@ -74,6 +74,26 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=find-out-more-contact'
 ].join('\n');
 
+// Printed in place of the lookups when the resource key does not carry the
+// hardware lookup.
+const NO_HARDWARE_LOOKUP =
+  'The resource key does not include HardwarePlatform.Profiles, the ' +
+  'hardware lookup this example needs, so no devices are listed. Create a ' +
+  'resource key that includes it at ' +
+  'https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=no-hardware-lookup, ' +
+  'or contact us about it at ' +
+  'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=no-hardware-lookup.';
+
+// Whether the resource key carries the hardware lookup. The hardware
+// engine's properties come from the cloud service's list of the properties
+// the key can access, so this is known before any lookup is made.
+const hasHardwareLookup = async function (hardwareEngine) {
+  await hardwareEngine.ready();
+  const properties = hardwareEngine.properties;
+  return properties !== undefined && properties !== null &&
+    properties.profiles !== undefined;
+};
+
 const analyseTac = async function (tac, pipeline, output) {
   // Create a flowdata instance.
   const flowData = pipeline.createFlowData();
@@ -91,7 +111,7 @@ const analyseTac = async function (tac, pipeline, output) {
   const profiles = DataExtension.getProfilesHelper(flowData.hardware);
 
   if (profiles.length === 0) {
-    output.write(DataExtension.getNoProfilesMessage());
+    output.write('\tNo devices are associated with this TAC.\n');
     return;
   }
 
@@ -119,7 +139,7 @@ const run = async function (options, output) {
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
       'properties. Once subscribed, a resource key with the properties ' +
       'required by this example can be created at ' +
-      'https://51degrees.com/configure/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
+      'https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
       'environment variable mentioned at the start of this message with the ' +
       'resource key or pass it as the first argument on the command line.'
     );
@@ -143,6 +163,11 @@ const run = async function (options, output) {
   // To monitor the pipeline we can put in listeners for various log events.
   // Valid types are info, debug, warn, error
   pipeline.on('error', console.error);
+
+  if (!await hasHardwareLookup(pipeline.getElement('hardware'))) {
+    output.write(NO_HARDWARE_LOOKUP + '\n');
+    return;
+  }
 
   const tac1 = '35925406';
   const tac2 = '86386802';
