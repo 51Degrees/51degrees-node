@@ -17,7 +17,7 @@
   },
   "scripts": {
     "test": "jest --ci --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura",
-    "lint": "eslint . --ext .js",
+    "lint": "eslint . --ext .js --max-warnings 0 --report-unused-disable-directives",
     "tsc": "tsc -b --force"
   },
   "author": "51Degrees Engineering <engineering@51degrees.com>",
