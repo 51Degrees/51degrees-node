@@ -232,9 +232,10 @@ reads its key from `_51DEGREES_RESOURCE_KEY` instead.
 - **Missing submodules.** The example then says it failed to find a data file
   and asks for `git submodule update --init --recursive`, which fetches them.
   A zip download of the repository has no submodules, so clone with Git.
-- **Warnings are errors on Windows.** Both `binding.51d` files set
-  `win_warn_as_error`, so a compiler newer than the one CI uses can stop the
-  build on a new warning.
+- **Warnings are errors.** Both `binding.51d` files build at MSVC `/W4` with
+  `win_warn_as_error`, and with `-Wall -Werror` on Linux and macOS, and turn
+  no warning off, so a compiler newer than the one CI uses can stop the build
+  on a new warning. Fix the code that gives it rather than turning it off.
 - **An older node-gyp.** Use node-gyp 12 through `npx`, as above. The comment
   in `ci/build-extension.ps1` says older versions do not recognise Visual
   Studio 2026.

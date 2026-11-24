@@ -9,10 +9,6 @@
         'win_warning_level': 4,
         'win_exception_handling': 1,
         'win_warn_as_error': 'true',
-        # Node 26 passes the linker its own '/flto=thin', which link.exe does not know and warns about (LNK4044).
-        'wrapper_win_link_warn_as_error': "<!(node -p \"parseInt(process.versions.node) >= 26 ? 'false' : 'true'\")",
-        'win_warning_ignore_list': [4018, 4100, 4127, 4244, 4302, 4311, 4324, 4459, 4702, 4996], # Only used for SWIG generated files. 4018 and 4324 come from Node 24 V8 headers.
-        'win_debug_additional_ignore_list': [4701, 4702], # Only used for SWIG generated files
         'linux_mac_c_std': '-std=gnu11',
         'linux_mac_cpp_std': '-std=gnu++17',
         # Node 23+ (V8 12.9+) headers require C++20, older versions build with C++17
@@ -30,31 +26,38 @@
                 string += arr[i];\
             }\
             console.log(string);\")",
-            "-Wall"
+            "-Wall",
+            "-Werror"
         ],
-        'linux_mac_c_core_additional_flags': [
-            "-Wno-unused-variable",
-            "-Wno-unused-result",
-            "-Wno-strict-aliasing",
-            "-Wno-ignored-qualifiers",
-            "-Wno-missing-braces",
-            "-Wno-attributes",
-			"-Wno-atomic-alignment"
-        ],
-        'linux_mac_c_wrapper_additional_flags': [
-            "-Wno-ignored-qualifiers",
-            "-Wno-unused-result",
-            "-Wno-attributes",
-            "-Wno-deprecated-declarations"
-        ],
-        'linux_specific_c_core_additional_flags': [
-            "-Wno-unused-but-set-variable"
-        ],
-        'linux_specific_c_wrapper_additional_flags': '-Wno-cast-function-type',
         'mac_specific_flags': [
             "-arch x86_64",
             "-arch arm64"
         ]
+    },
+    # Node's own build settings turn some warnings off for every addon. They
+    # are taken out here so these targets build with every warning the
+    # warning level gives.
+    'target_defaults': {
+        'msvs_disabled_warnings!': [4351, 4355, 4800, 4251, 4275, 4244, 4267],
+        'defines!': ['_CRT_SECURE_NO_DEPRECATE', '_CRT_NONSTDC_NO_DEPRECATE'],
+        'cflags!': ['-Wno-unused-parameter'],
+        'xcode_settings': {
+            'WARNING_CFLAGS!': ['-Wno-unused-parameter']
+        },
+        # Node 26's build settings ask for clang's thin LTO and profile
+        # guided optimisation, which MSVC does not know. The linker warns
+        # about each option (LNK4044), so they are taken out.
+        'msvs_settings': {
+            'VCCLCompilerTool': {
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+            },
+            'VCLibrarianTool': {
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+            },
+            'VCLinkerTool': {
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+            }
+        }
     },
     'targets': [
         {
@@ -118,12 +121,10 @@
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_core_additional_flags)',
                             '<@(mac_specific_flags)',
                             '<(linux_mac_c_std)'],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_core_additional_flags)',
                             '<@(mac_specific_flags)',
                             '<(linux_mac_cpp_std)']
                     }
@@ -133,9 +134,7 @@
                     'cflags_cc': ['<(linux_mac_cpp_std)'],
                     'cflags_c': ['<(linux_mac_c_std)'],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)',
-                        '<@(linux_mac_c_core_additional_flags)',
-                        '<@(linux_specific_c_core_additional_flags)'
+                        '<@(linux_mac_c_common_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]
@@ -150,8 +149,17 @@
                 "ipi_node_wrap.cxx",
             ],
             'dependencies': ['<(core_lib_name)'],
-            # The IP intelligence data format uses 64 bit file offsets.
-            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT', 'FIFTYONE_DEGREES_REDUCED_FILE' ],
+            'defines': [
+                # The IP intelligence data format uses 64 bit file offsets.
+                'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT',
+                'FIFTYONE_DEGREES_REDUCED_FILE',
+                # Stop the SWIG wrapper turning off MSVC's unreferenced
+                # function warning and the deprecation warnings of the C and
+                # C++ runtimes.
+                'SWIG_MSC_UNSUPPRESS_4505',
+                'SWIG_NO_CRT_SECURE_NO_DEPRECATE',
+                'SWIG_NO_SCL_SECURE_NO_DEPRECATE'
+            ],
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],
@@ -165,17 +173,13 @@
                                     'AdditionalOptions': [ '<(wrapper_win_cpp_std)', ],
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'DisableSpecificWarnings': [
-                                        '<@(win_warning_ignore_list)',
-                                        '<@(win_debug_additional_ignore_list)'
-                                    ],
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
                                     'LinkIncremental': 1
                                 }
@@ -188,15 +192,12 @@
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
-                                    'DisableSpecificWarnings': [
-                                        '<@(win_warning_ignore_list)'
-                                    ],
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
                                 }
                             }
@@ -211,13 +212,11 @@
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_wrapper_additional_flags)',
                             '<@(mac_specific_flags)',
                             '<(linux_mac_c_std)'
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_wrapper_additional_flags)',
                             '<@(mac_specific_flags)',
                             '<(wrapper_linux_mac_cpp_std)'
                         ],
@@ -231,9 +230,7 @@
                     'cflags_cc': ['<(wrapper_linux_mac_cpp_std)'],
                     'cflags_c': ['<(linux_mac_c_std)'],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)',
-                        '<@(linux_mac_c_wrapper_additional_flags)',
-                        '<@(linux_specific_c_wrapper_additional_flags)'
+                        '<@(linux_mac_c_common_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]
