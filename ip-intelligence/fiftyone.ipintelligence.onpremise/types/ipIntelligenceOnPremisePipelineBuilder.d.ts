@@ -19,6 +19,10 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * @param {string} options.dataFile dataFile path for the on premise engine
      * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
      * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
+     * @param {string} [options.dataUpdateProduct] the product to ask the data
+     * update service for, such as IPIV4Enterprise. When it is set, every
+     * request for a data file carries it in a Product parameter. With none
+     * set, the first request names no product.
      * @param {boolean} [options.autoUpdate] whether to autoUpdate the dataFile
      * @param {string} [options.dataUpdateUrl] base url for the datafile
      * update service
@@ -54,11 +58,12 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * DataFileUpdateService so the datafiles can receive
      * automatic updates
      */
-    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, createTempDataCopy, tempDataDir }: {
+    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, dataUpdateProduct, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, createTempDataCopy, tempDataDir }: {
         licenceKeys?: string;
         dataFile: string;
         dataUpdateVerifyMd5?: boolean;
         dataUpdateUseUrlFormatter?: boolean;
+        dataUpdateProduct?: string;
         autoUpdate?: boolean;
         dataUpdateUrl?: string;
         pollingInterval?: number;

@@ -24,6 +24,10 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * update service
      * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
      * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
+     * @param {string} [options.dataUpdateProduct] the product to ask the data
+     * update service for, such as IPIV4Enterprise. When it is set, every
+     * request for a data file carries it in a Product parameter. With none
+     * set, the first request names no product.
      * @param {Array<string>|string} options.restrictedProperties list of
      * properties the engine will be restricted to, or one comma separated
      * string of them, as a configuration file gives a list
@@ -55,7 +59,7 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * the datafile on initialisation. If there is no file at dataFilePath it
      * is downloaded, and processing fails if the download does not work.
      */
-    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
+    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, dataUpdateProduct, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
         autoUpdate: boolean;
         pollingInterval: number;
@@ -64,6 +68,7 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
         dataUpdateUrl: string;
         dataUpdateVerifyMd5: boolean;
         dataUpdateUseUrlFormatter: boolean;
+        dataUpdateProduct?: string;
         restrictedProperties: Array<string> | string;
         licenceKeys: string;
         download: boolean;

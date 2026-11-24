@@ -261,6 +261,14 @@ class DeviceDetectionOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
+   * @param {string} [options.dataUpdateProduct] the product to ask the data
+   * update service for, such as V4TAC or V4Enterprise. When it is set,
+   * every request for a data file carries it in a Product parameter. With
+   * none set, the first request names no product, which is all that license
+   * keys holding one product need. License keys that hold several products
+   * are then asked again for the product of the loaded data file, which
+   * cannot be done before a data file is loaded, so set the product when
+   * such keys download the data file on start-up.
    * @param {Array<string>|string} options.restrictedProperties list of
    * properties the engine will be restricted to, or one comma separated
    * string of them, as a configuration file gives a list
@@ -324,6 +332,7 @@ class DeviceDetectionOnPremise extends Engine {
       dataUpdateUrl = constants.dataUpdateUrl,
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
+      dataUpdateProduct,
       restrictedProperties,
       indexedProperties,
       licenceKeys,
@@ -658,6 +667,12 @@ class DeviceDetectionOnPremise extends Engine {
 
     if (licenceKeys) {
       params.licenseKeys = licenceKeys;
+    }
+
+    // A configured product is named in every request. With none, no request
+    // names a product until the data update service lists several.
+    if (dataUpdateProduct) {
+      params.product = dataUpdateProduct;
     }
 
     params.baseURL = dataUpdateUrl;
