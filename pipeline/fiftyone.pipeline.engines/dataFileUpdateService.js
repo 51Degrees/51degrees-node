@@ -26,6 +26,7 @@ const crypto = require('crypto');
 const https = require('https');
 const http = require('http');
 const url = require('url');
+const querystring = require('querystring');
 const EventEmitter = require('events');
 
 const AutoUpdateStatus = require('./autoUpdateStatus');
@@ -47,6 +48,111 @@ const RefreshRetryMilliseconds = 200;
 // because the file may still be being copied.
 const WatchedFileWaitMilliseconds = minToMs(10);
 const WatchedFileRetryMilliseconds = 500;
+
+// The most that is read of a response that lists the products of a license
+// key. A list is a few hundred bytes for each product.
+const MaximumProductListBytes = 65536;
+
+// The responses that send a request on to another address, which a check
+// follows itself, up to this many times. A redirect from https to http is
+// not followed.
+const RedirectStatuses = [301, 302, 303, 307, 308];
+const MaximumRedirects = 20;
+
+/**
+ * The products a data update service lists for license keys that hold
+ * several, from the AvailableUris of its response. Each is the value of the
+ * Product parameter of a URI in the list. Only that value is read from a
+ * URI, and a URI that names no product, or an entry that is not a string,
+ * is ignored.
+ *
+ * @param {string} body the body of the response
+ * @param {string} updateUrl the URL that was asked
+ * @returns {string[] | undefined} the products in the order listed, or
+ * undefined where the body is not JSON with an AvailableUris list
+ */
+const offeredProducts = function (body, updateUrl) {
+  let uris;
+  try {
+    uris = JSON.parse(body).AvailableUris;
+  } catch (e) {
+    return undefined;
+  }
+  if (!Array.isArray(uris)) {
+    return undefined;
+  }
+  const offered = [];
+  for (const uri of uris) {
+    if (typeof uri !== 'string') {
+      continue;
+    }
+    let parsed;
+    try {
+      parsed = new url.URL(uri, updateUrl);
+    } catch (e) {
+      continue;
+    }
+    let product;
+    for (const [name, value] of parsed.searchParams) {
+      if (name.toLowerCase() === 'product') {
+        product = value;
+      }
+    }
+    if (product) {
+      offered.push(product);
+    }
+  }
+  return offered;
+};
+
+/**
+ * The product a URL names in its Product parameter. A data file with a
+ * configured product names it in its update URL, so every request for that
+ * data file carries it.
+ *
+ * @param {url.URL} parsed the URL of a request
+ * @returns {string} the product, or an empty string where the URL names
+ * none
+ */
+const namedProduct = function (parsed) {
+  let product = '';
+  for (const [name, value] of parsed.searchParams) {
+    if (name.toLowerCase() === 'product') {
+      product = value;
+    }
+  }
+  return product;
+};
+
+/**
+ * The URL of a request with the product to ask for added, percent-encoded,
+ * as the last parameter of its query. The rest of the URL is kept as it is
+ * written, apart from a Product parameter the URL already has, which is
+ * taken out so the product is named once. Such a parameter is empty, as
+ * one with a value is a product named already.
+ *
+ * @param {string} updateUrl the URL of the first request
+ * @param {string} product the product to ask for
+ * @returns {string} the URL of the request that names the product
+ */
+const urlForProduct = function (updateUrl, product) {
+  const hash = updateUrl.indexOf('#');
+  const end = hash < 0 ? updateUrl.length : hash;
+  const start = updateUrl.indexOf('?');
+  const added = 'Product=' + encodeURIComponent(product);
+  if (start < 0 || start > end) {
+    return updateUrl.substring(0, end) + '?' + added +
+      updateUrl.substring(end);
+  }
+  const query = updateUrl.substring(start + 1, end);
+  const kept = query === ''
+    ? []
+    : query.split('&').filter((parameter) => querystring.unescape(
+      parameter.split('=')[0]).toLowerCase() !== 'product');
+  kept.push(added);
+  return updateUrl.substring(0, start) + '?' + kept.join('&') +
+    updateUrl.substring(end);
+};
 
 /**
  * The name of the engine a data file belongs to, for log messages.
@@ -434,11 +540,103 @@ class DataFileUpdateService {
    * The message for a data update service that could not be reached.
    *
    * @param {DataFile} dataFile the data file being updated
+   * @param {string} [updateUrl] the URL that was asked, where it is not the
+   * update URL of the data file
    * @returns {string} the message to log
    */
-  accessError (dataFile) {
-    return "Error accessing data update service at '" + dataFile.updateUrl +
+  accessError (dataFile, updateUrl = dataFile.updateUrl) {
+    return "Error accessing data update service at '" + updateUrl +
       "' for engine '" + engineName(dataFile) + "'";
+  }
+
+  /**
+   * Reads the products the data update service lists for license keys that
+   * hold several, and sends the first request again with the product of the
+   * loaded data file added. Only the product is taken from the response.
+   * Where the product is not listed the check fails with an error that
+   * names it and the products listed. A response that lists no product is
+   * any other response, and the check fails with its status code.
+   *
+   * @param {DataFile} dataFile the data file being updated
+   * @param {string} updateUrl the URL of the first request
+   * @param {string | undefined} modifiedSince the If-Modified-Since header
+   * of the first request, if it had one
+   * @param {import('http').IncomingMessage} response the response that
+   * lists the products
+   * @param {number} [redirects] the redirects the check has followed
+   */
+  chooseProduct (dataFile, updateUrl, modifiedSince, response,
+    redirects = 0) {
+    const dataFileUpdateService = this;
+    const forEngine = "' for engine '" + engineName(dataFile) + "'";
+    const chunks = [];
+    let size = 0;
+    let ended = false;
+
+    const failed = function (message, cause) {
+      dataFileUpdateService.log('error', checkErrorText(message, cause));
+      dataFileUpdateService.fail(
+        dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
+    };
+
+    response.on('data', function (chunk) {
+      size += chunk.length;
+      if (size <= MaximumProductListBytes) {
+        chunks.push(chunk);
+      }
+    });
+    response.on('error', function () {
+      // Reported when the response closes.
+    });
+    response.on('end', function () {
+      ended = true;
+      const offered = offeredProducts(
+        Buffer.concat(chunks).toString('utf8'), updateUrl);
+      if (!offered || offered.length === 0) {
+        // No list to choose from, or a list that gives no product, so this
+        // is any other response.
+        failed("HTTP status code '" + response.statusCode +
+          "' from data update service at '" + updateUrl + forEngine);
+        return;
+      }
+
+      // No product is known when no data file is loaded, and none is then
+      // chosen.
+      let wanted = '';
+      try {
+        if (typeof dataFile.getUpdateProduct === 'function') {
+          wanted = String(dataFile.getUpdateProduct() || '');
+        }
+      } catch (e) {
+        dataFileUpdateService.unhandled(dataFile, e);
+        dataFileUpdateService.fail(
+          dataFile, AutoUpdateStatus.AUTO_UPDATE_UNKNOWN_ERROR);
+        return;
+      }
+      const product = wanted === ''
+        ? undefined
+        : offered.find(
+          (name) => name.toLowerCase() === wanted.toLowerCase());
+
+      if (!product) {
+        failed("Product '" + wanted + "' is not offered by data update " +
+          "service at '" + updateUrl + forEngine + ". Products offered: '" +
+          offered.join(',') + "'");
+        return;
+      }
+
+      dataFileUpdateService.log('info', "Requesting product '" + product +
+        "' from '" + updateUrl + "' for Engine '" + engineName(dataFile) +
+        "'");
+      dataFileUpdateService.requestUpdate(
+        dataFile, urlForProduct(updateUrl, product),
+        { modifiedSince, redirects });
+    });
+    response.on('close', function () {
+      if (!ended) {
+        failed(dataFileUpdateService.accessError(dataFile, updateUrl));
+      }
+    });
   }
 
   /**
@@ -487,7 +685,6 @@ class DataFileUpdateService {
    * or request failed
    */
   updateDataFile (dataFile, automatic = false) {
-    const dataFileUpdateService = this;
     dataFile.attemptedDownload = true;
 
     if (dataFile.updating) {
@@ -509,30 +706,75 @@ class DataFileUpdateService {
       return false;
     }
 
+    return this.requestUpdate(dataFile, dataFile.updateUrl);
+  }
+
+  /**
+   * Asks the data update service for new data and applies what it sends.
+   * License keys that hold several products get a list of the products in
+   * place of the data. The request is then sent again, once, with the
+   * product of the loaded data file added. A request whose URL names a
+   * product already, as it does when one is configured for the data file,
+   * is sent once, and a list of products in answer to it is an error.
+   * A response that sends the request on to another address is followed,
+   * and the address that answers is then the URL of the request.
+   *
+   * @param {DataFile} dataFile the data file being updated
+   * @param {string} updateUrl the URL to ask
+   * @param {{modifiedSince: (string | undefined), chooseProduct: (boolean |
+   * undefined), redirects: (number | undefined)}} [repeat] given where the
+   * request is not the first of the check, with the If-Modified-Since
+   * header of the first request, whether a product may still be chosen,
+   * which is not the case once the request names the product chosen, and
+   * the number of redirects followed
+   * @returns {boolean | void} returns false if the request failed
+   */
+  requestUpdate (dataFile, updateUrl, repeat) {
+    const dataFileUpdateService = this;
+
     let urlParts;
     try {
-      urlParts = new url.URL(dataFile.updateUrl);
+      urlParts = new url.URL(updateUrl);
     } catch (e) {
-      this.log('error', checkErrorText(this.accessError(dataFile), e));
+      this.log('error', checkErrorText(
+        this.accessError(dataFile, updateUrl), e));
       this.fail(dataFile, AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
       return false;
     }
+
+    // A request that names a product already, because one is configured for
+    // the data file, has no product to choose.
+    const namesProduct = namedProduct(urlParts) !== '';
+    const mayChoose = !repeat || repeat.chooseProduct === true;
+    const redirects = (repeat && repeat.redirects) || 0;
 
     const requestOptions = urlParts;
 
     let request;
     let modifiedSince;
     try {
-      modifiedSince = dataFile.verifyIfModifiedSince
-        ? ifModifiedSince(dataFile)
-        : undefined;
+      // The request that names the product carries the same header as the
+      // first request.
+      if (repeat) {
+        modifiedSince = repeat.modifiedSince;
+      } else {
+        modifiedSince = dataFile.verifyIfModifiedSince
+          ? ifModifiedSince(dataFile)
+          : undefined;
+      }
       if (modifiedSince) {
         requestOptions.headers = { 'If-Modified-Since': modifiedSince };
       }
 
-      this.log('info', "Checking for update from '" + dataFile.updateUrl +
+      // The request that names the product is logged as the first one is,
+      // with its own URL. The log masks the license keys in it.
+      this.log('info', "Checking for update from '" + updateUrl +
         "' for Engine '" + engineName(dataFile) + "'");
 
+      // The requests are made with the http and https modules of Node.js,
+      // which do not follow a Location header. A redirect is followed
+      // below, but the Location header of a 300 never is, so the product is
+      // the one chosen and not the first one listed.
       if (urlParts.protocol === 'https:') {
         request = https.get(requestOptions);
       } else {
@@ -563,7 +805,8 @@ class DataFileUpdateService {
       }
       dataFileUpdateService.log(
         'error',
-        checkErrorText(dataFileUpdateService.accessError(dataFile), err));
+        checkErrorText(
+          dataFileUpdateService.accessError(dataFile, updateUrl), err));
 
       dataFileUpdateService.fail(
         dataFile,
@@ -572,6 +815,39 @@ class DataFileUpdateService {
 
     request.on('response', function (response) {
       responded = true;
+      // A 300 response to a request that names a product is not followed,
+      // whether the product was configured or read from an earlier 300. It
+      // is any other response.
+      if (response.statusCode === 300 && mayChoose && !namesProduct) {
+        dataFileUpdateService.chooseProduct(
+          dataFile, updateUrl, modifiedSince, response, redirects);
+        return false;
+      }
+      // A request sent on to another address is sent there with the same
+      // If-Modified-Since header, and is logged as a request is. A 300
+      // from there is read as it would be from the first address.
+      if (RedirectStatuses.includes(response.statusCode) &&
+        response.headers.location && redirects < MaximumRedirects) {
+        let next;
+        try {
+          next = new url.URL(response.headers.location, updateUrl);
+        } catch (e) {
+          next = undefined;
+        }
+        // A redirect from https to http is not followed, so the license
+        // keys in the URL stay on https.
+        if (next && !(urlParts.protocol === 'https:' &&
+          next.protocol !== 'https:')) {
+          next = next.href;
+          response.resume();
+          dataFileUpdateService.requestUpdate(dataFile, next, {
+            modifiedSince,
+            chooseProduct: mayChoose,
+            redirects: redirects + 1
+          });
+          return false;
+        }
+      }
       if (response.statusCode !== 200) {
         response.resume();
 
@@ -585,14 +861,14 @@ class DataFileUpdateService {
         switch (response.statusCode) {
           case (429):
             downloadFailed(
-              "Too many requests to '" + dataFile.updateUrl + forEngine,
+              "Too many requests to '" + updateUrl + forEngine,
               AutoUpdateStatus.AUTO_UPDATE_ERR_429_TOO_MANY_ATTEMPTS);
             break;
           case (304):
             dataFileUpdateService.log(
               'info',
               'No data newer than ' + (modifiedSince || 'the current data') +
-              " found at '" + dataFile.updateUrl +
+              " found at '" + updateUrl +
               "' for Engine '" + engineName(dataFile) + "'");
             dataFileUpdateService.fail(
               dataFile,
@@ -601,13 +877,13 @@ class DataFileUpdateService {
           case (403):
             downloadFailed(
               "Access denied to data update service at '" +
-              dataFile.updateUrl + forEngine,
+              updateUrl + forEngine,
               AutoUpdateStatus.AUTO_UPDATE_ERR_403_FORBIDDEN);
             break;
           default:
             downloadFailed(
               "HTTP status code '" + response.statusCode +
-              "' from data update service at '" + dataFile.updateUrl +
+              "' from data update service at '" + updateUrl +
               forEngine,
               AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
             break;
@@ -665,7 +941,7 @@ class DataFileUpdateService {
         output.once('close', function () {
           fs.unlink(filename, function () {
             dataFileUpdateService.log('error', checkErrorText(
-              dataFileUpdateService.accessError(dataFile), cause));
+              dataFileUpdateService.accessError(dataFile, updateUrl), cause));
             dataFileUpdateService.fail(
               dataFile,
               AutoUpdateStatus.AUTO_UPDATE_HTTPS_ERR);
@@ -681,7 +957,7 @@ class DataFileUpdateService {
 
         dataFileUpdateService.log(
           'info',
-          "Downloaded new data from '" + dataFile.updateUrl +
+          "Downloaded new data from '" + updateUrl +
           "' for Engine '" + engineName(dataFile) + "'");
 
         // Open file
@@ -694,7 +970,7 @@ class DataFileUpdateService {
             dataFileUpdateService.log(
               'warn',
               'No MD5 hash included in data update response for ' +
-              "'" + dataFile.updateUrl + "'. Unable to verify data " +
+              "'" + updateUrl + "'. Unable to verify data " +
               'integrity');
             dataFileUpdateService.processFile(dataFile, filename);
             return;

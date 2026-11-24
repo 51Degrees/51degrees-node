@@ -23,8 +23,8 @@
 // Every environment variable, secret and workflow variable this repository
 // reads or sets is named _51DEGREES_<NAME>, so wherever it appears it is
 // clearly a 51Degrees name. The only others are the names Node, jest,
-// GitHub or PowerShell define, and the secrets only CI uses, which are
-// named for what they do. Both are listed below.
+// GitHub or PowerShell define, and the secrets and variables only CI uses,
+// which are named for what they do. Both are listed below.
 
 const childProcess = require('child_process');
 const fs = require('fs');
@@ -47,17 +47,28 @@ const NAME_USE = new RegExp('(?:' + [
   '\\bvars\\.'
 ].join('|') + ')([A-Za-z_][A-Za-z0-9_]*)', 'g');
 
+// The names only CI uses for the Human Confidence tests that call the
+// staging cloud service, which a customer never sets, each with where a
+// workflow fills it from. The staging cloud's API base is an organization
+// variable, and the Bespoke key the staging cloud resolves is an
+// organization secret.
+const STAGING_NAMES = {
+  CLOUD_STAGING_ENDPOINT: 'vars',
+  RESOURCE_KEY_BESPOKE_STAGING: 'secrets'
+};
+
 // The names another tool defines, used as that tool requires, and the
-// secrets only CI uses.
+// secrets and variables only CI uses.
 const PLATFORM_NAMES = new Set([
   // Node
-  'NODE_PATH',
+  'NODE_PATH', 'NODE_OPTIONS',
   // jest and jest-junit
   'JEST_WORKER_ID', 'JEST_JUNIT_OUTPUT_DIR',
   // GitHub Actions
   'GITHUB_ACTIONS', 'GITHUB_JOB',
-  // The secrets only CI uses, which a customer never sets
-  'NPM_AUTH_TOKEN'
+  // The secrets and variables only CI uses, which a customer never sets
+  'NPM_AUTH_TOKEN',
+  ...Object.keys(STAGING_NAMES)
 ]);
 
 // Reading a binary file as text yields no useful name and wastes time, so
@@ -207,6 +218,12 @@ describe('environment variable names', () => {
     expect(isAllowed('_51DEGREES_RESOURCE_KEY_BESPOKE')).toBe(true);
     expect(isAllowed('JEST_WORKER_ID')).toBe(true);
     expect(isAllowed('NPM_AUTH_TOKEN')).toBe(true);
+    expect(isAllowed('CLOUD_STAGING_ENDPOINT')).toBe(true);
+    expect(isAllowed('RESOURCE_KEY_BESPOKE_STAGING')).toBe(true);
+    // Only those two exact names, not one that looks like them.
+    expect(isAllowed('CLOUD_STAGING_ENDPOINT_URL')).toBe(false);
+    expect(isAllowed('RESOURCE_KEY_BESPOKE')).toBe(false);
+    expect(isAllowed('cloud_staging_endpoint')).toBe(false);
 
     // The prefix alone names nothing.
     expect(isAllowed('_51DEGREES_')).toBe(false);
@@ -304,6 +321,41 @@ describe('environment variable names', () => {
       .toBe(true);
     expect(names.some((name) => name.startsWith(PREFIX + 'LICENSE_KEY')))
       .toBe(true);
+    expect(wrong).toEqual([]);
+  });
+
+  it('fills each staging name in a workflow from its own organization ' +
+    'value', () => {
+    // The staging key is a secret and never a variable, so it is never
+    // shown in a log.
+    const stagingAssignment = new RegExp('^\\s*(' +
+      Object.keys(STAGING_NAMES).join('|') + ')\\s*:\\s*(.*?)\\s*$');
+    // The dollar sign is kept apart, as above.
+    const source = (name) =>
+      '$' + '{{ ' + STAGING_NAMES[name] + '.' + name + ' }}';
+    const names = new Set();
+    const wrong = [];
+
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const lines = fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8')
+        .split('\n');
+      lines.forEach((line, index) => {
+        const match = line.match(stagingAssignment);
+        if (match) {
+          names.add(match[1]);
+          if (match[2] !== source(match[1])) {
+            wrong.push(`${file}:${index + 1}: ${match[1]}: ${match[2]}`);
+          }
+        }
+      });
+    }
+
+    // The Cloud Human Confidence workflow fills both, so the test cannot
+    // pass by finding neither.
+    expect([...names].sort()).toEqual(Object.keys(STAGING_NAMES).sort());
     expect(wrong).toEqual([]);
   });
 });

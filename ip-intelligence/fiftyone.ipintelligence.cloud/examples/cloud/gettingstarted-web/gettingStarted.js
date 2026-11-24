@@ -106,7 +106,7 @@ const setPipeline = (options) => {
   const resourceKey = optionsExtension.getResourceKey(options);
 
   if (!resourceKey || resourceKey.startsWith('!!')) {
-    throw NO_RESOURCE_KEY_MESSAGE;
+    throw new Error(NO_RESOURCE_KEY_MESSAGE);
   }
 
   // Usage sharing is on, as this example's 51d.json names the usage sharing

@@ -43,10 +43,10 @@ test('the cloud star sign example gives each star sign from the service',
       });
 
     expect(run.error).toBeUndefined();
-    // What the example wrote to stderr is shown when its status is wrong,
-    // so a failure says why.
+    // The example writes nothing to stderr, and what it wrote is shown
+    // when it did, so a failure says why.
     expect({ status: run.status, stderr: run.stderr })
-      .toEqual({ status: 0, stderr: expect.any(String) });
+      .toEqual({ status: 0, stderr: '' });
     expect(run.stdout).toContain(
       'Date of birth 1990-12-25, star sign capricorn');
     expect(run.stdout).toContain(

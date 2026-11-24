@@ -311,7 +311,7 @@ class TranslationEngine extends FlowElement {
    *
    * @param {*} value the value given
    * @returns {string} the MissingTranslationBehavior value
-   * @throws {string} when the value names no MissingTranslationBehavior
+   * @throws {Error} when the value names no MissingTranslationBehavior
    */
   static toMissingTranslationBehavior (value) {
     if (value === undefined || value === null) {

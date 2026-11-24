@@ -44,12 +44,12 @@ class DeviceDetectionOnPremise {
   }
 }
 
-// What reading the Property threw.
+// The message of the error reading the Property threw.
 const thrown = (key, product) => {
   try {
     new MissingPropertyService().check(key, new DeviceDetectionOnPremise(product));
   } catch (e) {
-    return e;
+    return e.message;
   }
   return undefined;
 };

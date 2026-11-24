@@ -20,13 +20,16 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// The Human Confidence web example's passive route, run against the live
-// cloud service with a resource key outside the Bespoke product, which gets
-// no HumanConfidenceSource. The key is read from
-// _51DEGREES_RESOURCE_KEY_BASIC alone. The Cloud 51Did workflow is the only
-// place that key is set, so the integration-test script leaves this file
-// out, and it is run with jest on its own. It fails rather than skips with
-// no key. The key is never printed.
+// The Human Confidence web example's passive route, run against the
+// staging cloud service with a resource key outside the Bespoke product,
+// which gets no HumanConfidenceSource. The example reads a property the
+// answer leaves out as null, the same as one the answer gives as null, so
+// the test also reads the cloud's own answer. That answer has to carry
+// HumanConfidenceSource as null with a reason, which a cloud that does not
+// serve the property leaves out. It reads the service from
+// CLOUD_STAGING_ENDPOINT and the key from _51DEGREES_RESOURCE_KEY_BASIC
+// alone, and fails rather than skips when either is not set. The key is
+// never printed.
 
 const { demoRoutes } = require('../examples/human-confidence-web/server');
 const keys = require('./liveCloudKeys');
@@ -36,22 +39,31 @@ const BASIC_KEY_NAME = '_51DEGREES_RESOURCE_KEY_BASIC';
 
 const resource = keys.findKey(BASIC_KEY_NAME);
 
-describe('Human Confidence example with a key outside Bespoke', () => {
+describe('Human Confidence example on the staging cloud service with a ' +
+  'key outside Bespoke', () => {
   jest.setTimeout(30000);
 
-  test('the passive answer carries no source', async () => {
+  test('the cloud answers the source as null, with a reason', async () => {
+    const api = live.stagingApi();
     if (!resource) {
-      throw new Error(keys.noKeyMessage(BASIC_KEY_NAME, 'Basic',
+      throw new Error(live.noKeyMessage(BASIC_KEY_NAME, 'Basic',
         'HumanConfidenceSource, to check that a key outside Bespoke gets ' +
         'none'));
     }
+    const cloud = live.keepingAnswers();
     const response = live.fakeResponse();
     await demoRoutes({
-      resource, license: '', api: live.api, fetch: live.namingTheProperties
+      resource, license: '', api, fetch: cloud.fetch
     }).passive(live.visitor, response);
 
     const answer = JSON.parse(response.body);
     expect(answer.error).toBeUndefined();
     expect(answer.source).toBeNull();
+
+    expect(cloud.bodies).toHaveLength(1);
+    const derived = JSON.parse(cloud.bodies[0]).derived;
+    expect(derived).toHaveProperty('humanconfidencesource', null);
+    expect(derived.humanconfidencesourcenullreason)
+      .toEqual(expect.stringMatching(/\S/));
   });
 });

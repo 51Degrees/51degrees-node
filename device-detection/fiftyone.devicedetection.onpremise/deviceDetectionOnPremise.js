@@ -261,6 +261,14 @@ class DeviceDetectionOnPremise extends Engine {
    * update service
    * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
    * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
+   * @param {string} [options.dataUpdateProduct] the product to ask the data
+   * update service for, such as V4TAC or V4Enterprise. When it is set,
+   * every request for a data file carries it in a Product parameter. With
+   * none set, the first request names no product, which is all that license
+   * keys holding one product need. License keys that hold several products
+   * are then asked again for the product of the loaded data file, which
+   * cannot be done before a data file is loaded, so set the product when
+   * such keys download the data file on start-up.
    * @param {Array<string>|string} options.restrictedProperties list of
    * properties the engine will be restricted to, or one comma separated
    * string of them, as a configuration file gives a list
@@ -324,6 +332,7 @@ class DeviceDetectionOnPremise extends Engine {
       dataUpdateUrl = constants.dataUpdateUrl,
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
+      dataUpdateProduct,
       restrictedProperties,
       indexedProperties,
       licenceKeys,
@@ -355,11 +364,11 @@ class DeviceDetectionOnPremise extends Engine {
     }
 
     if (typeof cache !== 'undefined') {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
 
     if (typeof dataFilePath === 'undefined') {
-      throw errorMessages.dataFilePathRequired;
+      throw new Error(errorMessages.dataFilePathRequired);
     }
     // Only polling and the update on start-up download from the
     // Distributor, so only they need a license key. The file system
@@ -376,8 +385,9 @@ class DeviceDetectionOnPremise extends Engine {
         needKey.push('updateOnStart');
       }
       if (needKey.length > 0) {
-        throw util.format(errorMessages.licenseKeyRequiredForUpdates,
-          needKey.join(', '), needKey.join(' and '));
+        throw new Error(util.format(
+          errorMessages.licenseKeyRequiredForUpdates,
+          needKey.join(', '), needKey.join(' and ')));
       }
     }
     // A file that is not there is downloaded when the engine updates on
@@ -387,7 +397,7 @@ class DeviceDetectionOnPremise extends Engine {
       (licenceKeys && licenceKeys.length > 0));
     const fileMissing = fs.existsSync(dataFilePath) === false;
     if (fileMissing && !downloadsOnStart) {
-      throw util.format(errorMessages.fileNotFound, dataFilePath);
+      throw new Error(util.format(errorMessages.fileNotFound, dataFilePath));
     }
     // look at dataFile extension to detect type
     const ext = path.parse(dataFilePath).ext;
@@ -400,7 +410,8 @@ class DeviceDetectionOnPremise extends Engine {
 
       // Check if the directory containing the native modules exists.
       if (fs.existsSync(moduleDir) === false) {
-        throw util.format(errorMessages.moduleDirNotFound, moduleDir, moduleName);
+        throw new Error(util.format(
+          errorMessages.moduleDirNotFound, moduleDir, moduleName));
       } else {
         // Try to load the native module for the current platform
         // and node version.
@@ -432,16 +443,16 @@ class DeviceDetectionOnPremise extends Engine {
           }
 
           // Let the user know what's gone wrong.
-          throw util.format(
+          throw new Error(util.format(
             errorMessages.nativeModuleNotFound,
             moduleName,
             availableModules,
-            err);
+            err));
         }
       }
       dataFileType = 'HashV41';
     } else {
-      throw errorMessages.invalidFileExtension;
+      throw new Error(errorMessages.invalidFileExtension);
     }
 
     // Create vector for restricted properties
@@ -475,9 +486,9 @@ class DeviceDetectionOnPremise extends Engine {
         config.setHighPerformance();
         break;
       default:
-        throw util.format(
+        throw new Error(util.format(
           errorMessages.invalidPerformanceProfile,
-          performanceProfile);
+          performanceProfile));
     }
 
     // If auto update is enabled then we must use a temporary copy of the file
@@ -658,6 +669,12 @@ class DeviceDetectionOnPremise extends Engine {
 
     if (licenceKeys) {
       params.licenseKeys = licenceKeys;
+    }
+
+    // A configured product is named in every request. With none, no request
+    // names a product until the data update service lists several.
+    if (dataUpdateProduct) {
+      params.product = dataUpdateProduct;
     }
 
     params.baseURL = dataUpdateUrl;

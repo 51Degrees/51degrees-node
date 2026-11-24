@@ -23,6 +23,7 @@
 const path = require('path');
 const http = require('http');
 const RequestClient = require('../requestClient');
+const RequestClientError = require('../requestClientError');
 const { default: each } = require('jest-each');
 
 // CloudEngine does not use relative path to import module so update the module
@@ -243,4 +244,55 @@ each([
         })
         .then(() => done(), done);
     });
+  });
+
+/**
+ * Sends a request with the client and gives back what it rejects with.
+ *
+ * @param {string} method get or post
+ * @param {string} url the address to send the request to
+ * @returns {Promise<*>} the value the request rejects with, or undefined
+ * if it resolves
+ */
+const rejection = function (method, url) {
+  const client = new RequestClient();
+  const request = method === 'get'
+    ? client.get(url)
+    : client.post(url, {});
+  return request.then(() => undefined, (reason) => reason);
+};
+
+// A caller reads the status, headers and content of a failed request from
+// an Error, so it can handle it as it handles any other error.
+each([['get'], ['post']])
+  .test('%s - a failure status rejects with an Error', async (method) => {
+    server.addListener('request', (req, res) => {
+      res.writeHead(503, { 'x-reason': 'down' });
+      res.end('service down');
+    });
+    await new Promise((resolve) => server.listen(GET_PORT, resolve));
+    const error = await rejection(method, `http://localhost:${GET_PORT}`);
+    expect(error).toBeInstanceOf(RequestClientError);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.statusCode).toBe(503);
+    expect(error.headers['x-reason']).toBe('down');
+    expect(error.content).toBe('service down');
+    expect(error.message).toBe('The request failed with status 503');
+  });
+
+// A request that gets no answer has no status or headers, and its content
+// is the reason it failed.
+each([['get'], ['post']])
+  .test('%s - a request with no answer rejects with an Error', async (method) => {
+    await new Promise((resolve) => server.listen(0, resolve));
+    const port = server.address().port;
+    await new Promise((resolve) => server.close(resolve));
+    server = undefined;
+    const error = await rejection(method, `http://localhost:${port}`);
+    expect(error).toBeInstanceOf(RequestClientError);
+    expect(error.statusCode).toBeUndefined();
+    expect(error.headers).toBeUndefined();
+    expect(error.content).toContain('ECONNREFUSED');
+    expect(error.message).toBe(error.content);
+    expect(error.cause.code).toBe('ECONNREFUSED');
   });

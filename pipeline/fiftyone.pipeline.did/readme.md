@@ -860,10 +860,9 @@ or past it, or fails its signature check.
 
 `npm test` runs the unit tests, which use an injected transport and touch no
 network. `tests/didClient.integration.test.js` runs against the live cloud
-once for each of `_51DEGREES_RESOURCE_KEY_BESPOKE` and
-`_51DEGREES_RESOURCE_KEY_51DID` that is set, and fails when neither is. With
-`_51DEGREES_RESOURCE_KEY_51DID` it redeems with the license in
-`_51DEGREES_LICENSE_KEY_51DID`. Each key has to carry
+with the resource key in `_51DEGREES_RESOURCE_KEY_51DID`, and fails when it
+is not set. It redeems with the license in `_51DEGREES_LICENSE_KEY_51DID`
+when that is set. The key has to carry
 the FODid product, and the CloudV5FODiD product for the marketing usages.
 `tests/tierEntitlement.integration.test.js` checks what a Basic tier key is
 given, with the key in `_51DEGREES_RESOURCE_KEY_BASIC`.

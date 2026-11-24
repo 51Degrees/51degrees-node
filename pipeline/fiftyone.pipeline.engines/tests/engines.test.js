@@ -88,7 +88,7 @@ test('restricted properties', done => {
     try {
       flowData.get('testEngine').get('two');
     } catch (e) {
-      expect(e).toBe("Property 'two' not found in data for element " +
+      expect(e.message).toBe("Property 'two' not found in data for element " +
         "'testEngine'. This is because the property has been excluded when " +
         'configuring the engine.');
     }
@@ -124,7 +124,7 @@ test('restricted properties are compared ignoring case', async () => {
   try {
     caseFlowData.get('caseEngine').get('two');
   } catch (e) {
-    expect(e).toBe("Property 'two' not found in data for element " +
+    expect(e.message).toBe("Property 'two' not found in data for element " +
       "'caseEngine'. This is because the property has been excluded when " +
       'configuring the engine.');
   }
@@ -136,7 +136,7 @@ test('missing property service', done => {
     try {
       flowData.get('testEngine').get('three');
     } catch (e) {
-      expect(e).toBe("Property 'three' not found in data for element " +
+      expect(e.message).toBe("Property 'three' not found in data for element " +
         "'testEngine'. The reason for this is unknown. Please check that " +
         'the aspect and property name are correct.');
     }

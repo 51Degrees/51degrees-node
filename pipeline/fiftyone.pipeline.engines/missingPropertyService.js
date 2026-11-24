@@ -60,7 +60,7 @@ class MissingPropertyService {
    * @param {string} key property key
    * @param {FlowElement} flowElement flowelement the data
    * was requested in
-   * @throws {string} the message saying why the Property is missing
+   * @throws {Error} the message saying why the Property is missing
    */
   check (key, flowElement) {
     const dataKey = flowElement === undefined
@@ -78,12 +78,12 @@ class MissingPropertyService {
     if (property !== undefined) {
       const tiers = this.tiersWithProperty(property, flowElement);
       if (tiers === undefined) {
-        throw format(errorMessages.missingPropertyExcluded);
+        throw new Error(format(errorMessages.missingPropertyExcluded));
       }
-      throw tiers.length === 0
+      throw new Error(tiers.length === 0
         ? format(errorMessages.missingPropertyUpgradeNoTiers)
         : format(errorMessages.missingPropertyUpgrade, tiers.join(','),
-          flowElement.constructor.name);
+          flowElement.constructor.name));
     }
 
     if (this._isCloudEngine(flowElement)) {
@@ -96,17 +96,17 @@ class MissingPropertyService {
           Object.keys(cloud.flowElementProperties).length > 0);
       if (loaded) {
         const names = Object.keys(flowElement.properties || {});
-        throw names.length === 0
+        throw new Error(names.length === 0
           ? format(errorMessages.missingPropertyProduct, dataKey)
           : format(errorMessages.missingPropertyNotIncluded, dataKey,
-            names.join(','));
+            names.join(',')));
       }
       if (flowElement.errors !== undefined) {
-        throw format(errorMessages.missingPropertyCloudRequestFailed);
+        throw new Error(format(errorMessages.missingPropertyCloudRequestFailed));
       }
     }
 
-    throw format(errorMessages.missingPropertyUnknown);
+    throw new Error(format(errorMessages.missingPropertyUnknown));
   }
 
   /**

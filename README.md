@@ -112,18 +112,24 @@ npm run tsc
 
 The tests that use the cloud need a Resource Key, which is read from the
 `_51DEGREES_RESOURCE_KEY_BESPOKE` environment variable. See each folder's readme for
-the keys and data files its tests use.
+the keys and data files its tests use. The Human Confidence tests that call
+the staging cloud read CI-only names, so `npm run integration-test` leaves
+them out, as the
+[cloud request engine's readme](pipeline/fiftyone.pipeline.cloudrequestengine/readme.md#tests)
+says.
 
 ## Regenerating the SWIG wrappers
 
 The wrappers are generated and must not be edited by hand. Use SWIG 4.5.0
-(https://www.swig.org), and run:
+(https://www.swig.org), and run the commands below. The `swig` folder
+holds copies of SWIG's runtime files and fragments that SWIG reads ahead of
+its own, changed so the wrappers build with no compiler warning.
 
 ```
 cd device-detection/fiftyone.devicedetection.onpremise
-swig -c++ -javascript -node hash_node.i
+swig -c++ -javascript -node -I../../swig hash_node.i
 cd ../../ip-intelligence/fiftyone.ipintelligence.onpremise
-swig -c++ -javascript -node ipi_node.i
+swig -c++ -javascript -node -I../../swig ipi_node.i
 ```
 
 ## History

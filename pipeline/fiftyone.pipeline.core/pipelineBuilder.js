@@ -168,7 +168,7 @@ class PipelineBuilder {
    *
    * @param {object} config a JSON configuration object
    * @returns {Pipeline} the constructed pipeline
-   * @throws {string|Error} "Can't find" and the name, when an element the
+   * @throws {Error} "Can't find" and the name, when an element the
    * configuration names cannot be required by that name or as a path from
    * the working folder, and the error an element's constructor throws
    */

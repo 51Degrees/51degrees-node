@@ -31,6 +31,7 @@ const path = require('path');
 const MockRequestClient = require('./classes/mockRequestClient');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const CloudEngine = require('../cloudEngine');
+const RequestClientError = require('../requestClientError');
 const PipelineBuilder = require(
   path.resolve(__dirname, '../../fiftyone.pipeline.core/pipelineBuilder'));
 
@@ -54,7 +55,9 @@ class RecoveringClient extends MockRequestClient {
 
   get (url, origin) {
     if (this.down) {
-      return Promise.reject({ statusCode: 503, headers: {}, content: '' }); // eslint-disable-line prefer-promise-reject-errors -- rejects with the response shape the client uses, not an Error
+      return Promise.reject(new RequestClientError(
+        'The request failed with status 503',
+        { statusCode: 503, headers: {}, content: '' }));
     }
     return super.get(url, origin);
   }

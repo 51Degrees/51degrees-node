@@ -17,6 +17,7 @@
   "author": "51Degrees Engineering <engineering@51degrees.com>",
   "license": "EUPL-1.2",
   "jest": {
+    "globalSetup": "<rootDir>/../ci/jestGlobalSetup.js",
     "setupFilesAfterEnv": [
       "./setup.js"
     ]

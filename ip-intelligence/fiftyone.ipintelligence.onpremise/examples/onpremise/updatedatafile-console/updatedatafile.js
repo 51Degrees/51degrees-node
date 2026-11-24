@@ -164,21 +164,30 @@ const KeyUtils = require51('fiftyone.ipintelligence.shared').keyUtils;
  * - [fiftyone.ipintelligence.onpremise](https://www.npmjs.com/package/fiftyone.ipintelligence.onpremise)
  */
 
-// The variable that holds the licence key.
+// The variable that holds the license key.
 const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
 
-// Reads the licence key from the environment.
+// Reads the license key from the environment.
 const getLicenseKey = function () {
   return process.env[LICENSE_KEY_VARIABLE] || undefined;
+};
+
+// The variable that holds the product to download, such as IPIV4Enterprise.
+const PRODUCT_VARIABLE = '_51DEGREES_IPI_PRODUCT';
+
+// Reads the product to download from the environment, or undefined when it
+// is not set.
+const getProduct = function () {
+  return process.env[PRODUCT_VARIABLE] || undefined;
 };
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
 
-// The free data file shown when there is no licence key. The ASN data file
+// The free data file shown when there is no license key. The ASN data file
 // is far smaller than the Lite data file.
 const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
 
-// Where to ask for a licence key and a copy of the Enterprise data file,
+// Where to ask for a license key and a copy of the Enterprise data file,
 // tagged with this example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licence-key';
 
@@ -195,7 +204,7 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=find-out-more-contact'
 ].join('\n');
 
-// Without a licence key the example cannot download a data file, so it
+// Without a license key the example cannot download a data file, so it
 // shows the data file it would start from, the free ASN data file unless
 // another is given, and says what an update needs.
 const explainLicenseKey = function (dataFilePath, output) {
@@ -223,11 +232,39 @@ const explainLicenseKey = function (dataFilePath, output) {
     `at ${CONTACT_US}\n`);
 };
 
-const run = async function (dataFilePath, licenseKey, interactive, output) {
+// The address the data file is downloaded from.
+const DATA_UPDATE_URL = 'https://distributor.51degrees.com/api/v2/download';
+
+// The settings that name the product to download, such as IPIV4Enterprise,
+// which a license key that holds several products needs. With no product
+// given there are none, so the request names no product and a license key
+// that holds one product gets its data file. A product is named by giving
+// the whole update URL, with the default parameters turned off.
+const productSettings = function (licenseKey, product) {
+  if (!product) {
+    return {};
+  }
+  return {
+    dataUpdateUrl: DATA_UPDATE_URL + '?' + new URLSearchParams({
+      Product: product,
+      Type: 'IPIV41',
+      Download: 'True',
+      licenseKeys: licenseKey
+    }).toString(),
+    dataUpdateUseUrlFormatter: false
+  };
+};
+
+const run = async function (dataFilePath, licenseKey, interactive, output,
+  product) {
   output.write('Starting example\n');
   // try to find a license key
   if (!licenseKey) {
     licenseKey = getLicenseKey();
+  }
+  // Name a product only when one was given or is set in the environment.
+  if (!product) {
+    product = getProduct();
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
     explainLicenseKey(dataFilePath, output);
@@ -390,8 +427,11 @@ const run = async function (dataFilePath, licenseKey, interactive, output) {
     // Enable automatic updates once the pipeline has started
     autoUpdate: true,
     // For automatic updates to work you will need to provide a license key.
-    // Contact us for a licence key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
+    // Contact us for a license key at https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-updatedatafile-console-updatedatafile.js&utm_term=licencekeys
     licenceKeys: licenseKey,
+    // Name the product to download only when one was given. A license key
+    // that holds several products needs it.
+    ...productSettings(licenseKey, product),
     // Enable update on startup, the auto update system
     // will be used to check for an update before the
     // IP intelligence engine is created. This will block
@@ -418,9 +458,13 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // file that is included in the repository.
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
+  // The product to download, such as IPIV4Enterprise, for a license key
+  // that holds several products. With none given, the product in
+  // _51DEGREES_IPI_PRODUCT is named. With neither, no product is named.
+  const product = args.length > 2 ? args[2] : null;
 
-  run(dataFilePath, licenseKey, true, process.stdout)
+  run(dataFilePath, licenseKey, true, process.stdout, product)
     .then(() => console.log(FIND_OUT_MORE));
 };
 
-module.exports = { run, getLicenseKey };
+module.exports = { run, getLicenseKey, getProduct, productSettings };

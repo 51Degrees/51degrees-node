@@ -65,7 +65,7 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 2. Run the following command in this directory:
 
 ```
-swig -c++ -javascript -node ipi_node.i
+swig -c++ -javascript -node -I../../swig ipi_node.i
 ```
 
 ### Examples

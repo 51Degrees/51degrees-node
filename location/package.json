@@ -33,7 +33,7 @@
     "fiftyone.pipeline.engines.fiftyone": "file:../pipeline/fiftyone.pipeline.engines.fiftyone"
   },
   "devDependencies": {
-    "@types/node": "^15.14.9",
+    "@types/node": "^20.14.10",
     "eslint": "8.57.0",
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.26.0",
@@ -56,6 +56,7 @@
     "outputName": "test_results.xml"
   },
   "jest": {
+    "globalSetup": "<rootDir>/../ci/jestGlobalSetup.js",
     "testRunner": "jest-jasmine2",
     "setupFilesAfterEnv": [
       "./setup.js",

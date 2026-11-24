@@ -196,6 +196,13 @@
 #include <assert.h>
 
 /* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's swigrun.swg without the functions the wrappers here never
+ * call: SWIG_TypeDynamicCast, SWIG_TypePrettyName, SWIG_TypeNewClientData,
+ * and the packing helpers from SWIG_PackData to SWIG_UnpackDataName. An
+ * unused static function is a compiler warning.
+ * ----------------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------------
  * swigrun.swg
  *
  * This file contains generic C API SWIG runtime support for pointer
@@ -623,47 +630,11 @@ SWIG_TypeCast(swig_cast_info *ty, void *ptr, int *newmemory) {
 }
 
 /*
-   Dynamic pointer casting. Down an inheritance hierarchy
-*/
-SWIGRUNTIME swig_type_info *
-SWIG_TypeDynamicCast(swig_type_info *ty, void **ptr) {
-  swig_type_info *lastty = ty;
-  if (!ty || !ty->dcast) return ty;
-  while (ty && (ty->dcast)) {
-    ty = (*ty->dcast)(ptr);
-    if (ty) lastty = ty;
-  }
-  return lastty;
-}
-
-/*
   Return the name associated with this type
 */
 SWIGRUNTIMEINLINE const char *
 SWIG_TypeName(const swig_type_info *ty) {
   return ty->name;
-}
-
-/*
-  Return the pretty name associated with this type,
-  that is an unmangled type name in a form presentable to the user.
-*/
-SWIGRUNTIME const char *
-SWIG_TypePrettyName(const swig_type_info *type) {
-  /* The "str" field contains the equivalent pretty names of the
-     type, separated by vertical-bar characters.  Choose the last
-     name. It should be the most specific; a fully resolved name
-     but not necessarily with default template parameters expanded. */
-  if (!type) return NULL;
-  if (type->str != NULL) {
-    const char *last_name = type->str;
-    const char *s;
-    for (s = type->str; *s; s++)
-      if (*s == '|') last_name = s+1;
-    return last_name;
-  }
-  else
-    return type->name;
 }
 
 /*
@@ -687,12 +658,6 @@ SWIG_TypeClientData(swig_type_info *ti, void *clientdata) {
     }
     head = head->next;
   }
-}
-
-SWIGRUNTIME void
-SWIG_TypeNewClientData(swig_type_info *ti, void *clientdata) {
-  SWIG_TypeClientData(ti, clientdata);
-  ti->owndata = 1;
 }
 
 /*
@@ -774,105 +739,6 @@ SWIG_TypeQueryModule(swig_module_info *start,
   return 0;
 }
 
-/*
-   Pack binary data into a string
-*/
-SWIGRUNTIME char *
-SWIG_PackData(char *c, void *ptr, size_t sz) {
-  static const char hex[17] = "0123456789abcdef";
-  const unsigned char *u = (unsigned char *) ptr;
-  const unsigned char *eu =  u + sz;
-  for (; u != eu; ++u) {
-    unsigned char uu = *u;
-    *(c++) = hex[(uu & 0xf0) >> 4];
-    *(c++) = hex[uu & 0xf];
-  }
-  return c;
-}
-
-/*
-   Unpack binary data from a string
-*/
-SWIGRUNTIME const char *
-SWIG_UnpackData(const char *c, void *ptr, size_t sz) {
-  unsigned char *u = (unsigned char *) ptr;
-  const unsigned char *eu = u + sz;
-  for (; u != eu; ++u) {
-    char d = *(c++);
-    unsigned char uu;
-    if ((d >= '0') && (d <= '9'))
-      uu = (unsigned char)((d - '0') << 4);
-    else if ((d >= 'a') && (d <= 'f'))
-      uu = (unsigned char)((d - ('a'-10)) << 4);
-    else
-      return (char *) 0;
-    d = *(c++);
-    if ((d >= '0') && (d <= '9'))
-      uu |= (unsigned char)(d - '0');
-    else if ((d >= 'a') && (d <= 'f'))
-      uu |= (unsigned char)(d - ('a'-10));
-    else
-      return (char *) 0;
-    *u = uu;
-  }
-  return c;
-}
-
-/*
-   Pack 'void *' into a string buffer.
-*/
-SWIGRUNTIME char *
-SWIG_PackVoidPtr(char *buff, void *ptr, const char *name, size_t bsz) {
-  char *r = buff;
-  if ((2*sizeof(void *) + 2) > bsz) return 0;
-  *(r++) = '_';
-  r = SWIG_PackData(r,&ptr,sizeof(void *));
-  if (strlen(name) + 1 > (bsz - (size_t)(r - buff))) return 0;
-  strcpy(r,name);
-  return buff;
-}
-
-SWIGRUNTIME const char *
-SWIG_UnpackVoidPtr(const char *c, void **ptr, const char *name) {
-  if (*c != '_') {
-    if (strcmp(c,"NULL") == 0) {
-      *ptr = (void *) 0;
-      return name;
-    } else {
-      return 0;
-    }
-  }
-  return SWIG_UnpackData(++c,ptr,sizeof(void *));
-}
-
-SWIGRUNTIME char *
-SWIG_PackDataName(char *buff, void *ptr, size_t sz, const char *name, size_t bsz) {
-  char *r = buff;
-  size_t lname = (name ? strlen(name) : 0);
-  if ((2*sz + 2 + lname) > bsz) return 0;
-  *(r++) = '_';
-  r = SWIG_PackData(r,ptr,sz);
-  if (lname) {
-    strncpy(r,name,lname+1);
-  } else {
-    *r = 0;
-  }
-  return buff;
-}
-
-SWIGRUNTIME const char *
-SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
-  if (*c != '_') {
-    if (strcmp(c,"NULL") == 0) {
-      memset(ptr,0,sz);
-      return name;
-    } else {
-      return 0;
-    }
-  }
-  return SWIG_UnpackData(++c,ptr,sz);
-}
-
 #ifdef __cplusplus
 }
 #endif
@@ -892,6 +758,15 @@ SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
 #define  SWIG_MemoryError    	   -12
 #define  SWIG_NullReferenceError   -13
 
+
+/* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's javascriptrun.swg for V8, changed so the wrappers here build
+ * with no compiler warning. The SWIG_V8_Raise overload that takes a value,
+ * the packed data object and SWIGV8_AppendOutput are left out, as the
+ * wrappers never call them. V8ErrorHandler::error leaves its unused code
+ * parameter unnamed, and getCPtr converts the pointer to a double
+ * explicitly.
+ * ----------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------------
  * These typedefs and defines are used to deal with v8 API changes
@@ -1018,10 +893,6 @@ SWIGINTERN void SWIG_V8_Raise(const char *msg) {
   SWIGV8_THROW_EXCEPTION(v8::Exception::Error(SWIGV8_STRING_NEW(msg)));
 }
 
-SWIGINTERN void SWIG_V8_Raise(SWIGV8_VALUE obj, const char *msg) {
-  SWIGV8_THROW_EXCEPTION(v8::Exception::Error(SWIGV8_TO_STRING(obj)));
-}
-
 
 /*
   Note: There are two contexts for handling errors.
@@ -1039,7 +910,7 @@ SWIGINTERN void SWIG_V8_Raise(SWIGV8_VALUE obj, const char *msg) {
 class V8ErrorHandler {
 public:
   virtual ~V8ErrorHandler() {}
-  virtual void error(int code, const char *msg) {
+  virtual void error(int /* code */, const char *msg) {
     SWIG_V8_Raise(msg);
   }
 };
@@ -1271,7 +1142,7 @@ SWIGRUNTIME SwigV8ReturnValue _wrap_getCPtr(const SwigV8Arguments &args) {
   }
 
   result = (intptr_t)arg1;
-  jsresult = SWIGV8_NUMBER_NEW(result);
+  jsresult = SWIGV8_NUMBER_NEW(static_cast<double>(result));
 
   SWIGV8_RETURN(jsresult);
   goto fail;
@@ -1279,128 +1150,6 @@ fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
 }
 
-/* ---------------------------------------------------------------------------
- * PackedData object
- *
- * ---------------------------------------------------------------------------*/
-
-class SwigV8PackedData {
-public:
-  SwigV8PackedData(void *data, size_t size, swig_type_info *type): data(nullptr), size(size), type(type) {
-    this->data = malloc(size);
-    if (this->data != nullptr)
-      memcpy(this->data, data, size);
-  }
-
-  ~SwigV8PackedData() {
-    free(this->data);
-  }
-
-  void *data;
-  size_t size;
-  swig_type_info *type;
-
-  v8::Persistent<v8::Object> handle;
-};
-
-SWIGRUNTIMEINLINE
-int SwigV8Packed_Check(SWIGV8_VALUE valRef) {
-  SWIGV8_HANDLESCOPE();
-  
-  SWIGV8_OBJECT objRef = SWIGV8_TO_OBJECT(valRef);
-  if(objRef->InternalFieldCount() < 1) return false;
-  v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("__swig__packed_data__"));
-  v8::Local<v8::Value> flag;
-  if (!objRef->GetPrivate(SWIGV8_CURRENT_CONTEXT(), privateKey).ToLocal(&flag))
-    return false;
-  return (flag->IsBoolean() && SWIGV8_BOOLEAN_VALUE(flag));
-}
-
-SWIGRUNTIME
-swig_type_info *SwigV8Packed_UnpackData(SWIGV8_VALUE valRef, void *ptr, size_t size) {
-  if (SwigV8Packed_Check(valRef)) {
-    SWIGV8_HANDLESCOPE();
-    
-    SwigV8PackedData *sobj;
-
-    SWIGV8_OBJECT objRef = SWIGV8_TO_OBJECT(valRef);
-
-    sobj = static_cast<SwigV8PackedData*>(SWIGV8_ALIGNED_POINTER_GET(objRef, 0));
-    if (sobj == NULL || sobj->size != size) return 0;
-    memcpy(ptr, sobj->data, size);
-    return sobj->type;
-  } else {
-    return 0;
-  }
-}
-
-SWIGRUNTIME
-int SWIGV8_ConvertPacked(SWIGV8_VALUE valRef, void *ptr, size_t sz, swig_type_info *ty) {
-  swig_type_info *to = SwigV8Packed_UnpackData(valRef, ptr, sz);
-  if (!to) return SWIG_ERROR;
-  if (ty) {
-    if (to != ty) {
-      /* check type cast? */
-      swig_cast_info *tc = SWIG_TypeCheck(to->name,ty);
-      if (!tc) return SWIG_ERROR;
-    }
-  }
-  return SWIG_OK;
-}
-
-SWIGRUNTIME void _wrap_SwigV8PackedData_delete(const v8::WeakCallbackInfo<SwigV8PackedData> &data) {
-  SwigV8PackedData *cdata = data.GetParameter();
-  cdata->handle.Reset();
-  delete cdata;
-}
-
-SWIGRUNTIME
-SWIGV8_VALUE SWIGV8_NewPackedObj(void *data, size_t size, swig_type_info *type) {
-  SWIGV8_HANDLESCOPE_ESC();
-
-  SwigV8PackedData *cdata = new SwigV8PackedData(data, size, type);
-  SWIGV8_OBJECT_TEMPLATE tmpl = SWIGV8_OBJECT_TEMPLATE_NEW();
-  tmpl->SetInternalFieldCount(1);
-  v8::Local<v8::Object> obj = SWIGV8_OBJECT_TEMPLATE_INSTACE(tmpl);
-
-  v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("__swig__packed_data__"));
-  obj->SetPrivate(SWIGV8_CURRENT_CONTEXT(), privateKey, SWIGV8_BOOLEAN_NEW(true));
-
-  SWIGV8_ALIGNED_POINTER_SET(obj, 0, cdata);
-
-  cdata->handle.Reset(v8::Isolate::GetCurrent(), obj);
-
-  cdata->handle.SetWeak(cdata, _wrap_SwigV8PackedData_delete, v8::WeakCallbackType::kParameter);
-
-  SWIGV8_ESCAPE(obj);
-}
-
-#define SWIG_ConvertMember(obj, ptr, sz, ty)            SWIGV8_ConvertPacked(obj, ptr, sz, ty)
-#define SWIG_NewMemberObj(ptr, sz, type)                SWIGV8_NewPackedObj(ptr, sz, type)
-
-
-/* ---------------------------------------------------------------------------
- * Support for IN/OUTPUT typemaps (see Lib/typemaps/inoutlist.swg)
- *
- * ---------------------------------------------------------------------------*/
-
-SWIGRUNTIME
-
-SWIGV8_VALUE SWIGV8_AppendOutput(SWIGV8_VALUE result, SWIGV8_VALUE obj) {
-  SWIGV8_HANDLESCOPE_ESC();
-  
-  if (result->IsUndefined()) {
-    result = SWIGV8_ARRAY_NEW(0);
-  } else if (!result->IsArray()) {
-    SWIGV8_ARRAY tmparr = SWIGV8_ARRAY_NEW(0);
-    SWIGV8_ARRAY_SET(tmparr, 0, result);
-    result = tmparr;
-  }
-
-  SWIGV8_ARRAY arr = SWIGV8_ARRAY::Cast(result);
-  SWIGV8_ARRAY_SET(arr, arr->Length(), obj);
-  SWIGV8_ESCAPE(arr);
-}
 
 
 
@@ -1440,23 +1189,6 @@ SWIGRUNTIME void SWIGV8_AddMemberFunction(SWIGV8_FUNCTION_TEMPLATE class_templ, 
 }
 
 /**
- * Registers a class property with given name for a given class template.
- */
-SWIGRUNTIME void SWIGV8_AddMemberVariable(SWIGV8_FUNCTION_TEMPLATE class_templ, const char* symbol,
-  SwigV8AccessorGetterCallback getter, SwigV8AccessorSetterCallback setter) {
-  SWIGV8_OBJECT_TEMPLATE proto_templ = class_templ->InstanceTemplate();
-  proto_templ->SetNativeDataProperty(SWIGV8_SYMBOL_NEW(symbol), getter, setter);
-}
-
-/**
- * Registers a class method with given name for a given object.
- */
-SWIGRUNTIME void SWIGV8_AddStaticFunction(SWIGV8_OBJECT obj, const char* symbol,
-  const SwigV8FunctionCallback& _func, v8::Local<v8::Context> context) {
-  SWIGV8_MAYBE_CHECK(obj->Set(context, SWIGV8_SYMBOL_NEW(symbol), SWIGV8_FUNCTEMPLATE_NEW(_func)->GetFunction(context).ToLocalChecked()));
-}
-
-/**
  * Registers a class method with given name for a given object.
  */
 SWIGRUNTIME void SWIGV8_AddStaticVariable(SWIGV8_OBJECT obj, const char* symbol,
@@ -1465,7 +1197,7 @@ SWIGRUNTIME void SWIGV8_AddStaticVariable(SWIGV8_OBJECT obj, const char* symbol,
   SWIGV8_MAYBE_CHECK(obj->SetNativeDataProperty(context, SWIGV8_SYMBOL_NEW(symbol), getter, setter));
 }
 
-SWIGRUNTIME void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> value, const SwigV8PropertyCallbackInfoVoid& info)
+SWIGRUNTIMEINLINE void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> /* value */, const SwigV8PropertyCallbackInfoVoid& /* info */)
 {
     char buffer[256];
     char msg[512];
@@ -1643,14 +1375,16 @@ using namespace FiftyoneDegrees::DeviceDetection::Hash;
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_long  (long value)
 {
-  return SWIGV8_NUMBER_NEW(value);
+  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 
 
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_unsigned_SS_long  (unsigned long value)
 {
-  return value <= UINT32_MAX ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(value) : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
+  return value <= UINT32_MAX
+    ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(static_cast<uint32_t>(value))
+    : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 
 
@@ -1757,17 +1491,12 @@ SWIGINTERN std::string const &std_map_Sl_std_string_Sc_std_string_Sg__get(std::m
 SWIGINTERNINLINE SWIGV8_VALUE
 SWIG_FromCharPtrAndSize(const char* carray, size_t size)
 {
-  if (carray) {
-    if (size > INT_MAX) {
-      // TODO: handle extra long strings
-      return SWIGV8_UNDEFINED();
-    } else {
-      v8::Local<v8::String> js_str = SWIGV8_STRING_NEW2(carray, size);
-      return js_str;
-    }
-  } else {
-    return SWIGV8_UNDEFINED();
+  if (carray && size <= INT_MAX) {
+    v8::Local<v8::String> js_str =
+      SWIGV8_STRING_NEW2(carray, static_cast<int>(size));
+    return js_str;
   }
+  return SWIGV8_UNDEFINED();
 }
 
 
@@ -1796,13 +1525,13 @@ SWIGINTERN bool std_map_Sl_std_string_Sc_std_string_Sg__has_key(std::map< std::s
                 return i != self->end();
             }
 
-SWIGINTERN
+SWIGINTERNINLINE
 int SWIG_AsVal_double (SWIGV8_VALUE obj, double *val)
 {
-  if(!obj->IsNumber()) {
+  if (!obj->IsNumber()) {
     return SWIG_TypeError;
   }
-  if(val) *val = SWIGV8_NUMBER_VALUE(obj);
+  if (val) *val = SWIGV8_NUMBER_VALUE(obj);
 
   return SWIG_OK;
 }
@@ -1929,7 +1658,7 @@ SWIG_AsVal_size_t (SWIGV8_VALUE obj, size_t *val)
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_long_SS_long  (long long value)
 {
-  return SWIGV8_NUMBER_NEW(value);
+  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 #endif
 
@@ -1938,7 +1667,9 @@ SWIGV8_VALUE SWIG_From_long_SS_long  (long long value)
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_unsigned_SS_long_SS_long  (unsigned long long value)
 {
-  return value <= UINT32_MAX ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(value) : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
+  return value <= UINT32_MAX
+    ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(static_cast<uint32_t>(value))
+    : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 #endif
 
@@ -1965,7 +1696,11 @@ int SWIG_AsVal_int (SWIGV8_VALUE valRef, int* val)
   if (!valRef->IsNumber()) {
     return SWIG_TypeError;
   }
-  if(val) *val = SWIGV8_INTEGER_VALUE(valRef);
+  int64_t value = SWIGV8_INTEGER_VALUE(valRef);
+  if (value < INT_MIN || value > INT_MAX) {
+    return SWIG_OverflowError;
+  }
+  if (val) *val = static_cast<int>(value);
 
   return SWIG_OK;
 }
@@ -19087,9 +18822,9 @@ static swig_cast_info *swig_cast_initial[] = {
 
 
 SWIGRUNTIME void
-SWIG_V8_SetModule(v8::Local<v8::Context> context, swig_module_info *swig_module) {
+SWIG_V8_SetModule(v8::Local<v8::Context> context, swig_module_info *module_info) {
   v8::Local<v8::Object> global_obj = context->Global();
-  v8::Local<v8::External> mod = SWIGV8_EXTERNAL_NEW(swig_module);
+  v8::Local<v8::External> mod = SWIGV8_EXTERNAL_NEW(module_info);
   assert(!mod.IsEmpty());
   v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("swig_module_info_data"));
   global_obj->SetPrivate(context, privateKey, mod);
@@ -19128,6 +18863,11 @@ SWIG_V8_GetModule(v8::Local<v8::Context> context) {
 #define SWIG_SetModule(clientdata, pointer)       SWIG_V8_SetModule(clientdata, pointer)
 #define SWIG_INIT_CLIENT_DATA_TYPE                v8::Local<v8::Context>
 
+
+/* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's swiginit.swg without SWIG_PropagateClientData, which the
+ * wrappers here never call. An unused static function is a compiler warning.
+ * ----------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
  * Type initialization:
@@ -19495,36 +19235,6 @@ SWIG_InitializeModule(SWIG_INIT_CLIENT_DATA_TYPE clientdata) {
   }
   printf("**** SWIG_InitializeModule: Cast List ******\n");
 #endif
-}
-
-/* This function will propagate the clientdata field of type to
-* any new swig_type_info structures that have been added into the list
-* of equivalent types.  It is like calling
-* SWIG_TypeClientData(type, clientdata) a second time.
-*/
-SWIGRUNTIME void
-SWIG_PropagateClientData(void) {
-  size_t i;
-  static int init_run = 0;
-
-  if (init_run) return;
-  init_run = 1;
-
-  for (i = 0; i < swig_module.size; i++) {
-    if (swig_module.types[i]->clientdata) {
-      swig_cast_info *head, *cast;
-      head = swig_module.types[i]->cast;
-      while (head) {
-        for (cast = head; (cast - head) <= head->value; cast++) {
-          if (!cast->converter) {
-            if (cast->type && !cast->type->clientdata)
-              SWIG_TypeClientData(cast->type, swig_module.types[i]->clientdata);
-          }
-        }
-        head = head->next;
-      }
-    }
-  }
 }
 
 #ifdef __cplusplus

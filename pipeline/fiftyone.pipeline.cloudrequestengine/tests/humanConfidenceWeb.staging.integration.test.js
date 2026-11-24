@@ -20,34 +20,38 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// The Human Confidence web example's passive route, run against the live
-// cloud service with the Bespoke resource key. The answer has to carry
-// HumanConfidenceSource as Passive, because no browser tests have run, and
-// a plain level. The test fails rather than skips with no key, because a
-// cloud test that passes without calling the cloud has proved nothing. The
-// key is never printed.
+// The Human Confidence web example's passive route, run against the
+// staging cloud service with a Bespoke resource key the staging cloud
+// resolves. The answer has to carry HumanConfidenceSource as Passive,
+// because no browser tests have run, and a plain level. The production
+// cloud does not serve HumanConfidenceSource yet, so the test reads the
+// service from CLOUD_STAGING_ENDPOINT and the key from
+// RESOURCE_KEY_BESPOKE_STAGING. It fails rather than skips when either is
+// not set, because a cloud test that passes without calling the cloud has
+// proved nothing. The key is never printed.
 
 const { demoRoutes } = require('../examples/human-confidence-web/server');
 const keys = require('./liveCloudKeys');
 const live = require('./humanConfidenceLive');
 
-const resource = keys.findKey(keys.RESOURCE_KEY_NAME);
+const resource = keys.findKey(live.BESPOKE_KEY_NAME);
 
 // Every value the level has.
 const LEVELS = ['High', 'Medium', 'Low', 'Unknown'];
 
-describe('Human Confidence example against the cloud service', () => {
+describe('Human Confidence example against the staging cloud service', () => {
   jest.setTimeout(30000);
 
   test('the passive answer carries the source Passive and a level',
     async () => {
+      const api = live.stagingApi();
       if (!resource) {
-        throw new Error(keys.noKeyMessage(keys.RESOURCE_KEY_NAME,
+        throw new Error(live.noKeyMessage(live.BESPOKE_KEY_NAME,
           'Bespoke', 'HumanConfidence and HumanConfidenceSource'));
       }
       const response = live.fakeResponse();
       await demoRoutes({
-        resource, license: '', api: live.api, fetch: live.namingTheProperties
+        resource, license: '', api, fetch: live.namingTheProperties
       }).passive(live.visitor, response);
 
       const answer = JSON.parse(response.body);

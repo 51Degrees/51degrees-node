@@ -49,6 +49,12 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
    * @param {string} options.dataFile dataFile path for the on premise engine
    * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
    * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
+   * @param {string} [options.dataUpdateProduct] the product to ask the data
+   * update service for, such as V4TAC or V4Enterprise. When it is set,
+   * every request for a data file carries it in a Product parameter. With
+   * none set, the first request names no product, which is all that license
+   * keys holding one product need. Set it when license keys that hold
+   * several products download the data file on start-up.
    * @param {boolean} [options.autoUpdate] whether to autoUpdate the dataFile
    * @param {string} [options.dataUpdateUrl] base url for the datafile
    * @param {number} [options.pollingInterval] How often to poll for
@@ -122,6 +128,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       dataFile = null,
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
+      dataUpdateProduct,
       autoUpdate = true,
       dataUpdateUrl = null,
       pollingInterval = 30,
@@ -165,7 +172,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
     }
 
     if (cacheSize) {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
     this.flowElements.push(new DeviceDetectionOnPremise(
       {
@@ -174,6 +181,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
         dataUpdateUrl,
         dataUpdateVerifyMd5,
         dataUpdateUseUrlFormatter,
+        dataUpdateProduct,
         fileSystemWatcher,
         pollingInterval,
         updateTimeMaximumRandomisation,
