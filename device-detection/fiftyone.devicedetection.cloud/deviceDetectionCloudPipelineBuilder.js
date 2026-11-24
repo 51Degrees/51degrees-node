@@ -67,7 +67,8 @@ class DeviceDetectionCloudPipelineBuilder extends PipelineBuilder {
       requestedProperties = null,
       cacheSize = null,
       cloudEndPoint = null,
-      cloudRequestOrigin = null
+      cloudRequestOrigin = null,
+      suppressProcessExceptions
     }) {
     super(...arguments);
 

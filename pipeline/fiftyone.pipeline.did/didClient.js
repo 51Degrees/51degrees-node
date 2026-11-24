@@ -205,6 +205,7 @@ const SignatureReason = Object.freeze({
 class DidClientError extends Error {
   /**
    * Builds the error with the status and body the cloud answered.
+   *
    * @param {string} message what went wrong
    * @param {number} [statusCode] the HTTP status, where there was one
    * @param {string} [body] the response body, where there was one
@@ -224,6 +225,7 @@ class DidClientError extends Error {
 class DidArgumentError extends DidClientError {
   /**
    * Builds the error from the validation message.
+   *
    * @param {string} message the validation message
    * @param {number} [statusCode] the HTTP status
    * @param {string} [body] the response body
@@ -242,6 +244,7 @@ class DidArgumentError extends DidClientError {
 class DidNotSupportedError extends DidClientError {
   /**
    * Builds the error from what the host said.
+   *
    * @param {string} message what the host said
    * @param {number} [statusCode] the HTTP status
    * @param {string} [body] the response body
@@ -259,6 +262,7 @@ class DidNotSupportedError extends DidClientError {
 class RedeemResult {
   /**
    * Reads the typed fields out of the parsed body.
+   *
    * @param {number} statusCode the HTTP status, 200 or 503
    * @param {string} raw the response body as received
    * @param {object} parsed the body parsed as JSON
@@ -330,6 +334,7 @@ class RedeemResult {
 
   /**
    * Builds a result from a redeem response body.
+   *
    * @param {number} statusCode the HTTP status
    * @param {string} raw the response body
    * @returns {RedeemResult} the typed result
@@ -349,6 +354,7 @@ class RedeemResult {
    * `factors` when present, `verifiedAt`, `secondsSinceVerified`), so a
    * server can answer a page with it directly. `signature` is left out when
    * the cloud did not report it, as the cloud leaves it out.
+   *
    * @returns {object} the plain object for JSON.stringify
    */
   toJSON () {
@@ -376,6 +382,7 @@ class RedeemResult {
  * options object with `method`, `headers` and `body`, and resolving to a
  * response with `status` and a `text()` method. Node 18 and later and
  * browsers provide it globally, and tests inject one.
+ *
  * @callback FetchFunction
  * @param {string} url the absolute URL to request
  * @param {object} init the request options
@@ -387,6 +394,7 @@ class RedeemResult {
  * A published signing key and the moment it came into force. A key stays in
  * force until its `endsAt`, or until the next key starts where the entry
  * carries no `endsAt`.
+ *
  * @typedef {object} PublicKeyEntry
  * @property {Date} startsAt when the key came, or comes, into force
  * @property {Date} [endsAt] when the key stops being in force, where the
@@ -397,6 +405,7 @@ class RedeemResult {
 
 /**
  * The detailed answer to an offline signature check.
+ *
  * @typedef {object} SignatureCheck
  * @property {boolean} valid whether a candidate key verified the signature
  * @property {string} reason one of {@link SignatureReason}
@@ -404,6 +413,7 @@ class RedeemResult {
 
 /**
  * Options for {@link DidClient}.
+ *
  * @typedef {object} DidClientOptions
  * @property {string} [resourceKey] the page's resource key. Public by
  * nature, it travels in the route of the key and verify requests and in
@@ -443,6 +453,8 @@ class RedeemResult {
  */
 class DidClient {
   /**
+   * Builds a client for one cloud endpoint.
+   *
    * @param {DidClientOptions} options the resource key, where the cloud
    * takes one, and optionally the licence key, endpoint, transport and
    * clock
@@ -485,6 +497,7 @@ class DidClient {
      * The transport, called as a plain function and never as a method of
      * the client, because a browser's fetch refuses to run as a method of
      * anything but the window.
+     *
      * @type {FetchFunction}
      */
     this._fetch = (url, init) => fetchFunction(url, init);
@@ -507,6 +520,8 @@ class DidClient {
   }
 
   /**
+   * The resource key the requests carry.
+   *
    * @returns {string | null} the resource key the requests carry, or null
    * where the cloud takes none
    */
@@ -521,6 +536,7 @@ class DidClient {
    * start held onwards are also fetched when an identifier's date reaches
    * the end of the list held (see {@link DidClient#publicKeyFor}). Every
    * answer is merged in by start, so no older key is dropped.
+   *
    * @returns {Promise<PublicKeyEntry[]>} the keys, oldest start first
    */
   publicKeys () {
@@ -537,6 +553,7 @@ class DidClient {
    * than a day old, or else the keys from the newest start held onwards
    * when {@link PublicKeys.covers} says the list does not answer for the
    * date, at most once a minute.
+   *
    * @param {FodId | string} fodId the identifier, or its base64
    * @returns {Promise<PublicKeyEntry | null>} the key, or null when no key
    * held covers the date
@@ -561,6 +578,7 @@ class DidClient {
    * fetched for this check, the keys from the start of the one in force at
    * the identifier's date onwards are fetched, at most once a minute, and
    * the check made once more.
+   *
    * @param {FodId | string} fodId the identifier, or its base64
    * @returns {Promise<boolean>} true when a candidate key verifies it
    */
@@ -572,6 +590,7 @@ class DidClient {
    * As {@link DidClient#verifySignature}, with the reason alongside the
    * answer, so a caller can tell an identifier no key covers from one whose
    * signature failed.
+   *
    * @param {FodId | string} fodId the identifier, or its base64
    * @returns {Promise<SignatureCheck>} the answer and its reason
    */
@@ -609,6 +628,7 @@ class DidClient {
    * `51did` and `owid`, so the request works with hosts that read either
    * parameter. Hosts that recognise both prefer `51did` and keep `owid` as
    * a compatibility alias.
+   *
    * @param {FodId | string} fodId the identifier, or its base64 in either
    * alphabet
    * @returns {Promise<boolean>} whether the cloud found the signature valid
@@ -657,6 +677,7 @@ class DidClient {
    * the one word `unreadable` by design, so the client does not try to
    * tell them apart either. The licence key is shown only by its last 4
    * characters in the message and body of each error.
+   *
    * @param {FodId | string} fodId the identifier the caller knows
    * independently, or its base64 in either alphabet
    * @param {string} result the sealed result exactly as the verify endpoint
@@ -720,6 +741,7 @@ class DidClient {
   /**
    * The key list to select from for the given date, after the fetch
    * {@link DidClient#_fetchFor} calls for, where it calls for one.
+   *
    * @param {Date} date the identifier's date
    * @returns {Promise<PublicKeyEntry[]>} the keys to select from
    * @private
@@ -735,6 +757,7 @@ class DidClient {
    * is the whole list. Where {@link PublicKeys.covers} says the list does
    * not answer for the date, it is the keys from the newest start held
    * onwards, within the limit {@link DidClient#_refetch} applies.
+   *
    * @param {Date} date the identifier's date
    * @returns {Promise<PublicKeyEntry[]> | null} the fetch, or null
    * @private
@@ -756,6 +779,7 @@ class DidClient {
    * held may lack a key a check needs. It shares a fetch already under way,
    * and otherwise starts at most once a minute, answering null where that
    * limit stops it.
+   *
    * @param {Date | null} since the start to fetch from, or null for the
    * whole list
    * @returns {Promise<PublicKeyEntry[]> | null} the fetch, or null
@@ -778,6 +802,8 @@ class DidClient {
   }
 
   /**
+   * Whether the public key list needs a full fetch.
+   *
    * @returns {boolean} whether the list is missing or the whole list was
    * last fetched over a day ago
    * @private
@@ -791,6 +817,7 @@ class DidClient {
    * Fetches keys and merges the answer into the list held, sharing one
    * request between concurrent callers. Only a fetch of the whole list
    * resets the list's age.
+   *
    * @param {Date | null} since the start to fetch from, or null for the
    * whole list
    * @returns {Promise<PublicKeyEntry[]>} the list held after the merge
@@ -821,6 +848,7 @@ class DidClient {
    * `startsAt` is read where present and `created` otherwise, `endsAt` is
    * kept, and `weekStart` is ignored. A start given is sent as `datetime`,
    * so the cloud answers with the keys that start then or later only.
+   *
    * @param {Date | null} since the start to fetch from, or null for the
    * whole list
    * @returns {Promise<PublicKeyEntry[]>} the answer, oldest start first
@@ -859,6 +887,7 @@ class DidClient {
   /**
    * A GET route with the resource key as its last segment, where the
    * client has one. A private cloud's routes carry none.
+   *
    * @param {string} route the route without the resource key
    * @returns {string} the route to put after the endpoint
    * @private
@@ -875,6 +904,7 @@ class DidClient {
  * string the reader cannot parse is reported as a DidArgumentError, the same
  * type the length guard and the cloud's own refusal use, so a caller
  * matching on DidClientError catches every bad argument in one place.
+ *
  * @param {FodId | string} value an identifier or its base64
  * @returns {FodId} the identifier
  */
@@ -894,6 +924,7 @@ function asFodId (value) {
  * the URL-safe alphabet, which needs no further encoding. A string is read
  * here first, so a value that is not a 51Did is refused before any request
  * is made, and then goes as given so the cloud sees what the page sent.
+ *
  * @param {FodId | string} value an identifier or its base64
  * @returns {string} the text to send
  */
@@ -913,6 +944,7 @@ function identifierText (value) {
  * Reads a string as a 51Did, or refuses it as a DidArgumentError naming the
  * reason. The reason is the reader's own status, so a caller sees why the
  * value was refused without any key being fetched or any request made.
+ *
  * @param {string} value the encoded identifier, already within the length
  * guard
  * @returns {FodId} the identifier
@@ -930,6 +962,7 @@ function parseOrRefuse (value) {
  * Turns away an encoded value too long to be worth decoding, before any
  * work is done on it. White space at either end is ignored, as the reader
  * ignores it.
+ *
  * @param {string} value the encoded identifier as the caller gave it
  */
 function ensureEncodedLength (value) {
@@ -948,6 +981,7 @@ function ensureEncodedLength (value) {
  * shorter than its base, so in practice only a Reserved identifier, which
  * the reader accepts at any length from the header up, reaches this check
  * with too few bytes.
+ *
  * @param {FodId} fodId the identifier
  * @returns {boolean} whether the length is acceptable
  */
@@ -964,6 +998,7 @@ function payloadLengthValid (fodId) {
  * identifier's date, so the answer carries that key's entry with any
  * earlier end and any replacement that starts in its period. Where no key
  * held starts that early, the oldest start held.
+ *
  * @param {PublicKeyEntry[]} keys the list held, oldest first
  * @param {Date} date the identifier's date
  * @returns {Date | null} the start, or null for an empty list
@@ -981,6 +1016,7 @@ function startInForce (keys, date) {
 /**
  * Checks the signature against the entries that may have signed the
  * identifier, chosen from the list by {@link PublicKeys.candidatesFor}.
+ *
  * @param {FodId} fodId the identifier
  * @param {PublicKeyEntry[]} keys the list to choose from
  * @returns {Promise<SignatureCheck>} the answer and its reason
@@ -1001,6 +1037,7 @@ async function checkAgainst (fodId, keys) {
 /**
  * The API base the _51DEGREES_CLOUD_ENDPOINT environment variable names,
  * where the runtime has environment variables. A browser has none.
+ *
  * @returns {string | undefined} the API base, or undefined where there is
  * no variable to read
  */
@@ -1017,6 +1054,7 @@ function environmentEndpoint () {
  * its own `User-Agent`, and one set by a page can make the browser ask the
  * cloud's permission with a preflight request first, so the header is left
  * out there and every request a page makes is a simple one.
+ *
  * @param {object} [headers] the headers the request needs besides
  * @returns {object} the headers to send
  */
@@ -1028,6 +1066,7 @@ function requestHeaders (headers) {
 /**
  * Whether the runtime is Node, which has environment variables and lets
  * a request name its sender.
+ *
  * @returns {boolean} true on Node
  */
 function isNode () {
@@ -1041,6 +1080,7 @@ function isNode () {
  * characters or fewer. Every 51Degrees package writes a licence key this
  * way in an error message. This package depends on nothing in the Pipeline,
  * so it does not use the Pipeline's mask.
+ *
  * @param {string} text the text
  * @param {string|null} licence the licence key, or null when none was sent
  * @returns {string} the text with the key masked
@@ -1061,6 +1101,7 @@ function maskLicence (text, licence) {
 
 /**
  * Parses JSON without throwing.
+ *
  * @param {string} text a response body
  * @returns {any} the parsed JSON, or null when the text is not JSON
  */

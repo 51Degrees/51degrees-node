@@ -39,6 +39,7 @@ const BOUNDARY_TOLERANCE_MS = 15 * MINUTE_MS;
  * A published signing key and the moment it came into force. A key stays in
  * force until its `endsAt`, or until the next key starts where the entry
  * carries no `endsAt`.
+ *
  * @typedef {object} PublicKeyEntry
  * @property {Date} startsAt when the key came, or comes, into force
  * @property {Date} [endsAt] when the key stops being in force, where the
@@ -69,6 +70,7 @@ const PublicKeys = Object.freeze({
    * as a date string or a Date. `endsAt` is kept where an entry carries it,
    * in either form, and an entry without it is valid. Any other field,
    * `weekStart` included, is ignored. The entries and the list are frozen.
+   *
    * @param {Array<object>} entries the list as published or as stored
    * @returns {ReadonlyArray<PublicKeyEntry>} the entries, oldest first
    * @throws {TypeError} when the value is not an array, or an entry lacks a
@@ -88,6 +90,7 @@ const PublicKeys = Object.freeze({
    * The moment an identifier was created, as a Date, being the envelope's
    * date field turned back from minutes since 2020-01-01T00:00:00Z. This is
    * the moment the key for the identifier is chosen at.
+   *
    * @param {FodId | string} fodId the identifier, or its base64 in either
    * alphabet
    * @returns {Date} the creation moment
@@ -103,6 +106,7 @@ const PublicKeys = Object.freeze({
    * The entry in force at a moment, being the one whose start is the latest
    * on or before it, or null when the moment precedes every entry or is at
    * or after that entry's `endsAt`.
+   *
    * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
    * @param {Date} at the moment
    * @returns {PublicKeyEntry | null} the entry in force
@@ -118,6 +122,7 @@ const PublicKeys = Object.freeze({
    * date precedes every entry in the list or is at or after that entry's
    * `endsAt`. The same rule as {@link DidClient#publicKeyFor}, applied to a
    * list the caller holds.
+   *
    * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
    * @param {FodId | string} fodId the identifier, or its base64 in either
    * alphabet
@@ -138,6 +143,7 @@ const PublicKeys = Object.freeze({
    * A signature is checked against these in order and no earlier key is
    * tried, which is the rule {@link DidClient#verifySignature} applies. An
    * empty list means no key in the list covers the identifier's date.
+   *
    * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
    * @param {FodId | string} fodId the identifier, or its base64 in either
    * alphabet
@@ -158,6 +164,7 @@ const PublicKeys = Object.freeze({
    * moment plus the boundary tolerance is before that end, so the key after
    * a boundary is held whenever it may have signed the identifier. False
    * for an empty list.
+   *
    * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
    * @param {Date} date the moment, as {@link PublicKeys.createdAt} gives it
    * @returns {boolean} true when the list answers without a fetch
@@ -177,6 +184,7 @@ const PublicKeys = Object.freeze({
    * later `endsAt` takes the place of an earlier one or of none. No held
    * entry is dropped, because an identifier made long ago is checked
    * against the key of its own period. Neither list is changed.
+   *
    * @param {ReadonlyArray<PublicKeyEntry>} held the list held, in any order
    * @param {ReadonlyArray<PublicKeyEntry>} answer the later answer, read with
    * {@link PublicKeys.fromList}, in any order
@@ -199,6 +207,7 @@ const PublicKeys = Object.freeze({
  * The identifier as a FodId, reading a base64 string with the throwing
  * surface so a value that is not a 51Did is refused with the reader's own
  * error.
+ *
  * @param {FodId | string} value an identifier or its base64
  * @returns {FodId} the identifier
  */
@@ -214,6 +223,7 @@ function asFodId (value) {
 
 /**
  * One entry of a published or stored list, read into a frozen entry.
+ *
  * @param {object} entry the entry as published or as stored
  * @returns {PublicKeyEntry} the entry
  */
@@ -239,6 +249,7 @@ function readEntry (entry) {
 
 /**
  * A date string or a Date read into a new Date.
+ *
  * @param {any} value the value as published or as stored
  * @returns {Date | null} the moment, or null when the value does not read
  * as one
@@ -252,6 +263,7 @@ function readDate (value) {
 
 /**
  * Whether the value is a valid Date.
+ *
  * @param {any} value the value
  * @returns {boolean} true for a Date holding a moment
  */
@@ -261,6 +273,7 @@ function isMoment (value) {
 
 /**
  * Orders entries oldest start first.
+ *
  * @param {PublicKeyEntry} a one entry
  * @param {PublicKeyEntry} b another entry
  * @returns {number} negative when a starts first
@@ -272,6 +285,7 @@ function oldestFirst (a, b) {
 /**
  * The list checked to be an array of entries carrying a start and a key,
  * and an end after the start where an entry has one.
+ *
  * @param {ReadonlyArray<PublicKeyEntry>} keys the list as given
  * @returns {ReadonlyArray<PublicKeyEntry>} the same list
  */
@@ -296,6 +310,7 @@ function asKeys (keys) {
 
 /**
  * The moment checked to be a valid Date.
+ *
  * @param {Date} at the moment as given
  * @returns {Date} the same moment
  */
@@ -309,6 +324,7 @@ function asMoment (at) {
 /**
  * The moment the list stops answering, being the newest entry's `endsAt`,
  * or its start where it carries none.
+ *
  * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
  * @returns {Date | null} the end, or null for an empty list
  */
@@ -327,6 +343,7 @@ function endOf (keys) {
  * The entry in force at the moment, being the newest whose start has
  * passed, or null when the moment precedes every entry or is at or after
  * that entry's `endsAt`.
+ *
  * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
  * @param {Date} at the moment
  * @returns {PublicKeyEntry | null} the entry in force
@@ -353,6 +370,7 @@ function inForceAt (keys, at) {
  * first: the entry in force, then the entry in force a tolerance earlier
  * and the entry in force a tolerance later where those differ. Not every
  * earlier entry.
+ *
  * @param {ReadonlyArray<PublicKeyEntry>} keys the list, in any order
  * @param {Date} at the moment
  * @returns {PublicKeyEntry[]} the entries to try, best first
