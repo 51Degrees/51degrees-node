@@ -243,6 +243,9 @@ describe('DidClient construction', () => {
   });
 
   test('resourceKey is required', () => {
+    // The public cloud requires the key, so the endpoint the environment
+    // names is cleared for this test.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     expect(() => new DidClient({})).toThrow(TypeError);
     expect(() => new DidClient({ resourceKey: '' })).toThrow(TypeError);
     expect(() => new DidClient(null)).toThrow(TypeError);
