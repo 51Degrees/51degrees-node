@@ -60,7 +60,11 @@
                 'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
             },
             'VCLinkerTool': {
-                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']],
+                # node-gyp turns off the linker's warning for a delay loaded
+                # DLL that nothing is imported from (LNK4199). It is taken
+                # out so that warning shows too.
+                'AdditionalOptions!': ['/ignore:4199']
             }
         }
     },
