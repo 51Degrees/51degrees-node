@@ -116,9 +116,8 @@ the keys and data files its tests use.
 
 ## Regenerating the SWIG wrappers
 
-The wrappers are generated and must not be edited by hand. Use the
-`node-24-holder-this` branch of the
-[51Degrees fork of SWIG](https://github.com/51Degrees/swig), and run:
+The wrappers are generated and must not be edited by hand. Use SWIG 4.5.0
+(https://www.swig.org), and run:
 
 ```
 cd device-detection/fiftyone.devicedetection.onpremise
