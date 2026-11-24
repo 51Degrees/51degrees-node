@@ -100,11 +100,11 @@ const fixDataFilePaths = (options) => {
         console.warn('Failed to find a data file at the specified ' +
           `path. Using '${newDataFilePath}' instead.`);
       } else {
-        throw 'Failed to find a data file at ' +
+        throw new Error('Failed to find a data file at ' +
           `'${parameters.dataFilePath}'. Ensure that the filename is ` +
           'correct in 51d.json. If using the lite files, then make sure ' +
           'the cxx/data submodule has been fetched by running ' +
-          '\'git submodule update --init --recursive\'.';
+          '\'git submodule update --init --recursive\'.');
       }
     }
   }

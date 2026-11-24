@@ -135,7 +135,7 @@ class DeviceDetectionPipelineBuilder extends PipelineBuilder {
 
     const deprecatedOptions = ['usePredictiveGraph', 'usePerformanceGraph'];
     for (const option of deprecatedOptions) {
-      if (arguments[0].hasOwnProperty(option)) {
+      if (Object.prototype.hasOwnProperty.call(arguments[0], option)) {
         console.warn(`{${option}} option is deprecated and has no effect on the configuration`);
       }
     }

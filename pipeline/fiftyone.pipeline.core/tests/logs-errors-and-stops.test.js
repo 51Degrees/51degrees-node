@@ -39,7 +39,7 @@ test('error data is populated', done => {
   syncPipeline.suppressProcessExceptions = true;
   const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
-    expect(syncFlowData.errors.error).toBe('Something went wrong');
+    expect(syncFlowData.errors.error).toEqual(new Error('Something went wrong'));
 
     done();
   });
@@ -56,7 +56,7 @@ test('logging', done => {
   syncPipeline.suppressProcessExceptions = true;
   const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
-    expect(log).toBe("Error occurred during processing of error. 'Something went wrong'");
+    expect(log).toBe("Error occurred during processing of error. 'Error: Something went wrong'");
 
     done();
   });

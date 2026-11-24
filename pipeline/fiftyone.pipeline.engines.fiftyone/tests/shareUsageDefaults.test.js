@@ -52,7 +52,7 @@ let received;
 let server;
 let port;
 
-beforeEach(done => { // eslint-disable-line
+beforeEach(done => {
   received = [];
   server = http.createServer((req, res) => {
     let data = '';
@@ -72,7 +72,7 @@ beforeEach(done => { // eslint-disable-line
   });
 });
 
-afterEach(done => { // eslint-disable-line
+afterEach(done => {
   server.close(() => done());
 });
 

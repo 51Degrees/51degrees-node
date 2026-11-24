@@ -186,7 +186,7 @@ class PipelineBuilder {
 
           FlowElement = require(localPath);
         } catch (e) {
-          throw "Can't find " + element.elementName;
+          throw new Error("Can't find " + element.elementName);
         }
       }
 

@@ -31,6 +31,14 @@ const core = require('fiftyone.pipeline.core');
 const parametersLine =
   /var renderedParameters = function\(\) \{ return (.*); \};/g;
 
+/**
+ * Builds a pipeline with the given JavaScript builder settings, processes
+ * the evidence and checks the script it renders parses.
+ *
+ * @param {object} options the JavaScript builder settings
+ * @param {object} evidence the evidence values by key
+ * @returns {Promise<string>} the rendered script
+ */
 async function render (options, evidence) {
   const pipeline = new core.PipelineBuilder({
     javascriptBuilderSettings: options
@@ -41,7 +49,6 @@ async function render (options, evidence) {
   }
   await flowData.process();
   const script = flowData.javascriptbuilder.javascript;
-  // eslint-disable-next-line no-new
   expect(() => new vm.Script(script, { filename: 'JavaScriptResource.js' }))
     .not.toThrow();
   return script;

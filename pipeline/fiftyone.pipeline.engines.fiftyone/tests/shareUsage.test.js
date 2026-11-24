@@ -51,7 +51,7 @@ const requestListener = function (req, res) {
   gunzip.on('data', function (chunk) {
     data += chunk;
   });
-  gunzip.on('error', (e) => fail(e)); // eslint-disable-line
+  gunzip.on('error', (e) => { throw e; });
   // Return an OK response.
   gunzip.on('end', () => {
     received.push(data);
@@ -60,7 +60,7 @@ const requestListener = function (req, res) {
   });
 };
 
-beforeEach(() => { // eslint-disable-line
+beforeEach(() => {
   received = [];
   // Set up the local server. This is HTTP rather than HTTPS to avoid
   // having to use local certificates.
@@ -68,7 +68,7 @@ beforeEach(() => { // eslint-disable-line
   server.listen(8080);
 });
 
-afterEach(() => { // eslint-disable-line
+afterEach(() => {
   server.close();
 });
 

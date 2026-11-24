@@ -123,7 +123,7 @@ class ElementData {
    */
   constructor ({ flowElement }) {
     if (!flowElement.dataKey) {
-      throw 'flowElement dataKey not found';
+      throw new Error('flowElement dataKey not found');
     }
 
     this.flowElement = flowElement;
@@ -242,12 +242,12 @@ class ElementData {
     if (typeof value === 'undefined') {
       value = this.getInternalIgnoringCase(key);
       if (typeof value === 'undefined') {
-        throw util.format(errorMessages.genericMissingProperties, key) +
+        throw new Error(util.format(errorMessages.genericMissingProperties, key) +
           (typeof this.flowElement === 'undefined'
             ? ''
             : ' in data for element "' +
             this.flowElement.dataKey) + '".' +
-          util.format(errorMessages.noReasonUnknown);
+          util.format(errorMessages.noReasonUnknown));
       }
     }
     return value;

@@ -77,7 +77,7 @@ class MockRequestClient {
       if (url.toLowerCase().includes('json')) {
         resolve(JSON.stringify(self.json));
       } else {
-        reject('unexpected URL ' + url); // eslint-disable-line
+        reject(new Error('unexpected URL ' + url));
       }
     });
   }
@@ -93,7 +93,7 @@ class MockRequestClient {
       } else if (url.toLowerCase().includes('evidencekeys')) {
         resolve(JSON.stringify(self.keys));
       } else {
-        reject('unexpected URL ' + url); // eslint-disable-line
+        reject(new Error('unexpected URL ' + url));
       }
     });
   }

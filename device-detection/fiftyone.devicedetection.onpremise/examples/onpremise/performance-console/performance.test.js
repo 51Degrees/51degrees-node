@@ -20,45 +20,12 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const fs = require('fs');
 const path = require('path');
 
-const testExample = function ({ file }) {
-  let code = fs.readFileSync(file, 'utf8');
-
-  // Add in closer of any apps
-
-  const serverClose = `
-    
-    if(typeof server !== "undefined"){
-
-        server.close();
-
-    }
-
-    `;
-
-  code += serverClose;
-
-  jest.fn(eval(code));
-};
-
 describe('Examples', () => {
-  // Skip the rest of the examples when async is not available
-  let isAsync = true;
-
-  try {
-    eval('async () => {}');
-  } catch (e) {
-    isAsync = false;
-  }
-
+  // The example runs when it is loaded, and has no server to close.
   test('hash performance', (done) => {
-    if (isAsync) {
-      setTimeout(done, 1000);
-      testExample({ file: path.join(__dirname, '/performance.js') });
-    } else {
-      done();
-    }
+    setTimeout(done, 1000);
+    require(path.join(__dirname, 'performance.js'));
   });
 });

@@ -54,7 +54,7 @@ class RecoveringClient extends MockRequestClient {
 
   get (url, origin) {
     if (this.down) {
-      return Promise.reject({ statusCode: 503, headers: {}, content: '' }); // eslint-disable-line
+      return Promise.reject({ statusCode: 503, headers: {}, content: '' }); // eslint-disable-line prefer-promise-reject-errors -- rejects with the response shape the client uses, not an Error
     }
     return super.get(url, origin);
   }

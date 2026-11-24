@@ -349,7 +349,7 @@ class DeviceDetectionOnPremise extends Engine {
 
     const deprecatedOptions = ['usePredictiveGraph', 'usePerformanceGraph'];
     for (const option of deprecatedOptions) {
-      if (arguments[0].hasOwnProperty(option)) {
+      if (Object.prototype.hasOwnProperty.call(arguments[0], option)) {
         console.warn(`{${option}} option is deprecated and has no effect on the configuration`);
       }
     }
@@ -415,7 +415,7 @@ class DeviceDetectionOnPremise extends Engine {
           fs.readdirSync(moduleDir).forEach(file => {
             const parts = file.split(/-|\./);
             const plat = parts[1] === 'win32' ? 'windows' : parts[1];
-            if (modules.hasOwnProperty(plat)) {
+            if (Object.prototype.hasOwnProperty.call(modules, plat)) {
               modules[plat].push(parts[2]);
             } else {
               modules[plat] = [parts[2]];

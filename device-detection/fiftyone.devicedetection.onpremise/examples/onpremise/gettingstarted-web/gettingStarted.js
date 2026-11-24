@@ -163,8 +163,8 @@ const setPipeline = (options) => {
   }
   const dataFilePath = optionsExtension.getDataFilePath(options);
   if (!dataFilePath) {
-    throw 'A data file must be specified in the 51d.json file or the ' +
-      `'${DATA_FILE_PATH_VARIABLE}' environment variable.`;
+    throw new Error('A data file must be specified in the 51d.json file or the ' +
+      `'${DATA_FILE_PATH_VARIABLE}' environment variable.`);
   }
 
   if (!fs.existsSync(dataFilePath)) {
@@ -175,11 +175,11 @@ const setPipeline = (options) => {
         `at the specified path '${dataFilePath}'. Use '${newDataFilePath}' ` +
         'instead.');
     } else {
-      throw 'Failed to find a device detection data file at ' +
+      throw new Error('Failed to find a device detection data file at ' +
         `'${dataFilePath}'. If using the lite file, then make sure the ` +
         'cxx/data submodule has been fetched by running ' +
         '\'git submodule update --init --recursive\'. Otherwise, ensure ' +
-        'that the filename is correct in 51d.json.';
+        'that the filename is correct in 51d.json.');
     }
   }
 

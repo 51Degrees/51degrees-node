@@ -55,7 +55,7 @@ class RecordingClient {
     const lower = url.toLowerCase();
     for (const [part, statusCode] of Object.entries(this.failures)) {
       if (lower.includes(part)) {
-        return Promise.reject({ // eslint-disable-line
+        return Promise.reject({ // eslint-disable-line prefer-promise-reject-errors -- rejects with the response shape the client uses, not an Error
           statusCode,
           headers: {},
           content: JSON.stringify({ errors: [refusal] })

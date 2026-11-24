@@ -89,7 +89,7 @@ class RequestClient {
       });
 
       req.on('error', (err) => {
-        reject({ content: err.message }); // eslint-disable-line
+        reject({ content: err.message }); // eslint-disable-line prefer-promise-reject-errors -- rejects with the response shape the client uses, not an Error
       });
 
       req.write(requestData);
@@ -150,7 +150,7 @@ class RequestClient {
           }
         });
       }).on('error', (err) => {
-        reject({ content: err.message }); // eslint-disable-line
+        reject({ content: err.message }); // eslint-disable-line prefer-promise-reject-errors -- rejects with the response shape the client uses, not an Error
       });
     });
   }

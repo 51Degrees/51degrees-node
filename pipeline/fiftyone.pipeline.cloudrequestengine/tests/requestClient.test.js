@@ -38,7 +38,7 @@ let POST_PORT = 4000;
 
 let server;
 
-afterEach(() => { // eslint-disable-line
+afterEach(() => {
   if (server) {
     GET_PORT++;
     POST_PORT++;
@@ -47,7 +47,7 @@ afterEach(() => { // eslint-disable-line
   }
 });
 
-beforeEach(() => { // eslint-disable-line
+beforeEach(() => {
   if (!server) server = http.createServer();
 });
 

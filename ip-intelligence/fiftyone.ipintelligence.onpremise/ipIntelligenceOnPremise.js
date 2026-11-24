@@ -247,7 +247,7 @@ class IpIntelligenceOnPremise extends Engine {
           fs.readdirSync(moduleDir).forEach(file => {
             const parts = file.split(/-|\./);
             const plat = parts[1] === 'win32' ? 'windows' : parts[1];
-            if (modules.hasOwnProperty(plat)) {
+            if (Object.prototype.hasOwnProperty.call(modules, plat)) {
               modules[plat].push(parts[2]);
             } else {
               modules[plat] = [parts[2]];

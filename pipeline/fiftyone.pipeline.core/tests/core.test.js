@@ -81,17 +81,12 @@ test('get', done => {
 test('get invalid data key', done => {
   const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
-    try {
-      syncFlowData.invalid; // eslint-disable-line
-    } catch (e) {
-      expect(e.indexOf(
-        util.format(
-          errorMessages.noElementData,
-          'invalid', 'sequence, async, sync, jsonbundler, javascriptbuilder, set-headers')) !== -1)
-        .toBe(true);
+    expect(() => syncFlowData.invalid).toThrow(
+      util.format(
+        errorMessages.noElementData,
+        'invalid', 'sequence, async, sync, jsonbundler, javascriptbuilder, set-headers'));
 
-      done();
-    }
+    done();
   });
 });
 
@@ -265,8 +260,6 @@ test('aspectPropertyValue', done => {
     // Verify behaviour where the APV does not have a value.
     expect(flowData.apv.get('no').hasValue).toBe(false);
     expect(expect(flowData.apv.no.noValueMessage).toBe('Value missing'));
-
-    const error = ''; // eslint-disable-line
 
     // Trying to access the value of an APV that does not have a
     // value should throw an error.
