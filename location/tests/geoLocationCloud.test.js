@@ -39,6 +39,9 @@ const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
 
 const TestLat = '51.4578261';
 const TestLon = '-0.975922996290084';
+// The properties that must have a value for the test position, where the key
+// carries them. The value types test checks these. County is not listed
+// because the cloud gives it no value for this position on the build agents.
 const expectedProperties = {
   location: [
     'javascript',
@@ -46,13 +49,6 @@ const expectedProperties = {
     'streetnumber',
     'road',
     'town',
-    // For some reason, the value of the 'county' property returned
-    // by the call to the cloud is always null on the build agent,
-    // despite working correctly locally.
-    // After spending the best part of a day trying to resolve this,
-    // we've  decided to exclude the county property from this test
-    // for the moment.
-    // 'county',
     'region',
     'state',
     'zipcode',
@@ -152,6 +148,9 @@ if (isAsync) {
   test.skip('Workaround', () => 1);
 }
 
+// Checks that every property the resource key carries for the engine comes
+// back with a value or a reason for having none. The key decides which
+// properties these are, as in the other languages' location tests.
 async function testAvailableProperties (done, pipeline, engine) {
   const flowData = pipeline.createFlowData();
 
@@ -160,7 +159,16 @@ async function testAvailableProperties (done, pipeline, engine) {
 
   await flowData.process();
 
-  expectedProperties[engine.dataKey].forEach(key => {
+  const keyProperties = Object.keys(engine.properties || {});
+  if (keyProperties.length === 0) {
+    done.fail(new Error('The resource key in ' + resourceKeyName +
+      ' carries no ' + engine.dataKey + ' properties, so there is nothing ' +
+      'to check. To see the products a key carries, open ' +
+      'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>.'));
+    return;
+  }
+
+  keyProperties.forEach(key => {
     try {
       const apv = flowData[engine.dataKey][key];
       if (apv === undefined) {
