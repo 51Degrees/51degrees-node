@@ -39,34 +39,6 @@ const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
 
 const TestLat = '51.4578261';
 const TestLon = '-0.975922996290084';
-// The properties that must have a value for the test position, where the key
-// carries them. The value types test checks these. County is not listed
-// because the cloud gives it no value for this position on the build agents.
-const expectedProperties = {
-  location: [
-    'javascript',
-    'building',
-    'streetnumber',
-    'road',
-    'town',
-    'region',
-    'state',
-    'zipcode',
-    'country',
-    'countrycode'
-  ],
-  location_digitalelement: [
-    'javascript',
-    'town',
-    'county',
-    'region',
-    'state',
-    'zipcode',
-    'country',
-    'countrycode'
-  ]
-};
-
 // Skip the rest of the examples when async is not available
 let isAsync = true;
 
@@ -159,12 +131,8 @@ async function testAvailableProperties (done, pipeline, engine) {
 
   await flowData.process();
 
-  const keyProperties = Object.keys(engine.properties || {});
-  if (keyProperties.length === 0) {
-    done.fail(new Error('The resource key in ' + resourceKeyName +
-      ' carries no ' + engine.dataKey + ' properties, so there is nothing ' +
-      'to check. To see the products a key carries, open ' +
-      'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>.'));
+  const keyProperties = getKeyProperties(done, engine);
+  if (keyProperties === null) {
     return;
   }
 
@@ -192,6 +160,9 @@ async function testAvailableProperties (done, pipeline, engine) {
   done();
 }
 
+// Checks that every property the resource key carries for the engine has a
+// value of the type the cloud service gives for it, or a reason for having
+// none, as in the other languages' location tests.
 async function testValueTypes (done, pipeline, engine) {
   const flowData = pipeline.createFlowData();
 
@@ -200,20 +171,41 @@ async function testValueTypes (done, pipeline, engine) {
 
   await flowData.process();
 
-  Object.keys(engine.properties).forEach(key => {
-    if (expectedProperties[engine.dataKey].includes(key)) {
-      const property = engine.properties[key.toLowerCase()];
-      const expectedType = property.type;
-      const apv = flowData[engine.dataKey][key];
+  const keyProperties = getKeyProperties(done, engine);
+  if (keyProperties === null) {
+    return;
+  }
 
-      expect(apv).not.toBeNull();
-      expect(apv).toBeDefined();
-      expect(apv.hasValue, 'No value for \'' + key + '\'. (' + apv.noValueMessage + ')').toBe(true);
+  keyProperties.forEach(key => {
+    const expectedType = engine.properties[key].type;
+    const apv = flowData[engine.dataKey][key];
+
+    expect(apv).not.toBeNull();
+    expect(apv).toBeDefined();
+    if (apv.hasValue === true) {
       expect(apv.value).toBe51DType(key, expectedType);
+    } else {
+      expect(apv.noValueMessage, 'No value and no reason for \'' + key + '\'.')
+        .toBeTruthy();
     }
   });
 
   done();
+}
+
+// Gives the names of the properties the resource key carries for the engine.
+// Where the key carries none, it fails the test with a message that names
+// the variable holding the key, and gives null.
+function getKeyProperties (done, engine) {
+  const keyProperties = Object.keys(engine.properties || {});
+  if (keyProperties.length === 0) {
+    done.fail(new Error('The resource key in ' + resourceKeyName +
+      ' carries no ' + engine.dataKey + ' properties, so there is nothing ' +
+      'to check. To see the products a key carries, open ' +
+      'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>.'));
+    return null;
+  }
+  return keyProperties;
 }
 
 expect.extend({
