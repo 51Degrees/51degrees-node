@@ -30,23 +30,36 @@ const BasicListEvidenceKeyFilter = require('../basicListEvidenceKeyFilter');
 
 const REQUESTS = 20;
 
-// How much longer each request waits than the one started after it, so the
-// requests overlap and finish in the reverse of the order they started.
-const STEP_MS = 5;
+// One gate for each request. The doubler for request n waits until gate n
+// opens, and the test opens the gates in the reverse of the order the
+// requests started, so the finishing order does not depend on timers.
+const gates = [];
+for (let n = 0; n < REQUESTS; n++) {
+  let open;
+  gates.push({ promise: new Promise((resolve) => { open = resolve; }), open });
+}
 
-// Doubles query.n after a wait that is longer the smaller n is.
+// The requests that have reached the doubler and are waiting at their gate.
+let waiting = 0;
+
+// Resolves once every request is waiting at its gate.
+const allWaiting = () => waiting === REQUESTS
+  ? Promise.resolve()
+  : new Promise((resolve) => setImmediate(resolve)).then(allWaiting);
+
+// Doubles query.n once the request's gate opens.
 const doubler = new FlowElement({
   dataKey: 'doubler',
   evidenceKeyFilter: new BasicListEvidenceKeyFilter(['query.n']),
   processInternal: function (flowData) {
     const n = Number(flowData.evidence.get('query.n'));
-    return new Promise((resolve) => setTimeout(() => {
+    waiting++;
+    return gates[n].promise.then(() => {
       flowData.setElementData(new ElementDataDictionary({
         flowElement: this,
         contents: { doubled: n * 2 }
       }));
-      resolve();
-    }, (REQUESTS - n) * STEP_MS));
+    });
   },
   properties: { doubled: { type: 'int' } }
 });
@@ -80,6 +93,13 @@ test('one Pipeline processes many Flow Data at once, each with its own results',
         finished.push(n);
         return done;
       }));
+    }
+    // Every request is in the doubler before any finishes, so they overlap.
+    await allWaiting();
+    expect(finished).toEqual([]);
+    for (let n = REQUESTS - 1; n >= 0; n--) {
+      gates[n].open();
+      await processing[n];
     }
     const results = await Promise.all(processing);
 
