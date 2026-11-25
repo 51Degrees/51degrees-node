@@ -597,16 +597,39 @@ with the cloud's message.
 
 ```js
 const valid = await client.verify(fodId);   // boolean
+
+// The same check, with the Human Confidence Value the 51Did carries.
+const checked = await client.verifyDetailed(fodId);
+checked.valid                      // boolean
+checked.humanConfidence            // HumanConfidence: 'High', 'Medium', 'Low'
+                                   //   or 'Absent', for a valid signature
+                                   //   with a licence key valid for Human
+                                   //   Confidence
+checked.humanConfidenceNullReason  // why humanConfidence is not present
 ```
+
+`verifyDetailed` sends the licence key where the client has one, in the body
+of a POST, never in a URL. The cloud gives the Value only to a call that
+presents a licence key valid for Human Confidence, whoever holds it, and gives
+`humanConfidenceNullReason` to any other call. 'Absent' means the 51Did
+carries no Value, which is true of every 51Did made before the Value was
+added. `verify` itself is unchanged and never sends the licence key.
 
 **4. Redeem a sealed creator context result.** The verify-context and
 verify-full endpoints are browser calls, because the creator context describes
-the browser's own connection, and they return the verdict only as an encrypted
-`result` the browser cannot read or forge. The party that acts on it redeems it
-on the server, with the licence key, against the 51Did it knows independently.
+the browser's own connection, and they return the verdict only as a sealed
+result the browser cannot read or forge, in `sealedResult` and in `result`,
+its older name. The party that acts on it redeems it on the server, with the
+licence key, against the 51Did it knows independently.
 
 ```js
-const redeemed = await client.redeem(fodId, result, challenge);
+const redeemed = await client.redeem(fodId, sealedResult, transaction);
+redeemed.status       // RedeemStatus: 'success', 'expired', 'replayed',
+                      // 'unreadable' or 'unconfirmed'
+redeemed.humanConfidence // on success, with a licence key valid for
+                      //   Human Confidence: 'High', 'Medium', 'Low'
+                      //   or 'Absent'
+redeemed.humanConfidenceNullReason // why humanConfidence is not present
 redeemed.context      // ContextResult: 'verified', 'mismatch', 'nocontext',
                       // 'misconfigured', 'invaliddate', 'notcheckable',
                       // 'expired', 'replayed', 'unreadable', 'unconfirmed'
@@ -625,6 +648,20 @@ redeemed.statusCode   // 200, or 503 for 'unconfirmed', which may be retried
 redeemed.raw          // the body as received
 redeemed.toJSON()     // the cloud's own response shape, for relaying to a page
 ```
+
+The client sends the sealed result as `sealedResult` and the transaction as
+`transaction`, and the same values under `result` and `challenge`, their
+obsolete names, so the call works with a cloud that reads only those. Read
+`status` first. Only `success` carries an unsealed result, being `signature`,
+`context`, `factors` and the Human Confidence Value, and the other four say
+why the sealed result was not redeemed. A cloud that sends no `status` wrote
+the reason to `context`, so `status` is then read from `context`, and a
+status this package does not know is `unreadable`. The cloud still writes the
+reason to `context` too, so `ContextResult.EXPIRED`, `REPLAYED`, `UNREADABLE`
+and `UNCONFIRMED` keep their values, but they are obsolete in favor of
+`RedeemStatus`, and each warns once with a `DeprecationWarning` when first
+used. `toJSON` leaves out `status` and the Human Confidence fields, so the
+Value reaches a page only where the server sends it.
 
 The factor names are in `Factor`, in the order the cloud lists them. From
 cloud release 4.4.38 the operating system and the browser each have a name

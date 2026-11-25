@@ -43,6 +43,27 @@ export type SignatureCheck = {
     reason: string;
 };
 /**
+ * The detailed answer of the cloud's verify endpoint.
+ */
+export type CloudVerification = {
+    /**
+     * whether the cloud found the signature valid
+     */
+    valid: boolean;
+    /**
+     * one of {@link HumanConfidence}, the
+     * Value the 51Did carries, present for a 51Did whose signature verifies when
+     * the call presented a License Key valid for Human Confidence
+     */
+    humanConfidence?: string;
+    /**
+     * why `humanConfidence` is
+     * not present, as the cloud gives it to a call that did not present such a
+     * key
+     */
+    humanConfidenceNullReason?: string;
+};
+/**
  * Options for {@link DidClient}.
  */
 export type DidClientOptions = {
@@ -56,8 +77,10 @@ export type DidClientOptions = {
     resourceKey?: string;
     /**
      * a licence key of the same account. Server
-     * side only. Needed to redeem where the account holds licence keys, and
-     * sent only in the body of the redeem request, never in a URL.
+     * side only. Needed to redeem where the account holds licence keys, and to
+     * read the Human Confidence Value a 51Did carries, which needs one valid for
+     * Human Confidence. Sent only in the body of the redeem request and of the
+     * {@link DidClient#verifyDetailed} request, never in a URL.
      */
     licenceKey?: string;
     /**
@@ -107,6 +130,17 @@ export type DidClientOptions = {
  * @property {string} reason one of {@link SignatureReason}
  */
 /**
+ * The detailed answer of the cloud's verify endpoint.
+ * @typedef {object} CloudVerification
+ * @property {boolean} valid whether the cloud found the signature valid
+ * @property {string} [humanConfidence] one of {@link HumanConfidence}, the
+ * Value the 51Did carries, present for a 51Did whose signature verifies when
+ * the call presented a License Key valid for Human Confidence
+ * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
+ * not present, as the cloud gives it to a call that did not present such a
+ * key
+ */
+/**
  * Options for {@link DidClient}.
  * @typedef {object} DidClientOptions
  * @property {string} [resourceKey] the page's resource key. Public by
@@ -115,8 +149,10 @@ export type DidClientOptions = {
  * private cloud serves those routes with no resource key, so a client for
  * one is built without it.
  * @property {string} [licenceKey] a licence key of the same account. Server
- * side only. Needed to redeem where the account holds licence keys, and
- * sent only in the body of the redeem request, never in a URL.
+ * side only. Needed to redeem where the account holds licence keys, and to
+ * read the Human Confidence Value a 51Did carries, which needs one valid for
+ * Human Confidence. Sent only in the body of the redeem request and of the
+ * {@link DidClient#verifyDetailed} request, never in a URL.
  * @property {string} [endpoint] the API base including the `/api/v4/`
  * segment. Defaults to the _51DEGREES_CLOUD_ENDPOINT environment variable where
  * the runtime has environment variables, then to the public cloud. A value
@@ -245,9 +281,42 @@ export class DidClient {
      */
     verify(fodId: FodId | string): Promise<boolean>;
     /**
+     * As {@link DidClient#verify}, with the Human Confidence Value the 51Did
+     * carries alongside the answer. The cloud gives the Value for a 51Did
+     * whose signature verifies, and only to a call that presents a License
+     * Key valid for Human Confidence, so a client built with a licence key
+     * sends the request as a POST with the resource key, the 51Did and the
+     * licence key in the form body, and the licence key never reaches a URL.
+     * A client without one sends the same GET as {@link DidClient#verify},
+     * and the answer to a valid signature then carries
+     * `humanConfidenceNullReason`. One use against the resource key either
+     * way. The licence key is shown only by its last 4 characters in the
+     * message and body of each error.
+     * @param {FodId | string} fodId the identifier, or its base64 in either
+     * alphabet
+     * @returns {Promise<CloudVerification>} whether the cloud found the
+     * signature valid, with the Value or the reason it is not present
+     * @throws {DidArgumentError} when the value is not a 51Did, refused here
+     * with the reader's status before any request is made, or when the cloud
+     * refuses it (HTTP 400), with the cloud's message
+     * @throws {DidClientError} on any other answer than valid or invalid
+     */
+    verifyDetailed(fodId: FodId | string): Promise<CloudVerification>;
+    /**
+     * Calls the verify endpoint, as a GET with the resource key in the route
+     * or, with the licence key, as a POST with everything in the form body,
+     * and answers the parsed body once it holds `valid`.
+     * @param {FodId | string} fodId the identifier, or its base64
+     * @param {boolean} withLicence whether to send the licence key
+     * @returns {Promise<{valid: boolean, humanConfidence?: any,
+     * humanConfidenceNullReason?: any}>} the parsed body
+     * @private
+     */
+    private _verify;
+    /**
      * Redeems a sealed creator context result against the identifier, on the
      * server, with the licence key. The resource key, the 51Did, the sealed
-     * result, the challenge and the licence key all travel in the body of a
+     * result, the transaction and the licence key all travel in the body of a
      * POST to id/redeem, so none of them reaches an access log. (The redeem
      * endpoint takes the resource key in the form on a POST, where the key
      * and verify endpoints take it in the route on a GET, and a private
@@ -259,11 +328,22 @@ export class DidClient {
      * the one word `unreadable` by design, so the client does not try to
      * tell them apart either. The licence key is shown only by its last 4
      * characters in the message and body of each error.
+     *
+     * The sealed result and the transaction are sent as `sealedResult` and
+     * `transaction`, and with the same values under `result` and `challenge`,
+     * the cloud's obsolete names for them, so the call works with a cloud
+     * that reads only those. A cloud that reads both takes the current names,
+     * and the `obsolete` list it then adds to its answer is ignored. The
+     * answer's
+     * {@link RedeemResult#status} says what happened, and on success, with a
+     * licence key valid for Human Confidence,
+     * {@link RedeemResult#humanConfidence} holds the Value the 51Did carries.
      * @param {FodId | string} fodId the identifier the caller knows
      * independently, or its base64 in either alphabet
-     * @param {string} result the sealed result exactly as the verify endpoint
-     * returned it to the page
-     * @param {string} [challenge] the single-use challenge given to the
+     * @param {string} sealedResult the sealed result exactly as the verify
+     * endpoint returned it to the page, in `sealedResult` or, from a cloud
+     * that predates that name, in `result`
+     * @param {string} [transaction] the single-use transaction given to the
      * verify endpoint, where one was
      * @returns {Promise<RedeemResult>} the typed outcome
      * @throws {DidArgumentError} when the value is not a 51Did, refused here
@@ -273,7 +353,7 @@ export class DidClient {
      * context (HTTP 404)
      * @throws {DidClientError} on any other status
      */
-    redeem(fodId: FodId | string, result: string, challenge?: string): Promise<RedeemResult>;
+    redeem(fodId: FodId | string, sealedResult: string, transaction?: string): Promise<RedeemResult>;
     /**
      * The key list to select from for the given date, after the fetch
      * {@link DidClient#_fetchFor} calls for, where it calls for one.
@@ -375,6 +455,29 @@ export class RedeemResult {
      * never mistaken for a good one.
      */
     context: string;
+    /**
+     * @type {string} one of {@link RedeemStatus}, saying what happened at
+     * the redemption. Read from `status`, where a word this package does not
+     * know maps to `unreadable`, so an unrecognised status is never mistaken
+     * for success. A cloud that sends no `status` wrote the same word to
+     * `context`, so the status is then read from `context`: one of the four
+     * reasons is that reason, any other word the context check gives is
+     * `success`, and anything else is `unreadable`.
+     */
+    status: string;
+    /**
+     * @type {string | undefined} one of {@link HumanConfidence}, the Value
+     * the 51Did carries, present on `success` for a call that presented a
+     * License Key valid for Human Confidence. A word this package does not
+     * know is left out, and {@link RedeemResult#raw} has it as sent.
+     */
+    humanConfidence: string | undefined;
+    /**
+     * @type {string | undefined} why {@link RedeemResult#humanConfidence}
+     * is not present, as the cloud gives it to a call that did not present a
+     * License Key valid for Human Confidence
+     */
+    humanConfidenceNullReason: string | undefined;
     /** @type {string} one of {@link SignatureResult} */
     signature: string;
     /**
@@ -405,15 +508,68 @@ export class RedeemResult {
      * The result in the cloud's own response shape (`signature`, `context`,
      * `factors` when present, `verifiedAt`, `secondsSinceVerified`), so a
      * server can answer a page with it directly. `signature` is left out when
-     * the cloud did not report it, as the cloud leaves it out.
+     * the cloud did not report it, as the cloud leaves it out. `status` and
+     * the Human Confidence fields are left out too, so the shape is the one a
+     * page read before they were added, and the Human Confidence Value
+     * reaches a page only where the server chooses to send it.
      * @returns {object} the plain object for JSON.stringify
      */
     toJSON(): object;
 }
 /**
+ * What happened at a redemption, as the cloud reports it in the `status`
+ * field of every redeem answer. Only `success` carries an unsealed result.
+ * The other four are the reasons a sealed result was not redeemed, and the
+ * cloud also writes the same word to `context`, as it did before `status`
+ * was added.
+ */
+export const RedeemStatus: Readonly<{
+    /** The sealed result was redeemed, and the unsealed result stands. */
+    SUCCESS: "success";
+    /** The sealed result was genuine, but redeemed outside the freshness window. */
+    EXPIRED: "expired";
+    /** The sealed result was genuine, but had already been redeemed. */
+    REPLAYED: "replayed";
+    /** First use could not be confirmed (503). The caller may retry. */
+    UNCONFIRMED: "unconfirmed";
+    /**
+     * The sealed result could not be read for the inputs sent. Every
+     * cryptographic failure, a missing licence key included, comes back as
+     * this one word by design, and a status this package does not know is
+     * mapped here too.
+     */
+    UNREADABLE: "unreadable";
+}>;
+/**
+ * The Human Confidence Value a 51Did carries, as the cloud reports it in the
+ * `humanConfidence` field of the verify and redeem answers. The cloud gives
+ * it only to a call that presents a License Key valid for Human Confidence,
+ * and gives `humanConfidenceNullReason` in its place to any other call.
+ */
+export const HumanConfidence: Readonly<{
+    /** High confidence that a human was using the device that made the 51Did. */
+    HIGH: "High";
+    /** Medium confidence that a human was using the device that made the 51Did. */
+    MEDIUM: "Medium";
+    /** Low confidence that a human was using the device that made the 51Did. */
+    LOW: "Low";
+    /**
+     * The 51Did carries no Human Confidence Value. Every 51Did made before
+     * the Value was added reads as Absent, as does one made where no Value
+     * was available.
+     */
+    ABSENT: "Absent";
+}>;
+/**
  * The creator context outcome of a redemption, as the cloud reports it in
  * the `context` field. The values are the cloud's own strings, so a result
  * can be compared to a constant or printed as received.
+ *
+ * The four outcomes that say a sealed result was not redeemed (EXPIRED,
+ * REPLAYED, UNREADABLE and UNCONFIRMED) are obsolete. Read
+ * {@link RedeemResult#status} and compare it to {@link RedeemStatus}
+ * instead. They keep their values and go on working, because the cloud still
+ * writes the same words to `context`, and each warns once when first used.
  */
 export const ContextResult: Readonly<{
     /** Every factor matched the browser and connection that created it. */
@@ -437,18 +593,34 @@ export const ContextResult: Readonly<{
      * identifier is fabricated rather than the service being wrong.
      */
     INVALID_DATE: "invaliddate";
-    /** The sealed result was redeemed outside the freshness window. */
-    EXPIRED: "expired";
-    /** The sealed result had already been redeemed on that instance. */
-    REPLAYED: "replayed";
+    /**
+     * The sealed result was redeemed outside the freshness window.
+     * @deprecated Use RedeemStatus.EXPIRED, compared to RedeemResult.status.
+     * @returns {'expired'} the word
+     */
+    readonly EXPIRED: "expired";
+    /**
+     * The sealed result had already been redeemed on that instance.
+     * @deprecated Use RedeemStatus.REPLAYED, compared to RedeemResult.status.
+     * @returns {'replayed'} the word
+     */
+    readonly REPLAYED: "replayed";
     /**
      * The sealed result could not be read. Every cryptographic failure, a
      * missing licence key included, comes back as this one word by design,
      * and a context string this package does not know is mapped here too.
+     * @deprecated Use RedeemStatus.UNREADABLE, compared to
+     * RedeemResult.status.
+     * @returns {'unreadable'} the word
      */
-    UNREADABLE: "unreadable";
-    /** First use could not be confirmed (503). The caller may retry. */
-    UNCONFIRMED: "unconfirmed";
+    readonly UNREADABLE: "unreadable";
+    /**
+     * First use could not be confirmed (503). The caller may retry.
+     * @deprecated Use RedeemStatus.UNCONFIRMED, compared to
+     * RedeemResult.status.
+     * @returns {'unconfirmed'} the word
+     */
+    readonly UNCONFIRMED: "unconfirmed";
 }>;
 /**
  * The signature outcome of a redemption, as the cloud reports it in the

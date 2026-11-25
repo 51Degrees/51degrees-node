@@ -28,6 +28,8 @@ const PublicKeys = require('./publicKeys');
 const {
   DidClient,
   RedeemResult,
+  RedeemStatus,
+  HumanConfidence,
   ContextResult,
   SignatureResult,
   FactorResult,
@@ -46,6 +48,8 @@ module.exports = {
   PublicKeys,
   DidClient,
   RedeemResult,
+  RedeemStatus,
+  HumanConfidence,
   ContextResult,
   SignatureResult,
   FactorResult,

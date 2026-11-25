@@ -24,6 +24,8 @@ const {
   FodId,
   DidClient,
   RedeemResult,
+  RedeemStatus,
+  HumanConfidence,
   ContextResult,
   SignatureResult,
   FactorResult,
@@ -345,7 +347,7 @@ describe('DidClient in a browser', () => {
     await withoutProcess(() => Promise.all([
       client.publicKeys(),
       client.verify(fod),
-      client.redeem(fod, 'sealed', 'challenge')
+      client.redeem(fod, 'sealed', 'transaction')
     ]));
     expect(fetch.calls.map((call) => call.init.headers)).toEqual([
       {},
@@ -361,7 +363,7 @@ describe('DidClient in a browser', () => {
     await Promise.all([
       client.publicKeys(),
       client.verify(fod),
-      client.redeem(fod, 'sealed', 'challenge')
+      client.redeem(fod, 'sealed', 'transaction')
     ]);
     expect(fetch.calls.map((call) => call.init.headers)).toEqual([
       { 'User-Agent': USER_AGENT },
@@ -440,13 +442,14 @@ describe('DidClient without a resource key', () => {
     const client = new DidClient({
       endpoint: ENDPOINT, licenceKey: LICENCE, fetch
     });
-    const redeemed = await client.redeem(fod, 'sealed', 'challenge');
+    const redeemed = await client.redeem(fod, 'sealed', 'transaction');
     expect(redeemed.context).toBe('verified');
     expect(fetch.calls[0].url).toBe(ENDPOINT + 'id/redeem');
     const form = new URLSearchParams(fetch.calls[0].init.body);
     expect(form.has('resource')).toBe(false);
     expect(Array.from(form.keys()).sort())
-      .toEqual(['51did', 'challenge', 'license', 'result']);
+      .toEqual(['51did', 'challenge', 'license', 'result', 'sealedResult',
+        'transaction']);
   });
 });
 
@@ -1283,10 +1286,160 @@ describe('DidClient verify (cloud)', () => {
   });
 });
 
+// The verify endpoint adds the Human Confidence Value a 51Did carries to the
+// answer for a valid signature, for a call that presents a License Key valid
+// for Human Confidence, and the reason it is not there to any other call.
+describe('DidClient verifyDetailed', () => {
+  const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
+  const NULL_REASON = 'humanConfidence is a paid feature. You need a ' +
+    'License Key valid for Human Confidence, presented on this call, to ' +
+    'retrieve it. Visit https://51degrees.com/pricing for details';
+
+  function verifyClient (status, body, extra = {}) {
+    const fetch = fakeFetch(() => response(status, body));
+    const client = new DidClient(Object.assign({
+      resourceKey: RESOURCE, endpoint: ENDPOINT, fetch
+    }, extra));
+    return { client, fetch };
+  }
+
+  test('without a licence key sends the same GET as verify and reads the reason', async () => {
+    const { client, fetch } = verifyClient(200, {
+      valid: true, humanConfidenceNullReason: NULL_REASON
+    });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({
+      valid: true, humanConfidenceNullReason: NULL_REASON
+    });
+    expect(fetch.calls).toHaveLength(1);
+    expect(fetch.calls[0].url).toBe(
+      ENDPOINT + 'id/verify/' + RESOURCE + '?51did=' + fod.asBase64Url() +
+      '&owid=' + fod.asBase64Url());
+    expect(fetch.calls[0].init.method).toBe('GET');
+  });
+
+  test('with a licence key sends a POST form and no key in the URL', async () => {
+    const { client, fetch } = verifyClient(200, {
+      valid: true, humanConfidence: 'High'
+    }, { licenceKey: LICENCE });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({
+      valid: true, humanConfidence: HumanConfidence.HIGH
+    });
+    expect(fetch.calls).toHaveLength(1);
+    const call = fetch.calls[0];
+    expect(call.url).toBe(ENDPOINT + 'id/verify');
+    expect(call.url).not.toContain(LICENCE);
+    expect(call.url).not.toContain(RESOURCE);
+    expect(call.init.method).toBe('POST');
+    expect(call.init.headers['User-Agent']).toBe(USER_AGENT);
+    expect(call.init.headers['Content-Type'])
+      .toBe('application/x-www-form-urlencoded');
+    const form = new URLSearchParams(call.init.body);
+    expect(form.get('resource')).toBe(RESOURCE);
+    expect(form.get('51did')).toBe(fod.asBase64Url());
+    expect(form.get('owid')).toBe(fod.asBase64Url());
+    expect(form.get('license')).toBe(LICENCE);
+    expect(Array.from(form.keys()).sort())
+      .toEqual(['51did', 'license', 'owid', 'resource']);
+  });
+
+  test('a private cloud gets no resource field', async () => {
+    const fetch = fakeFetch(() => response(200, {
+      valid: true, humanConfidence: 'Absent'
+    }));
+    const client = new DidClient({ endpoint: ENDPOINT, licenceKey: LICENCE, fetch });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({
+      valid: true, humanConfidence: HumanConfidence.ABSENT
+    });
+    const form = new URLSearchParams(fetch.calls[0].init.body);
+    expect(form.has('resource')).toBe(false);
+  });
+
+  test('verify itself is unchanged by a licence key', async () => {
+    const { client, fetch } = verifyClient(200, {
+      valid: true, humanConfidence: 'Low'
+    }, { licenceKey: LICENCE });
+    await expect(client.verify(fod)).resolves.toBe(true);
+    expect(fetch.calls[0].init.method).toBe('GET');
+    expect(fetch.calls[0].url).not.toContain(LICENCE);
+  });
+
+  test('every Value is read, ignoring case', async () => {
+    for (const [word, value] of [
+      ['High', HumanConfidence.HIGH],
+      ['Medium', HumanConfidence.MEDIUM],
+      ['Low', HumanConfidence.LOW],
+      ['Absent', HumanConfidence.ABSENT],
+      ['medium', HumanConfidence.MEDIUM],
+      ['ABSENT', HumanConfidence.ABSENT]
+    ]) {
+      const { client } = verifyClient(200, {
+        valid: true, humanConfidence: word
+      }, { licenceKey: LICENCE });
+      expect((await client.verifyDetailed(fod)).humanConfidence).toBe(value);
+    }
+  });
+
+  test('a Value this package does not know is left out', async () => {
+    const { client } = verifyClient(200, {
+      valid: true, humanConfidence: 'Splendid'
+    }, { licenceKey: LICENCE });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: true });
+  });
+
+  test('today\'s answer, with neither field, reads as before', async () => {
+    const { client } = verifyClient(200, { valid: true });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: true });
+  });
+
+  test('400 invalid answers false with no Value', async () => {
+    const { client } = verifyClient(400, { valid: false }, { licenceKey: LICENCE });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
+  });
+
+  test('400 errors raises DidArgumentError with the licence key masked', async () => {
+    const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
+    const { client } = verifyClient(400, {
+      errors: ['Invalid license key(s) supplied: \'' + LICENCE + '\'']
+    }, { licenceKey: LICENCE });
+    const error = await client.verifyDetailed(fod)
+      .then(() => undefined, (e) => e);
+    expect(error).toBeInstanceOf(DidArgumentError);
+    expect(error.statusCode).toBe(400);
+    expect(error.message).toContain(masked);
+    expect(error.body).toContain(masked);
+    expect(require('util').inspect(error, { showHidden: true }))
+      .not.toContain(LICENCE);
+  });
+
+  test('another status raises DidClientError with the licence key masked', async () => {
+    const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
+    const { client } = verifyClient(401, 'Refused ' + LICENCE, {
+      licenceKey: LICENCE
+    });
+    const error = await client.verifyDetailed(fod)
+      .then(() => undefined, (e) => e);
+    expect(error).toHaveProperty('name', 'DidClientError');
+    expect(error.statusCode).toBe(401);
+    expect(error.body).toBe('Refused ' + masked);
+    expect(error.message).not.toContain(LICENCE);
+  });
+
+  test('a malformed identifier is refused before any request', async () => {
+    const { client, fetch } = verifyClient(200, { valid: true }, { licenceKey: LICENCE });
+    for (const [input, status] of MALFORMED) {
+      await expect(client.verifyDetailed(input)).rejects.toMatchObject({
+        name: 'DidArgumentError',
+        message: expect.stringContaining('(' + status + ')')
+      });
+    }
+    expect(fetch.calls).toHaveLength(0);
+  });
+});
+
 describe('DidClient redeem', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
   const RESULT = 'sealed-result-value';
-  const CHALLENGE = 'challenge-123';
+  const TRANSACTION = 'transaction-123';
 
   function redeemClient (status, body, extra = {}) {
     const fetch = fakeFetch(() => response(status, body));
@@ -1296,14 +1449,14 @@ describe('DidClient redeem', () => {
     return { client, fetch };
   }
 
-  test('sends a POST form with the five fields and no key in the URL', async () => {
+  test('sends a POST form with the current and obsolete names and no key in the URL', async () => {
     const { client, fetch } = redeemClient(200, {
       signature: 'verified',
       context: 'verified',
       verifiedAt: '2026-08-07T09:15:32Z',
       secondsSinceVerified: 2
     });
-    await client.redeem(fod, RESULT, CHALLENGE);
+    await client.redeem(fod, RESULT, TRANSACTION);
     expect(fetch.calls).toHaveLength(1);
     const call = fetch.calls[0];
     expect(call.url).toBe(ENDPOINT + 'id/redeem');
@@ -1316,36 +1469,43 @@ describe('DidClient redeem', () => {
       .toBe('application/x-www-form-urlencoded');
     const form = new URLSearchParams(call.init.body);
     expect(form.get('51did')).toBe(fod.asBase64Url());
+    expect(form.get('sealedResult')).toBe(RESULT);
+    expect(form.get('transaction')).toBe(TRANSACTION);
+    // The same values under the obsolete names, for a cloud that reads only
+    // those.
     expect(form.get('result')).toBe(RESULT);
-    expect(form.get('challenge')).toBe(CHALLENGE);
+    expect(form.get('challenge')).toBe(TRANSACTION);
     expect(form.get('license')).toBe(LICENCE);
     expect(form.get('resource')).toBe(RESOURCE);
     expect(Array.from(form.keys()).sort())
-      .toEqual(['51did', 'challenge', 'license', 'resource', 'result']);
+      .toEqual(['51did', 'challenge', 'license', 'resource', 'result',
+        'sealedResult', 'transaction']);
   });
 
   test('omits license when no licence key was given', async () => {
     const { client, fetch } = redeemClient(200, { context: 'unreadable' }, {
       licenceKey: undefined
     });
-    await client.redeem(fod, RESULT, CHALLENGE);
+    await client.redeem(fod, RESULT, TRANSACTION);
     const form = new URLSearchParams(fetch.calls[0].init.body);
     expect(form.has('license')).toBe(false);
     expect(Array.from(form.keys()).sort())
-      .toEqual(['51did', 'challenge', 'resource', 'result']);
+      .toEqual(['51did', 'challenge', 'resource', 'result', 'sealedResult',
+        'transaction']);
   });
 
-  test('a missing challenge is sent empty', async () => {
+  test('a missing transaction is sent empty', async () => {
     const { client, fetch } = redeemClient(200, { context: 'unreadable' });
     await client.redeem(fod.asBase64(), RESULT);
     const form = new URLSearchParams(fetch.calls[0].init.body);
+    expect(form.get('transaction')).toBe('');
     expect(form.get('challenge')).toBe('');
     expect(form.get('51did')).toBe(fod.asBase64());
   });
 
   test('an over-long encoded value is refused before transport', async () => {
     const { client, fetch } = redeemClient(200, { context: 'unreadable' });
-    await expect(client.redeem(OVER_LONG, RESULT, CHALLENGE))
+    await expect(client.redeem(OVER_LONG, RESULT, TRANSACTION))
       .rejects.toBeInstanceOf(DidArgumentError);
     expect(fetch.calls).toHaveLength(0);
   });
@@ -1369,7 +1529,7 @@ describe('DidClient redeem', () => {
       secondsSinceVerified: 2
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result).toBeInstanceOf(RedeemResult);
     expect(result.statusCode).toBe(200);
     expect(result.context).toBe(ContextResult.MISMATCH);
@@ -1401,7 +1561,7 @@ describe('DidClient redeem', () => {
         }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors).toEqual(body.factors);
       expect(result.factors[Factor.PLATFORM_NAME])
         .toBe(FactorResult.VERIFIED);
@@ -1431,7 +1591,7 @@ describe('DidClient redeem', () => {
         }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors[Factor.TRANSPORT])
         .toBe(FactorResult.NOT_RECORDED);
       expect(result.factors[Factor.PLATFORM_VERSION])
@@ -1464,7 +1624,7 @@ describe('DidClient redeem', () => {
         }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors[Factor.TRANSPORT]).toBe(FactorResult.VERIFIED);
       expect(result.factors[Factor.DEVICE]).toBe(FactorResult.MISMATCH);
       expect(result.factors[Factor.BROWSER_IP]).toBe(FactorResult.VERIFIED);
@@ -1490,7 +1650,7 @@ describe('DidClient redeem', () => {
       factors: { newfactor: 'newword', device: 'verified' }
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.factors.newfactor).toBe(FactorResult.MISMATCH);
     expect(result.factors.device).toBe(FactorResult.VERIFIED);
   });
@@ -1508,7 +1668,7 @@ describe('DidClient redeem', () => {
       }
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.factors).toEqual({
       transport: FactorResult.VERIFIED,
       device: FactorResult.MISMATCH,
@@ -1526,7 +1686,7 @@ describe('DidClient redeem', () => {
       factors: { device: null, transport: 'verified' }
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.factors.device).toBe(FactorResult.MISMATCH);
     expect(result.factors.transport).toBe(FactorResult.VERIFIED);
   });
@@ -1538,7 +1698,7 @@ describe('DidClient redeem', () => {
       factors: { device: 'somethingnew', transport: 'verified' }
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(JSON.parse(result.raw).factors).toEqual(body.factors);
     expect(result).not.toHaveProperty('factorsRaw');
   });
@@ -1560,7 +1720,7 @@ describe('DidClient redeem', () => {
         factors: { transport: 'somethingnewer' }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors.transport).toBe(FactorResult.MISMATCH);
       expect(result.toJSON().factors).toEqual({ transport: 'mismatch' });
     });
@@ -1592,7 +1752,7 @@ describe('DidClient redeem', () => {
         }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors).toBeDefined();
       for (const name of [Factor.PLATFORM_NAME, Factor.PLATFORM_VERSION,
         Factor.BROWSER_NAME, Factor.BROWSER_VERSION]) {
@@ -1612,7 +1772,7 @@ describe('DidClient redeem', () => {
         factors: { transport: 'verified', laterfactor: 'mismatch' }
       };
       const { client } = redeemClient(200, body);
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.factors).toEqual(body.factors);
       expect(Object.isFrozen(result.factors)).toBe(true);
     });
@@ -1625,7 +1785,7 @@ describe('DidClient redeem', () => {
       secondsSinceVerified: 0
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.VERIFIED);
     expect(result.signature).toBe(SignatureResult.VERIFIED);
     expect(result.factors).toBeUndefined();
@@ -1640,7 +1800,7 @@ describe('DidClient redeem', () => {
       verifiedAt: '2026-08-07T09:15:32Z',
       secondsSinceVerified: 1
     });
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.signature).toBe(SignatureResult.INVALID);
   });
 
@@ -1651,7 +1811,7 @@ describe('DidClient redeem', () => {
       secondsSinceVerified: 14
     };
     const { client } = redeemClient(200, body);
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.EXPIRED);
     expect(result.signature).toBe(SignatureResult.UNKNOWN);
     expect(result.verifiedAt).toEqual(new Date('2026-08-07T09:15:32Z'));
@@ -1661,7 +1821,7 @@ describe('DidClient redeem', () => {
 
   test('replayed', async () => {
     const { client } = redeemClient(200, { context: 'replayed' });
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.REPLAYED);
     expect(result.verifiedAt).toBeUndefined();
     expect(result.secondsSinceVerified).toBeUndefined();
@@ -1670,7 +1830,7 @@ describe('DidClient redeem', () => {
 
   test('unreadable', async () => {
     const { client } = redeemClient(200, { context: 'unreadable' });
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.UNREADABLE);
     expect(result.signature).toBe(SignatureResult.UNKNOWN);
   });
@@ -1683,21 +1843,21 @@ describe('DidClient redeem', () => {
         verifiedAt: '2026-08-07T09:15:32Z',
         secondsSinceVerified: 1
       });
-      const result = await client.redeem(fod, RESULT, CHALLENGE);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
       expect(result.context).toBe(context);
     }
   });
 
   test('503 unconfirmed is a result the caller may retry', async () => {
     const { client } = redeemClient(503, { context: 'unconfirmed' });
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.statusCode).toBe(503);
     expect(result.context).toBe(ContextResult.UNCONFIRMED);
   });
 
   test('an unknown context string fails closed and keeps the raw value', async () => {
     const { client } = redeemClient(200, { context: 'splendid', signature: 'verified' });
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.UNREADABLE);
     expect(result.contextRaw).toBe('splendid');
     expect(result.toJSON().context).toBe('unreadable');
@@ -1705,7 +1865,7 @@ describe('DidClient redeem', () => {
 
   test('a missing context fails closed', async () => {
     const { client } = redeemClient(200, {});
-    const result = await client.redeem(fod, RESULT, CHALLENGE);
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
     expect(result.context).toBe(ContextResult.UNREADABLE);
     expect(result.contextRaw).toBe('');
   });
@@ -1716,7 +1876,7 @@ describe('DidClient redeem', () => {
     const { client } = redeemClient(400, {
       errors: ['Value for 51did is not a valid Base64-encoded 51Did: \'x\'.']
     });
-    await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toMatchObject({
+    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toMatchObject({
       name: 'DidArgumentError',
       statusCode: 400,
       message: 'Value for 51did is not a valid Base64-encoded 51Did: \'x\'.'
@@ -1726,7 +1886,7 @@ describe('DidClient redeem', () => {
   test('a malformed identifier is refused with the reader status before any request', async () => {
     const { client, fetch } = redeemClient(200, { context: 'verified' });
     for (const [input, status] of MALFORMED) {
-      await expect(client.redeem(input, RESULT, CHALLENGE))
+      await expect(client.redeem(input, RESULT, TRANSACTION))
         .rejects.toMatchObject({
           name: 'DidArgumentError',
           statusCode: undefined,
@@ -1738,23 +1898,23 @@ describe('DidClient redeem', () => {
 
   test('404 raises DidNotSupportedError', async () => {
     const { client } = redeemClient(404, 'Not found');
-    const rejection = expect(client.redeem(fod, RESULT, CHALLENGE)).rejects;
+    const rejection = expect(client.redeem(fod, RESULT, TRANSACTION)).rejects;
     await rejection.toBeInstanceOf(DidNotSupportedError);
-    await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toMatchObject({
+    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toMatchObject({
       statusCode: 404, body: 'Not found'
     });
   });
 
   test('another status raises DidClientError', async () => {
     const { client } = redeemClient(500, 'boom');
-    await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toMatchObject({
+    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toMatchObject({
       name: 'DidClientError', statusCode: 500, body: 'boom'
     });
   });
 
   test('a 200 that is not a JSON object raises DidClientError', async () => {
     const { client } = redeemClient(200, 'not json');
-    await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toMatchObject({
+    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toMatchObject({
       name: 'DidClientError', statusCode: 200, body: 'not json'
     });
   });
@@ -1762,7 +1922,7 @@ describe('DidClient redeem', () => {
   test('a transport failure propagates', async () => {
     const fetch = fakeFetch(() => { throw new TypeError('fetch failed'); });
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
-    await expect(client.redeem(fod, RESULT, CHALLENGE)).rejects.toThrow('fetch failed');
+    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toThrow('fetch failed');
   });
 
   // The cloud refuses a licence key with an error that names it. Only the
@@ -1776,13 +1936,345 @@ describe('DidClient redeem', () => {
   ])('a licence key named in a %s answer is masked', async (status, body, name) => {
     const masked = '*'.repeat(LICENCE.length - 4) + LICENCE.slice(-4);
     const { client } = redeemClient(status, body);
-    const error = await client.redeem(fod, RESULT, CHALLENGE)
+    const error = await client.redeem(fod, RESULT, TRANSACTION)
       .then(() => undefined, (e) => e);
     expect(error).toHaveProperty('name', name);
     expect(error.message).toContain(masked);
     expect(error.body).toContain(masked);
     expect(require('util').inspect(error, { showHidden: true }))
       .not.toContain(LICENCE);
+  });
+});
+
+// The redeem endpoint now adds `status` to every answer, the Human
+// Confidence Value (or the reason it is not there) on success, and
+// `obsolete` where a call used an old name. These are recorded answers in
+// the cloud's field order, beside today's answer for the same outcome.
+describe('DidClient redeem with the status and Human Confidence fields', () => {
+  const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
+  const NULL_REASON = 'humanConfidence is a paid feature. You need a ' +
+    'License Key valid for Human Confidence, presented on this call, to ' +
+    'retrieve it. Visit https://51degrees.com/pricing for details';
+  const OBSOLETE = [
+    'result is obsolete. Use sealedResult.',
+    'challenge is obsolete. Use transaction.'
+  ];
+  const FACTORS = {
+    transport: 'verified',
+    device: 'mismatch',
+    browserip: 'verified',
+    connectionip: 'verified',
+    asn: 'verified',
+    platformname: 'verified',
+    platformversion: 'notrecorded',
+    browsername: 'verified',
+    browserversion: 'verified'
+  };
+
+  // Each outcome as today's cloud answers it, the same answer from the
+  // updated cloud, and the status it carries.
+  const OUTCOMES = [
+    {
+      name: 'verified',
+      httpStatus: 200,
+      today: {
+        signature: 'verified',
+        context: 'verified',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 2
+      },
+      updated: {
+        signature: 'verified',
+        context: 'verified',
+        humanConfidence: 'High',
+        status: 'success',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 2
+      },
+      status: 'success'
+    },
+    {
+      name: 'mismatch',
+      httpStatus: 200,
+      today: {
+        signature: 'verified',
+        context: 'mismatch',
+        factors: FACTORS,
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 3
+      },
+      updated: {
+        signature: 'verified',
+        context: 'mismatch',
+        factors: FACTORS,
+        humanConfidenceNullReason: NULL_REASON,
+        status: 'success',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 3
+      },
+      status: 'success'
+    },
+    {
+      name: 'nocontext',
+      httpStatus: 200,
+      today: {
+        signature: 'invalid',
+        context: 'nocontext',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 1
+      },
+      updated: {
+        signature: 'invalid',
+        context: 'nocontext',
+        humanConfidence: 'Absent',
+        status: 'success',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 1
+      },
+      status: 'success'
+    },
+    {
+      name: 'expired',
+      httpStatus: 200,
+      today: {
+        context: 'expired',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 14
+      },
+      updated: {
+        context: 'expired',
+        status: 'expired',
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 14
+      },
+      status: 'expired'
+    },
+    {
+      name: 'replayed',
+      httpStatus: 200,
+      today: { context: 'replayed' },
+      updated: { context: 'replayed', status: 'replayed' },
+      status: 'replayed'
+    },
+    {
+      name: 'unreadable',
+      httpStatus: 200,
+      today: { context: 'unreadable' },
+      updated: { context: 'unreadable', status: 'unreadable' },
+      status: 'unreadable'
+    },
+    {
+      name: 'unconfirmed',
+      httpStatus: 503,
+      today: { context: 'unconfirmed' },
+      updated: { context: 'unconfirmed', status: 'unconfirmed' },
+      status: 'unconfirmed'
+    }
+  ];
+
+  /**
+   * The members a caller read before `status` and the Human Confidence
+   * fields were added.
+   * @param {RedeemResult} result the result
+   * @returns {object} those members
+   */
+  function todaysMembers (result) {
+    return {
+      statusCode: result.statusCode,
+      context: result.context,
+      contextRaw: result.contextRaw,
+      signature: result.signature,
+      factors: result.factors,
+      verifiedAt: result.verifiedAt,
+      secondsSinceVerified: result.secondsSinceVerified,
+      json: result.toJSON()
+    };
+  }
+
+  test.each(OUTCOMES.map((outcome) => [outcome.name, outcome]))(
+    'the %s answer with the new fields reads as today\'s does',
+    async (name, outcome) => {
+      for (const body of [
+        outcome.updated,
+        Object.assign({}, outcome.updated, { sealedResult: 'x' }),
+        Object.assign({}, outcome.updated, { obsolete: OBSOLETE })
+      ]) {
+        const before = RedeemResult.fromResponse(
+          outcome.httpStatus, JSON.stringify(outcome.today));
+        const after = RedeemResult.fromResponse(
+          outcome.httpStatus, JSON.stringify(body));
+        expect(todaysMembers(after)).toEqual(todaysMembers(before));
+        expect(after.status).toBe(outcome.status);
+      }
+    });
+
+  test.each(OUTCOMES.map((outcome) => [outcome.name, outcome]))(
+    'today\'s %s answer, with no status, has the status read from context',
+    async (name, outcome) => {
+      const result = RedeemResult.fromResponse(
+        outcome.httpStatus, JSON.stringify(outcome.today));
+      expect(result.status).toBe(outcome.status);
+      expect(result.humanConfidence).toBeUndefined();
+      expect(result.humanConfidenceNullReason).toBeUndefined();
+    });
+
+  test('the status words are the cloud\'s five', () => {
+    expect(Object.isFrozen(RedeemStatus)).toBe(true);
+    expect(Object.keys(RedeemStatus)).toEqual([
+      'SUCCESS', 'EXPIRED', 'REPLAYED', 'UNCONFIRMED', 'UNREADABLE'
+    ]);
+    expect(Object.values(RedeemStatus)).toEqual([
+      'success', 'expired', 'replayed', 'unconfirmed', 'unreadable'
+    ]);
+  });
+
+  test('the Human Confidence Values are the cloud\'s four', () => {
+    expect(Object.isFrozen(HumanConfidence)).toBe(true);
+    expect(Object.keys(HumanConfidence)).toEqual([
+      'HIGH', 'MEDIUM', 'LOW', 'ABSENT'
+    ]);
+    expect(Object.values(HumanConfidence)).toEqual([
+      'High', 'Medium', 'Low', 'Absent'
+    ]);
+  });
+
+  test('a redeemed answer gives the Value', async () => {
+    const fetch = fakeFetch(() => response(200, OUTCOMES[0].updated));
+    const client = new DidClient({
+      resourceKey: RESOURCE, licenceKey: LICENCE, endpoint: ENDPOINT, fetch
+    });
+    const result = await client.redeem(fod, 'sealed', 'transaction');
+    expect(result.status).toBe(RedeemStatus.SUCCESS);
+    expect(result.context).toBe('verified');
+    expect(result.humanConfidence).toBe(HumanConfidence.HIGH);
+    expect(result.humanConfidenceNullReason).toBeUndefined();
+  });
+
+  test('every Value is read, ignoring case, and an unknown one is left out', () => {
+    for (const [word, value] of [
+      ['High', HumanConfidence.HIGH],
+      ['Medium', HumanConfidence.MEDIUM],
+      ['Low', HumanConfidence.LOW],
+      ['Absent', HumanConfidence.ABSENT],
+      ['low', HumanConfidence.LOW],
+      ['HIGH', HumanConfidence.HIGH],
+      ['Splendid', undefined],
+      ['', undefined],
+      [7, undefined],
+      [null, undefined]
+    ]) {
+      const result = RedeemResult.fromResponse(200, JSON.stringify({
+        signature: 'verified',
+        context: 'verified',
+        humanConfidence: word,
+        status: 'success'
+      }));
+      expect(result.humanConfidence).toBe(value);
+    }
+  });
+
+  test('the reason the Value is not present is read as sent', () => {
+    const result = RedeemResult.fromResponse(
+      200, JSON.stringify(OUTCOMES[1].updated));
+    expect(result.humanConfidence).toBeUndefined();
+    expect(result.humanConfidenceNullReason).toBe(NULL_REASON);
+  });
+
+  test('a status this package does not know fails closed', () => {
+    for (const word of ['splendid', 'SUCCESS', '', 7, true, {}]) {
+      const result = RedeemResult.fromResponse(200, JSON.stringify({
+        signature: 'verified', context: 'verified', status: word
+      }));
+      expect(result.status).toBe(RedeemStatus.UNREADABLE);
+      expect(result.context).toBe('verified');
+    }
+  });
+
+  test('with no status, an unknown or missing context is unreadable', () => {
+    expect(RedeemResult.fromResponse(200, '{"context":"splendid"}').status)
+      .toBe(RedeemStatus.UNREADABLE);
+    expect(RedeemResult.fromResponse(200, '{}').status)
+      .toBe(RedeemStatus.UNREADABLE);
+  });
+
+  test('every context the check gives is success when no status is sent', () => {
+    for (const context of ['verified', 'mismatch', 'nocontext',
+      'notcheckable', 'misconfigured', 'invaliddate']) {
+      expect(RedeemResult.fromResponse(200, JSON.stringify({ context })).status)
+        .toBe(RedeemStatus.SUCCESS);
+    }
+  });
+});
+
+// The four reasons a sealed result was not redeemed are obsolete members of
+// ContextResult. They keep their values, because the cloud still writes them
+// to context, and each warns once.
+describe('ContextResult obsolete members', () => {
+  const OBSOLETE = [
+    ['EXPIRED', 'expired'],
+    ['REPLAYED', 'replayed'],
+    ['UNREADABLE', 'unreadable'],
+    ['UNCONFIRMED', 'unconfirmed']
+  ];
+
+  /**
+   * Loads a fresh copy of the package, so no warning has been given yet,
+   * and runs the function with process.emitWarning recorded.
+   * @param {function(object, jest.SpyInstance): void} fn given the package
+   * and the spy
+   */
+  function freshPackage (fn) {
+    const spy = jest.spyOn(process, 'emitWarning').mockImplementation(() => {});
+    try {
+      jest.isolateModules(() => {
+        fn(require('../index'), spy);
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  test.each(OBSOLETE)('%s keeps its value and warns once', (name, word) => {
+    freshPackage((did, spy) => {
+      expect(did.ContextResult[name]).toBe(word);
+      expect(did.ContextResult[name]).toBe(word);
+      expect(did.ContextResult[name]).toBe(did.RedeemStatus[name]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(
+        'ContextResult.' + name + ' is obsolete. Use RedeemStatus.' + name + '.',
+        expect.objectContaining({ type: 'DeprecationWarning' }));
+    });
+  });
+
+  test('the other members and reading an answer give no warning', () => {
+    freshPackage((did, spy) => {
+      expect(did.ContextResult.VERIFIED).toBe('verified');
+      expect(did.ContextResult.MISMATCH).toBe('mismatch');
+      expect(did.ContextResult.NO_CONTEXT).toBe('nocontext');
+      expect(did.ContextResult.NOT_CHECKABLE).toBe('notcheckable');
+      expect(did.ContextResult.MISCONFIGURED).toBe('misconfigured');
+      expect(did.ContextResult.INVALID_DATE).toBe('invaliddate');
+      for (const [, word] of OBSOLETE) {
+        const result = did.RedeemResult.fromResponse(
+          200, JSON.stringify({ context: word, status: word }));
+        expect(result.context).toBe(word);
+        expect(result.status).toBe(word);
+      }
+      expect(did.RedeemResult.fromResponse(200, '{"context":"x"}').context)
+        .toBe('unreadable');
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  test('the object is still frozen and lists every member', () => {
+    freshPackage((did) => {
+      expect(Object.isFrozen(did.ContextResult)).toBe(true);
+      expect(Object.keys(did.ContextResult)).toEqual([
+        'VERIFIED', 'MISMATCH', 'NO_CONTEXT', 'NOT_CHECKABLE',
+        'MISCONFIGURED', 'INVALID_DATE', 'EXPIRED', 'REPLAYED', 'UNREADABLE',
+        'UNCONFIRMED'
+      ]);
+    });
   });
 });
 
