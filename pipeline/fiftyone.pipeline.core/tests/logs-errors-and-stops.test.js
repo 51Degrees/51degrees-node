@@ -62,14 +62,20 @@ test('logging', done => {
   });
 });
 
-test("Don't Suppress Exception", done => {
-  const syncFlowData = syncPipeline.createFlowData();
-  syncFlowData.process().then(function () {
-    done();
-  }).catch((e) => {
-    // When an error occurs, check that the expected values are populated.
-    expect(e.indexOf('Something went wrong') !== -1).toBe(true);
-  });
+test("Don't Suppress Exception", async () => {
+  // The earlier tests suppress process exceptions, so this test turns that
+  // off for itself and puts it back afterwards.
+  syncPipeline.suppressProcessExceptions = false;
+  try {
+    const syncFlowData = syncPipeline.createFlowData();
+    // Processing rejects with every error the elements gave.
+    const failure = await syncFlowData.process().then(
+      () => undefined, (e) => e);
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure.errors).toEqual([new Error('Something went wrong')]);
+  } finally {
+    syncPipeline.suppressProcessExceptions = true;
+  }
 });
 
 test('stop flag works', done => {

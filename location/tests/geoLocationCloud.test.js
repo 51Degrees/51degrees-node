@@ -88,23 +88,12 @@ test('No evidence error message', done => {
     const country = flowData.location.country;
     expect(country.hasValue).toBe(false);
 
-    // Check if this is a subscription/rate limiting error
-    if (country.noValueMessage &&
-        (country.noValueMessage.indexOf('subscription does not contain') !== -1 ||
-         country.noValueMessage.indexOf('Location_products_missing') !== -1)) {
-      console.warn('WARNING: Test inconclusive - Resource key does not have required ' +
-                   'location products or rate limit exceeded. ' +
-                   'Message: ' + country.noValueMessage);
-      // Mark test as passing but with warning - subscription issue is not a test failure
-      done();
-      return;
-    }
-
-    // Normal test assertion for the expected JavaScript evidence message
-    expect(country.noValueMessage.indexOf('This property requires ' +
+    // The key has to carry the location product, so a key without it fails
+    // here, showing the message the service gave in its place.
+    expect(country.noValueMessage).toContain('This property requires ' +
       'evidence values from JavaScript running on the client. It ' +
       'cannot be populated until a future request is made that ' +
-      'contains this additional data.') !== -1).toBe(true);
+      'contains this additional data.');
 
     done();
   });
