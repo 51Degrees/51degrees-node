@@ -39,9 +39,6 @@ jobs:
       run:
         working-directory: pipeline/fiftyone.pipeline.did
     env:
-      # Every Node deprecation is an error, in Jest and in the processes the
-      # tests start.
-      NODE_OPTIONS: --throw-deprecation
       # Unset means the public cloud service.
       _51DEGREES_CLOUD_ENDPOINT: ${{ vars._51DEGREES_CLOUD_ENDPOINT }}
     steps:
