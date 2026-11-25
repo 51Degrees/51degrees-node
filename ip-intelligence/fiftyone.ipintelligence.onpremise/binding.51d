@@ -32,6 +32,7 @@
             }\
             console.log(string);\")",
             "-Wall",
+            "-Wextra",
             "-Werror"
         ],
         'mac_specific_flags': [
