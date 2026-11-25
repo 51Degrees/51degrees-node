@@ -29,18 +29,18 @@
  *
  * 1. Passive. This server asks the cloud itself, sending the visitor's
  *    request headers and IP address. HumanConfidenceSource is Passive and
- *    HumanConfidence is a plain level. The server asks for it rather than
- *    reading it from the page, because a level a browser sends can be
+ *    HumanConfidence is a plain Value. The server asks for it rather than
+ *    reading it from the page, because a Value a browser sends can be
  *    forged.
  * 2. Active. The page loads the 51Degrees client script, which runs the
  *    browser tests and sends the answers to the cloud. When the script
  *    completes, HumanConfidenceSource is Active and HumanConfidence holds
- *    a sealed value the browser can't read or change.
- * 3. Redeem. The page hands the sealed value to this server, which calls
- *    hc/redeem with it and the account's License Key, and gets the true
- *    level back. A sealed value redeems once, within ten seconds. This
- *    server is the only party holding the License Key, which the browser
- *    never sees.
+ *    a sealed result the browser can't read or change.
+ * 3. Redeem. The page hands the sealed result to this server, which calls
+ *    hc/redeem with it and the account's License Key, and gets the Value
+ *    back, with a status saying what happened. A sealed result redeems
+ *    once, within ten seconds. This server is the only party holding the
+ *    License Key, which the browser never sees.
  *
  * Environment variables:
  *   _51DEGREES_RESOURCE_KEY    the Resource Key, required
@@ -252,16 +252,18 @@ function demoRoutes ({ resource, license, api, fetch = globalThis.fetch }) {
     },
 
     /**
-     * Redeem: the page sends the sealed value, and this server redeems it
-     * with the License Key. The answer goes back to the page as the cloud
-     * gave it.
+     * Redeem: the page sends the sealed result, and this server redeems it
+     * with the License Key. The sealed result is sent as sealedResult, and
+     * as value too, the name a service released before sealedResult reads,
+     * so the call works with either. The answer goes back to the page as
+     * the cloud gave it.
      *
-     * @param {string} value the sealed value from the page
+     * @param {string} sealedResult the sealed result from the page
      * @param {import('http').ServerResponse} response the response to
      * write
      */
-    async redeem (value, response) {
-      const fields = { value };
+    async redeem (sealedResult, response) {
+      const fields = { sealedResult, value: sealedResult };
       if (license) {
         fields.license = license;
       }
@@ -329,7 +331,7 @@ function main () {
   if (!license) {
     console.log('No _51DEGREES_LICENSE_KEY set. The page still shows ' +
       'Passive and Active, but an account that holds License Keys can\'t ' +
-      'redeem without one, so the redeemed level will be unreadable.');
+      'redeem without one, so the redeem status will be unreadable.');
   }
 
   // The API base ends in exactly one slash, so every URL is the base plus
@@ -372,7 +374,8 @@ function main () {
         response.end();
         return;
       }
-      await routes.redeem(form.get('value') || '', response);
+      await routes.redeem(
+        form.get('sealedResult') || form.get('value') || '', response);
       return;
     }
     response.writeHead(404);
