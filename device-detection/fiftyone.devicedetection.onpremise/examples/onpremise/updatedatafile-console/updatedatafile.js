@@ -160,6 +160,14 @@ const KeyUtils = require51('fiftyone.devicedetection.shared').keyUtils;
  * ``` {js}
  *     updateTimeMaximumRandomisation: 10*60
  * ```
+ * # Product
+ * A license key can hold more than one product. With no product named, the data update
+ * service asks for the product of the data file the engine has loaded. To ask for another
+ * product, give its name, such as 'V4TAC', as the third command line argument.
+ * # Update URL
+ * The example downloads from the 51Degrees Distributor. To download from another address that
+ * answers as the Distributor does, such as a copy you host, give it as the fourth command line
+ * argument.
  * # Location
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/device-detection/fiftyone.devicedetection.onpremise/examples/onpremise/updatedatafile-console/updatedatafile.js).
  *
@@ -176,15 +184,6 @@ const LICENSE_KEY_VARIABLE = '_51DEGREES_LICENSE_KEY';
 // Reads the license key from the environment.
 const getLicenseKey = function () {
   return process.env[LICENSE_KEY_VARIABLE] || undefined;
-};
-
-// The variable that holds the product to download, such as V4TAC.
-const PRODUCT_VARIABLE = '_51DEGREES_DD_PRODUCT';
-
-// Reads the product to download from the environment, or undefined when it
-// is not set.
-const getProduct = function () {
-  return process.env[PRODUCT_VARIABLE] || undefined;
 };
 const DEFAULT_DATA_FILENAME =
   os.homedir() + path.sep + ExampleConstants.fileNames.enterpriseDataFileName;
@@ -234,17 +233,19 @@ const explainLicenseKey = function (dataFilePath, output) {
 // The address the data file is downloaded from.
 const DATA_UPDATE_URL = 'https://distributor.51degrees.com/api/v2/download';
 
-// The settings that name the product to download, such as V4TAC, which a
-// license key that holds several products needs. With no product given
-// there are none, so the request names no product and a license key that
-// holds one product gets its data file. A product is named by giving the
-// whole update URL, with the default parameters turned off.
-const productSettings = function (licenseKey, product) {
+// The settings that name the product to download, such as V4TAC, and the
+// address to download from. With no product given the request names none,
+// and the data update service asks for the product of the data file the
+// engine has loaded. A product is named by giving the whole update URL,
+// with the default parameters turned off. Another address, such as a copy
+// of the Distributor that you host, replaces the Distributor's.
+const productSettings = function (licenseKey, product,
+  dataUpdateUrl = DATA_UPDATE_URL) {
   if (!product) {
-    return {};
+    return dataUpdateUrl === DATA_UPDATE_URL ? {} : { dataUpdateUrl };
   }
   return {
-    dataUpdateUrl: DATA_UPDATE_URL + '?' + new URLSearchParams({
+    dataUpdateUrl: dataUpdateUrl + '?' + new URLSearchParams({
       Product: product,
       Type: 'HashV41',
       Download: 'True',
@@ -255,15 +256,11 @@ const productSettings = function (licenseKey, product) {
 };
 
 const run = async function (dataFilePath, licenseKey, interactive, output,
-  product) {
+  product, dataUpdateUrl) {
   output.write('Starting example\n');
   // try to find a license key
   if (!licenseKey) {
     licenseKey = getLicenseKey();
-  }
-  // Name a product only when one was given or is set in the environment.
-  if (!product) {
-    product = getProduct();
   }
   if (!licenseKey || KeyUtils.isInvalidKey(licenseKey)) {
     explainLicenseKey(dataFilePath, output);
@@ -367,7 +364,10 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     .then(status => {
       output.write(`Update on start-up complete - status: ${status}\n`);
 
-      if (status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS) {
+      // A data file that is already the newest needs no update, which is
+      // as good a start as one that was just downloaded.
+      if (status !== AutoUpdateStatus.AUTO_UPDATE_SUCCESS &&
+        status !== AutoUpdateStatus.AUTO_UPDATE_NOT_NEEDED) {
         output.write('Auto update was not successful, abandoning example\n');
         throw new Error('Auto update failed: ' + status);
       }
@@ -424,7 +424,7 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     licenceKeys: licenseKey,
     // Name the product to download only when one was given. A license key
     // that holds several products needs it.
-    ...productSettings(licenseKey, product),
+    ...productSettings(licenseKey, product, dataUpdateUrl),
     // Enable update on startup, the auto update system
     // will be used to check for an update before the
     // device detection engine is created. This will block
@@ -451,13 +451,15 @@ if (process.env.JEST_WORKER_ID === undefined) {
   // file that is included in the repository.
   const licenseKey = args.length > 0 ? args[0] : null;
   const dataFilePath = args.length > 1 ? args[1] : null;
-  // The product to download, such as V4TAC, for a license key that holds
-  // several products. With none given, the product in
-  // _51DEGREES_DD_PRODUCT is named. With neither, no product is named.
+  // The product to download, such as V4TAC. With none given, the data
+  // update service asks for the product of the data file.
   const product = args.length > 2 ? args[2] : null;
+  // The address to download from, in place of the Distributor's.
+  const dataUpdateUrl = args.length > 3 ? args[3] : null;
 
-  run(dataFilePath, licenseKey, true, process.stdout, product)
+  run(dataFilePath, licenseKey, true, process.stdout, product,
+    dataUpdateUrl || undefined)
     .then(() => console.log(FIND_OUT_MORE));
 };
 
-module.exports = { run, getLicenseKey, getProduct, productSettings };
+module.exports = { run, getLicenseKey, productSettings };
