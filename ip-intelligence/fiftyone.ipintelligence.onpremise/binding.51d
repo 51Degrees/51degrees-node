@@ -9,16 +9,18 @@
         'win_warning_level': 4,
         'win_exception_handling': 1,
         'win_warn_as_error': 'true',
-        'linux_mac_c_std': '-std=gnu11',
-        'linux_mac_cpp_std': '-std=gnu++17',
+        # Each target is built with one C standard and one C++ standard, and
+        # Node's own standard option is taken out where it differs, so the
+        # compiler never sees two. MSVC warns (D9025) when one standard
+        # overrides another, and /WX does not make that an error.
+        'node_major_version': "<!(node -p \"parseInt(process.versions.node)\")",
+        'linux_c_std': '-std=gnu11',
+        'mac_c_std': 'gnu11',
+        'core_win_cpp_std': 'stdcpp17',
+        'core_mac_cpp_std': 'gnu++17',
         # Node 23+ (V8 12.9+) headers require C++20, older versions build with C++17
-        'wrapper_win_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? '-std:c++20' : '-std:c++17'\")",
-        'wrapper_linux_mac_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? '-std=gnu++20' : '-std=gnu++17'\")",
-        # Node's build settings pass -std:c++20 to MSVC for every addon. A
-        # target that sets another standard takes Node's out, as MSVC warns
-        # (D9025) when one standard overrides another and /WX does not make
-        # that an error.
-        'wrapper_win_node_std_removed': "<!(node -p \"parseInt(process.versions.node) >= 23 ? '' : '-std:c++20'\")",
+        'wrapper_win_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? 'stdcpp20' : 'stdcpp17'\")",
+        'wrapper_mac_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? 'gnu++20' : 'gnu++17'\")",
         'linux_mac_c_common_flags': [
             "<!(node -e \"\
             var v8Version = process.versions.v8;\
@@ -55,7 +57,13 @@
         # about each option (LNK4044), so they are taken out.
         'msvs_settings': {
             'VCCLCompilerTool': {
-                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+                # Node's settings also pass -std:c++20 to MSVC for every
+                # addon. Each target here sets its standard with
+                # LanguageStandard, so Node's option is taken out.
+                'AdditionalOptions/': [
+                    ['exclude', '^[-/]f(lto|profile-use)'],
+                    ['exclude', '^[-/]std:']
+                ]
             },
             'VCLibrarianTool': {
                 'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
@@ -91,16 +99,11 @@
                 ['OS=="win"', {
 				    'msvs_version':'2019',
 				    'msvs_target_platform_minversion':'10.0.18362.0',
-                    'msvs_settings': {
-                        'VCCLCompilerTool': {
-                            'AdditionalOptions!': [ '-std:c++20', ]
-                        }
-                    },
                     'configurations': {
                         'Debug': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
@@ -119,7 +122,7 @@
                         'Release': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
@@ -140,20 +143,28 @@
                 ['OS=="mac"', {
                     "xcode_settings": {
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "GCC_C_LANGUAGE_STANDARD": '<(mac_c_std)',
+                        "CLANG_CXX_LANGUAGE_STANDARD": '<(core_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_c_std)'],
+                            '<@(mac_specific_flags)'],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_cpp_std)']
+                            '<@(mac_specific_flags)']
                     }
                 }],
                 ['OS=="linux"', {
                     'cflags_cc!': ["-fno-exceptions"],
-                    'cflags_cc': ['<(linux_mac_cpp_std)'],
-                    'cflags_c': ['<(linux_mac_c_std)'],
+                    'cflags_c': ['<(linux_c_std)'],
+                    # Node's settings give C++17 before Node 23, which is
+                    # what the core library uses, and C++20 from Node 23,
+                    # which is replaced.
+                    'conditions': [
+                        ['node_major_version>=23', {
+                            'cflags_cc!': ['-std=gnu++20'],
+                            'cflags_cc': ['-std=gnu++17']
+                        }]
+                    ],
                     'cflags': [
                         '<@(linux_mac_c_common_flags)'
                     ],
@@ -184,11 +195,6 @@
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],
-                    'msvs_settings': {
-                        'VCCLCompilerTool': {
-                            'AdditionalOptions!': [ '<(wrapper_win_node_std_removed)', ]
-                        }
-                    },
                     'configurations': {
                         'Debug': {
                             'msvs_settings': {
@@ -196,7 +202,7 @@
                                     # C++20 is the minimum required by the
                                     # headers of Node 23 and later, selected
                                     # dynamically by wrapper_win_cpp_std.
-                                    'AdditionalOptions': [ '<(wrapper_win_cpp_std)', ],
+                                    'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
@@ -214,7 +220,7 @@
                         'Release': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '<(wrapper_win_cpp_std)', ],
+                                    'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
@@ -236,15 +242,15 @@
                 ['OS=="mac"', {
                     "xcode_settings": {
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "GCC_C_LANGUAGE_STANDARD": '<(mac_c_std)',
+                        "CLANG_CXX_LANGUAGE_STANDARD": '<(wrapper_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_c_std)'
+                            '<@(mac_specific_flags)'
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(wrapper_linux_mac_cpp_std)'
+                            '<@(mac_specific_flags)'
                         ],
                         "OTHER_LDFLAGS": [
                             '<@(mac_specific_flags)'
@@ -253,8 +259,10 @@
                 }],
                 ['OS=="linux"', {
                     'cflags_cc!': ['-fno-exceptions'],
-                    'cflags_cc': ['<(wrapper_linux_mac_cpp_std)'],
-                    'cflags_c': ['<(linux_mac_c_std)'],
+                    # Node's settings give the C++ standard the wrapper needs,
+                    # C++17 before Node 23 and C++20 from Node 23, so it adds
+                    # none of its own.
+                    'cflags_c': ['<(linux_c_std)'],
                     'cflags': [
                         '<@(linux_mac_c_common_flags)'
                     ],
