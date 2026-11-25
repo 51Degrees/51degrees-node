@@ -53,7 +53,9 @@ export type CloudVerification = {
     /**
      * one of {@link HumanConfidence}, the
      * Value the 51Did carries, present for a 51Did whose signature verifies when
-     * the call presented a License Key valid for Human Confidence
+     * the call presented a License Key valid for Human Confidence. A word this
+     * package does not know reads as `Absent`. Not present where the answer has
+     * no `humanConfidence`.
      */
     humanConfidence?: string;
     /**
@@ -135,7 +137,9 @@ export type DidClientOptions = {
  * @property {boolean} valid whether the cloud found the signature valid
  * @property {string} [humanConfidence] one of {@link HumanConfidence}, the
  * Value the 51Did carries, present for a 51Did whose signature verifies when
- * the call presented a License Key valid for Human Confidence
+ * the call presented a License Key valid for Human Confidence. A word this
+ * package does not know reads as `Absent`. Not present where the answer has
+ * no `humanConfidence`.
  * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
  * not present, as the cloud gives it to a call that did not present such a
  * key
@@ -299,7 +303,8 @@ export class DidClient {
      * @throws {DidArgumentError} when the value is not a 51Did, refused here
      * with the reader's status before any request is made, or when the cloud
      * refuses it (HTTP 400), with the cloud's message
-     * @throws {DidClientError} on any other answer than valid or invalid
+     * @throws {DidClientError} on any other answer than valid or invalid. Only
+     * an HTTP 200 can say valid, and a 400 can only say invalid.
      */
     verifyDetailed(fodId: FodId | string): Promise<CloudVerification>;
     /**
@@ -427,14 +432,17 @@ export class DidClient {
  */
 export class RedeemResult {
     /**
-     * Builds a result from a redeem response body.
+     * Builds a result from a redeem response body. A 503 is `unconfirmed`
+     * whatever its body holds, an empty body or one that is not JSON
+     * included.
      * @param {number} statusCode the HTTP status
      * @param {string} raw the response body
      * @returns {RedeemResult} the typed result
      */
     static fromResponse(statusCode: number, raw: string): RedeemResult;
     /**
-     * Reads the typed fields out of the parsed body.
+     * Reads the typed fields out of the parsed body. A 503 is `unconfirmed`
+     * whatever its body says, so no verdict is read from it.
      * @param {number} statusCode the HTTP status, 200 or 503
      * @param {string} raw the response body as received
      * @param {object} parsed the body parsed as JSON
@@ -462,16 +470,25 @@ export class RedeemResult {
      * for success. A cloud that sends no `status` wrote the same word to
      * `context`, so the status is then read from `context`: one of the four
      * reasons is that reason, any other word the context check gives is
-     * `success`, and anything else is `unreadable`.
+     * `success`, and anything else is `unreadable`. An HTTP 503 is always
+     * `unconfirmed`, whatever its body says.
      */
     status: string;
     /**
      * @type {string | undefined} one of {@link HumanConfidence}, the Value
      * the 51Did carries, present on `success` for a call that presented a
-     * License Key valid for Human Confidence. A word this package does not
-     * know is left out, and {@link RedeemResult#raw} has it as sent.
+     * License Key valid for Human Confidence. A `humanConfidence` this
+     * package does not know reads as `Absent`, and
+     * {@link RedeemResult#humanConfidenceRaw} has it as sent. Not present
+     * where the answer has no `humanConfidence`, or on an HTTP 503.
      */
     humanConfidence: string | undefined;
+    /**
+     * @type {string | undefined} the `humanConfidence` string exactly as
+     * the cloud sent it, kept so a word this package does not know is still
+     * visible. Not present where the answer has no such string.
+     */
+    humanConfidenceRaw: string | undefined;
     /**
      * @type {string | undefined} why {@link RedeemResult#humanConfidence}
      * is not present, as the cloud gives it to a call that did not present a

@@ -613,7 +613,11 @@ of a POST, never in a URL. The cloud gives the Value only to a call that
 presents a licence key valid for Human Confidence, whoever holds it, and gives
 `humanConfidenceNullReason` to any other call. 'Absent' means the 51Did
 carries no Value, which is true of every 51Did made before the Value was
-added. `verify` itself is unchanged and never sends the licence key.
+added. A `humanConfidence` word this package does not know reads as 'Absent'
+too, and an answer without `humanConfidence` leaves it out. Only an HTTP 200
+can say the signature is valid. A 400 holding `valid: false` reads as
+invalid, and any other status raises `DidClientError` whatever its body
+holds. `verify` itself is unchanged and never sends the licence key.
 
 **4. Redeem a sealed creator context result.** The verify-context and
 verify-full endpoints are browser calls, because the creator context describes
@@ -629,6 +633,7 @@ redeemed.status       // RedeemStatus: 'success', 'expired', 'replayed',
 redeemed.humanConfidence // on success, with a licence key valid for
                       //   Human Confidence: 'High', 'Medium', 'Low'
                       //   or 'Absent'
+redeemed.humanConfidenceRaw // the humanConfidence word as sent
 redeemed.humanConfidenceNullReason // why humanConfidence is not present
 redeemed.context      // ContextResult: 'verified', 'mismatch', 'nocontext',
                       // 'misconfigured', 'invaliddate', 'notcheckable',
@@ -662,6 +667,12 @@ and `UNCONFIRMED` keep their values, but they are obsolete in favor of
 `RedeemStatus`, and each warns once with a `DeprecationWarning` when first
 used. `toJSON` leaves out `status` and the Human Confidence fields, so the
 Value reaches a page only where the server sends it.
+
+An HTTP 503 is `unconfirmed` whatever its body says, an empty body or one
+that is not JSON included, so `status` and `context` are both `unconfirmed`
+and no verdict or Value is read from it. A `humanConfidence` word this
+package does not know reads as 'Absent', and `humanConfidenceRaw` keeps it as
+sent. An answer without `humanConfidence` leaves both out.
 
 The factor names are in `Factor`, in the order the cloud lists them. From
 cloud release 4.4.38 the operating system and the browser each have a name

@@ -1279,6 +1279,29 @@ describe('DidClient verify (cloud)', () => {
     });
   });
 
+  test('200 invalid answers false', async () => {
+    const { client } = verifyClient(200, { valid: false });
+    await expect(client.verify(fod)).resolves.toBe(false);
+  });
+
+  test('valid true on any status but 200 raises DidClientError', async () => {
+    for (const status of [201, 400, 401, 403, 404, 500, 503]) {
+      const { client } = verifyClient(status, { valid: true });
+      await expect(client.verify(fod)).rejects.toMatchObject({
+        name: 'DidClientError', statusCode: status
+      });
+    }
+  });
+
+  test('valid false on any status but 200 or 400 raises DidClientError', async () => {
+    for (const status of [401, 403, 500, 503]) {
+      const { client } = verifyClient(status, { valid: false });
+      await expect(client.verify(fod)).rejects.toMatchObject({
+        name: 'DidClientError', statusCode: status
+      });
+    }
+  });
+
   test('an empty string is refused before any request', async () => {
     const { client, fetch } = verifyClient(200, { valid: true });
     await expect(client.verify('')).rejects.toThrow(TypeError);
@@ -1379,11 +1402,28 @@ describe('DidClient verifyDetailed', () => {
     }
   });
 
-  test('a Value this package does not know is left out', async () => {
-    const { client } = verifyClient(200, {
-      valid: true, humanConfidence: 'Splendid'
-    }, { licenceKey: LICENCE });
-    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: true });
+  test('a Value this package does not know reads as Absent', async () => {
+    for (const word of ['Splendid', '', 7, true, {}]) {
+      const { client } = verifyClient(200, {
+        valid: true, humanConfidence: word
+      }, { licenceKey: LICENCE });
+      await expect(client.verifyDetailed(fod)).resolves.toEqual({
+        valid: true, humanConfidence: HumanConfidence.ABSENT
+      });
+    }
+  });
+
+  test('an answer without humanConfidence, or with it null, leaves it out', async () => {
+    for (const body of [
+      { valid: true },
+      { valid: true, humanConfidence: null },
+      { valid: true, humanConfidenceNullReason: NULL_REASON }
+    ]) {
+      const { client } = verifyClient(200, body, { licenceKey: LICENCE });
+      const answer = await client.verifyDetailed(fod);
+      expect(answer).not.toHaveProperty('humanConfidence');
+      expect(answer.valid).toBe(true);
+    }
   });
 
   test('today\'s answer, with neither field, reads as before', async () => {
@@ -1394,6 +1434,25 @@ describe('DidClient verifyDetailed', () => {
   test('400 invalid answers false with no Value', async () => {
     const { client } = verifyClient(400, { valid: false }, { licenceKey: LICENCE });
     await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
+  });
+
+  test('400 invalid reads nothing else from the body', async () => {
+    const { client } = verifyClient(400, {
+      valid: false, humanConfidence: 'High'
+    }, { licenceKey: LICENCE });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
+  });
+
+  test('valid true on any status but 200 raises DidClientError', async () => {
+    for (const status of [201, 400, 403, 500, 503]) {
+      const { client } = verifyClient(status, {
+        valid: true, humanConfidence: 'High'
+      }, { licenceKey: LICENCE });
+      const error = await client.verifyDetailed(fod)
+        .then(() => undefined, (e) => e);
+      expect(error).toBeInstanceOf(DidClientError);
+      expect(error.statusCode).toBe(status);
+    }
   });
 
   test('400 errors raises DidArgumentError with the licence key masked', async () => {
@@ -1855,6 +1914,46 @@ describe('DidClient redeem', () => {
     expect(result.context).toBe(ContextResult.UNCONFIRMED);
   });
 
+  test('503 is unconfirmed whatever its body says', async () => {
+    for (const body of [
+      {
+        signature: 'verified',
+        context: 'verified',
+        status: 'success',
+        humanConfidence: 'High',
+        factors: { transport: 'verified' },
+        verifiedAt: '2026-08-07T09:15:32Z',
+        secondsSinceVerified: 2
+      },
+      { context: 'verified' },
+      { status: 'replayed', context: 'replayed' },
+      {},
+      '',
+      'Service Unavailable',
+      '[]'
+    ]) {
+      const { client } = redeemClient(503, body);
+      const result = await client.redeem(fod, RESULT, TRANSACTION);
+      expect(result.statusCode).toBe(503);
+      expect(result.status).toBe(RedeemStatus.UNCONFIRMED);
+      expect(result.context).toBe(ContextResult.UNCONFIRMED);
+      expect(result.signature).toBe(SignatureResult.UNKNOWN);
+      expect(result.humanConfidence).toBeUndefined();
+      expect(result.factors).toBeUndefined();
+      expect(result.verifiedAt).toBeUndefined();
+      expect(result.secondsSinceVerified).toBeUndefined();
+      expect(result.raw).toBe(
+        typeof body === 'string' ? body : JSON.stringify(body));
+    }
+  });
+
+  test('503 keeps the context it was sent in contextRaw', async () => {
+    const { client } = redeemClient(503, { context: 'verified' });
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
+    expect(result.contextRaw).toBe('verified');
+    expect(result.toJSON()).toEqual({ context: 'unconfirmed' });
+  });
+
   test('an unknown context string fails closed and keeps the raw value', async () => {
     const { client } = redeemClient(200, { context: 'splendid', signature: 'verified' });
     const result = await client.redeem(fod, RESULT, TRANSACTION);
@@ -2150,18 +2249,19 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
     expect(result.humanConfidenceNullReason).toBeUndefined();
   });
 
-  test('every Value is read, ignoring case, and an unknown one is left out', () => {
-    for (const [word, value] of [
-      ['High', HumanConfidence.HIGH],
-      ['Medium', HumanConfidence.MEDIUM],
-      ['Low', HumanConfidence.LOW],
-      ['Absent', HumanConfidence.ABSENT],
-      ['low', HumanConfidence.LOW],
-      ['HIGH', HumanConfidence.HIGH],
-      ['Splendid', undefined],
-      ['', undefined],
-      [7, undefined],
-      [null, undefined]
+  test('every Value is read, ignoring case, and an unknown one is Absent', () => {
+    for (const [word, value, raw] of [
+      ['High', HumanConfidence.HIGH, 'High'],
+      ['Medium', HumanConfidence.MEDIUM, 'Medium'],
+      ['Low', HumanConfidence.LOW, 'Low'],
+      ['Absent', HumanConfidence.ABSENT, 'Absent'],
+      ['low', HumanConfidence.LOW, 'low'],
+      ['HIGH', HumanConfidence.HIGH, 'HIGH'],
+      ['Splendid', HumanConfidence.ABSENT, 'Splendid'],
+      ['', HumanConfidence.ABSENT, ''],
+      [7, HumanConfidence.ABSENT, undefined],
+      [{}, HumanConfidence.ABSENT, undefined],
+      [null, undefined, undefined]
     ]) {
       const result = RedeemResult.fromResponse(200, JSON.stringify({
         signature: 'verified',
@@ -2170,7 +2270,39 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
         status: 'success'
       }));
       expect(result.humanConfidence).toBe(value);
+      expect(result.humanConfidenceRaw).toBe(raw);
     }
+  });
+
+  test('an answer without humanConfidence leaves the Value out', () => {
+    for (const body of [
+      { signature: 'verified', context: 'verified', status: 'success' },
+      OUTCOMES[0].today
+    ]) {
+      const result = RedeemResult.fromResponse(200, JSON.stringify(body));
+      expect(result.humanConfidence).toBeUndefined();
+      expect(result.humanConfidenceRaw).toBeUndefined();
+    }
+    const withReason = RedeemResult.fromResponse(
+      200, JSON.stringify(OUTCOMES[1].updated));
+    expect(withReason.humanConfidence).toBeUndefined();
+    expect(withReason.humanConfidenceRaw).toBeUndefined();
+    expect(withReason.humanConfidenceNullReason).toBe(NULL_REASON);
+  });
+
+  test('redeem reads an unknown Value as Absent and keeps the word', async () => {
+    const fetch = fakeFetch(() => response(200, {
+      signature: 'verified',
+      context: 'verified',
+      status: 'success',
+      humanConfidence: 'Splendid'
+    }));
+    const client = new DidClient({
+      resourceKey: RESOURCE, licenceKey: LICENCE, endpoint: ENDPOINT, fetch
+    });
+    const result = await client.redeem(fod, 'sealed', 'transaction');
+    expect(result.humanConfidence).toBe(HumanConfidence.ABSENT);
+    expect(result.humanConfidenceRaw).toBe('Splendid');
   });
 
   test('the reason the Value is not present is read as sent', () => {

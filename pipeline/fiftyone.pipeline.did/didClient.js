@@ -392,7 +392,8 @@ class DidNotSupportedError extends DidClientError {
  */
 class RedeemResult {
   /**
-   * Reads the typed fields out of the parsed body.
+   * Reads the typed fields out of the parsed body. A 503 is `unconfirmed`
+   * whatever its body says, so no verdict is read from it.
    * @param {number} statusCode the HTTP status, 200 or 503
    * @param {string} raw the response body as received
    * @param {object} parsed the body parsed as JSON
@@ -402,7 +403,12 @@ class RedeemResult {
     this.statusCode = statusCode;
     /** @type {string} the response body exactly as received */
     this.raw = raw;
-    const context = typeof parsed.context === 'string' ? parsed.context : '';
+    const sent = parsed !== null && typeof parsed === 'object' ? parsed : {};
+    const unconfirmed = statusCode === 503;
+    // A 503 means first use could not be confirmed. Its body is kept in raw
+    // and contextRaw, but nothing in it can turn the answer into a verdict.
+    const body = unconfirmed ? {} : sent;
+    const context = typeof sent.context === 'string' ? sent.context : '';
     /**
      * @type {string} the `context` string exactly as the cloud sent it,
      * kept so an outcome this package does not know is still visible
@@ -413,9 +419,11 @@ class RedeemResult {
      * does not know maps to `unreadable`, so an unrecognised outcome is
      * never mistaken for a good one.
      */
-    this.context = KNOWN_CONTEXTS.has(context)
-      ? context
-      : RedeemStatus.UNREADABLE;
+    this.context = unconfirmed
+      ? RedeemStatus.UNCONFIRMED
+      : KNOWN_CONTEXTS.has(context)
+        ? context
+        : RedeemStatus.UNREADABLE;
     /**
      * @type {string} one of {@link RedeemStatus}, saying what happened at
      * the redemption. Read from `status`, where a word this package does not
@@ -423,32 +431,44 @@ class RedeemResult {
      * for success. A cloud that sends no `status` wrote the same word to
      * `context`, so the status is then read from `context`: one of the four
      * reasons is that reason, any other word the context check gives is
-     * `success`, and anything else is `unreadable`.
+     * `success`, and anything else is `unreadable`. An HTTP 503 is always
+     * `unconfirmed`, whatever its body says.
      */
-    this.status = readStatus(parsed.status, this.context);
-    const humanConfidence = readHumanConfidence(parsed.humanConfidence);
+    this.status = unconfirmed
+      ? RedeemStatus.UNCONFIRMED
+      : readStatus(body.status, this.context);
     /**
      * @type {string | undefined} one of {@link HumanConfidence}, the Value
      * the 51Did carries, present on `success` for a call that presented a
-     * License Key valid for Human Confidence. A word this package does not
-     * know is left out, and {@link RedeemResult#raw} has it as sent.
+     * License Key valid for Human Confidence. A `humanConfidence` this
+     * package does not know reads as `Absent`, and
+     * {@link RedeemResult#humanConfidenceRaw} has it as sent. Not present
+     * where the answer has no `humanConfidence`, or on an HTTP 503.
      */
-    this.humanConfidence = humanConfidence;
+    this.humanConfidence = readHumanConfidence(body.humanConfidence);
+    /**
+     * @type {string | undefined} the `humanConfidence` string exactly as
+     * the cloud sent it, kept so a word this package does not know is still
+     * visible. Not present where the answer has no such string.
+     */
+    this.humanConfidenceRaw = typeof body.humanConfidence === 'string'
+      ? body.humanConfidence
+      : undefined;
     /**
      * @type {string | undefined} why {@link RedeemResult#humanConfidence}
      * is not present, as the cloud gives it to a call that did not present a
      * License Key valid for Human Confidence
      */
     this.humanConfidenceNullReason = optionalString(
-      parsed.humanConfidenceNullReason);
+      body.humanConfidenceNullReason);
     /** @type {string} one of {@link SignatureResult} */
-    this.signature = parsed.signature === SignatureResult.VERIFIED
+    this.signature = body.signature === SignatureResult.VERIFIED
       ? SignatureResult.VERIFIED
-      : parsed.signature === SignatureResult.INVALID
+      : body.signature === SignatureResult.INVALID
         ? SignatureResult.INVALID
         : SignatureResult.UNKNOWN;
-    const factors = parsed.factors && typeof parsed.factors === 'object'
-      ? parsed.factors
+    const factors = body.factors && typeof body.factors === 'object'
+      ? body.factors
       : undefined;
     /**
      * @type {object | undefined} {@link Factor} name to
@@ -467,8 +487,8 @@ class RedeemResult {
         Object.entries(factors).map(
           ([name, word]) => [name, factorResult(word)])))
       : undefined;
-    const verifiedAt = typeof parsed.verifiedAt === 'string'
-      ? new Date(parsed.verifiedAt)
+    const verifiedAt = typeof body.verifiedAt === 'string'
+      ? new Date(body.verifiedAt)
       : null;
     /**
      * @type {Date | undefined} when the verify endpoint checked the context
@@ -482,20 +502,27 @@ class RedeemResult {
      * redemption by the cloud's clock, present on the redeemed and expired
      * outcomes
      */
-    this.secondsSinceVerified = Number.isFinite(parsed.secondsSinceVerified)
-      ? parsed.secondsSinceVerified
+    this.secondsSinceVerified = Number.isFinite(body.secondsSinceVerified)
+      ? body.secondsSinceVerified
       : undefined;
   }
 
   /**
-   * Builds a result from a redeem response body.
+   * Builds a result from a redeem response body. A 503 is `unconfirmed`
+   * whatever its body holds, an empty body or one that is not JSON
+   * included.
    * @param {number} statusCode the HTTP status
    * @param {string} raw the response body
    * @returns {RedeemResult} the typed result
    */
   static fromResponse (statusCode, raw) {
     const parsed = tryParseJson(raw);
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    const isObject = parsed !== null && typeof parsed === 'object' &&
+      !Array.isArray(parsed);
+    if (statusCode === 503) {
+      return new RedeemResult(statusCode, raw, isObject ? parsed : {});
+    }
+    if (!isObject) {
       throw new DidClientError(
         `Redeem answered HTTP ${statusCode} with a body that is not a ` +
         `JSON object: ${raw}`, statusCode, raw);
@@ -570,7 +597,9 @@ class RedeemResult {
  * @property {boolean} valid whether the cloud found the signature valid
  * @property {string} [humanConfidence] one of {@link HumanConfidence}, the
  * Value the 51Did carries, present for a 51Did whose signature verifies when
- * the call presented a License Key valid for Human Confidence
+ * the call presented a License Key valid for Human Confidence. A word this
+ * package does not know reads as `Absent`. Not present where the answer has
+ * no `humanConfidence`.
  * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
  * not present, as the cloud gives it to a call that did not present such a
  * key
@@ -816,7 +845,8 @@ class DidClient {
    * @throws {DidArgumentError} when the value is not a 51Did, refused here
    * with the reader's status before any request is made, or when the cloud
    * refuses it (HTTP 400), with the cloud's message
-   * @throws {DidClientError} on any other answer than valid or invalid
+   * @throws {DidClientError} on any other answer than valid or invalid. Only
+   * an HTTP 200 can say valid, and a 400 can only say invalid.
    */
   async verifyDetailed (fodId) {
     const parsed = await this._verify(fodId, this._licenceKey !== null);
@@ -875,8 +905,15 @@ class DidClient {
     const shown = maskLicence(body, licence);
     const parsed = tryParseJson(body);
     if (parsed && typeof parsed === 'object') {
-      if (typeof parsed.valid === 'boolean') {
+      // Only a 200 answers whether the signature is valid. The cloud
+      // answers a signature that fails with a 400 holding valid false, so
+      // that is read as invalid, and nothing else is read from it. Any
+      // other status is an error, whatever its body holds.
+      if (response.status === 200 && typeof parsed.valid === 'boolean') {
         return parsed;
+      }
+      if (response.status === 400 && parsed.valid === false) {
+        return { valid: false };
       }
       if (response.status === 400 && Array.isArray(parsed.errors)) {
         throw new DidArgumentError(
@@ -1348,15 +1385,20 @@ function readStatus (word, context) {
 }
 
 /**
- * Reads a Human Confidence Value, ignoring case.
+ * Reads a Human Confidence Value, ignoring case. A field that is present
+ * with a word this package does not know reads as Absent, so an
+ * unfamiliar word is never mistaken for an answer without the field.
  * @param {*} word the value the cloud sent for `humanConfidence`
  * @returns {string | undefined} one of {@link HumanConfidence}, or
- * undefined where the cloud sent none or a word this package does not know
+ * undefined where the cloud sent no `humanConfidence` or sent it as null
  */
 function readHumanConfidence (word) {
-  return typeof word === 'string'
-    ? KNOWN_HUMAN_CONFIDENCE.get(word.toLowerCase())
-    : undefined;
+  if (word === undefined || word === null) {
+    return undefined;
+  }
+  return (typeof word === 'string' &&
+    KNOWN_HUMAN_CONFIDENCE.get(word.toLowerCase())) ||
+    HumanConfidence.ABSENT;
 }
 
 /**
