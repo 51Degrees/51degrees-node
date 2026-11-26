@@ -22,6 +22,24 @@
 
 const RequestClientError = require('./requestClientError');
 
+/**
+ * The reason a request got no answer. A host with more than one address
+ * fails with one error that holds an error for each address and has no
+ * message of its own, so the reasons of those are joined.
+ *
+ * @param {Error} err the error the request gave
+ * @returns {string} the reason the request failed
+ */
+const failureReason = function (err) {
+  if (err.message) {
+    return err.message;
+  }
+  if (Array.isArray(err.errors) && err.errors.length > 0) {
+    return err.errors.map((each) => each.message).join(', ');
+  }
+  return err.code || '';
+};
+
 class RequestClient {
   /**
    * Make a POST request to the specified url
@@ -90,8 +108,8 @@ class RequestClient {
       });
 
       req.on('error', (err) => {
-        reject(new RequestClientError(
-          err.message, { content: err.message }, err));
+        const reason = failureReason(err);
+        reject(new RequestClientError(reason, { content: reason }, err));
       });
 
       req.write(requestData);
@@ -151,8 +169,8 @@ class RequestClient {
           }
         });
       }).on('error', (err) => {
-        reject(new RequestClientError(
-          err.message, { content: err.message }, err));
+        const reason = failureReason(err);
+        reject(new RequestClientError(reason, { content: reason }, err));
       });
     });
   }

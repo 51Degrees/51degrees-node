@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const path = require('path');
+const dns = require('dns');
 const http = require('http');
 const RequestClient = require('../requestClient');
 const RequestClientError = require('../requestClientError');
@@ -295,4 +296,36 @@ each([['get'], ['post']])
     expect(error.content).toContain('ECONNREFUSED');
     expect(error.message).toBe(error.content);
     expect(error.cause.code).toBe('ECONNREFUSED');
+  });
+
+// A host with an IPv6 and an IPv4 address is tried at both, and the error
+// Node gives when both refuse has no message of its own. The content is
+// still the reason, taken from the error for each address.
+each([['get'], ['post']])
+  .test('%s - a request refused at every address gives the reasons', async (method) => {
+    await new Promise((resolve) => server.listen(0, resolve));
+    const port = server.address().port;
+    await new Promise((resolve) => server.close(resolve));
+    server = undefined;
+    const addresses = [
+      { address: '::1', family: 6 },
+      { address: '127.0.0.1', family: 4 }
+    ];
+    const lookup = jest.spyOn(dns, 'lookup').mockImplementation(
+      (hostname, options, callback) => {
+        if (options.all) {
+          callback(null, addresses);
+        } else {
+          callback(null, addresses[1].address, addresses[1].family);
+        }
+      });
+    try {
+      const error = await rejection(method, `http://two-addresses.test:${port}`);
+      expect(error).toBeInstanceOf(RequestClientError);
+      expect(error.content).toContain('ECONNREFUSED');
+      expect(error.content).toContain('127.0.0.1');
+      expect(error.message).toBe(error.content);
+    } finally {
+      lookup.mockRestore();
+    }
   });
