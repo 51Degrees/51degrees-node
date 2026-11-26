@@ -145,8 +145,8 @@ describeWithLite('performanceProfile', () => {
   }
 
   test('an engine left at its defaults uses Balanced', () => {
-    // eslint-disable-next-line no-new
-    new DeviceDetectionOnPremise(engineOptions);
+    expect(new DeviceDetectionOnPremise(engineOptions))
+      .toBeInstanceOf(DeviceDetectionOnPremise);
     expectBalanced();
   });
 

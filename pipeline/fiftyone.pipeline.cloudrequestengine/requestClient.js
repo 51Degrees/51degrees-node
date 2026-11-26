@@ -20,6 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+const RequestClientError = require('./requestClientError');
+
 class RequestClient {
   /**
    * Make a POST request to the specified url
@@ -28,12 +30,10 @@ class RequestClient {
    * @param {object | null} data The data to send in the body of the request
    * @param {string | null} origin The value to use for the Origin header when
    * making the request
-   * @returns {Promise} The resolve function will be passed the content
-   * from the response and the reject function will be passed
-   * an object with 3 properties:
-   * headers = HTTP headers in the response
-   * statusCode = HTTP status code of response
-   * content = The content of the response or an error message
+   * @returns {Promise<string>} the content of the response. A response with
+   * a failure status, or no response, rejects with a
+   * {@link RequestClientError} that holds the headers, status code and
+   * content of the response, or the reason there was none
    */
   post (url, data, origin) {
     let httpModule;
@@ -81,7 +81,8 @@ class RequestClient {
           result.content = data;
           // If response from cloud is not 2** / 3**, reject with error
           if (resp.statusCode > 399) {
-            reject(result);
+            reject(new RequestClientError(
+              `The request failed with status ${resp.statusCode}`, result));
           } else {
             resolve(data);
           }
@@ -89,7 +90,8 @@ class RequestClient {
       });
 
       req.on('error', (err) => {
-        reject({ content: err.message }); // eslint-disable-line
+        reject(new RequestClientError(
+          err.message, { content: err.message }, err));
       });
 
       req.write(requestData);
@@ -103,12 +105,10 @@ class RequestClient {
    * @param {string} url The url to send a request to
    * @param {string | null} origin The value to use for the Origin header when
    * making the request
-   * @returns {Promise} The resolve function will be passed the content
-   * from the response and the reject function will be passed
-   * an object with 3 properties:
-   * headers = HTTP headers in the response
-   * statusCode = HTTP status code of response
-   * content = The content of the response or an error message
+   * @returns {Promise<string>} the content of the response. A response with
+   * a failure status, or no response, rejects with a
+   * {@link RequestClientError} that holds the headers, status code and
+   * content of the response, or the reason there was none
    */
   get (url, origin) {
     let httpModule;
@@ -144,13 +144,15 @@ class RequestClient {
           result.content = data;
           // If response from cloud is not 2** / 3**, reject with error
           if (resp.statusCode > 399) {
-            reject(result);
+            reject(new RequestClientError(
+              `The request failed with status ${resp.statusCode}`, result));
           } else {
             resolve(data);
           }
         });
       }).on('error', (err) => {
-        reject({ content: err.message }); // eslint-disable-line
+        reject(new RequestClientError(
+          err.message, { content: err.message }, err));
       });
     });
   }

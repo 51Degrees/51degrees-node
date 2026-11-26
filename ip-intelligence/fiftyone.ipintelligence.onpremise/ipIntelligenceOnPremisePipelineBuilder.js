@@ -126,7 +126,7 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
     }
 
     if (cacheSize) {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
     this.flowElements.push(new IpIntelligenceOnPremise(
       {

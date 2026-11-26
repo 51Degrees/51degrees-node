@@ -43,7 +43,7 @@ describe('ipIntelligenceOnPremise', () => {
           cacheSize: 100
         }).build();
     } catch (err) {
-      expect(err.indexOf('cache cannot be configured') !== -1).toBe(true);
+      expect(err.message.indexOf('cache cannot be configured') !== -1).toBe(true);
 
       done();
     }

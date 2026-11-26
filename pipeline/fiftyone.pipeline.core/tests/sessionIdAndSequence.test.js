@@ -100,7 +100,6 @@ async function render (sequenceElement, evidence) {
   }
   await flowData.process();
   const script = flowData.javascriptbuilder.javascript;
-  // eslint-disable-next-line no-new
   expect(() => new vm.Script(script, { filename: 'JavaScriptResource.js' }))
     .not.toThrow();
   return script;

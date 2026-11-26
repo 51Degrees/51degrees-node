@@ -35,7 +35,7 @@ const testResourceKey = 'AAAAAAAAAAAA';
 
 const testEnvVarEndPoint = 'https://testhost/';
 
-afterEach(() => { // eslint-disable-line
+afterEach(() => {
   // Reset the endpoint environment variable
   process.env._51DEGREES_CLOUD_ENDPOINT = '';
 });

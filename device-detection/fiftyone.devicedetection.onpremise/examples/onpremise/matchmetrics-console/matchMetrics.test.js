@@ -41,7 +41,7 @@ describe('Examples', () => {
   test('onpremise match metrics Lite data file', async () => {
     const filePath = getDataFilePath(liteDataFileName);
     if (filePath === undefined) {
-      throw (`No Lite data file '${liteDataFileName}' found at 
+      throw new Error(`No Lite data file '${liteDataFileName}' found at 
         '${dataFileDirectories}'!`);
     }
     const output = {
@@ -64,7 +64,7 @@ describe('Examples', () => {
   test('onpremise match metrics Enterprise data file', async () => {
     const filePath = getDataFilePath(enterpriseDataFileName);
     if (filePath === undefined) {
-      throw (`No Lite data file '${enterpriseDataFileName}' found at 
+      throw new Error(`No Lite data file '${enterpriseDataFileName}' found at 
         '${dataFileDirectories}'!`);
     }
     await example.run(filePath, process.stdout, exampleConstants.defaultEvidenceValues.slice(2, 3));

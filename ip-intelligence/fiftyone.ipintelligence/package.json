@@ -29,7 +29,7 @@
   },
   "scripts": {
     "test": "jest",
-    "lint": "eslint . --ext .js"
+    "lint": "eslint . --ext .js --max-warnings 0 --report-unused-disable-directives"
   },
   "repository": {
     "type": "git",

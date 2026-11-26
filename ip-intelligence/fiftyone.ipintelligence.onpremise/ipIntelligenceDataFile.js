@@ -115,10 +115,14 @@ class IpIntelligenceDataFile extends DataFile {
    *
    * @param {object} options options for the datafile
    * @param {string} options.useUrlFormatter whether to append default URL params for Data File download
+   * @param {function(string): string} [options.getProductFromFile] reads
+   * the product name from the header of the data file at a path without
+   * loading the file, and throws where it cannot
    **/
-  constructor ({ useUrlFormatter = true, ...rest }) {
+  constructor ({ useUrlFormatter = true, getProductFromFile, ...rest }) {
     super({ ...rest });
     this.useUrlFormatter = useUrlFormatter;
+    this.getProductFromFile = getProductFromFile;
   }
 
   /**
@@ -171,21 +175,44 @@ class IpIntelligenceDataFile extends DataFile {
   }
 
   /**
-   * The name the Distributor gives the product of the data file the engine
-   * has loaded, which is 'IPIV4' and then the tier of the data file, so
-   * 'IPIV4Enterprise' for the Enterprise data file. A tier that already
-   * starts that way is given as it is. It is empty where the engine has no
-   * data file yet.
+   * The name the Distributor gives the product of the data file, which is
+   * 'IPIV4' and then the tier of the data file, so 'IPIV4Enterprise' for
+   * the Enterprise data file. A tier that already starts that way is given
+   * as it is, and 'IPIV4' alone is no product.
+   * Once the engine has loaded a data file the tier comes from the engine.
+   * Before then it is read from the header of the data file at the path,
+   * without loading the file. It is empty where neither gives a tier, as
+   * when there is no file at the path.
    *
    * @returns {string} the product name
    */
   getUpdateProduct () {
     const engine = this.flowElement && this.flowElement.engine;
-    const tier = engine ? String(engine.getProduct() || '') : '';
-    if (tier === '') {
+    const tier = engine
+      ? String(engine.getProduct() || '')
+      : this.productInFile();
+    if (tier === '' || tier.toUpperCase() === 'IPIV4') {
       return '';
     }
     return /^IPIV4/i.test(tier) ? tier : 'IPIV4' + tier;
+  }
+
+  /**
+   * The product name in the header of the data file at the path, read
+   * without loading the file.
+   *
+   * @returns {string} the product name, or an empty string where there is
+   * no path, no way to read the header, or the header cannot be read
+   */
+  productInFile () {
+    if (typeof this.getProductFromFile !== 'function' || !this.path) {
+      return '';
+    }
+    try {
+      return String(this.getProductFromFile(this.path) || '');
+    } catch (e) {
+      return '';
+    }
   }
 }
 

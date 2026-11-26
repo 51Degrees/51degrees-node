@@ -128,6 +128,7 @@ class Pipeline {
 
     /**
      * A logger for emitting messages
+     *
      * @type {EventEmitter}
      */
     this.eventEmitter = new EventEmitter();

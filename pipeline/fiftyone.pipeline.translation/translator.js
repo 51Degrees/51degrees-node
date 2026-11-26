@@ -97,7 +97,7 @@ class Translator {
     if (Array.isArray(value)) {
       return this.translateArray(value, errors);
     }
-    throw 'The value type is not supported for translation.';
+    throw new Error('The value type is not supported for translation.');
   }
 
   /**

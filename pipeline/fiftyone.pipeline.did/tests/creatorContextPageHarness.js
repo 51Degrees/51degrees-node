@@ -74,8 +74,10 @@ const IDS = {
 const record = { scripts: [], fetches: [], rows: {}, revealed: [], errors: [] };
 
 /**
+ * A stand-in for a DOM element that records what the page writes to it.
  *
- * @param id
+ * @param {string} id the element id
+ * @returns {object} the element stand-in
  */
 function element (id) {
   return {
@@ -93,8 +95,10 @@ function element (id) {
 
 const elements = {};
 /**
+ * A stand-in for document.getElementById that makes each element once.
  *
- * @param id
+ * @param {string} id the element id
+ * @returns {object} the element stand-in for the id
  */
 function byId (id) {
   if (!elements[id]) { elements[id] = element(id); }
@@ -142,8 +146,10 @@ const document = {
 };
 
 /**
+ * A successful fetch response whose text is the body as JSON.
  *
- * @param body
+ * @param {object} body the response body
+ * @returns {Promise<object>} the response
  */
 function response (body) {
   return Promise.resolve({
@@ -155,8 +161,10 @@ function response (body) {
 }
 
 /**
+ * A stand-in for fetch that records each URL and answers from stubs.
  *
- * @param url
+ * @param {string} url the URL the page fetches
+ * @returns {Promise<object>} the stubbed response
  */
 function fetchStub (url) {
   record.fetches.push(url);
@@ -207,7 +215,7 @@ try {
 // reporting. Several turns, because each step waits for the one before.
 let turns = 0;
 /**
- *
+ * Lets the page run its pending promise turns.
  */
 function settle () {
   turns += 1;

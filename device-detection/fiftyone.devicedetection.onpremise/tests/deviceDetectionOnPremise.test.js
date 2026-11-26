@@ -200,7 +200,7 @@ describe('deviceDetectionOnPremise', () => {
       });
       console.log(engine); // to prevent linter error
     } catch (err) {
-      expect(err.indexOf('cache cannot be configured') !== -1).toBe(true);
+      expect(err.message.indexOf('cache cannot be configured') !== -1).toBe(true);
 
       done();
     }
@@ -216,7 +216,7 @@ describe('deviceDetectionOnPremise', () => {
           cacheSize: 100
         }).build();
     } catch (err) {
-      expect(err.indexOf('cache cannot be configured') !== -1).toBe(true);
+      expect(err.message.indexOf('cache cannot be configured') !== -1).toBe(true);
 
       done();
     }

@@ -78,10 +78,10 @@ async function render (builderSettings, evidence) {
  * browser loads it. Throws a SyntaxError if it does not parse.
  *
  * @param {string} script the rendered script
+ * @returns {vm.Script} the compiled script
  */
 function parse (script) {
-  // eslint-disable-next-line no-new
-  new vm.Script(script, { filename: 'JavaScriptResource.js' });
+  return new vm.Script(script, { filename: 'JavaScriptResource.js' });
 }
 
 /**

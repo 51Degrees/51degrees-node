@@ -9,15 +9,18 @@
         'win_warning_level': 4,
         'win_exception_handling': 1,
         'win_warn_as_error': 'true',
-        # Node 26 passes the linker its own '/flto=thin', which link.exe does not know and warns about (LNK4044).
-        'wrapper_win_link_warn_as_error': "<!(node -p \"parseInt(process.versions.node) >= 26 ? 'false' : 'true'\")",
-        'win_warning_ignore_list': [4018, 4100, 4127, 4244, 4302, 4311, 4324, 4459, 4702, 4996], # Only used for SWIG generated files. 4018 and 4324 come from Node 24 V8 headers.
-        'win_debug_additional_ignore_list': [4701, 4702], # Only used for SWIG generated files
-        'linux_mac_c_std': '-std=gnu11',
-        'linux_mac_cpp_std': '-std=gnu++17',
+        # Each target is built with one C standard and one C++ standard, and
+        # Node's own standard option is taken out where it differs, so the
+        # compiler never sees two. MSVC warns (D9025) when one standard
+        # overrides another, and /WX does not make that an error.
+        'node_major_version': "<!(node -p \"parseInt(process.versions.node)\")",
+        'linux_c_std': '-std=gnu11',
+        'mac_c_std': 'gnu11',
+        'core_win_cpp_std': 'stdcpp17',
+        'core_mac_cpp_std': 'gnu++17',
         # Node 23+ (V8 12.9+) headers require C++20, older versions build with C++17
-        'wrapper_win_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? '-std:c++20' : '-std:c++17'\")",
-        'wrapper_linux_mac_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? '-std=gnu++20' : '-std=gnu++17'\")",
+        'wrapper_win_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? 'stdcpp20' : 'stdcpp17'\")",
+        'wrapper_mac_cpp_std': "<!(node -p \"parseInt(process.versions.node) >= 23 ? 'gnu++20' : 'gnu++17'\")",
         'linux_mac_c_common_flags': [
             "<!(node -e \"\
             var v8Version = process.versions.v8;\
@@ -30,31 +33,49 @@
                 string += arr[i];\
             }\
             console.log(string);\")",
-            "-Wall"
+            "-Wall",
+            "-Wextra",
+            "-Werror"
         ],
-        'linux_mac_c_core_additional_flags': [
-            "-Wno-unused-variable",
-            "-Wno-unused-result",
-            "-Wno-strict-aliasing",
-            "-Wno-ignored-qualifiers",
-            "-Wno-missing-braces",
-            "-Wno-attributes",
-			"-Wno-atomic-alignment"
-        ],
-        'linux_mac_c_wrapper_additional_flags': [
-            "-Wno-ignored-qualifiers",
-            "-Wno-unused-result",
-            "-Wno-attributes",
-            "-Wno-deprecated-declarations"
-        ],
-        'linux_specific_c_core_additional_flags': [
-            "-Wno-unused-but-set-variable"
-        ],
-        'linux_specific_c_wrapper_additional_flags': '-Wno-cast-function-type',
         'mac_specific_flags': [
             "-arch x86_64",
             "-arch arm64"
         ]
+    },
+    # Node's own build settings turn some warnings off for every addon. They
+    # are taken out here so these targets build with every warning the
+    # warning level gives.
+    'target_defaults': {
+        'msvs_disabled_warnings!': [4351, 4355, 4800, 4251, 4275, 4244, 4267],
+        'defines!': ['_CRT_SECURE_NO_DEPRECATE', '_CRT_NONSTDC_NO_DEPRECATE'],
+        'cflags!': ['-Wno-unused-parameter'],
+        'xcode_settings': {
+            'WARNING_CFLAGS!': ['-Wno-unused-parameter']
+        },
+        # Node 26's build settings ask for clang's thin LTO and profile
+        # guided optimisation, which MSVC does not know. The linker warns
+        # about each option (LNK4044), so they are taken out.
+        'msvs_settings': {
+            'VCCLCompilerTool': {
+                # Node's settings also pass -std:c++20 to MSVC for every
+                # addon. Each target here sets its standard with
+                # LanguageStandard, so Node's option is taken out.
+                'AdditionalOptions/': [
+                    ['exclude', '^[-/]f(lto|profile-use)'],
+                    ['exclude', '^[-/]std:']
+                ]
+            },
+            'VCLibrarianTool': {
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']]
+            },
+            'VCLinkerTool': {
+                'AdditionalOptions/': [['exclude', '^[-/]f(lto|profile-use)']],
+                # node-gyp turns off the linker's warning for a delay loaded
+                # DLL that nothing is imported from (LNK4199). It is taken
+                # out so that warning shows too.
+                'AdditionalOptions!': ['/ignore:4199']
+            }
+        }
     },
     'targets': [
         {
@@ -82,13 +103,16 @@
                         'Debug': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
+                                },
+                                'VCLibrarianTool': {
+                                    'TreatLibWarningAsErrors': '<(win_warn_as_error)'
                                 },
                                 'VCLinkerTool': {
                                     'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
@@ -98,13 +122,16 @@
                         'Release': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '-std:c++17', ],
+                                    'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
+                                },
+                                'VCLibrarianTool': {
+                                    'TreatLibWarningAsErrors': '<(win_warn_as_error)'
                                 },
                                 'VCLinkerTool': {
                                     'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
@@ -116,26 +143,30 @@
                 ['OS=="mac"', {
                     "xcode_settings": {
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "GCC_C_LANGUAGE_STANDARD": '<(mac_c_std)',
+                        "CLANG_CXX_LANGUAGE_STANDARD": '<(core_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_core_additional_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_c_std)'],
+                            '<@(mac_specific_flags)'],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_core_additional_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_cpp_std)']
+                            '<@(mac_specific_flags)']
                     }
                 }],
                 ['OS=="linux"', {
                     'cflags_cc!': ["-fno-exceptions"],
-                    'cflags_cc': ['<(linux_mac_cpp_std)'],
-                    'cflags_c': ['<(linux_mac_c_std)'],
+                    'cflags_c': ['<(linux_c_std)'],
+                    # Node's settings give C++17 before Node 23, which is
+                    # what the core library uses, and C++20 from Node 23,
+                    # which is replaced.
+                    'conditions': [
+                        ['node_major_version>=23', {
+                            'cflags_cc!': ['-std=gnu++20'],
+                            'cflags_cc': ['-std=gnu++17']
+                        }]
+                    ],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)',
-                        '<@(linux_mac_c_core_additional_flags)',
-                        '<@(linux_specific_c_core_additional_flags)'
+                        '<@(linux_mac_c_common_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]
@@ -150,8 +181,17 @@
                 "ipi_node_wrap.cxx",
             ],
             'dependencies': ['<(core_lib_name)'],
-            # The IP intelligence data format uses 64 bit file offsets.
-            'defines': [ 'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT', 'FIFTYONE_DEGREES_REDUCED_FILE' ],
+            'defines': [
+                # The IP intelligence data format uses 64 bit file offsets.
+                'FIFTYONE_DEGREES_LARGE_DATA_FILE_SUPPORT',
+                'FIFTYONE_DEGREES_REDUCED_FILE',
+                # Stop the SWIG wrapper turning off MSVC's unreferenced
+                # function warning and the deprecation warnings of the C and
+                # C++ runtimes.
+                'SWIG_MSC_UNSUPPRESS_4505',
+                'SWIG_NO_CRT_SECURE_NO_DEPRECATE',
+                'SWIG_NO_SCL_SECURE_NO_DEPRECATE'
+            ],
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],
@@ -162,20 +202,16 @@
                                     # C++20 is the minimum required by the
                                     # headers of Node 23 and later, selected
                                     # dynamically by wrapper_win_cpp_std.
-                                    'AdditionalOptions': [ '<(wrapper_win_cpp_std)', ],
+                                    'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'DisableSpecificWarnings': [
-                                        '<@(win_warning_ignore_list)',
-                                        '<@(win_debug_additional_ignore_list)'
-                                    ],
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
                                     'LinkIncremental': 1
                                 }
@@ -184,19 +220,16 @@
                         'Release': {
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
-                                    'AdditionalOptions': [ '<(wrapper_win_cpp_std)', ],
+                                    'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
                                     'WarnAsError': '<(win_warn_as_error)',
-                                    'DisableSpecificWarnings': [
-                                        '<@(win_warning_ignore_list)'
-                                    ],
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(wrapper_win_link_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
                                 }
                             }
@@ -209,17 +242,15 @@
                 ['OS=="mac"', {
                     "xcode_settings": {
                         "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        "GCC_C_LANGUAGE_STANDARD": '<(mac_c_std)',
+                        "CLANG_CXX_LANGUAGE_STANDARD": '<(wrapper_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_wrapper_additional_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(linux_mac_c_std)'
+                            '<@(mac_specific_flags)'
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(linux_mac_c_wrapper_additional_flags)',
-                            '<@(mac_specific_flags)',
-                            '<(wrapper_linux_mac_cpp_std)'
+                            '<@(mac_specific_flags)'
                         ],
                         "OTHER_LDFLAGS": [
                             '<@(mac_specific_flags)'
@@ -228,12 +259,12 @@
                 }],
                 ['OS=="linux"', {
                     'cflags_cc!': ['-fno-exceptions'],
-                    'cflags_cc': ['<(wrapper_linux_mac_cpp_std)'],
-                    'cflags_c': ['<(linux_mac_c_std)'],
+                    # Node's settings give the C++ standard the wrapper needs,
+                    # C++17 before Node 23 and C++20 from Node 23, so it adds
+                    # none of its own.
+                    'cflags_c': ['<(linux_c_std)'],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)',
-                        '<@(linux_mac_c_wrapper_additional_flags)',
-                        '<@(linux_specific_c_wrapper_additional_flags)'
+                        '<@(linux_mac_c_common_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]

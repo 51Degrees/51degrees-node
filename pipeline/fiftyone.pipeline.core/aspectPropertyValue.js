@@ -47,13 +47,13 @@ class AspectPropertyValue {
    * Get the value of this instance.
    *
    * @returns {*} The value of the property
-   * @throws {string} the no value message, when hasValue is false
+   * @throws {Error} the no value message, when hasValue is false
    */
   get value () {
     if (this.hasValue) {
       return this._value;
     } else {
-      throw this.noValueMessage;
+      throw new Error(this.noValueMessage);
     }
   }
 

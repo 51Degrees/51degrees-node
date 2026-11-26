@@ -118,12 +118,12 @@ class ElementData {
    * @param {object} options the options object
    * @param {FlowElement} options.flowElement the FlowElement this data
    * is part of
-   * @throws {string} 'flowElement dataKey not found', when the FlowElement
+   * @throws {Error} 'flowElement dataKey not found', when the FlowElement
    * has no data key
    */
   constructor ({ flowElement }) {
     if (!flowElement.dataKey) {
-      throw 'flowElement dataKey not found';
+      throw new Error('flowElement dataKey not found');
     }
 
     this.flowElement = flowElement;
@@ -230,7 +230,7 @@ class ElementData {
    *
    * @param {string} key the key to retrieve a property value for
    * @returns {FlowData} value
-   * @throws {string} a message naming the property and the element, when
+   * @throws {Error} a message naming the property and the element, when
    * the data has no value for the key in any case
    */
   get (key) {
@@ -242,12 +242,12 @@ class ElementData {
     if (typeof value === 'undefined') {
       value = this.getInternalIgnoringCase(key);
       if (typeof value === 'undefined') {
-        throw util.format(errorMessages.genericMissingProperties, key) +
+        throw new Error(util.format(errorMessages.genericMissingProperties, key) +
           (typeof this.flowElement === 'undefined'
             ? ''
             : ' in data for element "' +
             this.flowElement.dataKey) + '".' +
-          util.format(errorMessages.noReasonUnknown);
+          util.format(errorMessages.noReasonUnknown));
       }
     }
     return value;

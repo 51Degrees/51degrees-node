@@ -27,7 +27,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, execSync } = require('child_process');
 
 const packageRoot = path.join(__dirname, '..');
 const exported = [
@@ -71,14 +71,13 @@ describe('shared package layout', () => {
 
   test('the packed files include lib and the old paths',
     () => {
-      const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-      const output = execFileSync(
-        npm, ['pack', '--dry-run', '--json', '--ignore-scripts'],
-        {
-          cwd: packageRoot,
-          encoding: 'utf8',
-          shell: process.platform === 'win32'
-        });
+      // On Windows npm is a command script, which only a shell can start,
+      // so there the shell is given the whole command line.
+      const args = ['pack', '--dry-run', '--json', '--ignore-scripts'];
+      const options = { cwd: packageRoot, encoding: 'utf8' };
+      const output = process.platform === 'win32'
+        ? execSync(['npm', ...args].join(' '), options)
+        : execFileSync('npm', args, options);
       const packed = JSON.parse(output)[0].files.map((f) => f.path);
       expect(packed).toContain('index.js');
       exported.forEach((name) => {

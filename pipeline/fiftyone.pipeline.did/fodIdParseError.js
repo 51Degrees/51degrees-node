@@ -32,6 +32,7 @@
 class FodIdParseError extends Error {
   /**
    * Builds the error for a status.
+   *
    * @param {string} status one of `FodId.ParseStatus`
    */
   constructor (status) {

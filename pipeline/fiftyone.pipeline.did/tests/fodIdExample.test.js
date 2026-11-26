@@ -63,7 +63,7 @@ test('the 51Did example reads and verifies the 51Did it creates', () => {
     });
 
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   expect(result.stdout).toMatch(/Verifies\s*:\s*true/);
   expect(result.stdout).toMatch(/Same match key\s*:\s*true/);
   expectEndsWithFindOutMore(result.stdout);
