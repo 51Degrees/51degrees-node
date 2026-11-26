@@ -206,22 +206,50 @@ function reportUnloggedBuildFailure (engine, flowData) {
 const webRequestKey = 'server.http-request';
 
 /**
- * Whether the response in an element data has a top level member named
- * fodid, in any case. A response that cannot be read is cached as before.
+ * Whether the response in an element data holds a value made for the one
+ * request that asked for it, which no other request may be given. That is
+ * a top level fodid member, which holds a 51Did, a browserderived member
+ * holding the browser tests, which are issued for one visitor and whose
+ * answers come back on a later request that the cloud's evidence keys can't
+ * tell apart from this one, or a derived member whose HumanConfidenceSource
+ * is Active, as its HumanConfidence is then a sealed result made for that
+ * request. Names are matched in any case. A response that cannot be read is
+ * cached as before.
  *
  * @param {object} data the element data of a response
- * @returns {boolean} true if the response has a top level fodid member
+ * @returns {boolean} true if the response holds such a value
  */
-function holdsFodId (data) {
+function holdsPerRequestValue (data) {
   try {
     const text = data.get('cloud');
-    if (typeof text !== 'string' || !/fodid/i.test(text)) {
+    if (typeof text !== 'string' ||
+      !/fodid|browserderived|humanconfidencesource/i.test(text)) {
       return false;
     }
     const response = JSON.parse(text);
-    return response !== null &&
-      typeof response === 'object' &&
-      Object.keys(response).some((name) => name.toLowerCase() === 'fodid');
+    if (response === null || typeof response !== 'object') {
+      return false;
+    }
+    return Object.entries(response).some(([name, value]) => {
+      const lower = name.toLowerCase();
+      if (lower === 'fodid') {
+        return true;
+      }
+      if (value === null || typeof value !== 'object') {
+        return false;
+      }
+      if (lower === 'browserderived') {
+        return Object.entries(value).some(([property, script]) =>
+          property.toLowerCase() === 'browsertestsjavascript' &&
+          typeof script === 'string' && script.length > 0);
+      }
+      if (lower === 'derived') {
+        return Object.entries(value).some(([property, source]) =>
+          property.toLowerCase() === 'humanconfidencesource' &&
+          typeof source === 'string' && source.toLowerCase() === 'active');
+      }
+      return false;
+    });
   } catch (e) {
     return false;
   }
@@ -465,13 +493,14 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
-   * A response with a top level `fodid` member, in any case, holds a 51Did
-   * created for the one request, so it is neither stored in the cache nor
-   * served from it. The answer is worked out once for each element data,
-   * so a cache hit does not parse the response again.
+   * A response that holds a value made for the one request that asked for
+   * it, being a 51Did, the browser tests or a sealed Human Confidence result
+   * (see holdsPerRequestValue), is neither stored in the cache nor served
+   * from it. The answer is worked out once for each element data, so a
+   * cache hit does not parse the response again.
    *
    * @param {object} data the element data of a response
-   * @returns {boolean} false if the response has a top level fodid member
+   * @returns {boolean} false if the response holds such a value
    */
   isCacheable (data) {
     if (data === null || typeof data !== 'object') {
@@ -479,7 +508,7 @@ class CloudRequestEngine extends Engine {
     }
     let cacheable = cacheableData.get(data);
     if (cacheable === undefined) {
-      cacheable = !holdsFodId(data);
+      cacheable = !holdsPerRequestValue(data);
       cacheableData.set(data, cacheable);
     }
     return cacheable;
