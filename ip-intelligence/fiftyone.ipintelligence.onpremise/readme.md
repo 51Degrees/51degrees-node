@@ -54,7 +54,7 @@ root to perform all of the following steps automatically. The script works on Wi
 
 1. Ensure the `cxx` submodule at the root of the repository is checked out, including its own submodules.
 2. Copy `binding.51d` to `binding.gyp`.
-3. Run `node-gyp configure` and `node-gyp build`.
+3. Run `node-gyp configure` and `node-gyp build`. Compiler warnings are shown and do not stop the build. To make them errors, as the 51Degrees CI builds do, set the environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true` before configuring.
 4. Copy the resulting `build/Release/FiftyOneIpIntelligenceIpiV41.node` to `build/FiftyOneIpIntelligenceIpiV41-[platform]-[arch]-[node major version].node`, where [arch] is the value of `process.arch` and [node major version] is the major version of the Node.js runtime the module was built with.
 
 Process for rebuilding SWIG interfaces following an update to the IP intelligence cxx code (This is only intended to be run by 51Degrees developers internally):

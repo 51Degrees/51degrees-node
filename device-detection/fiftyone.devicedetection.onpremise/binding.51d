@@ -1,5 +1,22 @@
 {
     'variables': {
+        'variables': {
+            # Warnings are errors only when the environment variable
+            # _51DEGREES_WARNINGS_AS_ERRORS is "true", in any letter case,
+            # when gyp configures. The builds this project runs set it. A
+            # build on a customer's machine leaves it unset, so it shows its
+            # warnings and never fails on one, and a newer compiler cannot
+            # stop an install. The warning level is the same either way.
+            'warnings_as_errors': "<!(node -p \"String(process.env._51DEGREES_WARNINGS_AS_ERRORS).toLowerCase() === 'true'\")"
+        },
+        'warnings_as_errors': '<(warnings_as_errors)',
+        'conditions': [
+            ['warnings_as_errors=="true"', {
+                'linux_mac_warnings_as_errors_flags': ['-Werror']
+            }, {
+                'linux_mac_warnings_as_errors_flags': []
+            }]
+        ],
         'encoding': [
             '_UNICODE',
             'UNICODE'
@@ -8,7 +25,6 @@
         'core_lib_name': '<(module_name)Core',
         'win_warning_level': 4,
         'win_exception_handling': 1,
-        'win_warn_as_error': 'true',
         # Each target is built with one C standard and one C++ standard, and
         # Node's own standard option is taken out where it differs, so the
         # compiler never sees two. MSVC warns (D9025) when one standard
@@ -34,8 +50,7 @@
             }\
             console.log(string);\")",
             "-Wall",
-            "-Wextra",
-            "-Werror"
+            "-Wextra"
         ],
         'mac_specific_flags': [
             "-arch x86_64",
@@ -45,8 +60,8 @@
         # include path of every addon, are compiled as system headers, which
         # MSVC calls external headers. Node's headers warn at the warning
         # level these targets build with, and they are not ours to change.
-        # Only those folders are quiet, so cxx and the wrappers still build
-        # with warnings as errors. node-gyp still passes each folder with -I
+        # Only those folders are quiet, so every warning in cxx and the
+        # wrappers is still reported. node-gyp still passes each folder with -I
         # as well, and gcc and clang search a folder given both ways as a
         # system folder.
         'node_system_include_flags': [
@@ -137,16 +152,16 @@
                                     'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'WarnAsError': '<(warnings_as_errors)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLibrarianTool': {
-                                    'TreatLibWarningAsErrors': '<(win_warn_as_error)'
+                                    'TreatLibWarningAsErrors': '<(warnings_as_errors)'
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
+                                    'TreatLinkerWarningAsErrors': '<(warnings_as_errors)'
                                 }
                             }
                         },
@@ -156,16 +171,16 @@
                                     'LanguageStandard': '<(core_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'WarnAsError': '<(warnings_as_errors)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ]
                                 },
                                 'VCLibrarianTool': {
-                                    'TreatLibWarningAsErrors': '<(win_warn_as_error)'
+                                    'TreatLibWarningAsErrors': '<(warnings_as_errors)'
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)'
+                                    'TreatLinkerWarningAsErrors': '<(warnings_as_errors)'
                                 }
                             }
                         }
@@ -178,9 +193,11 @@
                         "CLANG_CXX_LANGUAGE_STANDARD": '<(core_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_warnings_as_errors_flags)',
                             '<@(mac_specific_flags)'],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_warnings_as_errors_flags)',
                             '<@(mac_specific_flags)']
                     }
                 }],
@@ -197,7 +214,8 @@
                         }]
                     ],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)'
+                        '<@(linux_mac_c_common_flags)',
+                        '<@(linux_mac_warnings_as_errors_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]
@@ -232,7 +250,7 @@
                                     'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'WarnAsError': '<(warnings_as_errors)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ],
@@ -246,7 +264,7 @@
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(warnings_as_errors)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)'],
                                     'LinkIncremental': 1
                                 }
@@ -261,7 +279,7 @@
                                     'LanguageStandard': '<(wrapper_win_cpp_std)',
                                     'WarningLevel': '<(win_warning_level)',
                                     'ExceptionHandling': '<(win_exception_handling)',
-                                    'WarnAsError': '<(win_warn_as_error)',
+                                    'WarnAsError': '<(warnings_as_errors)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
                                     ],
@@ -275,7 +293,7 @@
                                     ]
                                 },
                                 'VCLinkerTool': {
-                                    'TreatLinkerWarningAsErrors': '<(win_warn_as_error)',
+                                    'TreatLinkerWarningAsErrors': '<(warnings_as_errors)',
                                     'AdditionalLibraryDirectories': ['<(PRODUCT_DIR)']
                                 }
                             }
@@ -292,12 +310,14 @@
                         "CLANG_CXX_LANGUAGE_STANDARD": '<(wrapper_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_warnings_as_errors_flags)',
                             '<@(mac_specific_flags)',
                             # Node's headers are system headers.
                             '<@(node_system_include_flags)'
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
+                            '<@(linux_mac_warnings_as_errors_flags)',
                             '<@(mac_specific_flags)',
                             # Node's headers are system headers.
                             '<@(node_system_include_flags)'
@@ -315,6 +335,7 @@
                     'cflags_c': ['<(linux_c_std)'],
                     'cflags': [
                         '<@(linux_mac_c_common_flags)',
+                        '<@(linux_mac_warnings_as_errors_flags)',
                         # Node's headers are system headers.
                         '<@(node_system_include_flags)'
                     ],

@@ -130,6 +130,7 @@ section explains how to do this.
     - Create a folder named `build`.
     - Run `node-gyp configure`
     - Run `node-gyp build`
+  - Compiler warnings are shown and do not stop the build. To make them errors, as the 51Degrees CI builds do, set the environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true` before configuring.
   - Platform specific:
     - Windows
       - By default this will look for Visual Studio 2019 and a minimum Windows SDK version `10.0.18362.0`.
