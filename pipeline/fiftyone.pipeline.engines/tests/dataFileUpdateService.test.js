@@ -500,36 +500,118 @@ test('watched and scheduled data files can be collected once dropped',
     expect(collected).toBe(2);
   });
 
+// True where a watcher of the path sees a change to the file. fs.watch
+// follows a symbolic link on every system but Windows, where a watcher of a
+// link sees only the link.
+const sees = (watchedPath, changed) =>
+  (process.platform !== 'win32' ||
+    !fs.lstatSync(watchedPath).isSymbolicLink()) &&
+  fs.realpathSync(watchedPath) === fs.realpathSync(changed);
+
+// Keeps the paths fs.watch is given and the listener for each, while the
+// watchers still work, so that a test can raise an event on every watcher
+// that sees a change to a file, as the change does.
+const spyOnWatch = () => {
+  const watched = [];
+  const watch = fs.watch;
+  const spy = jest.spyOn(fs, 'watch').mockImplementation(
+    (watchedPath, options, listener) => {
+      watched.push({ path: watchedPath, listener });
+      return watch(watchedPath, options, listener);
+    });
+  return {
+    spy,
+    paths: () => watched.map((watcher) => watcher.path),
+    raise: (changed) => watched
+      .filter((watcher) => sees(watcher.path, changed))
+      .forEach((watcher) => watcher.listener('change'))
+  };
+};
+
+// Raises one event on every watcher that sees a change to the file, and
+// resolves with the statuses reported once the refresh it starts has ended.
+const reportsOfOneChange = async (updateService, watch, changed) => {
+  const statuses = recordStatuses(updateService);
+  const refreshed = next(updateService, AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+  watch.raise(changed);
+  await refreshed;
+  // Any report still to come from the same change arrives by then.
+  await sleep(500);
+  return statuses;
+};
+
 /**
- * A data file whose path is a symbolic link is refreshed when the file the
- * link points to changes. On Windows fs.watch watches the folder of the
- * path, which holds only the link, so the file it points to is watched too.
- * The test checks both are watched, which it can on every system, and that
- * a change to the file pointed to is applied.
+ * A data file in a folder that is a symbolic link, as the temporary folder
+ * is on macOS, is not a link itself, so it has one watcher, and one change
+ * is reported once.
  */
-test('file watcher watches the file a symbolic link points to', async () => {
-  const { folder, file } = newDataFile('watcher-link-');
-  const link = path.join(folder, 'link.dat');
-  fs.symlinkSync(file, link, 'file');
-  const watch = jest.spyOn(fs, 'watch');
+test('file watcher watches a data file in a linked folder once', async () => {
+  const { folder, file } = newDataFile('watcher-folder-');
+  const linkedFolder = folder + '-link';
+  fs.symlinkSync(folder, linkedFolder, 'dir');
+  const linked = path.join(linkedFolder, path.basename(file));
+  const watch = spyOnWatch();
   const updateService = new DataFileUpdateService({ log: () => {} });
-  const dataFile = Object.assign(standInDataFile(link),
+  const dataFile = Object.assign(standInDataFile(linked),
     { fileSystemWatcher: true });
+  // The file changes before it is watched, so that only the events the
+  // test raises report it.
+  fs.writeFileSync(file, 'version 2');
 
   try {
     updateService.registerDataFile(dataFile);
-    expect(watch.mock.calls.map((call) => call[0]))
-      .toEqual([link, fs.realpathSync(file)]);
-    // On macOS fs.watch can miss a change made straight after it starts.
-    await sleep(500);
+    expect(watch.paths()).toEqual([linked]);
 
-    const refreshed = next(updateService,
-      AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
-    fs.writeFileSync(file, 'version 2');
-    await refreshed;
+    expect(await reportsOfOneChange(updateService, watch, linked))
+      .toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
     expect(dataFile.data).toBe('version 2');
   } finally {
-    watch.mockRestore();
+    watch.spy.mockRestore();
+    // The folders are left in place, as in the watcher tests above.
+    dataFile.finished = true;
+  }
+});
+
+/**
+ * A data file whose path is a symbolic link, here to another link, has the
+ * file at the end of the links watched, because on Windows fs.watch watches
+ * the folder of the path and so misses a change to the file. There the
+ * link is watched as well. One change is reported once, and a change to
+ * the file is applied.
+ */
+test('file watcher watches the file a symbolic link points to', async () => {
+  const { folder, file } = newDataFile('watcher-link-');
+  const middle = path.join(folder, 'middle.dat');
+  fs.symlinkSync(file, middle, 'file');
+  const link = path.join(folder, 'link.dat');
+  fs.symlinkSync(middle, link, 'file');
+  const watch = spyOnWatch();
+  const updateService = new DataFileUpdateService({ log: () => {} });
+  const dataFile = Object.assign(standInDataFile(link),
+    { fileSystemWatcher: true });
+  // The file changes before it is watched, so that only the events the
+  // test raises report it.
+  fs.writeFileSync(file, 'version 2');
+
+  try {
+    updateService.registerDataFile(dataFile);
+    const target = fs.realpathSync(file);
+    expect(watch.paths()).toEqual(
+      process.platform === 'win32' ? [target, link] : [target]);
+
+    expect(await reportsOfOneChange(updateService, watch, file))
+      .toEqual([AutoUpdateStatus.AUTO_UPDATE_SUCCESS]);
+    expect(dataFile.data).toBe('version 2');
+
+    // On macOS fs.watch can miss a change made straight after it starts.
+    await sleep(500);
+    const refreshed = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    fs.writeFileSync(file, 'version 3');
+    await refreshed;
+    expect(dataFile.data).toBe('version 3');
+  } finally {
+    watch.spy.mockRestore();
     // The folder is left in place, as in the watcher tests above.
     dataFile.finished = true;
   }

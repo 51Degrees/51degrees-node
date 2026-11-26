@@ -377,15 +377,17 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     .then(() => {
       output.write('Modifying downloaded file to trigger reload - please wait for that' +
         ' to complete\n');
-      // The example waits a minute for the reload, and fails if it has not
-      // happened by then, rather than waiting for ever. The timer also keeps
-      // node running until the reload has happened.
+      // The example waits three minutes for the reload, and fails if it has
+      // not happened by then, rather than waiting for ever. A reload makes a
+      // new temporary copy of the data file, which for an IP Intelligence
+      // data file of several GB can take most of a minute. The timer also
+      // keeps node running until the reload has happened.
       let timeoutId;
       const timedOut = new Promise((resolve, reject) => {
         timeoutId = setTimeout(() => {
           output.write('Update on file modification timed out\n');
           reject(new Error('Timed out waiting for the engine to refresh data'));
-        }, 60 * 1000);
+        }, 3 * 60 * 1000);
       });
       // The wait is set up before the file is touched, so that the reload
       // it triggers cannot be missed.

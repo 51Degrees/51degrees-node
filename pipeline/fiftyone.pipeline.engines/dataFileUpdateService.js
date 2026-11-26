@@ -21,7 +21,6 @@
  * ********************************************************************* */
 
 const fs = require('fs');
-const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const https = require('https');
@@ -397,18 +396,29 @@ const applyWatchedChange = function (serviceRef, dataFileRef, file) {
 };
 
 /**
- * The full path of the file a path names, following symbolic links, or the
- * full path itself where it cannot be followed.
+ * The paths to watch for changes to the file at a path. fs.watch follows a
+ * symbolic link on every system but Windows, where it watches the folder
+ * that holds the path, so a change to the file a link points to raises no
+ * event. Where the path is itself a link, the file it points to, through
+ * any further links, is watched in its place. On Windows the link is
+ * watched as well, so that pointing it at another file is seen. A path in a
+ * folder that is a link is watched as it is. Each change then raises events
+ * on one watcher only.
  *
- * @param {string} file the path
- * @returns {string} the full path of the file
+ * @param {string} file the path of the data file
+ * @returns {Array<string>} the paths to watch, the first of which must be
+ * watched
  */
-const realPath = function (file) {
+const watchedPaths = function (file) {
   try {
-    return fs.realpathSync(file);
+    if (fs.lstatSync(file).isSymbolicLink()) {
+      const target = fs.realpathSync(file);
+      return process.platform === 'win32' ? [target, file] : [target];
+    }
   } catch (e) {
-    return path.resolve(file);
+    // A link that leads nowhere is watched as it is.
   }
+  return [file];
 };
 
 /**
@@ -444,19 +454,16 @@ const watchDataFile = function (serviceRef, dataFileRef) {
       service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
     }
   };
-  watchers.push(fs.watch(watched.path, { persistent: false }, changed));
-  // On Windows fs.watch watches the folder that holds the path, so where
-  // the path is a symbolic link, a change to the file it points to raises
-  // no event. That file is watched as well. Both watchers raise events for
-  // one change on other systems, which the check above takes as one.
-  const target = realPath(watched.path);
-  if (target !== path.resolve(watched.path)) {
+  watchedPaths(watched.path).forEach((file, index) => {
     try {
-      watchers.push(fs.watch(target, { persistent: false }, changed));
+      watchers.push(fs.watch(file, { persistent: false }, changed));
     } catch (e) {
-      // The path itself is still watched.
+      // The link itself is only watched where the file it points to is.
+      if (index === 0) {
+        throw e;
+      }
     }
-  }
+  });
   const service = serviceRef.deref();
   if (service) {
     service.log('info', 'Creating file system watcher');

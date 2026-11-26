@@ -59,10 +59,10 @@ const DATA_FILE = path.join(ROOT, 'cxx', 'data', 'ip-intelligence',
   '51Degrees-EnterpriseIpiV41.ipi');
 
 // Each run of the example copies the data file, which is several GB, three
-// times and loads it three times. The two runs took 1092 s together on a
-// hosted Windows runner, 171 s on Ubuntu and 83 s on macOS, so one run has
-// 900 s, and the test a minute more to stop it and clean up.
-const RUN_LIMIT_MS = 900 * 1000;
+// times and loads it three times. A run took 105 to 121 s on hosted Windows
+// runners and about 81 s on Ubuntu, so one run has 300 s, and the test a
+// minute more to stop it and clean up.
+const RUN_LIMIT_MS = 300 * 1000;
 const TIMEOUT_MS = RUN_LIMIT_MS + 60 * 1000;
 
 describe('the product the update example asks for', () => {
