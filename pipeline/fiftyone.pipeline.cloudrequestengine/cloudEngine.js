@@ -92,7 +92,11 @@ class CloudEngine extends Engine {
   updateEngineWhenCloudRequestEngineReady (resolve, reject) {
     this._cloudRequestEngine.ready()
       .then(() => {
-        this._flowElement.properties = this._cloudRequestEngine.flowElementProperties[this._flowElement.dataKey];
+        // The cloud names some products in other letters than the answer
+        // does, such as FODid for fodid, so the product is found in any case.
+        this._flowElement.properties = memberIgnoringCase(
+          this._cloudRequestEngine.flowElementProperties,
+          this._flowElement.dataKey);
         this.updateProperties();
         this._flowElement.evidenceKeyFilter = new BasicListEvidenceKeyFilter(this._cloudRequestEngine.evidenceKeys);
         resolve(this);
@@ -147,7 +151,9 @@ class CloudEngine extends Engine {
         return;
       }
       const cloudData = JSON.parse(response);
-      const elementData = cloudData ? cloudData[engine.dataKey] : undefined;
+      const elementData = cloudData
+        ? memberIgnoringCase(cloudData, engine.dataKey)
+        : undefined;
       const result = {};
 
       if (elementData === undefined) {
@@ -166,7 +172,8 @@ class CloudEngine extends Engine {
       } else if (elementData === null) {
         // A null element is an answer to this request, so its reason is
         // logged every time.
-        const reason = cloudData[engine.dataKey + 'nullreason'];
+        const reason = memberIgnoringCase(
+          cloudData, engine.dataKey + 'nullreason');
         flowData.pipeline.log('error', engine.dataKey + ' not populated. ' +
           (reason || util.format(errorMessages.elementNullNoReason,
             productHint(flowData, engine.dataKey))));
@@ -192,6 +199,26 @@ class CloudEngine extends Engine {
       flowData.setElementData(data);
     });
   }
+}
+
+/**
+ * A member of an object by its name, in the letters given where there is
+ * one, and otherwise in any case.
+ *
+ * @param {object} owner the object, such as the cloud's answer
+ * @param {string} name the member's name, such as a product's data key
+ * @returns {*} the member, or undefined where there is none
+ */
+function memberIgnoringCase (owner, name) {
+  if (owner === null || typeof owner !== 'object') {
+    return undefined;
+  }
+  if (Object.prototype.hasOwnProperty.call(owner, name)) {
+    return owner[name];
+  }
+  const lower = String(name).toLowerCase();
+  const found = Object.keys(owner).find((key) => key.toLowerCase() === lower);
+  return found === undefined ? undefined : owner[found];
 }
 
 /**

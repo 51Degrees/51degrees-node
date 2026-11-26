@@ -224,6 +224,21 @@ describe('server route browser tests', () => {
     expect(second.derived.humanconfidencesource.value).toBe('Active');
   });
 
+  // The cloud lists the product as FODid and answers it as fodid, so the
+  // page is given the 51Did only where the engine finds the product in any
+  // case.
+  test('gives the page the 51Did and the Value source from the iteration ' +
+    'that carries the answers', async () => {
+    const client = new IterationsClient([handsOutTests, carriesAnswers]);
+    const pipeline = await build(client);
+    const first = await iteration(pipeline, {});
+    const second = await iteration(pipeline, pageCallback(first, answers));
+    const json = second.jsonbundler.json;
+    expect(json.fodid.idprobglobal).toBe('AQID');
+    expect(json.derived.humanconfidencesource).toBe('Active');
+    expect(json.javascriptProperties).toEqual([]);
+  });
+
   test('passes answers the page sent as cookies on too', async () => {
     const client = new IterationsClient([handsOutTests, carriesAnswers]);
     const pipeline = await build(client);
