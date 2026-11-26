@@ -43,6 +43,7 @@ const ParseStatus = Object.freeze(
  * Frozen. On success `ok` is true, `value` is the identifier and `status`
  * is `ParseStatus.PARSED`. On failure `ok` is false, `value` is null, never
  * a half read identifier, and `status` names the reason.
+ *
  * @typedef {object} FodIdParseResult
  * @property {boolean} ok whether the input was a structurally valid 51Did
  * @property {FodId | null} value the identifier on success, null on failure
@@ -88,6 +89,7 @@ class FodId {
    * Why a read succeeded or failed, being the OWID library's statuses plus
    * `PAYLOAD_TOO_SHORT`, `INVALID_TYPE_PAYLOAD_LENGTH`,
    * `UNSUPPORTED_PAYLOAD_VERSION` and `NO_USAGE`. Frozen.
+   *
    * @type {Readonly<Record<string, string>>}
    */
   static ParseStatus = ParseStatus;
@@ -97,6 +99,7 @@ class FodId {
    * {@link FodId#checkSignature}. The OWID library's own frozen object.
    * Only `SIGNATURE_VALID` and `SIGNATURE_INVALID` judge the signature, and
    * every other member says the question could not be answered.
+   *
    * @type {Readonly<Record<string, string>>}
    */
   static SignatureStatus = owid.SignatureStatus;
@@ -106,6 +109,7 @@ class FodId {
    * aliased. Its base64 is read again through the same walk every other
    * surface uses, so a FodId built this way is identical to one from
    * {@link FodId.fromBase64} and can never disagree with its envelope.
+   *
    * @param {object} owidInstance an OWID from `owid.parse` or
    * `owid.parseBytes`, or any object carrying the envelope base64 as `data`
    * @throws {TypeError} when no OWID was given
@@ -165,6 +169,7 @@ class FodId {
    * specification requires. The issuer writes neither, so either is a sign
    * of a damaged value, such as a `+` a form decoder turned into a space or
    * a value converted only in part.
+   *
    * @param {string} value base64 in the standard or URL-safe alphabet, with
    * or without padding, and with or without white space around it
    * @returns {string|null} the same bytes in the standard alphabet with
@@ -183,6 +188,7 @@ class FodId {
    * value can be placed in a URL without further encoding. The characters
    * are swapped in the text, because `Buffer` and its `base64url` encoding
    * do not exist in a browser.
+   *
    * @param {string} value base64 in the standard or URL-safe alphabet
    * @returns {string} the same bytes in the URL-safe alphabet, no padding
    */
@@ -208,6 +214,7 @@ class FodId {
    * A successful read says the bytes are a structurally valid 51Did. It
    * fetches no key and checks no signature, so the identifier may still be
    * a forgery. Call {@link FodId#verify} or {@link FodId#checkSignature}.
+   *
    * @param {string} base64 the envelope in either base64 alphabet
    * @returns {FodIdParseResult} a frozen result with `ok`, `value` and
    * `status`
@@ -224,6 +231,7 @@ class FodId {
    * from the OWID library is reported exactly as the OWID library reported
    * it. The bytes are copied, so changing the buffer afterwards does not
    * change the identifier.
+   *
    * @param {Uint8Array} buffer the envelope bytes
    * @returns {FodIdParseResult} a frozen result with `ok`, `value` and
    * `status`
@@ -238,6 +246,7 @@ class FodId {
    * who prefers an exception. Both base64 alphabets are accepted, and the
    * envelope is held in the standard form, so {@link FodId#asBase64}
    * returns the standard alphabet with padding whichever form was given.
+   *
    * @param {string} base64 the envelope in either base64 alphabet
    * @returns {FodId} the parsed identifier, whose signature has not been
    * checked
@@ -258,6 +267,7 @@ class FodId {
   /**
    * Parses a 51Did from the raw bytes of an OWID envelope, throwing when
    * the bytes are not one. The same read as {@link FodId.tryFromByteArray}.
+   *
    * @param {Uint8Array} buffer the envelope bytes
    * @returns {FodId} the parsed identifier, whose signature has not been
    * checked
@@ -279,6 +289,7 @@ class FodId {
    * aliased. Its base64 is read again through the same walk as
    * {@link FodId.fromBase64}, so the FodId can never disagree with its
    * envelope.
+   *
    * @param {object} owidInstance an OWID from `owid.parse` or
    * `owid.parseBytes`
    * @returns {FodId} the parsed identifier, whose signature has not been
@@ -300,6 +311,7 @@ class FodId {
   /**
    * The Usage carried in bits 0-2 of the flags, as the highest usage
    * granted. See Usage for why it is read that way.
+   *
    * @returns {number} a Usage value
    */
   get usage () {
@@ -314,7 +326,8 @@ class FodId {
    * was derived from one, but a later signal of another kind sets the same
    * bit. Both are legitimate ways to arrive at a usage, and this says
    * nothing about which usage it is.
-   * @returns {boolean}
+   *
+   * @returns {boolean} whether the usage was derived from an indirect signal
    */
   get usageIsIndirect () {
     return this._read.usageIsIndirect;
@@ -330,6 +343,7 @@ class FodId {
    * identifies nothing outside 51Degrees. It is still stable for a given
    * identifier, so it remains usable as an opaque part of the payload, but
    * it must not be read as a licence number.
+   *
    * @returns {number} the raw field value
    */
   get licenseId () {
@@ -342,6 +356,7 @@ class FodId {
    * HashedEmail identifiers, or 16 GUID bytes for Random. Two 51Dids for
    * the same inputs share the same match key, so the match key is the
    * cache and deduplication key.
+   *
    * @returns {Uint8Array} a defensive copy of the match key bytes
    */
   get matchKey () {
@@ -364,6 +379,7 @@ class FodId {
    * created under and the answer has to come from somewhere else. No
    * address is ever built from an index, since that would name a document
    * nobody wrote.
+   *
    * @returns {string|null} the address, or null where the identifier names
    * no document this package knows, which is never an empty string
    */
@@ -386,6 +402,7 @@ class FodId {
    * 2020-01-01T00:00:00Z exactly as the wire carries it, read as an
    * unsigned 32-bit number. This is the integer to compare when asking
    * which of two identifiers was issued first.
+   *
    * @returns {number} minutes since 2020-01-01T00:00:00Z
    */
   get date () {
@@ -403,6 +420,8 @@ class FodId {
   }
 
   /**
+   * The OWID in the form the cloud issues.
+   *
    * @returns {string} the OWID as a base64 string in the standard alphabet
    * with padding, the form the cloud issues.
    */
@@ -413,6 +432,7 @@ class FodId {
   /**
    * The envelope in the URL-safe base64 alphabet without padding, the form
    * to place in a URL or a link. {@link FodId.fromBase64} accepts it back.
+   *
    * @returns {string} the OWID as URL-safe base64, no padding
    */
   asBase64Url () {
@@ -422,6 +442,7 @@ class FodId {
   /**
    * Decoded with `atob` and not Node's `Buffer`, which a browser does not
    * have.
+   *
    * @returns {Uint8Array} the OWID envelope as raw bytes.
    */
   asByteArray () {
@@ -436,6 +457,7 @@ class FodId {
    * or no Web Crypto), because a caller told false would treat an outage as
    * a forgery. {@link FodId#checkSignature} reports the same outcomes as
    * named statuses. Asynchronous because it uses Web Crypto.
+   *
    * @param {string} publicPem the creator public key in SPKI PEM form
    * @returns {Promise<boolean>} true when the signature is genuine for the
    * key, false when it is not
@@ -449,6 +471,7 @@ class FodId {
    * offline, and reports the outcome as one of {@link FodId.SignatureStatus}
    * so that "could not check" stays apart from "does not match". Only
    * `SIGNATURE_INVALID` means the identifier should be distrusted.
+   *
    * @param {string} publicPem the creator public key in SPKI PEM form
    * @returns {Promise<{ok: boolean, status: string, message?: string,
    * cause?: any}>} a frozen result carrying `ok`, `status` and, where the
@@ -464,6 +487,7 @@ class FodId {
  * carried through with its status unchanged, and a success is then held to
  * the 51Did payload rules. The identifier is built without the public
  * constructor so that the payload is walked once.
+ *
  * @param {object} read the result of `owid.parse` or `owid.parseBytes`
  * @returns {{ok: boolean, value: FodId | null, status: string,
  * detail?: object}} the read, with the payload lengths alongside a 51Did
@@ -497,6 +521,7 @@ function readEnvelope (read) {
  * reported by the OWID library's own rules for absent and wrongly typed
  * input. A string the normaliser refuses is `INVALID_BASE64`, the status
  * the OWID library gives for any other string that is not base64.
+ *
  * @param {*} base64 whatever the caller gave
  * @returns {{ok: boolean, value: FodId | null, status: string,
  * detail?: object}} the read
@@ -515,6 +540,7 @@ function readBase64 (base64) {
 /**
  * The three facts a caller of a non-throwing surface is given, and nothing
  * else, frozen.
+ *
  * @param {{ok: boolean, value: FodId | null, status: string}} read the read
  * @returns {FodIdParseResult} the result
  */
@@ -525,6 +551,7 @@ function publicResult (read) {
 /**
  * The identifier from a read, or the exception the throwing surfaces
  * document for the failure.
+ *
  * @param {{ok: boolean, value: FodId | null, status: string,
  * detail?: object}} read the read
  * @returns {FodId} the identifier
@@ -541,6 +568,7 @@ function valueOrThrow (read) {
  * RangeError this package has always thrown for them, and every OWID status
  * is a FodIdParseError carrying the status. Each error carries `status` so
  * the reason can be acted on without reading the message.
+ *
  * @param {{status: string, detail?: object}} read the failed read
  * @returns {Error} the error to throw
  */

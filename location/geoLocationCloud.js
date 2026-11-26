@@ -36,7 +36,7 @@ class GeoLocationCloud extends CloudEngine {
     } else if (locationProvider === 'digitalelement') {
       this.dataKey = 'location_digitalelement';
     } else {
-      throw "The location provider '" + locationProvider + "' was not recognized.";
+      throw new Error("The location provider '" + locationProvider + "' was not recognized.");
     }
   }
 }

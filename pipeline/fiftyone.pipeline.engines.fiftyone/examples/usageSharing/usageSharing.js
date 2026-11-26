@@ -55,13 +55,6 @@ const path = require('path');
 
 const core = require('fiftyone.pipeline.core');
 
-// Note that this example is designed to be run from within the
-// source repository. If this code has been copied to run standalone
-// then you'll need to replace the require below with the commented
-// out version below it.
-const engine51 = require('../..'); // eslint-disable-line
-// const engine51 = require("fiftyone.pipeline.engines.fiftyone");
-
 // Where to go next, printed at the end of the example.
 const FIND_OUT_MORE = [
   '',
@@ -79,17 +72,22 @@ console.log();
 // Create a new pipeline from the supplied config file.
 // The file is read from the example's own folder, so that the example
 // runs from any working folder.
-const pipeline = new core.PipelineBuilder() // eslint-disable-line no-unused-vars
+const pipeline = new core.PipelineBuilder()
   .buildFromConfigurationFile(path.join(__dirname, '51d.json'));
 
 // Alternatively, the commented code below shows how to
 // configure the ShareUsageElement in code, rather than
 // using a configuration file.
+// const engine51 = require('fiftyone.pipeline.engines.fiftyone');
 // const usageElement = new engine51.ShareUsage({
 //  sharePercentage: 0.1,
 //  requestedPackageSize: 2000,
 // });
 // const pipeline = new core.PipelineBuilder().add(usageElement).build();
+
+if (!pipeline.getElement('shareUsage')) {
+  throw new Error('51d.json does not add the share usage element.');
+}
 
 console.log(`Pipeline created with share usage element. Evidence processed 
 with this pipeline will now be periodically shared with 51Degrees using the 

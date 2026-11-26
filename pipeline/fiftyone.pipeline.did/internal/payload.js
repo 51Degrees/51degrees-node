@@ -75,6 +75,7 @@ const PayloadStatus = Object.freeze({
  * follows the match key, and anything beyond the terms byte is a creator
  * context section whose lengths belong to the cloud, so a longer payload is
  * accepted whatever its length.
+ *
  * @param {Uint8Array} payload the payload bytes
  * @returns {{ok: boolean, flags?: number, type?: number, usage?: number,
  * usageIsIndirect?: boolean, terms?: (string|null), licenseId?: number,

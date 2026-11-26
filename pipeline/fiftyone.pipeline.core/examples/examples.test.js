@@ -137,7 +137,7 @@ test('pipeline functionality example', () => {
   const result = runExample(path.join(__dirname, 'pipelines.js'));
 
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   // The sync element's integer, read by its element's key and by the
   // element itself.
   expect(result.stdout.split('\n').slice(0, 2)).toEqual(['5', '5']);
@@ -149,7 +149,7 @@ test('custom flowElements 1', () => {
     __dirname, 'customFlowElements', 'simpleEvidenceFlowElement.js'));
 
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   // The star sign, then the section.
   const section = result.stdout.indexOf(RULE);
   expect(section).toBeGreaterThan(-1);
@@ -168,7 +168,7 @@ test.each([
     __dirname, 'customFlowElements', 'simpleEvidenceFlowElement.js'), [date]);
 
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   const section = result.stdout.indexOf(RULE);
   expect(result.stdout.slice(0, section).trim()).toBe(sign);
 }, TIMEOUT_MS);

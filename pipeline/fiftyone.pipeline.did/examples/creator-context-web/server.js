@@ -112,6 +112,7 @@ const FIND_OUT_MORE = [
  * transport failure, and the cause is the useful part since fetch itself
  * only says that it failed, and anything else that is not an Error is
  * printed as it is.
+ *
  * @param {any} error whatever was thrown
  * @returns {string} the message
  */
@@ -127,6 +128,7 @@ function messageOf (error) {
 
 /**
  * Whether a body is JSON, which decides the content type it is relayed with.
+ *
  * @param {string} text a response body
  * @returns {boolean} whether the text parses as JSON
  */
@@ -141,6 +143,7 @@ function isJson (text) {
 
 /**
  * Writes a JSON body with the given status.
+ *
  * @param {import('http').ServerResponse} response the response to write
  * @param {number} status the HTTP status
  * @param {object} body the JSON body
@@ -161,6 +164,7 @@ function sendJson (response, status, body) {
  * which is this server's own offline check of the identifier's signature
  * against the published public keys. The page ignores fields it does not
  * know, so page.html is the same for every language.
+ *
  * @param {DidClient} client the client holding the resource key, the
  * licence key and the endpoint
  * @returns {function(URL, import('http').ServerResponse): Promise<void>}

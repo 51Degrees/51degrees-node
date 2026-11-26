@@ -33,12 +33,12 @@ const MissingPropertyService = require(
 const AspectDataDictionary = require(
   path.resolve(__dirname, '..', 'aspectDataDictionary'));
 
-// What reading the Property from the service threw.
+// The message of the error reading the Property from the service threw.
 const thrown = (key, flowElement) => {
   try {
     new MissingPropertyService().check(key, flowElement);
   } catch (e) {
-    return e;
+    return e.message;
   }
   return undefined;
 };
@@ -87,7 +87,7 @@ describe('the missing property message', () => {
     try {
       data.get('two');
     } catch (e) {
-      message = e;
+      message = e.message;
     }
     expect(message).toBe("Property 'two' not found in data for element " +
       "'test'. This is because the property has been excluded when " +

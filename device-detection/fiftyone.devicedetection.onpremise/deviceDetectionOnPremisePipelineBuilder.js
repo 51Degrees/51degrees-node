@@ -147,13 +147,14 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       difference,
       allowUnmatched = false,
       createTempDataCopy,
-      tempDataDir
+      tempDataDir,
+      suppressProcessExceptions
     }) {
     super(...arguments);
 
     const deprecatedOptions = ['usePredictiveGraph', 'usePerformanceGraph'];
     for (const option of deprecatedOptions) {
-      if (arguments[0].hasOwnProperty(option)) {
+      if (Object.prototype.hasOwnProperty.call(arguments[0], option)) {
         console.warn(`{${option}} option is deprecated and has no effect on the configuration`);
       }
     }
@@ -171,7 +172,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
     }
 
     if (cacheSize) {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
     this.flowElements.push(new DeviceDetectionOnPremise(
       {

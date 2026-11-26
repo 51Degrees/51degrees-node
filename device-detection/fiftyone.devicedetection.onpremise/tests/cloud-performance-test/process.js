@@ -33,7 +33,7 @@ const datafile = path.join(__dirname, '../../../../cxx/data/device-detection/51D
 
 if (!fs.existsSync(datafile)) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched, then run its get-data-files.sh or get-data-files.ps1 script to download the file.");
-  throw ("No data file at '" + datafile + "'");
+  throw new Error("No data file at '" + datafile + "'");
 }
 
 const argv = process.argv.slice(2);

@@ -38,7 +38,7 @@ const getEvidenceFilePath = function () {
       return fullPath;
     }
   }
-  throw (`No evidence file '${GEOIP_COMPARISON_EVIDENCE_FILE}' found at
+  throw new Error(`No evidence file '${GEOIP_COMPARISON_EVIDENCE_FILE}' found at
     '${dataFileDirectories.join(', ')}'!`);
 };
 

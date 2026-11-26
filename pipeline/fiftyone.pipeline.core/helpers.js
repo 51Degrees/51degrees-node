@@ -189,7 +189,8 @@ class Helpers {
       // has no headers to set, and its response goes on without them
       // rather than failing the request.
       flowData.pipeline.log('warn', 'No response headers were set, as ' +
-        'the Flow Data has no result from the Set Headers element. ' + e);
+        'the Flow Data has no result from the Set Headers element. ' +
+        e.message);
       return;
     }
     for (const [key, value] of Object.entries(headers || {})) {

@@ -118,8 +118,7 @@ const analyse = async function (evidence: Map<string, string>, pipeline: Pipelin
   // been populated with the result. In this case, we want
   // information about the device, which we can get by
   // asking for the 'device' data.
-  // @ts-ignore
-  const device = data.device;
+  const device = data.get('device');
 
   // Display the results of the detection, which are called
   // device properties. See the property dictionary at

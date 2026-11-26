@@ -35,14 +35,15 @@ const TEMPLATES = 'javascript-templates/';
 const TEMPLATE = TEMPLATES + 'JavaScriptResource.mustache';
 
 // The paths npm would pack for the core package. On Windows npm is a
-// command script, which only a shell can start.
+// command script, which only a shell can start, so there the shell is
+// given the whole command line rather than separate arguments.
 const packedFiles = () => {
-  const result = childProcess.spawnSync(
-    'npm', ['pack', '--dry-run', '--json'], {
-      cwd: CORE,
-      encoding: 'utf8',
-      shell: process.platform === 'win32'
-    });
+  const args = ['pack', '--dry-run', '--json'];
+  const options = { cwd: CORE, encoding: 'utf8' };
+  const result = process.platform === 'win32'
+    ? childProcess.spawnSync(['npm', ...args].join(' '),
+      { ...options, shell: true })
+    : childProcess.spawnSync('npm', args, options);
   expect({ status: result.status, stderr: result.stderr })
     .toEqual({ status: 0, stderr: expect.any(String) });
   return JSON.parse(result.stdout)[0].files

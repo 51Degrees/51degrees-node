@@ -41,6 +41,12 @@ const { canonicalPayload, envelopeBase64 } = require('./envelope');
 
 const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
 
+/**
+ * A stand-in for an HTTP response that records the status, headers and body
+ * written to it.
+ *
+ * @returns {object} the response stand-in
+ */
 function fakeResponse () {
   return {
     status: null,
@@ -56,11 +62,28 @@ function fakeResponse () {
   };
 }
 
+/**
+ * The URL of a request to the example's /redeem route.
+ *
+ * @param {string} fiftyOneDid the 51Did query value
+ * @param {string} [result] the sealed result query value
+ * @param {string} [challenge] the challenge query value
+ * @returns {URL} the request URL
+ */
 function request (fiftyOneDid, result = 'sealed', challenge = 'chal') {
   return new URL('http://localhost/redeem?51did=' + fiftyOneDid +
     '&result=' + encodeURIComponent(result) + '&challenge=' + challenge);
 }
 
+/**
+ * A stand-in for DidClient that records its calls and answers with the
+ * given signature check and redeem function.
+ *
+ * @param {object} root0 the answers to give
+ * @param {boolean} [root0.signature] what verifySignature answers
+ * @param {Function} root0.redeem the function redeem calls
+ * @returns {object} the client stand-in
+ */
 function clientAnswering ({ signature = true, redeem }) {
   return {
     calls: [],
@@ -208,6 +231,7 @@ describe('creator context example endpoint', () => {
 
   /**
    * A port nothing is listening on.
+   *
    * @returns {Promise<number>} the port
    */
   const freePort = () => new Promise((resolve, reject) => {
@@ -221,6 +245,7 @@ describe('creator context example endpoint', () => {
 
   /**
    * The body of one GET request.
+   *
    * @param {string} url the URL to get
    * @returns {Promise<string>} the body
    */
@@ -236,6 +261,7 @@ describe('creator context example endpoint', () => {
   /**
    * Starts the example with the endpoint variables given and no others,
    * and returns the page it serves.
+   *
    * @param {object} endpointVariables the endpoint variables to set
    * @returns {Promise<string>} the page
    */

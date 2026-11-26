@@ -70,7 +70,7 @@ const run = (cwd) => {
 
 const expectBuiltAndFinished = (result) => {
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   expect(result.stdout)
     .toContain('Pipeline created with share usage element.');
   expectEndsWithFindOutMore(result.stdout);

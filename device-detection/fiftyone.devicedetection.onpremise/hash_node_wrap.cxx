@@ -9,6 +9,11 @@
 
 #define SWIG_VERSION 0x040500
 #define SWIGJAVASCRIPT
+/* This file is SWIG 4.5.0's swiglabels.swg, read ahead of SWIG's own copy
+ * when the wrappers are generated with -I../../swig. It no longer turns
+ * off MSVC's unused function warning, the C and C++ runtime deprecation
+ * warnings, or an Intel compiler warning, so the wrapper shows them all.
+ */
 /* -----------------------------------------------------------------------------
  *  This section contains generic SWIG labels for method/variable
  *  declarations/attributes, and other compiler dependent labels.
@@ -48,12 +53,6 @@
 #   define SWIGUNUSED __attribute__ ((__unused__))
 # else
 #   define SWIGUNUSED
-# endif
-#endif
-
-#ifndef SWIG_MSC_UNSUPPRESS_4505
-# if defined(_MSC_VER)
-#   pragma warning(disable : 4505) /* unreferenced local function has been removed */
 # endif
 #endif
 
@@ -109,28 +108,9 @@
 # endif
 #endif
 
-/* Deal with Microsoft's attempt at deprecating C standard runtime functions */
-#if !defined(SWIG_NO_CRT_SECURE_NO_DEPRECATE) && defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE)
-# define _CRT_SECURE_NO_DEPRECATE
-#endif
-
-/* Deal with Microsoft's attempt at deprecating methods in the standard C++ library */
-#if !defined(SWIG_NO_SCL_SECURE_NO_DEPRECATE) && defined(_MSC_VER) && !defined(_SCL_SECURE_NO_DEPRECATE)
-# define _SCL_SECURE_NO_DEPRECATE
-#endif
-
 /* Deal with Apple's deprecated 'AssertMacros.h' from Carbon-framework */
 #if defined(__APPLE__) && !defined(__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES)
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
-#endif
-
-/* Intel's compiler complains if a variable which was never initialised is
- * cast to void, which is a common idiom which we use to indicate that we
- * are aware a variable isn't used.  So we just silence that warning.
- * See: https://github.com/swig/swig/issues/192 for more discussion.
- */
-#ifdef __INTEL_COMPILER
-# pragma warning disable 592
 #endif
 
 #if defined(__cplusplus) && __cplusplus >= 201103L
@@ -194,6 +174,13 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <assert.h>
+
+/* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's swigrun.swg without the functions the wrappers here never
+ * call: SWIG_TypeDynamicCast, SWIG_TypePrettyName, SWIG_TypeNewClientData,
+ * and the packing helpers from SWIG_PackData to SWIG_UnpackDataName. An
+ * unused static function is a compiler warning.
+ * ----------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
  * swigrun.swg
@@ -623,47 +610,11 @@ SWIG_TypeCast(swig_cast_info *ty, void *ptr, int *newmemory) {
 }
 
 /*
-   Dynamic pointer casting. Down an inheritance hierarchy
-*/
-SWIGRUNTIME swig_type_info *
-SWIG_TypeDynamicCast(swig_type_info *ty, void **ptr) {
-  swig_type_info *lastty = ty;
-  if (!ty || !ty->dcast) return ty;
-  while (ty && (ty->dcast)) {
-    ty = (*ty->dcast)(ptr);
-    if (ty) lastty = ty;
-  }
-  return lastty;
-}
-
-/*
   Return the name associated with this type
 */
 SWIGRUNTIMEINLINE const char *
 SWIG_TypeName(const swig_type_info *ty) {
   return ty->name;
-}
-
-/*
-  Return the pretty name associated with this type,
-  that is an unmangled type name in a form presentable to the user.
-*/
-SWIGRUNTIME const char *
-SWIG_TypePrettyName(const swig_type_info *type) {
-  /* The "str" field contains the equivalent pretty names of the
-     type, separated by vertical-bar characters.  Choose the last
-     name. It should be the most specific; a fully resolved name
-     but not necessarily with default template parameters expanded. */
-  if (!type) return NULL;
-  if (type->str != NULL) {
-    const char *last_name = type->str;
-    const char *s;
-    for (s = type->str; *s; s++)
-      if (*s == '|') last_name = s+1;
-    return last_name;
-  }
-  else
-    return type->name;
 }
 
 /*
@@ -687,12 +638,6 @@ SWIG_TypeClientData(swig_type_info *ti, void *clientdata) {
     }
     head = head->next;
   }
-}
-
-SWIGRUNTIME void
-SWIG_TypeNewClientData(swig_type_info *ti, void *clientdata) {
-  SWIG_TypeClientData(ti, clientdata);
-  ti->owndata = 1;
 }
 
 /*
@@ -774,105 +719,6 @@ SWIG_TypeQueryModule(swig_module_info *start,
   return 0;
 }
 
-/*
-   Pack binary data into a string
-*/
-SWIGRUNTIME char *
-SWIG_PackData(char *c, void *ptr, size_t sz) {
-  static const char hex[17] = "0123456789abcdef";
-  const unsigned char *u = (unsigned char *) ptr;
-  const unsigned char *eu =  u + sz;
-  for (; u != eu; ++u) {
-    unsigned char uu = *u;
-    *(c++) = hex[(uu & 0xf0) >> 4];
-    *(c++) = hex[uu & 0xf];
-  }
-  return c;
-}
-
-/*
-   Unpack binary data from a string
-*/
-SWIGRUNTIME const char *
-SWIG_UnpackData(const char *c, void *ptr, size_t sz) {
-  unsigned char *u = (unsigned char *) ptr;
-  const unsigned char *eu = u + sz;
-  for (; u != eu; ++u) {
-    char d = *(c++);
-    unsigned char uu;
-    if ((d >= '0') && (d <= '9'))
-      uu = (unsigned char)((d - '0') << 4);
-    else if ((d >= 'a') && (d <= 'f'))
-      uu = (unsigned char)((d - ('a'-10)) << 4);
-    else
-      return (char *) 0;
-    d = *(c++);
-    if ((d >= '0') && (d <= '9'))
-      uu |= (unsigned char)(d - '0');
-    else if ((d >= 'a') && (d <= 'f'))
-      uu |= (unsigned char)(d - ('a'-10));
-    else
-      return (char *) 0;
-    *u = uu;
-  }
-  return c;
-}
-
-/*
-   Pack 'void *' into a string buffer.
-*/
-SWIGRUNTIME char *
-SWIG_PackVoidPtr(char *buff, void *ptr, const char *name, size_t bsz) {
-  char *r = buff;
-  if ((2*sizeof(void *) + 2) > bsz) return 0;
-  *(r++) = '_';
-  r = SWIG_PackData(r,&ptr,sizeof(void *));
-  if (strlen(name) + 1 > (bsz - (size_t)(r - buff))) return 0;
-  strcpy(r,name);
-  return buff;
-}
-
-SWIGRUNTIME const char *
-SWIG_UnpackVoidPtr(const char *c, void **ptr, const char *name) {
-  if (*c != '_') {
-    if (strcmp(c,"NULL") == 0) {
-      *ptr = (void *) 0;
-      return name;
-    } else {
-      return 0;
-    }
-  }
-  return SWIG_UnpackData(++c,ptr,sizeof(void *));
-}
-
-SWIGRUNTIME char *
-SWIG_PackDataName(char *buff, void *ptr, size_t sz, const char *name, size_t bsz) {
-  char *r = buff;
-  size_t lname = (name ? strlen(name) : 0);
-  if ((2*sz + 2 + lname) > bsz) return 0;
-  *(r++) = '_';
-  r = SWIG_PackData(r,ptr,sz);
-  if (lname) {
-    strncpy(r,name,lname+1);
-  } else {
-    *r = 0;
-  }
-  return buff;
-}
-
-SWIGRUNTIME const char *
-SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
-  if (*c != '_') {
-    if (strcmp(c,"NULL") == 0) {
-      memset(ptr,0,sz);
-      return name;
-    } else {
-      return 0;
-    }
-  }
-  return SWIG_UnpackData(++c,ptr,sz);
-}
-
 #ifdef __cplusplus
 }
 #endif
@@ -893,6 +739,15 @@ SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
 #define  SWIG_NullReferenceError   -13
 
 
+/* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's javascriptrun.swg for V8, changed so the wrappers here build
+ * with no compiler warning. The SWIG_V8_Raise overload that takes a value,
+ * the packed data object and SWIGV8_AppendOutput are left out, as the
+ * wrappers never call them. V8ErrorHandler::error leaves its unused code
+ * parameter unnamed, and getCPtr converts the pointer to a double
+ * explicitly.
+ * ----------------------------------------------------------------------------- */
+
 /* ---------------------------------------------------------------------------
  * These typedefs and defines are used to deal with v8 API changes
  *
@@ -906,6 +761,21 @@ typedef v8::FunctionCallbackInfo<v8::Value> SwigV8Arguments;
 typedef v8::PropertyCallbackInfo<v8::Value> SwigV8PropertyCallbackInfo;
 #define SWIGV8_RETURN(val) args.GetReturnValue().Set(val); return
 #define SWIGV8_RETURN_INFO(val, info) info.GetReturnValue().Set(val); return
+
+/* The object a wrapped method or accessor was invoked on.
+ *
+ * v8 12.6 deprecated FunctionCallbackInfo::Holder() and 13.5 removed it.  This() has
+ * always been available and is what v8 says to use instead, so no version check is needed.
+ *
+ * For PropertyCallbackInfo, v8 12.7 added HolderV2(), 14.4 removed Holder() and 14.6
+ * removed This() too, leaving HolderV2() as the only way to get at the receiver.
+ */
+#define SWIGV8_ARGS_THIS(args) (args).This()
+#if (SWIG_V8_VERSION < 0x1207)
+#define SWIGV8_INFO_HOLDER(info) (info).Holder()
+#else
+#define SWIGV8_INFO_HOLDER(info) (info).HolderV2()
+#endif
 
 #define SWIGV8_HANDLESCOPE() v8::HandleScope scope(v8::Isolate::GetCurrent());
 #define SWIGV8_HANDLESCOPE_ESC() v8::EscapableHandleScope scope(v8::Isolate::GetCurrent());
@@ -922,7 +792,14 @@ typedef v8::PropertyCallbackInfo<v8::Value> SwigV8PropertyCallbackInfo;
 
 #define SWIGV8_ARRAY_NEW(size) v8::Array::New(v8::Isolate::GetCurrent(), size)
 #define SWIGV8_BOOLEAN_NEW(bool) v8::Boolean::New(v8::Isolate::GetCurrent(), bool)
+/* v8 14.3 added a type tag to v8::External and deprecated the versions without one */
+#if (SWIG_V8_VERSION < 0x1403)
 #define SWIGV8_EXTERNAL_NEW(val) v8::External::New(v8::Isolate::GetCurrent(), val)
+#define SWIGV8_EXTERNAL_VALUE(handle) (handle)->Value()
+#else
+#define SWIGV8_EXTERNAL_NEW(val) v8::External::New(v8::Isolate::GetCurrent(), val, v8::kExternalPointerTypeTagDefault)
+#define SWIGV8_EXTERNAL_VALUE(handle) (handle)->Value(v8::kExternalPointerTypeTagDefault)
+#endif
 #define SWIGV8_FUNCTEMPLATE_NEW(func) v8::FunctionTemplate::New(v8::Isolate::GetCurrent(), func)
 #define SWIGV8_FUNCTEMPLATE_NEW_VOID() v8::FunctionTemplate::New(v8::Isolate::GetCurrent())
 #define SWIGV8_INT32_NEW(num) v8::Int32::New(v8::Isolate::GetCurrent(), num)
@@ -941,24 +818,43 @@ typedef v8::PropertyCallbackInfo<v8::Value> SwigV8PropertyCallbackInfo;
 #define SWIGV8_ARRAY_GET(array, index) (array)->Get(SWIGV8_CURRENT_CONTEXT(), index).ToLocalChecked()
 #define SWIGV8_ARRAY_SET(array, index, value) SWIGV8_MAYBE_CHECK((array)->Set(SWIGV8_CURRENT_CONTEXT(), index, value))
 
+/* v8 14.2 removed the aligned internal field pointer accessors that take no
+ * EmbedderDataTypeTag, having added the tagged versions in 14.1.  Only the tagged setter
+ * exists in 14.1, so the switch is made at 14.2 when both are available.
+ *
+ * The tag passed when setting must match the tag passed when getting, so the default tag
+ * is used - a SWIG specific tag would stop a module wrapped by an older SWIG from being
+ * read by one wrapped by a newer SWIG.
+ */
+#if (SWIG_V8_VERSION < 0x1402)
+#define SWIGV8_ALIGNED_POINTER_GET(obj, index) (obj)->GetAlignedPointerFromInternalField(index)
+#define SWIGV8_ALIGNED_POINTER_SET(obj, index, ptr) (obj)->SetAlignedPointerInInternalField(index, ptr)
+#else
+#define SWIGV8_ALIGNED_POINTER_GET(obj, index) (obj)->GetAlignedPointerFromInternalField(index, v8::kEmbedderDataTypeTagDefault)
+#define SWIGV8_ALIGNED_POINTER_SET(obj, index, ptr) (obj)->SetAlignedPointerInInternalField(index, ptr, v8::kEmbedderDataTypeTagDefault)
+#endif
+
 #define SWIGV8_SET_CLASS_TEMPL(class_templ, class) class_templ.Reset(v8::Isolate::GetCurrent(), class);
 
 #define SWIGV8_TO_OBJECT(handle) (handle)->ToObject(SWIGV8_CURRENT_CONTEXT()).ToLocalChecked()
 #define SWIGV8_TO_STRING(handle) (handle)->ToString(SWIGV8_CURRENT_CONTEXT()).ToLocalChecked()
 #define SWIGV8_NUMBER_VALUE(handle) (handle)->NumberValue(SWIGV8_CURRENT_CONTEXT()).ToChecked()
 #define SWIGV8_INTEGER_VALUE(handle) (handle)->IntegerValue(SWIGV8_CURRENT_CONTEXT()).ToChecked()
-/* V8 14 (Node 26) removed String::WriteUtf8 and String::Utf8Length, and the
- * aligned pointer functions of an internal field now take a type tag. */
-#if (V8_MAJOR_VERSION-0) < 14
-#define SWIGV8_WRITE_UTF8(handle, buffer, len) (handle)->WriteUtf8(v8::Isolate::GetCurrent(), buffer, len)
-#define SWIGV8_UTF8_LENGTH(handle) (handle)->Utf8Length(v8::Isolate::GetCurrent())
-#define SWIGV8_GET_ALIGNED_POINTER(obj, index) (obj)->GetAlignedPointerFromInternalField(index)
-#define SWIGV8_SET_ALIGNED_POINTER(obj, index, ptr) (obj)->SetAlignedPointerInInternalField(index, ptr)
+/* v8 13.3 added Utf8LengthV2/WriteUtf8V2 and deprecated Utf8Length/WriteUtf8, which
+ * 14.4 then removed.  The V2 versions are used as soon as they are available as the
+ * deprecation warning is an error when compiling with -Werror.
+ *
+ * SWIGV8_UTF8_LENGTH is the number of bytes needed to encode the string, excluding the
+ * terminating NUL.  SWIGV8_WRITE_UTF8's 'len' is the full size of the buffer, including
+ * room for the NUL; it always NUL terminates and returns the number of bytes written,
+ * including the NUL.
+ */
+#if (SWIG_V8_VERSION < 0x1303)
+#define SWIGV8_WRITE_UTF8(handle, buffer, len) ((size_t)(handle)->WriteUtf8(v8::Isolate::GetCurrent(), buffer, (int)(len)))
+#define SWIGV8_UTF8_LENGTH(handle) ((size_t)(handle)->Utf8Length(v8::Isolate::GetCurrent()))
 #else
 #define SWIGV8_WRITE_UTF8(handle, buffer, len) (handle)->WriteUtf8V2(v8::Isolate::GetCurrent(), buffer, len, v8::String::WriteFlags::kNullTerminate)
 #define SWIGV8_UTF8_LENGTH(handle) (handle)->Utf8LengthV2(v8::Isolate::GetCurrent())
-#define SWIGV8_GET_ALIGNED_POINTER(obj, index) (obj)->GetAlignedPointerFromInternalField(index, v8::kEmbedderDataTypeTagDefault)
-#define SWIGV8_SET_ALIGNED_POINTER(obj, index, ptr) (obj)->SetAlignedPointerInInternalField(index, ptr, v8::kEmbedderDataTypeTagDefault)
 #endif
 #define SWIGV8_OBJECT_TEMPLATE_INSTACE(tmpl) tmpl->NewInstance(SWIGV8_CURRENT_CONTEXT()).ToLocalChecked();
 #define SWIGV8_BOOLEAN_VALUE(handle) (handle)->BooleanValue(v8::Isolate::GetCurrent())
@@ -975,10 +871,6 @@ typedef v8::PropertyCallbackInfo<v8::Value> SwigV8PropertyCallbackInfo;
 
 SWIGINTERN void SWIG_V8_Raise(const char *msg) {
   SWIGV8_THROW_EXCEPTION(v8::Exception::Error(SWIGV8_STRING_NEW(msg)));
-}
-
-SWIGINTERN void SWIG_V8_Raise(SWIGV8_VALUE obj, const char *msg) {
-  SWIGV8_THROW_EXCEPTION(v8::Exception::Error(SWIGV8_TO_STRING(obj)));
 }
 
 
@@ -998,7 +890,7 @@ SWIGINTERN void SWIG_V8_Raise(SWIGV8_VALUE obj, const char *msg) {
 class V8ErrorHandler {
 public:
   virtual ~V8ErrorHandler() {}
-  virtual void error(int code, const char *msg) {
+  virtual void error(int /* code */, const char *msg) {
     SWIG_V8_Raise(msg);
   }
 };
@@ -1059,7 +951,7 @@ SWIGRUNTIME int SWIG_V8_ConvertInstancePtr(SWIGV8_OBJECT objRef, void **ptr, swi
 
   if(objRef->InternalFieldCount() < 1) return SWIG_ERROR;
 
-  SWIGV8_Proxy *cdata = static_cast<SWIGV8_Proxy *>(SWIGV8_GET_ALIGNED_POINTER(objRef, 0));
+  SWIGV8_Proxy *cdata = static_cast<SWIGV8_Proxy *>(SWIGV8_ALIGNED_POINTER_GET(objRef, 0));
 
   if(cdata == NULL) {
     return SWIG_ERROR;
@@ -1107,7 +999,7 @@ SWIGRUNTIME int SWIG_V8_GetInstancePtr(SWIGV8_VALUE valRef, void **ptr) {
 
   if(objRef->InternalFieldCount() < 1) return SWIG_ERROR;
 
-  SWIGV8_Proxy *cdata = static_cast<SWIGV8_Proxy *>(SWIGV8_GET_ALIGNED_POINTER(objRef, 0));
+  SWIGV8_Proxy *cdata = static_cast<SWIGV8_Proxy *>(SWIGV8_ALIGNED_POINTER_GET(objRef, 0));
 
   if(cdata == NULL) {
     return SWIG_ERROR;
@@ -1124,7 +1016,7 @@ SWIGRUNTIME void SWIGV8_SetPrivateData(SWIGV8_OBJECT obj, void *ptr, swig_type_i
   cdata->swigCMemOwn = (flags & SWIG_POINTER_OWN) ? 1 : 0;
   cdata->info = info;
 
-  SWIGV8_SET_ALIGNED_POINTER(obj, 0, cdata);
+  SWIGV8_ALIGNED_POINTER_SET(obj, 0, cdata);
 
   cdata->handle.Reset(v8::Isolate::GetCurrent(), obj);
 
@@ -1198,7 +1090,7 @@ SWIGRUNTIME SwigV8ReturnValue _SWIGV8_wrap_equals(const SwigV8Arguments &args) {
 
   if(args.Length() != 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for equals.");
 
-  res1 = SWIG_GetInstancePtr(args.This(), &arg1);
+  res1 = SWIG_GetInstancePtr(SWIGV8_ARGS_THIS(args), &arg1);
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ERROR, "Could not get pointer from 'this' object for equals.");
   }
@@ -1224,13 +1116,13 @@ SWIGRUNTIME SwigV8ReturnValue _wrap_getCPtr(const SwigV8Arguments &args) {
   intptr_t result;
   int res1;
 
-  res1 = SWIG_GetInstancePtr(args.This(), &arg1);
+  res1 = SWIG_GetInstancePtr(SWIGV8_ARGS_THIS(args), &arg1);
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "getCPtr" "', argument " "1"" of type '" "void *""'");
   }
 
   result = (intptr_t)arg1;
-  jsresult = SWIGV8_NUMBER_NEW(result);
+  jsresult = SWIGV8_NUMBER_NEW(static_cast<double>(result));
 
   SWIGV8_RETURN(jsresult);
   goto fail;
@@ -1238,128 +1130,6 @@ fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
 }
 
-/* ---------------------------------------------------------------------------
- * PackedData object
- *
- * ---------------------------------------------------------------------------*/
-
-class SwigV8PackedData {
-public:
-  SwigV8PackedData(void *data, size_t size, swig_type_info *type): data(nullptr), size(size), type(type) {
-    this->data = malloc(size);
-    if (this->data != nullptr)
-      memcpy(this->data, data, size);
-  }
-
-  ~SwigV8PackedData() {
-    free(this->data);
-  }
-
-  void *data;
-  size_t size;
-  swig_type_info *type;
-
-  v8::Persistent<v8::Object> handle;
-};
-
-SWIGRUNTIMEINLINE
-int SwigV8Packed_Check(SWIGV8_VALUE valRef) {
-  SWIGV8_HANDLESCOPE();
-  
-  SWIGV8_OBJECT objRef = SWIGV8_TO_OBJECT(valRef);
-  if(objRef->InternalFieldCount() < 1) return false;
-  v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("__swig__packed_data__"));
-  v8::Local<v8::Value> flag;
-  if (!objRef->GetPrivate(SWIGV8_CURRENT_CONTEXT(), privateKey).ToLocal(&flag))
-    return false;
-  return (flag->IsBoolean() && SWIGV8_BOOLEAN_VALUE(flag));
-}
-
-SWIGRUNTIME
-swig_type_info *SwigV8Packed_UnpackData(SWIGV8_VALUE valRef, void *ptr, size_t size) {
-  if (SwigV8Packed_Check(valRef)) {
-    SWIGV8_HANDLESCOPE();
-    
-    SwigV8PackedData *sobj;
-
-    SWIGV8_OBJECT objRef = SWIGV8_TO_OBJECT(valRef);
-
-    sobj = static_cast<SwigV8PackedData*>(SWIGV8_GET_ALIGNED_POINTER(objRef, 0));
-    if (sobj == NULL || sobj->size != size) return 0;
-    memcpy(ptr, sobj->data, size);
-    return sobj->type;
-  } else {
-    return 0;
-  }
-}
-
-SWIGRUNTIME
-int SWIGV8_ConvertPacked(SWIGV8_VALUE valRef, void *ptr, size_t sz, swig_type_info *ty) {
-  swig_type_info *to = SwigV8Packed_UnpackData(valRef, ptr, sz);
-  if (!to) return SWIG_ERROR;
-  if (ty) {
-    if (to != ty) {
-      /* check type cast? */
-      swig_cast_info *tc = SWIG_TypeCheck(to->name,ty);
-      if (!tc) return SWIG_ERROR;
-    }
-  }
-  return SWIG_OK;
-}
-
-SWIGRUNTIME void _wrap_SwigV8PackedData_delete(const v8::WeakCallbackInfo<SwigV8PackedData> &data) {
-  SwigV8PackedData *cdata = data.GetParameter();
-  cdata->handle.Reset();
-  delete cdata;
-}
-
-SWIGRUNTIME
-SWIGV8_VALUE SWIGV8_NewPackedObj(void *data, size_t size, swig_type_info *type) {
-  SWIGV8_HANDLESCOPE_ESC();
-
-  SwigV8PackedData *cdata = new SwigV8PackedData(data, size, type);
-  SWIGV8_OBJECT_TEMPLATE tmpl = SWIGV8_OBJECT_TEMPLATE_NEW();
-  tmpl->SetInternalFieldCount(1);
-  v8::Local<v8::Object> obj = SWIGV8_OBJECT_TEMPLATE_INSTACE(tmpl);
-
-  v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("__swig__packed_data__"));
-  obj->SetPrivate(SWIGV8_CURRENT_CONTEXT(), privateKey, SWIGV8_BOOLEAN_NEW(true));
-
-  SWIGV8_SET_ALIGNED_POINTER(obj, 0, cdata);
-
-  cdata->handle.Reset(v8::Isolate::GetCurrent(), obj);
-
-  cdata->handle.SetWeak(cdata, _wrap_SwigV8PackedData_delete, v8::WeakCallbackType::kParameter);
-
-  SWIGV8_ESCAPE(obj);
-}
-
-#define SWIG_ConvertMember(obj, ptr, sz, ty)            SWIGV8_ConvertPacked(obj, ptr, sz, ty)
-#define SWIG_NewMemberObj(ptr, sz, type)                SWIGV8_NewPackedObj(ptr, sz, type)
-
-
-/* ---------------------------------------------------------------------------
- * Support for IN/OUTPUT typemaps (see Lib/typemaps/inoutlist.swg)
- *
- * ---------------------------------------------------------------------------*/
-
-SWIGRUNTIME
-
-SWIGV8_VALUE SWIGV8_AppendOutput(SWIGV8_VALUE result, SWIGV8_VALUE obj) {
-  SWIGV8_HANDLESCOPE_ESC();
-  
-  if (result->IsUndefined()) {
-    result = SWIGV8_ARRAY_NEW(0);
-  } else if (!result->IsArray()) {
-    SWIGV8_ARRAY tmparr = SWIGV8_ARRAY_NEW(0);
-    SWIGV8_ARRAY_SET(tmparr, 0, result);
-    result = tmparr;
-  }
-
-  SWIGV8_ARRAY arr = SWIGV8_ARRAY::Cast(result);
-  SWIGV8_ARRAY_SET(arr, arr->Length(), obj);
-  SWIGV8_ESCAPE(arr);
-}
 
 
 
@@ -1399,15 +1169,6 @@ SWIGRUNTIME void SWIGV8_AddMemberFunction(SWIGV8_FUNCTION_TEMPLATE class_templ, 
 }
 
 /**
- * Registers a class property with given name for a given class template.
- */
-SWIGRUNTIME void SWIGV8_AddMemberVariable(SWIGV8_FUNCTION_TEMPLATE class_templ, const char* symbol,
-  SwigV8AccessorGetterCallback getter, SwigV8AccessorSetterCallback setter) {
-  SWIGV8_OBJECT_TEMPLATE proto_templ = class_templ->InstanceTemplate();
-  proto_templ->SetNativeDataProperty(SWIGV8_SYMBOL_NEW(symbol), getter, setter);
-}
-
-/**
  * Registers a class method with given name for a given object.
  */
 SWIGRUNTIME void SWIGV8_AddStaticFunction(SWIGV8_OBJECT obj, const char* symbol,
@@ -1424,7 +1185,7 @@ SWIGRUNTIME void SWIGV8_AddStaticVariable(SWIGV8_OBJECT obj, const char* symbol,
   SWIGV8_MAYBE_CHECK(obj->SetNativeDataProperty(context, SWIGV8_SYMBOL_NEW(symbol), getter, setter));
 }
 
-SWIGRUNTIME void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> value, const SwigV8PropertyCallbackInfoVoid& info)
+SWIGRUNTIMEINLINE void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> /* value */, const SwigV8PropertyCallbackInfoVoid& /* info */)
 {
     char buffer[256];
     char msg[512];
@@ -1602,14 +1363,16 @@ using namespace FiftyoneDegrees::DeviceDetection::Hash;
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_long  (long value)
 {
-  return SWIGV8_NUMBER_NEW(value);
+  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 
 
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_unsigned_SS_long  (unsigned long value)
 {
-  return value <= UINT32_MAX ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(value) : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
+  return value <= UINT32_MAX
+    ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(static_cast<uint32_t>(value))
+    : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 
 
@@ -1716,17 +1479,12 @@ SWIGINTERN std::string const &std_map_Sl_std_string_Sc_std_string_Sg__get(std::m
 SWIGINTERNINLINE SWIGV8_VALUE
 SWIG_FromCharPtrAndSize(const char* carray, size_t size)
 {
-  if (carray) {
-    if (size > INT_MAX) {
-      // TODO: handle extra long strings
-      return SWIGV8_UNDEFINED();
-    } else {
-      v8::Local<v8::String> js_str = SWIGV8_STRING_NEW2(carray, size);
-      return js_str;
-    }
-  } else {
-    return SWIGV8_UNDEFINED();
+  if (carray && size <= INT_MAX) {
+    v8::Local<v8::String> js_str =
+      SWIGV8_STRING_NEW2(carray, static_cast<int>(size));
+    return js_str;
   }
+  return SWIGV8_UNDEFINED();
 }
 
 
@@ -1755,13 +1513,13 @@ SWIGINTERN bool std_map_Sl_std_string_Sc_std_string_Sg__has_key(std::map< std::s
                 return i != self->end();
             }
 
-SWIGINTERN
+SWIGINTERNINLINE
 int SWIG_AsVal_double (SWIGV8_VALUE obj, double *val)
 {
-  if(!obj->IsNumber()) {
+  if (!obj->IsNumber()) {
     return SWIG_TypeError;
   }
-  if(val) *val = SWIGV8_NUMBER_VALUE(obj);
+  if (val) *val = SWIGV8_NUMBER_VALUE(obj);
 
   return SWIG_OK;
 }
@@ -1888,7 +1646,7 @@ SWIG_AsVal_size_t (SWIGV8_VALUE obj, size_t *val)
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_long_SS_long  (long long value)
 {
-  return SWIGV8_NUMBER_NEW(value);
+  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 #endif
 
@@ -1897,7 +1655,9 @@ SWIGV8_VALUE SWIG_From_long_SS_long  (long long value)
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_unsigned_SS_long_SS_long  (unsigned long long value)
 {
-  return value <= UINT32_MAX ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(value) : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
+  return value <= UINT32_MAX
+    ? (SWIGV8_VALUE)SWIGV8_INTEGER_NEW_UNS(static_cast<uint32_t>(value))
+    : (SWIGV8_VALUE)SWIGV8_NUMBER_NEW(static_cast<double>(value));
 }
 #endif
 
@@ -1924,7 +1684,11 @@ int SWIG_AsVal_int (SWIGV8_VALUE valRef, int* val)
   if (!valRef->IsNumber()) {
     return SWIG_TypeError;
   }
-  if(val) *val = SWIGV8_INTEGER_VALUE(valRef);
+  int64_t value = SWIGV8_INTEGER_VALUE(valRef);
+  if (value < INT_MIN || value > INT_MAX) {
+    return SWIG_OverflowError;
+  }
+  if (val) *val = static_cast<int>(value);
 
   return SWIG_OK;
 }
@@ -2060,7 +1824,7 @@ SWIGINTERN void EvidenceBase_set(EvidenceBase *self,std::string const &key,std::
 SWIGINTERN std::string const &EvidenceBase_get(EvidenceBase *self,std::string const &key){
         return self->operator[](key);
     }
-SWIGINTERN int EvidenceBase_size(EvidenceBase *self){
+SWIGINTERN size_t EvidenceBase_size(EvidenceBase *self){
         return self->size();
     }
 
@@ -2134,10 +1898,11 @@ SWIGV8_ClientData _exports_ResultsHashSerializer_clientData;
 SWIGV8_ClientData _exports_Transform_clientData;
 
 
-static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::map< std::string,std::string > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_MapStringStringSwig__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_MapStringStringSwig__SWIG_0.");
@@ -2151,13 +1916,15 @@ static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_0(const SwigV8Argum
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::map< std::string,std::string > *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -2182,6 +1949,7 @@ static SwigV8ReturnValue _wrap_new_MapStringStringSwig__SWIG_1(const SwigV8Argum
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -2232,7 +2000,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_size(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_size.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_size" "', argument " "1"" of type '" "std::map< std::string,std::string > const *""'"); 
   }
@@ -2259,7 +2027,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_empty(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_empty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_empty" "', argument " "1"" of type '" "std::map< std::string,std::string > const *""'"); 
   }
@@ -2285,7 +2053,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_clear(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_clear.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_clear" "', argument " "1"" of type '" "std::map< std::string,std::string > *""'"); 
   }
@@ -2314,7 +2082,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_get(const SwigV8Arguments &ar
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_get.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_get" "', argument " "1"" of type '" "std::map< std::string,std::string > *""'"); 
   }
@@ -2362,7 +2130,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_set(const SwigV8Arguments &ar
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_set.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_set" "', argument " "1"" of type '" "std::map< std::string,std::string > *""'"); 
   }
@@ -2418,7 +2186,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_del(const SwigV8Arguments &ar
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_del.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_del" "', argument " "1"" of type '" "std::map< std::string,std::string > *""'"); 
   }
@@ -2465,7 +2233,7 @@ static SwigV8ReturnValue _wrap_MapStringStringSwig_has_key(const SwigV8Arguments
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MapStringStringSwig_has_key.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__mapT_std__string_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MapStringStringSwig_has_key" "', argument " "1"" of type '" "std::map< std::string,std::string > *""'"); 
   }
@@ -2506,10 +2274,11 @@ static void _wrap_delete_MapStringStringSwig(const v8::WeakCallbackInfo<SWIGV8_P
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< std::string > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_VectorStringSwig__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_VectorStringSwig__SWIG_0.");
@@ -2523,13 +2292,15 @@ static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_0(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< std::string >::size_type arg1 ;
   size_t val1 ;
   int ecode1 = 0 ;
@@ -2551,13 +2322,15 @@ static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_1(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< std::string > *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -2582,6 +2355,7 @@ static SwigV8ReturnValue _wrap_new_VectorStringSwig__SWIG_2(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -2642,7 +2416,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_size(const SwigV8Arguments &args
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_size.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_size" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
   }
@@ -2669,7 +2443,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_capacity(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_capacity.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_capacity" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
   }
@@ -2698,7 +2472,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_reserve(const SwigV8Arguments &a
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_reserve.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_reserve" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
   }
@@ -2730,7 +2504,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_isEmpty(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_isEmpty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_isEmpty" "', argument " "1"" of type '" "std::vector< std::string > const *""'"); 
   }
@@ -2756,7 +2530,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_clear(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_clear.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_clear" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
   }
@@ -2784,7 +2558,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_add(const SwigV8Arguments &args)
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_add.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_add" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
   }
@@ -2828,7 +2602,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_get(const SwigV8Arguments &args)
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_get.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_get" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
   }
@@ -2868,7 +2642,7 @@ static SwigV8ReturnValue _wrap_VectorStringSwig_set(const SwigV8Arguments &args)
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringSwig_set.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringSwig_set" "', argument " "1"" of type '" "std::vector< std::string > *""'"); 
   }
@@ -2918,10 +2692,11 @@ static void _wrap_delete_VectorStringSwig(const v8::WeakCallbackInfo<SWIGV8_Prox
 }
 
 
-static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   RequiredPropertiesConfig *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_RequiredPropertiesConfigSwig__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_RequiredPropertiesConfigSwig__SWIG_0.");
@@ -2966,13 +2741,15 @@ static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_0(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< std::string > *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -3025,13 +2802,15 @@ static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_1(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   char *arg1 = 0 ;
   int res1 ;
   char *buf1 = 0 ;
@@ -3085,6 +2864,7 @@ static SwigV8ReturnValue _wrap_new_RequiredPropertiesConfigSwig__SWIG_2(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -3156,7 +2936,7 @@ static SwigV8ReturnValue _wrap_RequiredPropertiesConfigSwig_getProperties(const 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_RequiredPropertiesConfigSwig_getProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_RequiredPropertiesConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_RequiredPropertiesConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "RequiredPropertiesConfigSwig_getProperties" "', argument " "1"" of type '" "RequiredPropertiesConfig *""'"); 
   }
@@ -3206,7 +2986,7 @@ fail:
 static SwigV8ReturnValue _wrap_new_StringValueSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Value< std::string > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_StringValueSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_StringValueSwig.");
@@ -3265,7 +3045,7 @@ static SwigV8ReturnValue _wrap_StringValueSwig_hasValue(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_StringValueSwig_hasValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringValueSwig_hasValue" "', argument " "1"" of type '" "Value< std::string > *""'"); 
   }
@@ -3323,7 +3103,7 @@ static SwigV8ReturnValue _wrap_StringValueSwig_getNoValueMessage(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_StringValueSwig_getNoValueMessage.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringValueSwig_getNoValueMessage" "', argument " "1"" of type '" "Value< std::string > *""'"); 
   }
@@ -3381,7 +3161,7 @@ static SwigV8ReturnValue _wrap_StringValueSwig_getValue(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_StringValueSwig_getValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__string_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StringValueSwig_getValue" "', argument " "1"" of type '" "Value< std::string > *""'"); 
   }
@@ -3442,7 +3222,7 @@ static void _wrap_delete_StringValueSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy
 static SwigV8ReturnValue _wrap_new_BoolValueSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Value< bool > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_BoolValueSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_BoolValueSwig.");
@@ -3501,7 +3281,7 @@ static SwigV8ReturnValue _wrap_BoolValueSwig_hasValue(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_BoolValueSwig_hasValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolValueSwig_hasValue" "', argument " "1"" of type '" "Value< bool > *""'"); 
   }
@@ -3559,7 +3339,7 @@ static SwigV8ReturnValue _wrap_BoolValueSwig_getNoValueMessage(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_BoolValueSwig_getNoValueMessage.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolValueSwig_getNoValueMessage" "', argument " "1"" of type '" "Value< bool > *""'"); 
   }
@@ -3617,7 +3397,7 @@ static SwigV8ReturnValue _wrap_BoolValueSwig_getValue(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_BoolValueSwig_getValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_bool_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BoolValueSwig_getValue" "', argument " "1"" of type '" "Value< bool > *""'"); 
   }
@@ -3678,7 +3458,7 @@ static void _wrap_delete_BoolValueSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy> 
 static SwigV8ReturnValue _wrap_new_IntegerValueSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Value< int > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_IntegerValueSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_IntegerValueSwig.");
@@ -3737,7 +3517,7 @@ static SwigV8ReturnValue _wrap_IntegerValueSwig_hasValue(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_IntegerValueSwig_hasValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntegerValueSwig_hasValue" "', argument " "1"" of type '" "Value< int > *""'"); 
   }
@@ -3795,7 +3575,7 @@ static SwigV8ReturnValue _wrap_IntegerValueSwig_getNoValueMessage(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_IntegerValueSwig_getNoValueMessage.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntegerValueSwig_getNoValueMessage" "', argument " "1"" of type '" "Value< int > *""'"); 
   }
@@ -3853,7 +3633,7 @@ static SwigV8ReturnValue _wrap_IntegerValueSwig_getValue(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_IntegerValueSwig_getValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_int_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "IntegerValueSwig_getValue" "', argument " "1"" of type '" "Value< int > *""'"); 
   }
@@ -3914,7 +3694,7 @@ static void _wrap_delete_IntegerValueSwig(const v8::WeakCallbackInfo<SWIGV8_Prox
 static SwigV8ReturnValue _wrap_new_VectorStringValuesSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Value< std::vector< std::string > > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_VectorStringValuesSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_VectorStringValuesSwig.");
@@ -3973,7 +3753,7 @@ static SwigV8ReturnValue _wrap_VectorStringValuesSwig_hasValue(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringValuesSwig_hasValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringValuesSwig_hasValue" "', argument " "1"" of type '" "Value< std::vector< std::string > > *""'"); 
   }
@@ -4031,7 +3811,7 @@ static SwigV8ReturnValue _wrap_VectorStringValuesSwig_getNoValueMessage(const Sw
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringValuesSwig_getNoValueMessage.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringValuesSwig_getNoValueMessage" "', argument " "1"" of type '" "Value< std::vector< std::string > > *""'"); 
   }
@@ -4089,7 +3869,7 @@ static SwigV8ReturnValue _wrap_VectorStringValuesSwig_getValue(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorStringValuesSwig_getValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_std__vectorT_std__string_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorStringValuesSwig_getValue" "', argument " "1"" of type '" "Value< std::vector< std::string > > *""'"); 
   }
@@ -4150,7 +3930,7 @@ static void _wrap_delete_VectorStringValuesSwig(const v8::WeakCallbackInfo<SWIGV
 static SwigV8ReturnValue _wrap_new_DoubleValueSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Value< double > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_DoubleValueSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_DoubleValueSwig.");
@@ -4209,7 +3989,7 @@ static SwigV8ReturnValue _wrap_DoubleValueSwig_hasValue(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_DoubleValueSwig_hasValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleValueSwig_hasValue" "', argument " "1"" of type '" "Value< double > *""'"); 
   }
@@ -4267,7 +4047,7 @@ static SwigV8ReturnValue _wrap_DoubleValueSwig_getNoValueMessage(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_DoubleValueSwig_getNoValueMessage.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleValueSwig_getNoValueMessage" "', argument " "1"" of type '" "Value< double > *""'"); 
   }
@@ -4325,7 +4105,7 @@ static SwigV8ReturnValue _wrap_DoubleValueSwig_getValue(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_DoubleValueSwig_getValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueT_double_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DoubleValueSwig_getValue" "', argument " "1"" of type '" "Value< double > *""'"); 
   }
@@ -4405,7 +4185,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getAvailableProperties(const Swig
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsBaseSwig_getAvailableProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getAvailableProperties" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4465,7 +4245,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_containsProperty(const SwigV8Argu
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsBaseSwig_containsProperty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_containsProperty" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4537,7 +4317,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getProperties(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsBaseSwig_getProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getProperties" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4598,7 +4378,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getPropertyName(const SwigV8Argum
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsBaseSwig_getPropertyName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getPropertyName" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4650,8 +4430,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -4662,7 +4443,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_0(const SwigV8Arg
   int res2 = SWIG_OLDOBJ ;
   Value< std::vector< std::string > > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValues" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4720,11 +4501,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_0(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -4736,7 +4519,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_1(const SwigV8Arg
   int ecode2 = 0 ;
   Value< std::vector< std::string > > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValues" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4785,6 +4568,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValues__SWIG_1(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -4820,8 +4604,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -4832,7 +4617,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_0(const Sw
   int res2 = SWIG_OLDOBJ ;
   Value< std::string > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsString" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4890,11 +4675,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_0(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -4906,7 +4693,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_1(const Sw
   int ecode2 = 0 ;
   Value< std::string > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsString" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -4955,6 +4742,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsString__SWIG_1(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -4990,8 +4778,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5002,7 +4791,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_0(const Swig
   int res2 = SWIG_OLDOBJ ;
   Value< bool > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsBool" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5060,11 +4849,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_0(const Swig
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5076,7 +4867,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_1(const Swig
   int ecode2 = 0 ;
   Value< bool > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsBool" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5125,6 +4916,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsBool__SWIG_1(const Swig
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -5160,8 +4952,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5172,7 +4965,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_0(const S
   int res2 = SWIG_OLDOBJ ;
   Value< int > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsInteger" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5230,11 +5023,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_0(const S
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5246,7 +5041,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_1(const S
   int ecode2 = 0 ;
   Value< int > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsInteger" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5295,6 +5090,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsInteger__SWIG_1(const S
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -5330,8 +5126,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5342,7 +5139,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_0(const Sw
   int res2 = SWIG_OLDOBJ ;
   Value< double > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsDouble" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5400,11 +5197,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_0(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5416,7 +5215,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_1(const Sw
   int ecode2 = 0 ;
   Value< double > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsDouble" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5465,6 +5264,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsDouble__SWIG_1(const Sw
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -5500,8 +5300,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5512,7 +5313,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_0(cons
   int res2 = SWIG_OLDOBJ ;
   Value< bool > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictBool" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5570,11 +5371,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_0(cons
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5586,7 +5389,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_1(cons
   int ecode2 = 0 ;
   Value< bool > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictBool" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5635,6 +5438,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictBool__SWIG_1(cons
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -5670,8 +5474,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5682,7 +5487,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_0(c
   int res2 = SWIG_OLDOBJ ;
   Value< int > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictInteger" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5740,11 +5545,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_0(c
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5756,7 +5563,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_1(c
   int ecode2 = 0 ;
   Value< int > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictInteger" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5805,6 +5612,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictInteger__SWIG_1(c
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -5840,8 +5648,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5852,7 +5661,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_0(co
   int res2 = SWIG_OLDOBJ ;
   Value< double > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictDouble" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5910,11 +5719,13 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_0(co
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -5926,7 +5737,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_1(co
   int ecode2 = 0 ;
   Value< double > result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsBaseSwig_getValueAsStrictDouble" "', argument " "1"" of type '" "ResultsBase *""'"); 
   }
@@ -5975,6 +5786,7 @@ static SwigV8ReturnValue _wrap_ResultsBaseSwig_getValueAsStrictDouble__SWIG_1(co
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -6030,7 +5842,7 @@ static SwigV8ReturnValue _wrap_Date_getYear(const SwigV8Arguments &args) {
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Date_getYear.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Date, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Date, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Date_getYear" "', argument " "1"" of type '" "Date *""'"); 
   }
@@ -6088,7 +5900,7 @@ static SwigV8ReturnValue _wrap_Date_getMonth(const SwigV8Arguments &args) {
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Date_getMonth.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Date, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Date, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Date_getMonth" "', argument " "1"" of type '" "Date *""'"); 
   }
@@ -6146,7 +5958,7 @@ static SwigV8ReturnValue _wrap_Date_getDay(const SwigV8Arguments &args) {
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Date_getDay.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Date, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Date, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Date_getDay" "', argument " "1"" of type '" "Date *""'"); 
   }
@@ -6224,7 +6036,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getName(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getName" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6282,7 +6094,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getDataFilesWherePresent(con
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getDataFilesWherePresent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getDataFilesWherePresent" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6340,7 +6152,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getType(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getType.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getType" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6398,7 +6210,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getCategory(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getCategory.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getCategory" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6456,7 +6268,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getUrl(const SwigV8Arguments
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getUrl.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getUrl" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6514,7 +6326,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getAvailable(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getAvailable.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getAvailable" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6572,7 +6384,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getDisplayOrder(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getDisplayOrder.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getDisplayOrder" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6630,7 +6442,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getIsMandatory(const SwigV8A
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getIsMandatory.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getIsMandatory" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6688,7 +6500,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getIsList(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getIsList.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getIsList" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6746,7 +6558,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getIsObsolete(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getIsObsolete.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getIsObsolete" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6804,7 +6616,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getShow(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getShow.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getShow" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6862,7 +6674,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getShowValues(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getShowValues.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getShowValues" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6920,7 +6732,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataSwig_getDescription(const SwigV8A
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataSwig_getDescription.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_PropertyMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataSwig_getDescription" "', argument " "1"" of type '" "PropertyMetaData *""'"); 
   }
@@ -6998,7 +6810,7 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataSwig_getComponentIdAsInt(const S
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataSwig_getComponentIdAsInt.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataSwig_getComponentIdAsInt" "', argument " "1"" of type '" "ComponentMetaData *""'"); 
   }
@@ -7056,7 +6868,7 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataSwig_getComponentId(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataSwig_getComponentId.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataSwig_getComponentId" "', argument " "1"" of type '" "ComponentMetaData *""'"); 
   }
@@ -7114,7 +6926,7 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataSwig_getName(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataSwig_getName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ComponentMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataSwig_getName" "', argument " "1"" of type '" "ComponentMetaData *""'"); 
   }
@@ -7192,7 +7004,7 @@ static SwigV8ReturnValue _wrap_ProfileMetaDataSwig_getProfileId(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ProfileMetaDataSwig_getProfileId.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ProfileMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ProfileMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ProfileMetaDataSwig_getProfileId" "', argument " "1"" of type '" "ProfileMetaData *""'"); 
   }
@@ -7259,10 +7071,11 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< uint8_t > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_UTF8StringSwig__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_UTF8StringSwig__SWIG_0.");
@@ -7307,13 +7120,15 @@ static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_0(const SwigV8Arguments 
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< unsigned char >::size_type arg1 ;
   size_t val1 ;
   int ecode1 = 0 ;
@@ -7366,13 +7181,15 @@ static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_1(const SwigV8Arguments 
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< uint8_t > *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -7428,6 +7245,7 @@ static SwigV8ReturnValue _wrap_new_UTF8StringSwig__SWIG_2(const SwigV8Arguments 
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -7488,7 +7306,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_size(const SwigV8Arguments &args) 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_size.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_size" "', argument " "1"" of type '" "std::vector< uint8_t > const *""'"); 
   }
@@ -7546,7 +7364,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_capacity(const SwigV8Arguments &ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_capacity.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_capacity" "', argument " "1"" of type '" "std::vector< uint8_t > const *""'"); 
   }
@@ -7606,7 +7424,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_reserve(const SwigV8Arguments &arg
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_reserve.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_reserve" "', argument " "1"" of type '" "std::vector< uint8_t > *""'"); 
   }
@@ -7669,7 +7487,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_isEmpty(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_isEmpty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_isEmpty" "', argument " "1"" of type '" "std::vector< uint8_t > const *""'"); 
   }
@@ -7726,7 +7544,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_clear(const SwigV8Arguments &args)
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_clear.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_clear" "', argument " "1"" of type '" "std::vector< uint8_t > *""'"); 
   }
@@ -7787,7 +7605,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_add(const SwigV8Arguments &args) {
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_add.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_add" "', argument " "1"" of type '" "std::vector< uint8_t > *""'"); 
   }
@@ -7854,7 +7672,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_get(const SwigV8Arguments &args) {
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_get.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_get" "', argument " "1"" of type '" "std::vector< uint8_t > *""'"); 
   }
@@ -7927,7 +7745,7 @@ static SwigV8ReturnValue _wrap_UTF8StringSwig_set(const SwigV8Arguments &args) {
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_UTF8StringSwig_set.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint8_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "UTF8StringSwig_set" "', argument " "1"" of type '" "std::vector< uint8_t > *""'"); 
   }
@@ -8000,10 +7818,11 @@ static void _wrap_delete_UTF8StringSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy>
 }
 
 
-static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::string arg1 ;
   std::string arg2 ;
   ValueMetaDataKey *result;
@@ -8074,13 +7893,15 @@ static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_0(const SwigV8Argu
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::string arg1 ;
   unsigned char *arg2 = (unsigned char *)0 ;
   long arg3 ;
@@ -8154,6 +7975,7 @@ static SwigV8ReturnValue _wrap_new_ValueMetaDataKeySwig__SWIG_1(const SwigV8Argu
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -8204,7 +8026,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataKeySwig_getPropertyName(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataKeySwig_getPropertyName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaDataKey, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaDataKey, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataKeySwig_getPropertyName" "', argument " "1"" of type '" "ValueMetaDataKey *""'"); 
   }
@@ -8262,7 +8084,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataKeySwig_getValueName(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataKeySwig_getValueName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaDataKey, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaDataKey, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataKeySwig_getValueName" "', argument " "1"" of type '" "ValueMetaDataKey *""'"); 
   }
@@ -8331,7 +8153,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataSwig_getName(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataSwig_getName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataSwig_getName" "', argument " "1"" of type '" "ValueMetaData *""'"); 
   }
@@ -8389,7 +8211,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataSwig_getDescription(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataSwig_getDescription.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataSwig_getDescription" "', argument " "1"" of type '" "ValueMetaData *""'"); 
   }
@@ -8447,7 +8269,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataSwig_getUrl(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataSwig_getUrl.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataSwig_getUrl" "', argument " "1"" of type '" "ValueMetaData *""'"); 
   }
@@ -8505,7 +8327,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataSwig_getUtf8ValueName(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataSwig_getUtf8ValueName.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ValueMetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataSwig_getUtf8ValueName" "', argument " "1"" of type '" "ValueMetaData *""'"); 
   }
@@ -8591,13 +8413,13 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataCollectionSwig_getByKey(const Sw
   byte arg2 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  void *argp2 ;
+  void *argp2 = 0 ;
   int res2 = 0 ;
   ComponentMetaData *result = 0 ;
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataCollectionSwig_getByKey.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataCollectionSwig_getByKey" "', argument " "1"" of type '" "Collection< byte,ComponentMetaData > *""'"); 
   }
@@ -8671,7 +8493,7 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataCollectionSwig_getByIndex(const 
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataCollectionSwig_getByIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataCollectionSwig_getByIndex" "', argument " "1"" of type '" "Collection< byte,ComponentMetaData > *""'"); 
   }
@@ -8734,7 +8556,7 @@ static SwigV8ReturnValue _wrap_ComponentMetaDataCollectionSwig_getSize(const Swi
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ComponentMetaDataCollectionSwig_getSize.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_byte_ComponentMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComponentMetaDataCollectionSwig_getSize" "', argument " "1"" of type '" "Collection< byte,ComponentMetaData > *""'"); 
   }
@@ -8813,7 +8635,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataCollectionSwig_getByKey(const Swi
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataCollectionSwig_getByKey.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataCollectionSwig_getByKey" "', argument " "1"" of type '" "Collection< std::string,PropertyMetaData > *""'"); 
   }
@@ -8886,7 +8708,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataCollectionSwig_getByIndex(const S
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataCollectionSwig_getByIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataCollectionSwig_getByIndex" "', argument " "1"" of type '" "Collection< std::string,PropertyMetaData > *""'"); 
   }
@@ -8949,7 +8771,7 @@ static SwigV8ReturnValue _wrap_PropertyMetaDataCollectionSwig_getSize(const Swig
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_PropertyMetaDataCollectionSwig_getSize.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_std__string_PropertyMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PropertyMetaDataCollectionSwig_getSize" "', argument " "1"" of type '" "Collection< std::string,PropertyMetaData > *""'"); 
   }
@@ -9030,7 +8852,7 @@ static SwigV8ReturnValue _wrap_ProfileMetaDataCollectionSwig_getByKey(const Swig
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ProfileMetaDataCollectionSwig_getByKey.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ProfileMetaDataCollectionSwig_getByKey" "', argument " "1"" of type '" "Collection< uint32_t,ProfileMetaData > *""'"); 
   }
@@ -9096,7 +8918,7 @@ static SwigV8ReturnValue _wrap_ProfileMetaDataCollectionSwig_getByIndex(const Sw
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ProfileMetaDataCollectionSwig_getByIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ProfileMetaDataCollectionSwig_getByIndex" "', argument " "1"" of type '" "Collection< uint32_t,ProfileMetaData > *""'"); 
   }
@@ -9159,7 +8981,7 @@ static SwigV8ReturnValue _wrap_ProfileMetaDataCollectionSwig_getSize(const SwigV
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ProfileMetaDataCollectionSwig_getSize.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_uint32_t_ProfileMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ProfileMetaDataCollectionSwig_getSize" "', argument " "1"" of type '" "Collection< uint32_t,ProfileMetaData > *""'"); 
   }
@@ -9234,13 +9056,13 @@ static SwigV8ReturnValue _wrap_ValueMetaDataCollectionSwig_getByKey(const SwigV8
   SwigValueWrapper< ValueMetaDataKey > arg2 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  void *argp2 ;
+  void *argp2 = 0 ;
   int res2 = 0 ;
   ValueMetaData *result = 0 ;
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataCollectionSwig_getByKey.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataCollectionSwig_getByKey" "', argument " "1"" of type '" "Collection< ValueMetaDataKey,ValueMetaData > *""'"); 
   }
@@ -9314,7 +9136,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataCollectionSwig_getByIndex(const Swig
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataCollectionSwig_getByIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataCollectionSwig_getByIndex" "', argument " "1"" of type '" "Collection< ValueMetaDataKey,ValueMetaData > *""'"); 
   }
@@ -9377,7 +9199,7 @@ static SwigV8ReturnValue _wrap_ValueMetaDataCollectionSwig_getSize(const SwigV8A
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ValueMetaDataCollectionSwig_getSize.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionT_ValueMetaDataKey_ValueMetaData_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ValueMetaDataCollectionSwig_getSize" "', argument " "1"" of type '" "Collection< ValueMetaDataKey,ValueMetaData > *""'"); 
   }
@@ -9455,7 +9277,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getComponents(const SwigV8Arguments 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getComponents.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getComponents" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9513,7 +9335,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getProperties(const SwigV8Arguments 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getProperties" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9571,7 +9393,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getProfiles(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getProfiles.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getProfiles" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9629,7 +9451,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getValues(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getValues.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getValues" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9690,7 +9512,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getValuesForProperty(const SwigV8Arg
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getValuesForProperty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getValuesForProperty" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9756,7 +9578,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getValuesForProfile(const SwigV8Argu
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getValuesForProfile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getValuesForProfile" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9822,7 +9644,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getComponentForProfile(const SwigV8A
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getComponentForProfile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getComponentForProfile" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9888,7 +9710,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getComponentForProperty(const SwigV8
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getComponentForProperty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getComponentForProperty" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -9954,7 +9776,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getDefaultProfileForComponent(const 
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getDefaultProfileForComponent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getDefaultProfileForComponent" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -10020,7 +9842,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getDefaultValueForProperty(const Swi
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getDefaultValueForProperty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getDefaultValueForProperty" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -10086,7 +9908,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getPropertiesForComponent(const Swig
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getPropertiesForComponent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getPropertiesForComponent" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -10152,7 +9974,7 @@ static SwigV8ReturnValue _wrap_MetaDataSwig_getPropertyForValue(const SwigV8Argu
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_MetaDataSwig_getPropertyForValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_MetaData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MetaDataSwig_getPropertyForValue" "', argument " "1"" of type '" "MetaData *""'"); 
   }
@@ -10236,7 +10058,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_setLicenseKey(const SwigV8Argument
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_setLicenseKey.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_setLicenseKey" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10309,7 +10131,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_setDataUpdateUrl(const SwigV8Argum
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_setDataUpdateUrl.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_setDataUpdateUrl" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10381,7 +10203,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getMetaData(const SwigV8Arguments 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getMetaData.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getMetaData" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10439,7 +10261,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getAutomaticUpdatesEnabled(const S
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getAutomaticUpdatesEnabled.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getAutomaticUpdatesEnabled" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10500,7 +10322,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_processBase(const SwigV8Arguments 
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_processBase.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_processBase" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10552,8 +10374,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -10561,7 +10384,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_0(const SwigV8Ar
   void *argp1 = 0 ;
   int res1 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_refreshData" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10605,11 +10428,13 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_0(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -10621,7 +10446,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_1(const SwigV8Ar
   char *buf2 = 0 ;
   int alloc2 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_refreshData" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10670,11 +10495,13 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_1(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -10688,7 +10515,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_2(const SwigV8Ar
   long val3 ;
   int ecode3 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_refreshData" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10742,6 +10569,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_refreshData__SWIG_2(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -10797,7 +10625,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getDataUpdateUrl(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getDataUpdateUrl.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getDataUpdateUrl" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10855,7 +10683,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getPublishedTime(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getPublishedTime.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getPublishedTime" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10913,7 +10741,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getUpdateAvailableTime(const SwigV
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getUpdateAvailableTime.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getUpdateAvailableTime" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -10971,7 +10799,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getDataFilePath(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getDataFilePath.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getDataFilePath" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11029,7 +10857,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getDataFileTempPath(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getDataFileTempPath.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getDataFileTempPath" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11087,7 +10915,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getProduct(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getProduct.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getProduct" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11145,7 +10973,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getType(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getType.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getType" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11203,7 +11031,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getKeys(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getKeys.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getKeys" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11261,7 +11089,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getRequiredProperties(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getRequiredProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getRequiredProperties" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11319,7 +11147,7 @@ static SwigV8ReturnValue _wrap_EngineBaseSwig_getIsThreadSafe(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineBaseSwig_getIsThreadSafe.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineBaseSwig_getIsThreadSafe" "', argument " "1"" of type '" "EngineBase *""'"); 
   }
@@ -11399,7 +11227,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_setUseUpperPrefixHeaders(const Swi
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_setUseUpperPrefixHeaders.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_setUseUpperPrefixHeaders" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11464,7 +11292,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_setUseTempFile(const SwigV8Argumen
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_setUseTempFile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_setUseTempFile" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11529,7 +11357,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_setReuseTempFile(const SwigV8Argum
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_setReuseTempFile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_setReuseTempFile" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11589,12 +11417,12 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_setTempDirectories(const SwigV8Arg
   std::vector< std::string > arg2 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  void *argp2 ;
+  void *argp2 = 0 ;
   int res2 = 0 ;
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_setTempDirectories.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_setTempDirectories" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11665,7 +11493,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_getUseUpperPrefixHeaders(const Swi
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_getUseUpperPrefixHeaders.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_getUseUpperPrefixHeaders" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11723,7 +11551,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_getUseTempFile(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_getUseTempFile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_getUseTempFile" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11781,7 +11609,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_getReuseTempFile(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_getReuseTempFile.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_getReuseTempFile" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11839,7 +11667,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_getTempDirectories(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_getTempDirectories.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_getTempDirectories" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11897,7 +11725,7 @@ static SwigV8ReturnValue _wrap_ConfigBaseSwig_getConcurrency(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigBaseSwig_getConcurrency.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigBaseSwig_getConcurrency" "', argument " "1"" of type '" "ConfigBase *""'"); 
   }
@@ -11966,7 +11794,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_setUpdateMatchedUserAge
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_setUpdateMatchedUserAgent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_setUpdateMatchedUserAgent" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12031,7 +11859,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_setMaxMatchedUserAgentL
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_setMaxMatchedUserAgentLength.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_setMaxMatchedUserAgentLength" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12096,7 +11924,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_setAllowUnmatched(const
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_setAllowUnmatched.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_setAllowUnmatched" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12159,7 +11987,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_getUpdateMatchedUserAge
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_getUpdateMatchedUserAgent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_getUpdateMatchedUserAgent" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12217,7 +12045,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_getMaxMatchedUserAgentL
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_getMaxMatchedUserAgentLength.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_getMaxMatchedUserAgentLength" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12275,7 +12103,7 @@ static SwigV8ReturnValue _wrap_ConfigDeviceDetectionSwig_getAllowUnmatched(const
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigDeviceDetectionSwig_getAllowUnmatched.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigDeviceDetectionSwig_getAllowUnmatched" "', argument " "1"" of type '" "ConfigDeviceDetection *""'"); 
   }
@@ -12345,7 +12173,7 @@ fail:
 static SwigV8ReturnValue _wrap_new_EvidenceBaseSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   EvidenceBase *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_EvidenceBaseSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_EvidenceBaseSwig.");
@@ -12418,7 +12246,7 @@ static SwigV8ReturnValue _wrap_EvidenceBaseSwig_set(const SwigV8Arguments &args)
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EvidenceBaseSwig_set.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EvidenceBaseSwig_set" "', argument " "1"" of type '" "EvidenceBase *""'"); 
   }
@@ -12506,7 +12334,7 @@ static SwigV8ReturnValue _wrap_EvidenceBaseSwig_get(const SwigV8Arguments &args)
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EvidenceBaseSwig_get.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EvidenceBaseSwig_get" "', argument " "1"" of type '" "EvidenceBase *""'"); 
   }
@@ -12574,17 +12402,17 @@ static SwigV8ReturnValue _wrap_EvidenceBaseSwig_size(const SwigV8Arguments &args
   EvidenceBase *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  int result;
+  size_t result;
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EvidenceBaseSwig_size.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EvidenceBase, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EvidenceBaseSwig_size" "', argument " "1"" of type '" "EvidenceBase *""'"); 
   }
   arg1 = reinterpret_cast< EvidenceBase * >(argp1);{
     try {
-      result = (int)EvidenceBase_size(arg1);;
+      result = EvidenceBase_size(arg1);;
     }
     catch(FatalException& e) {
       SWIG_exception(SWIG_RuntimeError, e.what());
@@ -12614,7 +12442,7 @@ static SwigV8ReturnValue _wrap_EvidenceBaseSwig_size(const SwigV8Arguments &args
       SWIG_exception(SWIG_ValueError, e.what());
     }
   }
-  jsresult = SWIG_From_int(static_cast< int >(result));
+  jsresult = SWIG_From_size_t(static_cast< size_t >(result));
   
   
   SWIGV8_RETURN(jsresult);
@@ -12628,7 +12456,7 @@ fail:
 static SwigV8ReturnValue _wrap_new_EvidenceDeviceDetectionSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   EvidenceDeviceDetection *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_EvidenceDeviceDetectionSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_EvidenceDeviceDetectionSwig.");
@@ -12689,6 +12517,9 @@ static void _wrap_delete_EvidenceDeviceDetectionSwig(const v8::WeakCallbackInfo<
 
 static void _wrap_EngineDeviceDetectionSwig_defaultElementDataKey_set(v8::Local<v8::Name> property, v8::Local<v8::Value> value, const SwigV8PropertyCallbackInfoVoid &info) {
   SWIGV8_HANDLESCOPE();
+  (void)property;
+  (void)value;
+  (void)info;
   
   std::string *arg1 = 0 ;
   int res1 = SWIG_OLDOBJ ;
@@ -12717,6 +12548,7 @@ fail:
 
 static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_defaultElementDataKey_get(v8::Local<v8::Name> property, const SwigV8PropertyCallbackInfo &info) {
   SWIGV8_HANDLESCOPE();
+  (void)property;
   
   SWIGV8_VALUE jsresult;
   std::string *result = 0 ;
@@ -12732,8 +12564,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -12745,7 +12578,7 @@ static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection_
   int res2 = 0 ;
   ResultsDeviceDetection *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineDeviceDetectionSwig_processDeviceDetection" "', argument " "1"" of type '" "EngineDeviceDetection *""'"); 
   }
@@ -12794,11 +12627,13 @@ static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection_
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -12811,7 +12646,7 @@ static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection_
   int alloc2 = 0 ;
   ResultsDeviceDetection *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineDeviceDetectionSwig_processDeviceDetection" "', argument " "1"" of type '" "EngineDeviceDetection *""'"); 
   }
@@ -12860,6 +12695,7 @@ static SwigV8ReturnValue _wrap_EngineDeviceDetectionSwig_processDeviceDetection_
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -12926,7 +12762,7 @@ static SwigV8ReturnValue _wrap_ResultsDeviceDetectionSwig_getDeviceId(const Swig
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsDeviceDetectionSwig_getDeviceId.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsDeviceDetectionSwig_getDeviceId" "', argument " "1"" of type '" "ResultsDeviceDetection *""'"); 
   }
@@ -12987,7 +12823,7 @@ static SwigV8ReturnValue _wrap_ResultsDeviceDetectionSwig_getUserAgent(const Swi
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsDeviceDetectionSwig_getUserAgent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsDeviceDetectionSwig_getUserAgent" "', argument " "1"" of type '" "ResultsDeviceDetection *""'"); 
   }
@@ -13050,7 +12886,7 @@ static SwigV8ReturnValue _wrap_ResultsDeviceDetectionSwig_getUserAgents(const Sw
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsDeviceDetectionSwig_getUserAgents.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsDeviceDetection, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsDeviceDetectionSwig_getUserAgents" "', argument " "1"" of type '" "ResultsDeviceDetection *""'"); 
   }
@@ -13128,8 +12964,9 @@ static void _wrap_delete_ResultsHashSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13138,7 +12975,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_0(const SwigV8A
   int res1 = 0 ;
   std::string result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDeviceId" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13182,11 +13019,13 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_0(const SwigV8A
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13198,7 +13037,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_1(const SwigV8A
   int ecode2 = 0 ;
   std::string result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDeviceId" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13247,6 +13086,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDeviceId__SWIG_1(const SwigV8A
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -13282,8 +13122,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13292,7 +13133,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_0(const SwigV
   int res1 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDifference" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13336,11 +13177,13 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_0(const SwigV
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13352,7 +13195,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_1(const SwigV
   int ecode2 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDifference" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13401,6 +13244,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDifference__SWIG_1(const SwigV
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -13436,8 +13280,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13446,7 +13291,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_0(const SwigV8Arg
   int res1 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getMethod" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13490,11 +13335,13 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_0(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13506,7 +13353,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_1(const SwigV8Arg
   int ecode2 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getMethod" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13555,6 +13402,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getMethod__SWIG_1(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -13590,8 +13438,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13600,7 +13449,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_0(const SwigV8Argu
   int res1 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDrift" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13644,11 +13493,13 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_0(const SwigV8Argu
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -13660,7 +13511,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_1(const SwigV8Argu
   int ecode2 = 0 ;
   int result;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getDrift" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13709,6 +13560,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getDrift__SWIG_1(const SwigV8Argu
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -13755,7 +13607,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getTrace(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSwig_getTrace.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getTrace" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13813,7 +13665,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getMatchedNodes(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSwig_getMatchedNodes.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getMatchedNodes" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13871,7 +13723,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getIterations(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSwig_getIterations.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getIterations" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13932,7 +13784,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getUserAgent(const SwigV8Argument
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSwig_getUserAgent.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getUserAgent" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -13995,7 +13847,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSwig_getUserAgents(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSwig_getUserAgents.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSwig_getUserAgents" "', argument " "1"" of type '" "ResultsHash *""'"); 
   }
@@ -14054,7 +13906,7 @@ fail:
 static SwigV8ReturnValue _wrap_new_CollectionConfigSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   CollectionConfig *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_CollectionConfigSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_CollectionConfigSwig.");
@@ -14115,7 +13967,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_setCapacity(const SwigV8Argu
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_setCapacity.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_setCapacity" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14180,7 +14032,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_setConcurrency(const SwigV8A
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_setConcurrency.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_setConcurrency" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14245,7 +14097,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_setLoaded(const SwigV8Argume
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_setLoaded.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_setLoaded" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14308,7 +14160,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_getCapacity(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_getCapacity.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_getCapacity" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14366,7 +14218,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_getConcurrency(const SwigV8A
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_getConcurrency.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_getConcurrency" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14424,7 +14276,7 @@ static SwigV8ReturnValue _wrap_CollectionConfigSwig_getLoaded(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_CollectionConfigSwig_getLoaded.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_CollectionConfig, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CollectionConfigSwig_getLoaded" "', argument " "1"" of type '" "CollectionConfig *""'"); 
   }
@@ -14485,7 +14337,7 @@ static void _wrap_delete_CollectionConfigSwig(const v8::WeakCallbackInfo<SWIGV8_
 static SwigV8ReturnValue _wrap_new_ConfigHashSwig(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   ConfigHash *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_ConfigHashSwig.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_ConfigHashSwig.");
@@ -14543,7 +14395,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setHighPerformance(const SwigV8Arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setHighPerformance.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setHighPerformance" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14600,7 +14452,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setBalanced(const SwigV8Arguments 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setBalanced.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setBalanced" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14657,7 +14509,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setBalancedTemp(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setBalancedTemp.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setBalancedTemp" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14714,7 +14566,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setLowMemory(const SwigV8Arguments
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setLowMemory.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setLowMemory" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14771,7 +14623,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setMaxPerformance(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setMaxPerformance.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setMaxPerformance" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14831,7 +14683,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setDrift(const SwigV8Arguments &ar
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setDrift.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setDrift" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14896,7 +14748,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setDifference(const SwigV8Argument
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setDifference.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setDifference" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -14961,7 +14813,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setConcurrency(const SwigV8Argumen
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setConcurrency.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setConcurrency" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15026,7 +14878,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setUsePerformanceGraph(const SwigV
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setUsePerformanceGraph.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setUsePerformanceGraph" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15091,7 +14943,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setUsePredictiveGraph(const SwigV8
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setUsePredictiveGraph.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setUsePredictiveGraph" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15156,7 +15008,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setTraceRoute(const SwigV8Argument
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setTraceRoute.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setTraceRoute" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15221,7 +15073,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setPropertyValueIndex(const SwigV8
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setPropertyValueIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setPropertyValueIndex" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15281,12 +15133,12 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_setIndexedProperties(const SwigV8A
   std::vector< std::string > arg2 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  void *argp2 ;
+  void *argp2 = 0 ;
   int res2 = 0 ;
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_setIndexedProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_setIndexedProperties" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15357,7 +15209,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getStrings(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getStrings.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getStrings" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15415,7 +15267,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getProperties(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getProperties" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15473,7 +15325,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getValues(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getValues.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getValues" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15531,7 +15383,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getProfiles(const SwigV8Arguments 
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getProfiles.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getProfiles" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15589,7 +15441,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getNodes(const SwigV8Arguments &ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getNodes.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getNodes" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15647,7 +15499,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getProfileOffsets(const SwigV8Argu
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getProfileOffsets.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getProfileOffsets" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15705,7 +15557,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getDrift(const SwigV8Arguments &ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getDrift.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getDrift" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15763,7 +15615,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getDifference(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getDifference.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getDifference" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15821,7 +15673,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getUsePerformanceGraph(const SwigV
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getUsePerformanceGraph.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getUsePerformanceGraph" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15879,7 +15731,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getUsePredictiveGraph(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getUsePredictiveGraph.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getUsePredictiveGraph" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15937,7 +15789,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getConcurrency(const SwigV8Argumen
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getConcurrency.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getConcurrency" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -15995,7 +15847,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getTraceRoute(const SwigV8Argument
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getTraceRoute.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getTraceRoute" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -16053,7 +15905,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getPropertyValueIndex(const SwigV8
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getPropertyValueIndex.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getPropertyValueIndex" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -16111,7 +15963,7 @@ static SwigV8ReturnValue _wrap_ConfigHashSwig_getIndexedProperties(const SwigV8A
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ConfigHashSwig_getIndexedProperties.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ConfigHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ConfigHashSwig_getIndexedProperties" "', argument " "1"" of type '" "ConfigHash *""'"); 
   }
@@ -16169,10 +16021,11 @@ static void _wrap_delete_ConfigHashSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy>
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< uint32_t > *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_VectorUInt32Swig__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_VectorUInt32Swig__SWIG_0.");
@@ -16217,13 +16070,15 @@ static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_0(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< unsigned int >::size_type arg1 ;
   size_t val1 ;
   int ecode1 = 0 ;
@@ -16276,13 +16131,15 @@ static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_1(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::vector< uint32_t > *arg1 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
@@ -16338,6 +16195,7 @@ static SwigV8ReturnValue _wrap_new_VectorUInt32Swig__SWIG_2(const SwigV8Argument
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -16398,7 +16256,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_size(const SwigV8Arguments &args
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_size.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_size" "', argument " "1"" of type '" "std::vector< uint32_t > const *""'"); 
   }
@@ -16456,7 +16314,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_capacity(const SwigV8Arguments &
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_capacity.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_capacity" "', argument " "1"" of type '" "std::vector< uint32_t > const *""'"); 
   }
@@ -16516,7 +16374,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_reserve(const SwigV8Arguments &a
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_reserve.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_reserve" "', argument " "1"" of type '" "std::vector< uint32_t > *""'"); 
   }
@@ -16579,7 +16437,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_isEmpty(const SwigV8Arguments &a
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_isEmpty.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_isEmpty" "', argument " "1"" of type '" "std::vector< uint32_t > const *""'"); 
   }
@@ -16636,7 +16494,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_clear(const SwigV8Arguments &arg
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_clear.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_clear" "', argument " "1"" of type '" "std::vector< uint32_t > *""'"); 
   }
@@ -16697,7 +16555,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_add(const SwigV8Arguments &args)
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_add.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_add" "', argument " "1"" of type '" "std::vector< uint32_t > *""'"); 
   }
@@ -16764,7 +16622,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_get(const SwigV8Arguments &args)
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_get.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_get" "', argument " "1"" of type '" "std::vector< uint32_t > *""'"); 
   }
@@ -16837,7 +16695,7 @@ static SwigV8ReturnValue _wrap_VectorUInt32Swig_set(const SwigV8Arguments &args)
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_VectorUInt32Swig_set.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_std__vectorT_uint32_t_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "VectorUInt32Swig_set" "', argument " "1"" of type '" "std::vector< uint32_t > *""'"); 
   }
@@ -16910,10 +16768,11 @@ static void _wrap_delete_VectorUInt32Swig(const v8::WeakCallbackInfo<SWIGV8_Prox
 }
 
 
-static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::string *arg1 = 0 ;
   ConfigHash *arg2 = 0 ;
   RequiredPropertiesConfig *arg3 = 0 ;
@@ -16990,13 +16849,15 @@ static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_0(const SwigV8Arguments 
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   unsigned char *arg1 = (unsigned char *)0 ;
   long arg2 ;
   ConfigHash *arg3 = 0 ;
@@ -17073,6 +16934,7 @@ static SwigV8ReturnValue _wrap_new_EngineHashSwig__SWIG_1(const SwigV8Arguments 
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -17123,7 +16985,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_getPublishedTime(const SwigV8Argum
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getPublishedTime.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getPublishedTime" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17181,7 +17043,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_getUpdateAvailableTime(const SwigV
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getUpdateAvailableTime.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getUpdateAvailableTime" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17228,6 +17090,138 @@ fail:
 }
 
 
+static SwigV8ReturnValue _wrap_EngineHashSwig_getPublishedTimeFromFile(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  std::string *arg1 = 0 ;
+  int res1 = SWIG_OLDOBJ ;
+  Date result;
+  
+  if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getPublishedTimeFromFile.");
+  
+  {
+    {
+      std::string *ptr = (std::string *)0;
+      res1 = SWIG_AsPtr_std_string(args[0], &ptr);
+      if (!SWIG_IsOK(res1)) {
+        SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getPublishedTimeFromFile" "', argument " "1"" of type '" "std::string const &""'"); 
+      }
+      if (!ptr) {
+        SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "EngineHashSwig_getPublishedTimeFromFile" "', argument " "1"" of type '" "std::string const &""'"); 
+      }
+      arg1 = ptr;
+    }
+  }
+  {
+    try {
+      result = EngineHash::getPublishedTimeFromFile((std::string const &)*arg1);;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_NewPointerObj((new Date(result)), SWIGTYPE_p_Date, SWIG_POINTER_OWN |  0 );
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
+static SwigV8ReturnValue _wrap_EngineHashSwig_getProductFromFile(const SwigV8Arguments &args) {
+  SWIGV8_HANDLESCOPE();
+  
+  SWIGV8_VALUE jsresult;
+  std::string *arg1 = 0 ;
+  int res1 = SWIG_OLDOBJ ;
+  std::string result;
+  
+  if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getProductFromFile.");
+  
+  {
+    {
+      std::string *ptr = (std::string *)0;
+      res1 = SWIG_AsPtr_std_string(args[0], &ptr);
+      if (!SWIG_IsOK(res1)) {
+        SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getProductFromFile" "', argument " "1"" of type '" "std::string const &""'"); 
+      }
+      if (!ptr) {
+        SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "EngineHashSwig_getProductFromFile" "', argument " "1"" of type '" "std::string const &""'"); 
+      }
+      arg1 = ptr;
+    }
+  }
+  {
+    try {
+      result = EngineHash::getProductFromFile((std::string const &)*arg1);;
+    }
+    catch(FatalException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NotImplementedException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(InvalidPropertyException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(EvidenceException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(TooManyValuesException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(NoValuesAvailableException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }	
+    catch(StatusCodeException& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(runtime_error& e) {
+      SWIG_exception(SWIG_RuntimeError, e.what());
+    }
+    catch(invalid_argument& e) {
+      SWIG_exception(SWIG_ValueError, e.what());
+    }
+  }
+  jsresult = SWIG_From_std_string(static_cast< std::string >(result));
+  if (SWIG_IsNewObj(res1)) delete arg1;
+  
+  SWIGV8_RETURN(jsresult);
+  
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+}
+
+
 static SwigV8ReturnValue _wrap_EngineHashSwig_getDataFilePath(const SwigV8Arguments &args) {
   SWIGV8_HANDLESCOPE();
   
@@ -17239,7 +17233,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_getDataFilePath(const SwigV8Argume
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getDataFilePath.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getDataFilePath" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17297,7 +17291,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_getDataFileTempPath(const SwigV8Ar
   
   if (args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getDataFileTempPath.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getDataFileTempPath" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17344,8 +17338,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17353,7 +17348,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_0(const SwigV8Ar
   void *argp1 = 0 ;
   int res1 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_refreshData" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17397,11 +17392,13 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_0(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17413,7 +17410,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_1(const SwigV8Ar
   char *buf2 = 0 ;
   int alloc2 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_refreshData" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17462,11 +17459,13 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_1(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_2(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17480,7 +17479,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_2(const SwigV8Ar
   long val3 ;
   int ecode3 = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_refreshData" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17534,6 +17533,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_refreshData__SWIG_2(const SwigV8Ar
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -17578,8 +17578,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17591,7 +17592,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_0(const SwigV8Argume
   int res2 = 0 ;
   ResultsHash *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_process" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17640,11 +17641,13 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_0(const SwigV8Argume
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17657,7 +17660,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_1(const SwigV8Argume
   int alloc2 = 0 ;
   ResultsHash *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_process" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17706,6 +17709,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_process__SWIG_1(const SwigV8Argume
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -17756,7 +17760,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_getProfileIdsForPropertyValue(cons
   
   if (args.Length() < 2 || args.Length() > 2) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_getProfileIdsForPropertyValue.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_getProfileIdsForPropertyValue" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17845,7 +17849,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_processBase(const SwigV8Arguments 
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_EngineHashSwig_processBase.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_processBase" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17897,8 +17901,9 @@ fail:
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17910,7 +17915,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_0(con
   int res2 = 0 ;
   ResultsDeviceDetection *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_processDeviceDetection" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -17959,11 +17964,13 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_0(con
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler)
+static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
 {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
   SWIGV8_VALUE jsresult;
@@ -17976,7 +17983,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_1(con
   int alloc2 = 0 ;
   ResultsDeviceDetection *result = 0 ;
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_EngineHash, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "EngineHashSwig_processDeviceDetection" "', argument " "1"" of type '" "EngineHash *""'"); 
   }
@@ -18025,6 +18032,7 @@ static SwigV8ReturnValue _wrap_EngineHashSwig_processDeviceDetection__SWIG_1(con
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -18071,10 +18079,11 @@ static void _wrap_delete_EngineHashSwig(const v8::WeakCallbackInfo<SWIGV8_Proxy>
 }
 
 
-static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   ResultsHashSerializer *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_ResultsHashSerializer__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_ResultsHashSerializer__SWIG_0.");
@@ -18119,13 +18128,15 @@ static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_0(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   std::size_t arg1 ;
   size_t val1 ;
   int ecode1 = 0 ;
@@ -18178,6 +18189,7 @@ static SwigV8ReturnValue _wrap_new_ResultsHashSerializer__SWIG_1(const SwigV8Arg
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -18231,7 +18243,7 @@ static SwigV8ReturnValue _wrap_ResultsHashSerializer_allValuesJson(const SwigV8A
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_ResultsHashSerializer_allValuesJson.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_ResultsHashSerializer, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_ResultsHashSerializer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ResultsHashSerializer_allValuesJson" "', argument " "1"" of type '" "ResultsHashSerializer *""'"); 
   }
@@ -18294,10 +18306,11 @@ static void _wrap_delete_ResultsHashSerializer(const v8::WeakCallbackInfo<SWIGV8
 }
 
 
-static SwigV8ReturnValue _wrap_new_Transform__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_Transform__SWIG_0(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   Transform *result;
   if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor _wrap_new_Transform__SWIG_0.");
   if(args.Length() < 0 || args.Length() > 0) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_new_Transform__SWIG_0.");
@@ -18342,13 +18355,15 @@ static SwigV8ReturnValue _wrap_new_Transform__SWIG_0(const SwigV8Arguments &args
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
-static SwigV8ReturnValue _wrap_new_Transform__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &SWIGV8_ErrorHandler) {
+static SwigV8ReturnValue _wrap_new_Transform__SWIG_1(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
   SWIGV8_HANDLESCOPE();
   
-  SWIGV8_OBJECT self = args.This();
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
   size_t arg1 ;
   size_t val1 ;
   int ecode1 = 0 ;
@@ -18401,6 +18416,7 @@ static SwigV8ReturnValue _wrap_new_Transform__SWIG_1(const SwigV8Arguments &args
   goto fail;
 fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
 }
 
 
@@ -18453,7 +18469,7 @@ static SwigV8ReturnValue _wrap_Transform_fromJsonGHEV(const SwigV8Arguments &arg
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Transform_fromJsonGHEV.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Transform_fromJsonGHEV" "', argument " "1"" of type '" "Transform *""'"); 
   }
@@ -18527,7 +18543,7 @@ static SwigV8ReturnValue _wrap_Transform_fromBase64GHEV(const SwigV8Arguments &a
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Transform_fromBase64GHEV.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Transform_fromBase64GHEV" "', argument " "1"" of type '" "Transform *""'"); 
   }
@@ -18601,7 +18617,7 @@ static SwigV8ReturnValue _wrap_Transform_fromSUA(const SwigV8Arguments &args) {
   
   if (args.Length() < 1 || args.Length() > 1) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for _wrap_Transform_fromSUA.");
   
-  res1 = SWIG_ConvertPtr(args.This(), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
+  res1 = SWIG_ConvertPtr(SWIGV8_ARGS_THIS(args), &argp1,SWIGTYPE_p_Transform, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Transform_fromSUA" "', argument " "1"" of type '" "Transform *""'"); 
   }
@@ -18926,9 +18942,9 @@ static swig_cast_info *swig_cast_initial[] = {
 
 
 SWIGRUNTIME void
-SWIG_V8_SetModule(v8::Local<v8::Context> context, swig_module_info *swig_module) {
+SWIG_V8_SetModule(v8::Local<v8::Context> context, swig_module_info *module_info) {
   v8::Local<v8::Object> global_obj = context->Global();
-  v8::Local<v8::External> mod = SWIGV8_EXTERNAL_NEW(swig_module);
+  v8::Local<v8::External> mod = SWIGV8_EXTERNAL_NEW(module_info);
   assert(!mod.IsEmpty());
   v8::Local<v8::Private> privateKey = v8::Private::ForApi(v8::Isolate::GetCurrent(), SWIGV8_STRING_NEW("swig_module_info_data"));
   global_obj->SetPrivate(context, privateKey, mod);
@@ -18956,7 +18972,7 @@ SWIG_V8_GetModule(v8::Local<v8::Context> context) {
     return 0;
   }
 
-  void *ptr = moduleinfo_extern->Value();
+  void *ptr = SWIGV8_EXTERNAL_VALUE(moduleinfo_extern);
   assert(ptr);
   swig_module_info *retptr = static_cast<swig_module_info *>(ptr);
   assert(retptr);
@@ -18967,6 +18983,11 @@ SWIG_V8_GetModule(v8::Local<v8::Context> context) {
 #define SWIG_SetModule(clientdata, pointer)       SWIG_V8_SetModule(clientdata, pointer)
 #define SWIG_INIT_CLIENT_DATA_TYPE                v8::Local<v8::Context>
 
+
+/* -----------------------------------------------------------------------------
+ * SWIG 4.5.0's swiginit.swg without SWIG_PropagateClientData, which the
+ * wrappers here never call. An unused static function is a compiler warning.
+ * ----------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
  * Type initialization:
@@ -19099,10 +19120,12 @@ extern "C" {
 SWIGINTERN int SWIG_CastCmpStruct(const void *pa, const void *pb) {
   swig_cast_info *pca = (swig_cast_info *)pa;
   swig_cast_info *pcb = (swig_cast_info *)pb;
-  if (pca->type < pcb->type)
-    return (pca->next || pcb->next == 0) ? -1 : 1;
-  if (pca->type > pcb->type)
-    return (pcb->next || pca->next == 0) ? 1 : -1;
+  /* Entries with next != 0 (newly mapped) come before entries with next == 0 (already loaded) */
+  if (!pca->next && pcb->next) return 1;
+  if (pca->next && !pcb->next) return -1;
+  /* Within the same group, sort by type pointer for binary search */
+  if (pca->type < pcb->type) return -1;
+  if (pca->type > pcb->type) return 1;
   return 0;
 }
 
@@ -19332,36 +19355,6 @@ SWIG_InitializeModule(SWIG_INIT_CLIENT_DATA_TYPE clientdata) {
   }
   printf("**** SWIG_InitializeModule: Cast List ******\n");
 #endif
-}
-
-/* This function will propagate the clientdata field of type to
-* any new swig_type_info structures that have been added into the list
-* of equivalent types.  It is like calling
-* SWIG_TypeClientData(type, clientdata) a second time.
-*/
-SWIGRUNTIME void
-SWIG_PropagateClientData(void) {
-  size_t i;
-  static int init_run = 0;
-
-  if (init_run) return;
-  init_run = 1;
-
-  for (i = 0; i < swig_module.size; i++) {
-    if (swig_module.types[i]->clientdata) {
-      swig_cast_info *head, *cast;
-      head = swig_module.types[i]->cast;
-      while (head) {
-        for (cast = head; (cast - head) <= head->value; cast++) {
-          if (!cast->converter) {
-            if (cast->type && !cast->type->clientdata)
-              SWIG_TypeClientData(cast->type, swig_module.types[i]->clientdata);
-          }
-        }
-        head = head->next;
-      }
-    }
-  }
 }
 
 #ifdef __cplusplus
@@ -20158,6 +20151,8 @@ v8::Local<v8::Object> _exports_Transform_obj = _exports_Transform_class_0->GetFu
 
   /* add static class functions and variables */
   SWIGV8_AddStaticVariable(_exports_EngineDeviceDetectionSwig_obj, "defaultElementDataKey", _wrap_EngineDeviceDetectionSwig_defaultElementDataKey_get, _wrap_EngineDeviceDetectionSwig_defaultElementDataKey_set, context);
+SWIGV8_AddStaticFunction(_exports_EngineHashSwig_obj, "getPublishedTimeFromFile", _wrap_EngineHashSwig_getPublishedTimeFromFile, context);
+SWIGV8_AddStaticFunction(_exports_EngineHashSwig_obj, "getProductFromFile", _wrap_EngineHashSwig_getProductFromFile, context);
 
 
   /* register classes */

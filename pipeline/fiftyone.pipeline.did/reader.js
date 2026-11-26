@@ -59,6 +59,7 @@ const NOT_A_51DID = Object.freeze({
  * Reads the type, the usage and the terms of a 51Did. The value may be
  * anything at all, because a 51Did arrives from outside and failing to be
  * one is an ordinary outcome, so this never throws.
+ *
  * @param {*} value a 51Did in either base 64 alphabet
  * @returns {FodIdFacts} a frozen answer
  */
