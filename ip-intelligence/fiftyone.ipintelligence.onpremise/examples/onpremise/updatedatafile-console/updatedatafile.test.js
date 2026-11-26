@@ -26,9 +26,7 @@
 // machine, which needs no real license key, so no test here reaches the
 // Distributor.
 
-const childProcess = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const example = require(path.join(__dirname, 'updatedatafile.js'));
@@ -36,6 +34,8 @@ const example = require(path.join(__dirname, 'updatedatafile.js'));
 const ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
 const DataUpdateStandIn = require(path.join(ROOT, 'pipeline',
   'fiftyone.pipeline.engines', 'tests', 'dataUpdateStandIn'));
+const ExampleProcess = require(path.join(ROOT, 'pipeline',
+  'fiftyone.pipeline.engines', 'tests', 'exampleProcess'));
 const DataFileUpdateService = require(path.join(ROOT, 'pipeline',
   'fiftyone.pipeline.engines', 'dataFileUpdateService'));
 const IpIntelligenceOnPremisePipelineBuilder = require(path.join(ROOT,
@@ -58,7 +58,12 @@ const OTHER_PRODUCT = 'V4TAC';
 const DATA_FILE = path.join(ROOT, 'cxx', 'data', 'ip-intelligence',
   '51Degrees-EnterpriseIpiV41.ipi');
 
-const TIMEOUT_MS = 20 * 60 * 1000;
+// Each run of the example copies the data file, which is several GB, three
+// times and loads it three times. The two runs took 1092 s together on a
+// hosted Windows runner, 171 s on Ubuntu and 83 s on macOS, so one run has
+// 900 s, and the test a minute more to stop it and clean up.
+const RUN_LIMIT_MS = 900 * 1000;
+const TIMEOUT_MS = RUN_LIMIT_MS + 60 * 1000;
 
 describe('the product the update example asks for', () => {
   test.each([undefined, null, ''])(
@@ -114,80 +119,48 @@ const dataFileProduct = () => {
   return product;
 };
 
-// Runs the example in its own process, so that the file watcher and the
-// polling it starts end with it. The process loads the example as a module
-// and runs it with the settings given, rather than as a person runs it,
-// which would ask whether to go on. No license key or data file setting
-// reaches it, and its temporary files go in the folder given.
-const runExample = (folder, settings) => new Promise((resolve) => {
-  const remove = new Set(['_51DEGREES_LICENSE_KEY', '_51DEGREES_IPI_PATH']);
-  const env = {};
-  for (const [name, value] of Object.entries(process.env)) {
-    if (!remove.has(name.toUpperCase())) {
-      env[name] = value;
-    }
-  }
-  // The example runs only its module part when this is set.
-  env.JEST_WORKER_ID = env.JEST_WORKER_ID || '1';
-  env.TMPDIR = env.TMP = env.TEMP = folder;
-  const script = 'const s = JSON.parse(process.argv[2]);' +
-    'require(process.argv[1]).run(s.dataFile, s.licenseKey, false, ' +
-    'process.stdout, s.product, s.dataUpdateUrl).then(' +
-    '() => process.exit(0), (e) => { console.error(e); process.exit(1); });';
-  const child = childProcess.spawn(process.execPath,
-    ['-e', script, path.join(__dirname, 'updatedatafile.js'),
-      JSON.stringify(settings)],
-    { cwd: __dirname, env });
-  let output = '';
-  child.stdout.on('data', (data) => { output += data; });
-  child.stderr.on('data', (data) => { output += data; });
-  child.on('close', (status) => resolve({ status, output }));
-});
-
 describe('the update example against a stand-in for the Distributor', () => {
   // The example copies the data file beside itself before it starts.
   const copy = DATA_FILE + '.bak';
   let folder;
   let copied;
   let standIn;
+  let running;
 
   beforeEach(() => {
-    folder = fs.mkdtempSync(path.join(os.tmpdir(), 'update-example-'));
+    folder = ExampleProcess.makeFolder(DATA_FILE);
     copied = !fs.existsSync(copy);
   });
 
-  afterEach(async () => {
-    if (standIn) {
-      await standIn.stop();
-      standIn = undefined;
-    }
-    if (copied) {
-      fs.rmSync(copy, { force: true });
-    }
-    fs.rmSync(folder, { recursive: true, force: true });
-  });
+  // The example is stopped before anything it holds open is removed. Its
+  // temporary copy of the data file is in the folder.
+  afterEach(() => ExampleProcess.cleanUp([
+    () => running && running.stop(),
+    () => standIn && standIn.stop(),
+    () => copied && fs.rmSync(copy, { force: true }),
+    () => ExampleProcess.removeFolder(folder),
+    () => { running = standIn = undefined; }
+  ]));
 
   // Runs the example on the data file, with its update URL pointed at the
   // stand-in. The data file is several gigabytes, so the stand-in answers
   // a request for a product it lists with 304 rather than serving a copy,
   // and the data file is never written. The example fails when its update
   // on start-up fails, so the update has completed when it finishes.
-  // Resolves with the requests the stand-in received.
+  // Writes the time of each step of the run, and resolves with the
+  // requests the stand-in received.
   const update = async (product, productArgument) => {
     standIn = await DataUpdateStandIn.start([product, OTHER_PRODUCT], null);
 
-    const result = await runExample(folder, {
+    running = ExampleProcess.start(path.join(__dirname, 'updatedatafile.js'), {
       dataFile: DATA_FILE,
       licenseKey: STAND_IN_KEY,
       product: productArgument,
       dataUpdateUrl: standIn.url
-    });
-
-    // What the example wrote is shown when it did not finish.
-    expect({
-      status: result.status,
-      output: result.status === 0 ? '' : result.output
-    }).toEqual({ status: 0, output: '' });
+    }, folder, RUN_LIMIT_MS);
+    await running.finished();
+    process.stdout.write(running.timeline('IP Intelligence update example, ' +
+      `product ${productArgument || 'none'}`) + '\n');
     return standIn.requests;
   };
 
