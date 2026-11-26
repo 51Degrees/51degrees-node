@@ -605,6 +605,7 @@ checked.humanConfidence            // HumanConfidence: 'High', 'Medium', 'Low'
                                    //   or 'Absent', for a valid signature
                                    //   with a licence key valid for Human
                                    //   Confidence
+checked.humanConfidenceRaw         // the humanConfidence word as sent
 checked.humanConfidenceNullReason  // why humanConfidence is not present
 ```
 
@@ -614,10 +615,11 @@ presents a licence key valid for Human Confidence, whoever holds it, and gives
 `humanConfidenceNullReason` to any other call. 'Absent' means the 51Did
 carries no Value, which is true of every 51Did made before the Value was
 added. A `humanConfidence` word this package does not know reads as 'Absent'
-too, and an answer without `humanConfidence` leaves it out. Only an HTTP 200
-can say the signature is valid. A 400 holding `valid: false` reads as
-invalid, and any other status raises `DidClientError` whatever its body
-holds. `verify` itself is unchanged and never sends the licence key.
+too, and `humanConfidenceRaw` keeps it as sent. An answer without
+`humanConfidence` leaves both out. Verify and redeem read these fields the
+same way. Only an HTTP 200 can say the signature is valid. A 400 holding
+`valid` reads as invalid whatever `valid` says, with nothing else read from
+it, and any other status raises `DidClientError` whatever its body holds. `verify` itself is unchanged and never sends the licence key.
 
 **4. Redeem a sealed creator context result.** The verify-context and
 verify-full endpoints are browser calls, because the creator context describes
@@ -669,8 +671,8 @@ used. `toJSON` leaves out `status` and the Human Confidence fields, so the
 Value reaches a page only where the server sends it.
 
 An HTTP 503 is `unconfirmed` whatever its body says, an empty body or one
-that is not JSON included, so `status` and `context` are both `unconfirmed`
-and no verdict or Value is read from it. A `humanConfidence` word this
+that is not JSON included, so `status`, `context` and `contextRaw` are all
+`unconfirmed` and nothing else is read from it. The body is kept in `raw`. A `humanConfidence` word this
 package does not know reads as 'Absent', and `humanConfidenceRaw` keeps it as
 sent. An answer without `humanConfidence` leaves both out.
 

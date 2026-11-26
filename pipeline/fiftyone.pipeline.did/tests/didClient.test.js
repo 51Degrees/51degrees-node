@@ -1284,12 +1284,19 @@ describe('DidClient verify (cloud)', () => {
     await expect(client.verify(fod)).resolves.toBe(false);
   });
 
-  test('valid true on any status but 200 raises DidClientError', async () => {
-    for (const status of [201, 400, 401, 403, 404, 500, 503]) {
+  test('valid true on any status but 200 or 400 raises DidClientError', async () => {
+    for (const status of [201, 401, 403, 404, 500, 503]) {
       const { client } = verifyClient(status, { valid: true });
       await expect(client.verify(fod)).rejects.toMatchObject({
         name: 'DidClientError', statusCode: status
       });
+    }
+  });
+
+  test('400 is invalid whatever valid says', async () => {
+    for (const valid of [true, false, 'true', null]) {
+      const { client } = verifyClient(400, { valid });
+      await expect(client.verify(fod)).resolves.toBe(false);
     }
   });
 
@@ -1345,7 +1352,7 @@ describe('DidClient verifyDetailed', () => {
       valid: true, humanConfidence: 'High'
     }, { licenceKey: LICENCE });
     await expect(client.verifyDetailed(fod)).resolves.toEqual({
-      valid: true, humanConfidence: HumanConfidence.HIGH
+      valid: true, humanConfidence: HumanConfidence.HIGH, humanConfidenceRaw: 'High'
     });
     expect(fetch.calls).toHaveLength(1);
     const call = fetch.calls[0];
@@ -1371,7 +1378,7 @@ describe('DidClient verifyDetailed', () => {
     }));
     const client = new DidClient({ endpoint: ENDPOINT, licenceKey: LICENCE, fetch });
     await expect(client.verifyDetailed(fod)).resolves.toEqual({
-      valid: true, humanConfidence: HumanConfidence.ABSENT
+      valid: true, humanConfidence: HumanConfidence.ABSENT, humanConfidenceRaw: 'Absent'
     });
     const form = new URLSearchParams(fetch.calls[0].init.body);
     expect(form.has('resource')).toBe(false);
@@ -1402,14 +1409,47 @@ describe('DidClient verifyDetailed', () => {
     }
   });
 
-  test('a Value this package does not know reads as Absent', async () => {
-    for (const word of ['Splendid', '', 7, true, {}]) {
+  test('a Value this package does not know reads as Absent and keeps the word', async () => {
+    for (const [word, raw] of [
+      ['Splendid', 'Splendid'],
+      ['', ''],
+      [7, undefined],
+      [true, undefined],
+      [{}, undefined]
+    ]) {
       const { client } = verifyClient(200, {
         valid: true, humanConfidence: word
       }, { licenceKey: LICENCE });
-      await expect(client.verifyDetailed(fod)).resolves.toEqual({
-        valid: true, humanConfidence: HumanConfidence.ABSENT
-      });
+      const answer = await client.verifyDetailed(fod);
+      expect(answer.humanConfidence).toBe(HumanConfidence.ABSENT);
+      expect(answer.humanConfidenceRaw).toBe(raw);
+      expect(Object.prototype.hasOwnProperty.call(answer, 'humanConfidenceRaw'))
+        .toBe(raw !== undefined);
+    }
+  });
+
+  test('verify and redeem read the Human Confidence fields the same way', async () => {
+    for (const fields of [
+      { humanConfidence: 'High' },
+      { humanConfidence: 'low' },
+      { humanConfidence: 'Splendid' },
+      { humanConfidence: 7 },
+      { humanConfidence: null },
+      { humanConfidenceNullReason: NULL_REASON },
+      { humanConfidenceNullReason: '' },
+      {}
+    ]) {
+      const { client } = verifyClient(200, Object.assign({ valid: true }, fields));
+      const verified = await client.verifyDetailed(fod);
+      const redeemed = RedeemResult.fromResponse(200, JSON.stringify(
+        Object.assign({
+          signature: 'verified', context: 'verified', status: 'success'
+        }, fields)));
+      for (const name of [
+        'humanConfidence', 'humanConfidenceRaw', 'humanConfidenceNullReason'
+      ]) {
+        expect([name, verified[name]]).toEqual([name, redeemed[name]]);
+      }
     }
   });
 
@@ -1443,8 +1483,17 @@ describe('DidClient verifyDetailed', () => {
     await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
   });
 
-  test('valid true on any status but 200 raises DidClientError', async () => {
-    for (const status of [201, 400, 403, 500, 503]) {
+  test('400 holding valid true reads as invalid with nothing else read', async () => {
+    const { client } = verifyClient(400, {
+      valid: true,
+      humanConfidence: 'High',
+      humanConfidenceNullReason: NULL_REASON
+    }, { licenceKey: LICENCE });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
+  });
+
+  test('valid true on any status but 200 or 400 raises DidClientError', async () => {
+    for (const status of [201, 403, 500, 503]) {
       const { client } = verifyClient(status, {
         valid: true, humanConfidence: 'High'
       }, { licenceKey: LICENCE });
@@ -1921,6 +1970,7 @@ describe('DidClient redeem', () => {
         context: 'verified',
         status: 'success',
         humanConfidence: 'High',
+        humanConfidenceNullReason: 'not licensed',
         factors: { transport: 'verified' },
         verifiedAt: '2026-08-07T09:15:32Z',
         secondsSinceVerified: 2
@@ -1937,8 +1987,11 @@ describe('DidClient redeem', () => {
       expect(result.statusCode).toBe(503);
       expect(result.status).toBe(RedeemStatus.UNCONFIRMED);
       expect(result.context).toBe(ContextResult.UNCONFIRMED);
+      expect(result.contextRaw).toBe('unconfirmed');
       expect(result.signature).toBe(SignatureResult.UNKNOWN);
       expect(result.humanConfidence).toBeUndefined();
+      expect(result.humanConfidenceRaw).toBeUndefined();
+      expect(result.humanConfidenceNullReason).toBeUndefined();
       expect(result.factors).toBeUndefined();
       expect(result.verifiedAt).toBeUndefined();
       expect(result.secondsSinceVerified).toBeUndefined();
@@ -1947,10 +2000,11 @@ describe('DidClient redeem', () => {
     }
   });
 
-  test('503 keeps the context it was sent in contextRaw', async () => {
+  test('503 reads no context from its body', async () => {
     const { client } = redeemClient(503, { context: 'verified' });
     const result = await client.redeem(fod, RESULT, TRANSACTION);
-    expect(result.contextRaw).toBe('verified');
+    expect(result.contextRaw).toBe('unconfirmed');
+    expect(result.raw).toBe('{"context":"verified"}');
     expect(result.toJSON()).toEqual({ context: 'unconfirmed' });
   });
 

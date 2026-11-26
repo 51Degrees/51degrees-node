@@ -59,6 +59,12 @@ export type CloudVerification = {
      */
     humanConfidence?: string;
     /**
+     * the `humanConfidence` string
+     * exactly as the cloud sent it, kept so a word this package does not know is
+     * still visible. Not present where the answer has no such string.
+     */
+    humanConfidenceRaw?: string;
+    /**
      * why `humanConfidence` is
      * not present, as the cloud gives it to a call that did not present such a
      * key
@@ -140,6 +146,9 @@ export type DidClientOptions = {
  * the call presented a License Key valid for Human Confidence. A word this
  * package does not know reads as `Absent`. Not present where the answer has
  * no `humanConfidence`.
+ * @property {string} [humanConfidenceRaw] the `humanConfidence` string
+ * exactly as the cloud sent it, kept so a word this package does not know is
+ * still visible. Not present where the answer has no such string.
  * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
  * not present, as the cloud gives it to a call that did not present such a
  * key
@@ -432,20 +441,23 @@ export class DidClient {
  */
 export class RedeemResult {
     /**
-     * Builds a result from a redeem response body. A 503 is `unconfirmed`
-     * whatever its body holds, an empty body or one that is not JSON
-     * included.
+     * Builds a result from a redeem response body. This is the one place a
+     * 503 is handled. A 503 means first use could not be confirmed, whatever
+     * its body holds, so it is `unconfirmed` in both `status` and `context`,
+     * and nothing else is read from the body, which may be empty, not JSON,
+     * or claim another outcome. The body is kept in `raw`.
      * @param {number} statusCode the HTTP status
      * @param {string} raw the response body
      * @returns {RedeemResult} the typed result
      */
     static fromResponse(statusCode: number, raw: string): RedeemResult;
     /**
-     * Reads the typed fields out of the parsed body. A 503 is `unconfirmed`
-     * whatever its body says, so no verdict is read from it.
+     * Reads the typed fields out of the fields given. Build a result with
+     * {@link RedeemResult.fromResponse}, which decides what is read from the
+     * body and so handles a 503.
      * @param {number} statusCode the HTTP status, 200 or 503
      * @param {string} raw the response body as received
-     * @param {object} parsed the body parsed as JSON
+     * @param {object} parsed the fields to read
      */
     constructor(statusCode: number, raw: string, parsed: object);
     /** @type {number} the HTTP status the cloud answered with */
@@ -454,7 +466,8 @@ export class RedeemResult {
     raw: string;
     /**
      * @type {string} the `context` string exactly as the cloud sent it,
-     * kept so an outcome this package does not know is still visible
+     * kept so an outcome this package does not know is still visible. On an
+     * HTTP 503 it is `unconfirmed`, whatever the body says.
      */
     contextRaw: string;
     /**
