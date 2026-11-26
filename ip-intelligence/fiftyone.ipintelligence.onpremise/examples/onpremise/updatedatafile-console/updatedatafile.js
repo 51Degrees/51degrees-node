@@ -381,16 +381,19 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     .then(() => {
       output.write('Modifying downloaded file to trigger reload - please wait for that' +
         ' to complete\n');
-      // In this example we set a timeout to make sure node waits for the promise
-      // to complete. Without this, node exits without waiting for the promise.
-      // This is not a neat way of achieving this, but for now it makes the
-      // example run as intended.
-      const timeoutId = setTimeout(() => {
-        output.write('Update on file modification timed out\n');
-      }, 60 * 1000);
+      // The example waits a minute for the reload, and fails if it has not
+      // happened by then, rather than waiting for ever. The timer also keeps
+      // node running until the reload has happened.
+      let timeoutId;
+      const timedOut = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => {
+          output.write('Update on file modification timed out\n');
+          reject(new Error('Timed out waiting for the engine to refresh data'));
+        }, 60 * 1000);
+      });
       // The wait is set up before the file is touched, so that the reload
       // it triggers cannot be missed.
-      const reloaded = whenUpdateEnds()
+      const reloaded = Promise.race([whenUpdateEnds(), timedOut])
         .then(status => {
           clearTimeout(timeoutId);
           output.write(`Update on file modification complete - status: ${status}\n`);

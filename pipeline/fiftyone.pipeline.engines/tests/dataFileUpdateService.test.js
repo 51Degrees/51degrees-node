@@ -499,3 +499,38 @@ test('watched and scheduled data files can be collected once dropped',
     // The folder is left in place, as in the watcher tests above.
     expect(collected).toBe(2);
   });
+
+/**
+ * A data file whose path is a symbolic link is refreshed when the file the
+ * link points to changes. On Windows fs.watch watches the folder of the
+ * path, which holds only the link, so the file it points to is watched too.
+ * The test checks both are watched, which it can on every system, and that
+ * a change to the file pointed to is applied.
+ */
+test('file watcher watches the file a symbolic link points to', async () => {
+  const { folder, file } = newDataFile('watcher-link-');
+  const link = path.join(folder, 'link.dat');
+  fs.symlinkSync(file, link, 'file');
+  const watch = jest.spyOn(fs, 'watch');
+  const updateService = new DataFileUpdateService({ log: () => {} });
+  const dataFile = Object.assign(standInDataFile(link),
+    { fileSystemWatcher: true });
+
+  try {
+    updateService.registerDataFile(dataFile);
+    expect(watch.mock.calls.map((call) => call[0]))
+      .toEqual([link, fs.realpathSync(file)]);
+    // On macOS fs.watch can miss a change made straight after it starts.
+    await sleep(500);
+
+    const refreshed = next(updateService,
+      AutoUpdateStatus.AUTO_UPDATE_SUCCESS);
+    fs.writeFileSync(file, 'version 2');
+    await refreshed;
+    expect(dataFile.data).toBe('version 2');
+  } finally {
+    watch.mockRestore();
+    // The folder is left in place, as in the watcher tests above.
+    dataFile.finished = true;
+  }
+});

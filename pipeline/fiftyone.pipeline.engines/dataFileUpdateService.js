@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const fs = require('fs');
+const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const https = require('https');
@@ -333,9 +334,9 @@ const ifModifiedSince = function (dataFile) {
 // the native memory and file handles of its engine, alive until the process
 // ends, because nothing stops them.
 
-// Closes the watcher of a data file once the data file has been collected.
+// Closes the watchers of a data file once the data file has been collected.
 const watchersToClose = new FinalizationRegistry(
-  (watcher) => watcher.close());
+  (watchers) => watchers.forEach((watcher) => watcher.close()));
 
 /**
  * Updates the data file once the interval has passed, unless the update
@@ -396,6 +397,21 @@ const applyWatchedChange = function (serviceRef, dataFileRef, file) {
 };
 
 /**
+ * The full path of the file a path names, following symbolic links, or the
+ * full path itself where it cannot be followed.
+ *
+ * @param {string} file the path
+ * @returns {string} the full path of the file
+ */
+const realPath = function (file) {
+  try {
+    return fs.realpathSync(file);
+  } catch (e) {
+    return path.resolve(file);
+  }
+};
+
+/**
  * Refreshes the data file whenever the file at its path changes, until the
  * update service or the data file has been collected. fs.watch goes on
  * watching after a change that failed, so a later file is picked up.
@@ -408,11 +424,12 @@ const watchDataFile = function (serviceRef, dataFileRef) {
   if (!watched) {
     return;
   }
-  const watcher = fs.watch(watched.path, { persistent: false }, function () {
+  const watchers = [];
+  const changed = function () {
     const service = serviceRef.deref();
     const dataFile = dataFileRef.deref();
     if (!service || !dataFile) {
-      watcher.close();
+      watchers.forEach((watcher) => watcher.close());
       return;
     }
     if (!dataFile.updating) {
@@ -426,12 +443,25 @@ const watchDataFile = function (serviceRef, dataFileRef) {
       // nothing left to do.
       service.complete(dataFile, AutoUpdateStatus.AUTO_UPDATE_IN_PROGRESS);
     }
-  });
+  };
+  watchers.push(fs.watch(watched.path, { persistent: false }, changed));
+  // On Windows fs.watch watches the folder that holds the path, so where
+  // the path is a symbolic link, a change to the file it points to raises
+  // no event. That file is watched as well. Both watchers raise events for
+  // one change on other systems, which the check above takes as one.
+  const target = realPath(watched.path);
+  if (target !== path.resolve(watched.path)) {
+    try {
+      watchers.push(fs.watch(target, { persistent: false }, changed));
+    } catch (e) {
+      // The path itself is still watched.
+    }
+  }
   const service = serviceRef.deref();
   if (service) {
     service.log('info', 'Creating file system watcher');
   }
-  watchersToClose.register(watched, watcher);
+  watchersToClose.register(watched, watchers);
 };
 
 /**
