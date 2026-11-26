@@ -3,7 +3,9 @@
  * fragments for JavaScript, so a fragment here replaces SWIG 4.5.0's
  * fragment of the same name. Each one converts between types explicitly,
  * and checks the range where a value might not fit, so the generated
- * wrapper builds with no conversion warning.
+ * wrapper builds with no conversion warning. No fragment here asks for
+ * another that its code does not call, so a wrapper holds no function it
+ * does not use, which is a compiler warning.
  * ----------------------------------------------------------------------------- */
 
 /* An int is read from a JavaScript number that fits in one. */
@@ -38,6 +40,81 @@ int SWIG_AsVal_dec(double)(SWIGV8_VALUE obj, double *val)
 }
 }
 
+/* The integer readers below are SWIG 4.5.0's, without the
+   SWIG_CanCastAsInteger fragment and the other readers they ask for but do
+   not call. */
+%fragment(SWIG_AsVal_frag(long),"header") {
+SWIGINTERN
+int SWIG_AsVal_dec(long)(SWIGV8_VALUE obj, long* val)
+{
+  if (!obj->IsNumber()) {
+    return SWIG_TypeError;
+  }
+  if(val) *val = (long) SWIGV8_INTEGER_VALUE(obj);
+
+  return SWIG_OK;
+}
+}
+
+%fragment(SWIG_AsVal_frag(unsigned long),"header") {
+SWIGINTERN
+int SWIG_AsVal_dec(unsigned long)(SWIGV8_VALUE obj, unsigned long *val)
+{
+  if(!obj->IsNumber()) {
+    return SWIG_TypeError;
+  }
+
+  long longVal = (long) SWIGV8_NUMBER_VALUE(obj);
+
+  if(longVal < 0) {
+      return SWIG_OverflowError;
+  }
+
+  if(val) *val = longVal;
+
+  return SWIG_OK;
+}
+}
+
+%fragment(SWIG_AsVal_frag(long long),"header",
+    fragment="SWIG_LongLongAvailable") {
+%#ifdef SWIG_LONG_LONG_AVAILABLE
+SWIGINTERN
+int SWIG_AsVal_dec(long long)(SWIGV8_VALUE obj, long long* val)
+{
+  if (!obj->IsNumber()) {
+    return SWIG_TypeError;
+  }
+  if(val) *val = (long long) SWIGV8_INTEGER_VALUE(obj);
+
+  return SWIG_OK;
+}
+%#endif
+}
+
+%fragment(SWIG_AsVal_frag(unsigned long long),"header",
+    fragment="SWIG_LongLongAvailable") {
+%#ifdef SWIG_LONG_LONG_AVAILABLE
+SWIGINTERN
+int SWIG_AsVal_dec(unsigned long long)(SWIGV8_VALUE obj, unsigned long long *val)
+{
+  if(!obj->IsNumber()) {
+    return SWIG_TypeError;
+  }
+
+  long long longVal = (long long) SWIGV8_NUMBER_VALUE(obj);
+
+  if(longVal < 0) {
+      return SWIG_OverflowError;
+  }
+
+  if(val) *val = longVal;
+
+  return SWIG_OK;
+}
+%#endif
+}
+
 /* A long becomes a JavaScript number, a double. */
 %fragment(SWIG_From_frag(long),"header") {
 SWIGINTERNINLINE
@@ -49,8 +126,7 @@ SWIGV8_VALUE SWIG_From_dec(long)(long value)
 
 /* An unsigned long becomes a JavaScript integer when it fits in 32 bits,
    and a JavaScript number otherwise. */
-%fragment(SWIG_From_frag(unsigned long),"header",
-          fragment=SWIG_From_frag(long)) {
+%fragment(SWIG_From_frag(unsigned long),"header") {
 SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_dec(unsigned long)(unsigned long value)
 {
@@ -62,7 +138,6 @@ SWIGV8_VALUE SWIG_From_dec(unsigned long)(unsigned long value)
 
 /* A long long becomes a JavaScript number, a double. */
 %fragment(SWIG_From_frag(long long),"header",
-    fragment=SWIG_From_frag(long),
     fragment="SWIG_LongLongAvailable") {
 %#ifdef SWIG_LONG_LONG_AVAILABLE
 SWIGINTERNINLINE
@@ -76,7 +151,6 @@ SWIGV8_VALUE SWIG_From_dec(long long)(long long value)
 /* An unsigned long long becomes a JavaScript integer when it fits in 32
    bits, and a JavaScript number otherwise. */
 %fragment(SWIG_From_frag(unsigned long long),"header",
-    fragment=SWIG_From_frag(long long),
     fragment="SWIG_LongLongAvailable") {
 %#ifdef SWIG_LONG_LONG_AVAILABLE
 SWIGINTERNINLINE
