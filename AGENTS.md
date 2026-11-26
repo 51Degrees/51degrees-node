@@ -236,6 +236,8 @@ reads its key from `_51DEGREES_RESOURCE_KEY` instead.
   `win_warn_as_error`, and with `-Wall -Werror` on Linux and macOS, and turn
   no warning off, so a compiler newer than the one CI uses can stop the build
   on a new warning. Fix the code that gives it rather than turning it off.
+  Only Node's own headers are quiet, as they are compiled as system headers
+  (`-isystem`, and MSVC's `/external:I` with `/external:W0`).
 - **An older node-gyp.** Use node-gyp 12 through `npx`, as above. The comment
   in `ci/build-extension.ps1` says older versions do not recognise Visual
   Studio 2026.

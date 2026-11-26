@@ -40,6 +40,38 @@
         'mac_specific_flags': [
             "-arch x86_64",
             "-arch arm64"
+        ],
+        # Node's own headers, and the other folders node-gyp puts on the
+        # include path of every addon, are compiled as system headers, which
+        # MSVC calls external headers. Node's headers warn at the warning
+        # level these targets build with, and they are not ours to change.
+        # Only those folders are quiet, so cxx and the wrappers still build
+        # with warnings as errors. node-gyp still passes each folder with -I
+        # as well, and gcc and clang search a folder given both ways as a
+        # system folder.
+        'node_system_include_flags': [
+            '-isystem<(node_root_dir)/include/node',
+            '-isystem<(node_root_dir)/src',
+            '-isystem<(node_root_dir)/deps/openssl/config',
+            '-isystem<(node_root_dir)/deps/openssl/openssl/include',
+            '-isystem<(node_root_dir)/deps/uv/include',
+            '-isystem<(node_root_dir)/deps/zlib',
+            '-isystem<(node_root_dir)/deps/v8/include'
+        ],
+        # MSVC reports no warning from a header under an /external:I folder
+        # when /external:W0 is given. /external:templates- is left out, so
+        # Node's templates are also quiet where the wrapper uses them, as
+        # they are with gcc and clang. The folders are quoted in case the
+        # path has spaces.
+        'win_node_external_include_flags': [
+            '/external:W0',
+            '/external:I"<(node_root_dir)/include/node"',
+            '/external:I"<(node_root_dir)/src"',
+            '/external:I"<(node_root_dir)/deps/openssl/config"',
+            '/external:I"<(node_root_dir)/deps/openssl/openssl/include"',
+            '/external:I"<(node_root_dir)/deps/uv/include"',
+            '/external:I"<(node_root_dir)/deps/zlib"',
+            '/external:I"<(node_root_dir)/deps/v8/include"'
         ]
     },
     # Node's own build settings turn some warnings off for every addon. They
@@ -201,6 +233,12 @@
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
+                                    ],
+                                    # Node's headers are external headers.
+                                    # The exclude patterns in target_defaults
+                                    # do not match these options.
+                                    'AdditionalOptions': [
+                                        '<@(win_node_external_include_flags)'
                                     ]
                                 },
                                 'VCLinkerTool': {
@@ -219,6 +257,12 @@
                                     'WarnAsError': '<(win_warn_as_error)',
                                     'PreprocessorDefinitions': [
                                         '<@(encoding)'
+                                    ],
+                                    # Node's headers are external headers.
+                                    # The exclude patterns in target_defaults
+                                    # do not match these options.
+                                    'AdditionalOptions': [
+                                        '<@(win_node_external_include_flags)'
                                     ]
                                 },
                                 'VCLinkerTool': {
@@ -239,11 +283,15 @@
                         "CLANG_CXX_LANGUAGE_STANDARD": '<(wrapper_mac_cpp_std)',
                         "OTHER_CFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)'
+                            '<@(mac_specific_flags)',
+                            # Node's headers are system headers.
+                            '<@(node_system_include_flags)'
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)'
+                            '<@(mac_specific_flags)',
+                            # Node's headers are system headers.
+                            '<@(node_system_include_flags)'
                         ],
                         "OTHER_LDFLAGS": [
                             '<@(mac_specific_flags)'
@@ -257,7 +305,9 @@
                     # none of its own.
                     'cflags_c': ['<(linux_c_std)'],
                     'cflags': [
-                        '<@(linux_mac_c_common_flags)'
+                        '<@(linux_mac_c_common_flags)',
+                        # Node's headers are system headers.
+                        '<@(node_system_include_flags)'
                     ],
                     'libraries': ["-latomic"]
                 }]
