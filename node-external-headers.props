@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Read by both native addons on Windows. Node's own headers are given to MSVC
+  as external headers (/external:I in each binding.51d), and this turns off
+  warnings in external headers only. MSBuild sets the external warning level
+  itself, so it is set here rather than as a compiler option, which MSVC would
+  report as overriding MSBuild's.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

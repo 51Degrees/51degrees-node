@@ -191,6 +191,20 @@
             'conditions': [
                 ['OS=="win"', {
                     'libraries': ['<(core_lib_name).lib'],
+                    # Node's own headers (Node, V8, libuv and OpenSSL, all in
+                    # its include folder) are read as external headers, so
+                    # the compiler does not report warnings in code this
+                    # repository cannot change. This repository's code, the
+                    # cxx code and the wrapper keep every warning as an error.
+                    'msvs_settings': {
+                        'VCCLCompilerTool': {
+                            'AdditionalOptions': [
+                                '/external:I<(node_root_dir)/include/node'
+                            ]
+                        }
+                    },
+                    # Sets the warning level of external headers to none.
+                    'msbuild_props': ['../../node-external-headers.props'],
                     'configurations': {
                         'Debug': {
                             'msvs_settings': {
@@ -243,7 +257,10 @@
                         ],
                         "OTHER_CPLUSPLUSFLAGS": [
                             '<@(linux_mac_c_common_flags)',
-                            '<@(mac_specific_flags)'
+                            '<@(mac_specific_flags)',
+                            # Node's own headers are system headers, as on
+                            # Windows.
+                            '-isystem<(node_root_dir)/include/node'
                         ],
                         "OTHER_LDFLAGS": [
                             '<@(mac_specific_flags)'
@@ -256,6 +273,8 @@
                     # C++17 before Node 23 and C++20 from Node 23, so it adds
                     # none of its own.
                     'cflags_c': ['<(linux_c_std)'],
+                    # Node's own headers are system headers, as on Windows.
+                    'cflags_cc': ['-isystem<(node_root_dir)/include/node'],
                     'cflags': [
                         '<@(linux_mac_c_common_flags)'
                     ],
