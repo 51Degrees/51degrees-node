@@ -58,13 +58,12 @@
             '-isystem<(node_root_dir)/deps/zlib',
             '-isystem<(node_root_dir)/deps/v8/include'
         ],
-        # MSVC reports no warning from a header under an /external:I folder
-        # when /external:W0 is given. /external:templates- is left out, so
-        # Node's templates are also quiet where the wrapper uses them, as
-        # they are with gcc and clang. The folders are quoted in case the
-        # path has spaces.
+        # MSVC reports no warning from a header under an /external:I folder,
+        # as external-headers.props sets the external warning level to off.
+        # /external:templates- is left out, so Node's templates are also
+        # quiet where the wrapper uses them, as they are with gcc and clang.
+        # The folders are quoted in case the path has spaces.
         'win_node_external_include_flags': [
-            '/external:W0',
             '/external:I"<(node_root_dir)/include/node"',
             '/external:I"<(node_root_dir)/src"',
             '/external:I"<(node_root_dir)/deps/openssl/config"',
@@ -225,6 +224,9 @@
                     'libraries': ['<(core_lib_name).lib'],
                     'configurations': {
                         'Debug': {
+                            # MSBuild's external warning level for Node's
+                            # headers. gyp has no setting for it.
+                            'msbuild_props': ['external-headers.props'],
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
                                     'LanguageStandard': '<(wrapper_win_cpp_std)',
@@ -236,7 +238,9 @@
                                     ],
                                     # Node's headers are external headers.
                                     # The exclude patterns in target_defaults
-                                    # do not match these options.
+                                    # do not match these options, and
+                                    # external-headers.props turns their
+                                    # warnings off.
                                     'AdditionalOptions': [
                                         '<@(win_node_external_include_flags)'
                                     ]
@@ -249,6 +253,9 @@
                             }
                         },
                         'Release': {
+                            # MSBuild's external warning level for Node's
+                            # headers. gyp has no setting for it.
+                            'msbuild_props': ['external-headers.props'],
                             'msvs_settings': {
                                 'VCCLCompilerTool': {
                                     'LanguageStandard': '<(wrapper_win_cpp_std)',
@@ -260,7 +267,9 @@
                                     ],
                                     # Node's headers are external headers.
                                     # The exclude patterns in target_defaults
-                                    # do not match these options.
+                                    # do not match these options, and
+                                    # external-headers.props turns their
+                                    # warnings off.
                                     'AdditionalOptions': [
                                         '<@(win_node_external_include_flags)'
                                     ]
