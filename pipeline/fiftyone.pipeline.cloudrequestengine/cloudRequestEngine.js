@@ -255,6 +255,40 @@ function holdsPerRequestValue (data) {
   }
 }
 
+// The element data made for a request that carried browser test answers,
+// which is never stored in the cache.
+const madeWithAnswers = new WeakSet();
+
+/**
+ * Whether a request carries a value the client script writes, being a
+ * query or cookie value whose name starts 51D_, that the cloud's evidence
+ * keys do not list. The browser test answers come back under such names,
+ * which change each time the tests are served, so no list of keys can hold
+ * them and the cache key, made from the listed keys, can't tell a request
+ * carrying them from one that doesn't. The device snippets' values, which
+ * the list does hold, are in the cache key already.
+ *
+ * @param {CloudRequestEngine} engine the engine whose keys are checked
+ * @param {FlowData} flowData the request
+ * @returns {boolean} true where the request carries such a value
+ */
+function carriesUnlistedAnswers (engine, flowData) {
+  const evidence = flowData.evidence;
+  const unaccepted = typeof evidence.getUnaccepted === 'function'
+    ? evidence.getUnaccepted()
+    : {};
+  for (const source of [evidence.getAll(), unaccepted]) {
+    for (const key of Object.keys(source)) {
+      const lower = key.toLowerCase();
+      if ((lower.startsWith('query.51d_') || lower.startsWith('cookie.51d_')) &&
+        !engine.evidenceKeyFilter.filterEvidenceKey(key)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Engine that makes a call to the 51Degrees cloud service
 // Returns raw JSON as a "cloud" property under "cloud" dataKey
 class CloudRequestEngine extends Engine {
@@ -464,7 +498,26 @@ class CloudRequestEngine extends Engine {
       contents: { properties: this.properties }
     });
     data.addLazyProperty('cloud', this.getData(flowData));
+    if (this.cache && carriesUnlistedAnswers(this, flowData)) {
+      madeWithAnswers.add(data);
+    }
     flowData.setElementData(data);
+  }
+
+  /**
+   * A request carrying the browser test answers is never answered from the
+   * cache (see carriesUnlistedAnswers), so the answers always reach the
+   * cloud.
+   *
+   * @param {FlowData} flowData the request
+   * @param {string} [key] its cache key
+   * @returns {boolean} whether it was answered from the cache
+   */
+  inCache (flowData, key) {
+    if (carriesUnlistedAnswers(this, flowData)) {
+      return false;
+    }
+    return super.inCache(flowData, key);
   }
 
   /**
@@ -495,9 +548,10 @@ class CloudRequestEngine extends Engine {
   /**
    * A response that holds a value made for the one request that asked for
    * it, being a 51Did, the browser tests or a sealed Human Confidence result
-   * (see holdsPerRequestValue), is neither stored in the cache nor served
-   * from it. The answer is worked out once for each element data, so a
-   * cache hit does not parse the response again.
+   * (see holdsPerRequestValue), or one made for a request carrying the
+   * browser test answers, is neither stored in the cache nor served from
+   * it. The answer is worked out once for each element data, so a cache hit
+   * does not parse the response again.
    *
    * @param {object} data the element data of a response
    * @returns {boolean} false if the response holds such a value
@@ -505,6 +559,9 @@ class CloudRequestEngine extends Engine {
   isCacheable (data) {
     if (data === null || typeof data !== 'object') {
       return true;
+    }
+    if (madeWithAnswers.has(data)) {
+      return false;
     }
     let cacheable = cacheableData.get(data);
     if (cacheable === undefined) {

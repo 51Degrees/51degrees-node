@@ -73,7 +73,9 @@ const keys = [
   'query.client-ip',
   'query.ja4',
   'query.h2',
-  'query.id.usage'
+  'query.id.usage',
+  'query.51D_ScreenPixelsWidth',
+  'cookie.51D_ScreenPixelsWidth'
 ];
 
 // The first iteration hands out the browser tests and holds the 51Did back.
@@ -297,6 +299,39 @@ describe('server route browser tests', () => {
     await iteration(pipeline, {});
     expect(client.posts).toHaveLength(3);
   });
+
+  // A plain answer already in the cache has the same cache key as the
+  // iteration carrying the answers, whose names the cloud doesn't list.
+  test('never answers the iteration carrying the answers from the cache',
+    async () => {
+      const plain = {
+        derived: { humanconfidence: 'Medium', humanconfidencesource: 'Passive' },
+        javascriptProperties: []
+      };
+      const client = new IterationsClient([plain, carriesAnswers, plain]);
+      const pipeline = await build(client, new LruCache({ size: 10 }));
+      const first = await iteration(pipeline, {});
+      const second = await iteration(pipeline, pageCallback(first, answers));
+      expect(client.posts).toHaveLength(2);
+      expect(client.posts[1].content['51D_BrowserTestsAnswer']).toBe('answer');
+      expect(second.derived.humanconfidencesource.value).toBe('Active');
+      // Nor is what it got stored for the next.
+      await iteration(pipeline, pageCallback(first, answers));
+      expect(client.posts).toHaveLength(3);
+    });
+
+  test('still caches a request whose snippet values the cloud lists',
+    async () => {
+      const plain = {
+        derived: { humanconfidence: 'Medium', humanconfidencesource: 'Passive' },
+        javascriptProperties: []
+      };
+      const client = new IterationsClient([plain]);
+      const pipeline = await build(client, new LruCache({ size: 10 }));
+      await iteration(pipeline, { 'cookie.51D_ScreenPixelsWidth': '1920' });
+      await iteration(pipeline, { 'cookie.51D_ScreenPixelsWidth': '1920' });
+      expect(client.posts).toHaveLength(1);
+    });
 
   test('still serves an answer with nothing made for one visitor from the ' +
     'cache', async () => {
