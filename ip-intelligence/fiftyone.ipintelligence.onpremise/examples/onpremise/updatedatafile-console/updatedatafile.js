@@ -268,16 +268,18 @@ const run = async function (dataFilePath, licenseKey, interactive, output,
     return;
   }
 
-  // work out where the downloaded file will be put, directory must exist
-  if (dataFilePath) {
-    try {
+  // work out where the downloaded file will be put, directory must exist.
+  // A path to a file that exists is used as it is, and a file name alone
+  // is looked for in the folders around this one. The file is downloaded
+  // to any other path.
+  if (dataFilePath && !fs.existsSync(dataFilePath)) {
+    if (path.basename(dataFilePath) === dataFilePath) {
       dataFilePath = ExampleUtils.findFile(dataFilePath);
-    } catch (e) {
-      if (fs.existsSync(path.dirname(dataFilePath))) {
-        console.error('The directory must exist when specifying a location for a new ' +
-          `file to be downloaded. Path specified was '${dataFilePath}'`);
-        throw new Error('Directory for new file must exist');
-      }
+    } else if (!fs.existsSync(path.dirname(dataFilePath))) {
+      console.error('The directory must exist when specifying a location for a new ' +
+        `file to be downloaded. Path specified was '${dataFilePath}'`);
+      throw new Error('Directory for new file must exist');
+    } else {
       console.warn(`File ${dataFilePath} not found, a file will be downloaded to that location on ` +
         'start-up');
     }
