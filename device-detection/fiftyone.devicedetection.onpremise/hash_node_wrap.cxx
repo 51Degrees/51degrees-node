@@ -13,6 +13,8 @@
  * when the wrappers are generated with -I../../swig. It no longer turns
  * off MSVC's unused function warning, the C and C++ runtime deprecation
  * warnings, or an Intel compiler warning, so the wrapper shows them all.
+ * SWIGUNUSED is empty for every compiler, so gcc and clang also report a
+ * function in the wrapper that nothing uses.
  */
 /* -----------------------------------------------------------------------------
  *  This section contains generic SWIG labels for method/variable
@@ -41,20 +43,9 @@
 # endif
 #endif
 
-/* attribute recognised by some compilers to avoid 'unused' warnings */
-#ifndef SWIGUNUSED
-# if defined(__GNUC__)
-#   if !(defined(__cplusplus)) || (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
-#     define SWIGUNUSED __attribute__ ((__unused__))
-#   else
-#     define SWIGUNUSED
-#   endif
-# elif defined(__ICC) || defined (__clang__)
-#   define SWIGUNUSED __attribute__ ((__unused__))
-# else
-#   define SWIGUNUSED
-# endif
-#endif
+/* No compiler is told that a function or parameter is unused, so every
+ * unused one is reported. */
+#define SWIGUNUSED
 
 #ifndef SWIGUNUSEDPARM
 # ifdef __cplusplus
@@ -177,9 +168,10 @@
 
 /* -----------------------------------------------------------------------------
  * SWIG 4.5.0's swigrun.swg without the functions the wrappers here never
- * call: SWIG_TypeDynamicCast, SWIG_TypePrettyName, SWIG_TypeNewClientData,
- * and the packing helpers from SWIG_PackData to SWIG_UnpackDataName. An
- * unused static function is a compiler warning.
+ * call: SWIG_TypeDynamicCast, SWIG_TypeName, SWIG_TypePrettyName,
+ * SWIG_TypeClientData, SWIG_TypeNewClientData, and the packing helpers from
+ * SWIG_PackData to SWIG_UnpackDataName. An unused static function is a
+ * compiler warning.
  * ----------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
@@ -607,37 +599,6 @@ SWIG_TypeCheckStruct(const swig_type_info *from, swig_type_info *ty) {
 SWIGRUNTIMEINLINE void *
 SWIG_TypeCast(swig_cast_info *ty, void *ptr, int *newmemory) {
   return ((!ty) || (!ty->converter)) ? ptr : (*ty->converter)(ptr, newmemory);
-}
-
-/*
-  Return the name associated with this type
-*/
-SWIGRUNTIMEINLINE const char *
-SWIG_TypeName(const swig_type_info *ty) {
-  return ty->name;
-}
-
-/*
-   Set the clientdata field for a type
-*/
-SWIGRUNTIME void
-SWIG_TypeClientData(swig_type_info *ti, void *clientdata) {
-  swig_cast_info *head = ti->cast;
-  /* if (ti->clientdata == clientdata) return; */
-  ti->clientdata = clientdata;
-
-  while (head) {
-    swig_cast_info *cast;
-    for (cast = head; (unsigned int)(cast - head) <= head->value; cast++) {
-      if (!cast->converter) {
-        swig_type_info *tc = cast->type;
-        if (!tc->clientdata) {
-          SWIG_TypeClientData(tc, clientdata);
-        }
-      }
-    }
-    head = head->next;
-  }
 }
 
 /*
@@ -1185,29 +1146,6 @@ SWIGRUNTIME void SWIGV8_AddStaticVariable(SWIGV8_OBJECT obj, const char* symbol,
   SWIGV8_MAYBE_CHECK(obj->SetNativeDataProperty(context, SWIGV8_SYMBOL_NEW(symbol), getter, setter));
 }
 
-SWIGRUNTIMEINLINE void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> /* value */, const SwigV8PropertyCallbackInfoVoid& /* info */)
-{
-    char buffer[256];
-    char msg[512];
-    int res;
-
-    v8::Local<v8::String> sproperty;
-    if (property->ToString(SWIGV8_CURRENT_CONTEXT()).ToLocal(&sproperty)) {
-      SWIGV8_WRITE_UTF8(sproperty, buffer, 256);
-      res = SWIG_snprintf(msg, sizeof(msg), "Tried to write read-only variable: %s.", buffer);
-    }
-    else {
-      res = -1;
-    }
-
-    if(res<0) {
-      SWIG_exception(SWIG_ERROR, "Tried to write read-only variable.");
-    } else {
-      SWIG_exception(SWIG_ERROR, msg);
-    }
-fail: ;
-}
-
 
 
 /* -------- TYPES TABLE (BEGIN) -------- */
@@ -1361,13 +1299,6 @@ using namespace FiftyoneDegrees::DeviceDetection::Hash;
 
 
 SWIGINTERNINLINE
-SWIGV8_VALUE SWIG_From_long  (long value)
-{
-  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
-}
-
-
-SWIGINTERNINLINE
 SWIGV8_VALUE SWIG_From_unsigned_SS_long  (unsigned long value)
 {
   return value <= UINT32_MAX
@@ -1513,59 +1444,6 @@ SWIGINTERN bool std_map_Sl_std_string_Sc_std_string_Sg__has_key(std::map< std::s
                 return i != self->end();
             }
 
-SWIGINTERNINLINE
-int SWIG_AsVal_double (SWIGV8_VALUE obj, double *val)
-{
-  if (!obj->IsNumber()) {
-    return SWIG_TypeError;
-  }
-  if (val) *val = SWIGV8_NUMBER_VALUE(obj);
-
-  return SWIG_OK;
-}
-
-
-#include <errno.h>
-
-
-#include <float.h>
-
-
-#include <math.h>
-
-
-SWIGINTERNINLINE int
-SWIG_CanCastAsInteger(double *d, double min, double max) {
-  double x = *d;
-  if ((min <= x && x <= max)) {
-   double fx, cx, rd;
-   errno = 0;
-   fx = floor(x);
-   cx = ceil(x);
-   rd =  ((x - fx) < 0.5) ? fx : cx; /* simple rint */
-   if ((errno == EDOM) || (errno == ERANGE)) {
-     errno = 0;
-   } else {
-     double summ, reps, diff;
-     if (rd < x) {
-       diff = x - rd;
-     } else if (rd > x) {
-       diff = rd - x;
-     } else {
-       return 1;
-     }
-     summ = rd + x;
-     reps = diff/summ;
-     if (reps < 8*DBL_EPSILON) {
-       *d = rd;
-       return 1;
-     }
-   }
-  }
-  return 0;
-}
-
-
 SWIGINTERN
 int SWIG_AsVal_unsigned_SS_long (SWIGV8_VALUE obj, unsigned long *val)
 {
@@ -1640,15 +1518,6 @@ SWIG_AsVal_size_t (SWIGV8_VALUE obj, size_t *val)
 #endif
   return res;
 }
-
-
-#ifdef SWIG_LONG_LONG_AVAILABLE
-SWIGINTERNINLINE
-SWIGV8_VALUE SWIG_From_long_SS_long  (long long value)
-{
-  return SWIGV8_NUMBER_NEW(static_cast<double>(value));
-}
-#endif
 
 
 #ifdef SWIG_LONG_LONG_AVAILABLE

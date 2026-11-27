@@ -95,6 +95,10 @@ cp binding.51d binding.gyp
 node-gyp rebuild
 ```
 
+Compiler warnings are shown and do not stop the build. To make them errors,
+as the CI builds do, set the environment variable
+`_51DEGREES_WARNINGS_AS_ERRORS` to `true` before `node-gyp` configures.
+
 Then copy `build/Release/<module>.node` to
 `build/<module>-<platform>-<arch>-<node major version>.node`, for example
 `build/FiftyOneDeviceDetectionHashV4-darwin-arm64-24.node`.

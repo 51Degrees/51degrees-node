@@ -5,6 +5,12 @@ param (
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
+# Every native build CI runs comes through this script, including the builds
+# whose binaries the packages publish, so warnings are errors here. A
+# workflow cannot pass this to common-ci's reusable workflows, so it is set
+# here until common-ci sets it for every job.
+$env:_51DEGREES_WARNINGS_AS_ERRORS = 'true'
+
 # This is a local version of common-ci/node/build-extension.ps1, which can
 # only build the device detection native module, and writes its artifacts
 # relative to a package directly under the repository.

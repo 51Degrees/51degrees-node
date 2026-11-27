@@ -1,8 +1,9 @@
 /* -----------------------------------------------------------------------------
  * SWIG 4.5.0's swigrun.swg without the functions the wrappers here never
- * call: SWIG_TypeDynamicCast, SWIG_TypePrettyName, SWIG_TypeNewClientData,
- * and the packing helpers from SWIG_PackData to SWIG_UnpackDataName. An
- * unused static function is a compiler warning.
+ * call: SWIG_TypeDynamicCast, SWIG_TypeName, SWIG_TypePrettyName,
+ * SWIG_TypeClientData, SWIG_TypeNewClientData, and the packing helpers from
+ * SWIG_PackData to SWIG_UnpackDataName. An unused static function is a
+ * compiler warning.
  * ----------------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------------
@@ -430,37 +431,6 @@ SWIG_TypeCheckStruct(const swig_type_info *from, swig_type_info *ty) {
 SWIGRUNTIMEINLINE void *
 SWIG_TypeCast(swig_cast_info *ty, void *ptr, int *newmemory) {
   return ((!ty) || (!ty->converter)) ? ptr : (*ty->converter)(ptr, newmemory);
-}
-
-/*
-  Return the name associated with this type
-*/
-SWIGRUNTIMEINLINE const char *
-SWIG_TypeName(const swig_type_info *ty) {
-  return ty->name;
-}
-
-/*
-   Set the clientdata field for a type
-*/
-SWIGRUNTIME void
-SWIG_TypeClientData(swig_type_info *ti, void *clientdata) {
-  swig_cast_info *head = ti->cast;
-  /* if (ti->clientdata == clientdata) return; */
-  ti->clientdata = clientdata;
-
-  while (head) {
-    swig_cast_info *cast;
-    for (cast = head; (unsigned int)(cast - head) <= head->value; cast++) {
-      if (!cast->converter) {
-        swig_type_info *tc = cast->type;
-        if (!tc->clientdata) {
-          SWIG_TypeClientData(tc, clientdata);
-        }
-      }
-    }
-    head = head->next;
-  }
 }
 
 /*

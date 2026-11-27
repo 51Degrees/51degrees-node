@@ -2,8 +2,8 @@
  * SWIG 4.5.0's javascripthelpers.swg for V8, changed so the wrappers here
  * build with no compiler warning. SWIGV8_AddMemberVariable is left out, as
  * the wrappers never call it.
- * JS_veto_set_variable is inline, as only a wrapper with a read-only
- * variable uses it, and leaves the parameters it does not read unnamed.
+ * JS_veto_set_variable is left out too, as only a wrapper with a read-only
+ * variable uses it, so that wrapper's interface file gives it.
  * ----------------------------------------------------------------------------- */
 
 %insert(runtime) %{
@@ -58,29 +58,6 @@ SWIGRUNTIME void SWIGV8_AddStaticVariable(SWIGV8_OBJECT obj, const char* symbol,
   SwigV8AccessorGetterCallback getter, SwigV8AccessorSetterCallback setter,
   v8::Local<v8::Context> context) {
   SWIGV8_MAYBE_CHECK(obj->SetNativeDataProperty(context, SWIGV8_SYMBOL_NEW(symbol), getter, setter));
-}
-
-SWIGRUNTIMEINLINE void JS_veto_set_variable(v8::Local<v8::Name> property, v8::Local<v8::Value> /* value */, const SwigV8PropertyCallbackInfoVoid& /* info */)
-{
-    char buffer[256];
-    char msg[512];
-    int res;
-
-    v8::Local<v8::String> sproperty;
-    if (property->ToString(SWIGV8_CURRENT_CONTEXT()).ToLocal(&sproperty)) {
-      SWIGV8_WRITE_UTF8(sproperty, buffer, 256);
-      res = SWIG_snprintf(msg, sizeof(msg), "Tried to write read-only variable: %s.", buffer);
-    }
-    else {
-      res = -1;
-    }
-
-    if(res<0) {
-      SWIG_exception(SWIG_ERROR, "Tried to write read-only variable.");
-    } else {
-      SWIG_exception(SWIG_ERROR, msg);
-    }
-fail: ;
 }
 
 %} // v8_helper_functions

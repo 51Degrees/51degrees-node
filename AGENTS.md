@@ -232,10 +232,15 @@ reads its key from `_51DEGREES_RESOURCE_KEY` instead.
 - **Missing submodules.** The example then says it failed to find a data file
   and asks for `git submodule update --init --recursive`, which fetches them.
   A zip download of the repository has no submodules, so clone with Git.
-- **Warnings are errors.** Both `binding.51d` files build at MSVC `/W4` with
-  `win_warn_as_error`, and with `-Wall -Werror` on Linux and macOS, and turn
-  no warning off, so a compiler newer than the one CI uses can stop the build
-  on a new warning. Fix the code that gives it rather than turning it off.
+- **Warnings are errors in CI.** Both `binding.51d` files build at MSVC `/W4`,
+  and with `-Wall -Wextra` on Linux and macOS, and turn no warning off. They
+  make warnings errors (`-Werror`, and MSVC's `WarnAsError` and the
+  librarian's and linker's settings) only when
+  `_51DEGREES_WARNINGS_AS_ERRORS` is `true`, in any letter case, when gyp
+  configures. `ci/build-extension.ps1` sets it, so a compiler newer than the
+  one CI uses can stop a CI build on a new warning, while a build on a
+  customer's machine only shows it. Set it to build as CI does, and fix the
+  code that gives a warning rather than turning it off.
   Only Node's own headers are quiet, as they are compiled as system headers
   (`-isystem`, and MSVC's `/external:I`, whose warning level
   `external-headers.props` turns off).

@@ -2,6 +2,8 @@
  * when the wrappers are generated with -I../../swig. It no longer turns
  * off MSVC's unused function warning, the C and C++ runtime deprecation
  * warnings, or an Intel compiler warning, so the wrapper shows them all.
+ * SWIGUNUSED is empty for every compiler, so gcc and clang also report a
+ * function in the wrapper that nothing uses.
  */
 /* -----------------------------------------------------------------------------
  *  This section contains generic SWIG labels for method/variable
@@ -30,20 +32,9 @@
 # endif
 #endif
 
-/* attribute recognised by some compilers to avoid 'unused' warnings */
-#ifndef SWIGUNUSED
-# if defined(__GNUC__)
-#   if !(defined(__cplusplus)) || (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
-#     define SWIGUNUSED __attribute__ ((__unused__))
-#   else
-#     define SWIGUNUSED
-#   endif
-# elif defined(__ICC) || defined (__clang__)
-#   define SWIGUNUSED __attribute__ ((__unused__))
-# else
-#   define SWIGUNUSED
-# endif
-#endif
+/* No compiler is told that a function or parameter is unused, so every
+ * unused one is reported. */
+#define SWIGUNUSED
 
 #ifndef SWIGUNUSEDPARM
 # ifdef __cplusplus
