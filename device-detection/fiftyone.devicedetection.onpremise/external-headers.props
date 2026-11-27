@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Turns off MSVC's warnings for the external headers the wrapper includes,
+  which binding.51d gives with /external:I (Node's own headers). MSBuild
+  passes its own external warning level, taken from the project's warning
+  level, and gyp has no setting for it. Setting it here means MSBuild passes
+  /external:W0 itself, so no option on the compiler's command line
+  overrides another. Our own files keep the project's warning level.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

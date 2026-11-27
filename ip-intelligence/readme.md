@@ -35,21 +35,21 @@ The API can either use our cloud service to get its data or it can use a local (
 
 You will require a [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
+[configuration page](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
 [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 The cloud property tiers changed in May 2026. The examples and this documentation
 now reflect what is free and what needs a paid subscription. The free tier includes
 the following IP intelligence properties: Country, LocationConfidence, Ip and IpV6.
 A resource key that selects these free properties can be created at
-[this configurator link](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+[this link](https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 
 The paid IP intelligence properties used by the examples are: CountryCode,
 CountryCode3, Region, State, Town, TimeZoneOffset, RegisteredName, RegisteredOwner,
 RegisteredCountry, IpRangeStart, IpRangeEnd, Latitude, Longitude and
 AccuracyRadiusMin. A resource key that selects the free properties plus these paid
 properties, covering everything the examples display, can be created at
-[this configurator link](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+[this link](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 See https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud to get a paid subscription with more properties.
 
 When running the cloud examples, the resource key can be supplied in the
@@ -130,6 +130,7 @@ The manual steps are as follows.
     - Create a folder named `build`.
     - Run `node-gyp configure`
     - Run `node-gyp build`
+  - Compiler warnings are shown and do not stop the build. To make them errors, as the 51Degrees CI builds do, set the environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true` before configuring.
   - Platform specific:
     - Windows
       - By default this will look for Visual Studio 2019 and a minimum Windows SDK version `10.0.18362.0`.
@@ -200,7 +201,7 @@ command in the root directory:
 npm install
 ```
 
-Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees Cloud Configurator](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+Add a 51Degrees cloud resource key for cloud tests. You can obtain a resource key covering everything the examples display from the [51Degrees configuration page](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY_BESPOKE` in your test environment.
 
 The on-premise tests use the native module, which is built for the current Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions). Make sure one of these versions is active (`nvm list` shows the active version) before running the tests.
 
@@ -220,15 +221,15 @@ Process for rebuilding SWIG interfaces following an update to the IP intelligenc
 (This is only intended to be run by 51Degrees developers internally):
 
 1. Ensure Swig is installed.
-   1. Use the 51Degrees fork of Swig, built from source from the `node-24-holder-this` branch of https://github.com/51Degrees/swig.
-   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions).
+   1. Use SWIG 4.5.0 from https://www.swig.org.
+   2. SWIG 4.5.0 supports the V8 versions of Node 22, 24 and 26. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tested-versions).
    3. All native modules loaded into one Node process must be generated by the same Swig version. Mixing modules generated by different Swig versions (for example this package and fiftyone.devicedetection.onpremise) can crash the process, so regenerate and release them together.
 2. Update the `cxx` submodule at the root of the repository to reference the relevant commit.
 3. From terminal, navigate to fiftyone.ipintelligence.onpremise and run:
-    a) swig -c++ -javascript -node ipi_node.i
+    a) swig -Werror -c++ -javascript -node -I../../swig ipi_node.i
 4. Commit changes to repository.
 5. Run the nightly publish CI pipeline to produce binaries for all supported platforms.
 
 ## TypeScript
 
-Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/common-ci/blob/main/node/generate-types.ps1#L10). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
+Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/51degrees-node/blob/main/ci/generate-types.ps1). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.

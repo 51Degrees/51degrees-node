@@ -35,7 +35,7 @@
 import { DeviceDetectionOnPremisePipelineBuilder } from '../../../';
 import { dataExtension, exampleConstants } from 'fiftyone.devicedetection.shared';
 import * as fiftyone from 'fiftyone.pipeline.core';
-import { ExampleUtils as _eu } from '../exampleUtils';
+import { ExampleUtils as _eu, NEEDS_ENTERPRISE } from '../exampleUtils';
 
 type Pipeline = InstanceType<typeof fiftyone.Pipeline>;
 
@@ -43,6 +43,8 @@ const ExampleUtils: {
   findFile: (fileName: string) => string | undefined;
   findDataFile: (fileName: string) => string | undefined;
   checkDataFile: (pipeline: any, dataFile: string) => void;
+  getEnterpriseValue: (engine: any, elementData: any, name: string) => string;
+  getEnterpriseNote: (contactUs: string) => string;
 } = _eu;
 
 
@@ -51,10 +53,29 @@ const ExampleUtils: {
 // or you may specify another file as a command line parameter.
 //
 // Note that the Lite data file is only used for illustration, and has
-// a small number of Properties.
+// a small number of Properties. Each property the example asks for
+// that only the Enterprise data file has is shown as needing it, with a
+// link to ask for a copy.
 // Find out about the Enterprise data file on our pricing page:
 // https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=lite_v_4_1_hash
 const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
+
+// Where to ask for a copy of the Enterprise data file, tagged with this
+// example.
+const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=enterprise-data-file';
+
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe device detection engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-examples-onpremise-gettingstarted-console-gettingstarted.ts&utm_term=find-out-more-contact'
+].join('\n');
 
 const outputValue = function (name: any, value: any) {
   // Individual result values have a wrapper called
@@ -97,8 +118,7 @@ const analyse = async function (evidence: Map<string, string>, pipeline: Pipelin
   // been populated with the result. In this case, we want
   // information about the device, which we can get by
   // asking for the 'device' data.
-  // @ts-ignore
-  const device = data.device;
+  const device = data.get('device');
 
   // Display the results of the detection, which are called
   // device properties. See the property dictionary at
@@ -109,8 +129,15 @@ const analyse = async function (evidence: Map<string, string>, pipeline: Pipelin
   message += outputValue('Platform Version', dataExtension.getValueHelper(device, 'platformversion'));
   message += outputValue('Browser Name', dataExtension.getValueHelper(device, 'browsername'));
   message += outputValue('Browser Version', dataExtension.getValueHelper(device, 'browserversion'));
+  // These properties are only in the Enterprise data file, so with the free
+  // Lite data file each is shown as needing it.
+  const engine = pipeline.getElement('device');
+  message += outputValue('Hardware Vendor', ExampleUtils.getEnterpriseValue(engine, device, 'HardwareVendor'));
+  message += outputValue('Hardware Name', ExampleUtils.getEnterpriseValue(engine, device, 'HardwareName'));
+  message += outputValue('Device Type', ExampleUtils.getEnterpriseValue(engine, device, 'DeviceType'));
   message += '\n\n';
   process.stdout.write(message);
+  return message.includes(NEEDS_ENTERPRISE);
 };
 
 const run = async function (dataFile: string) {
@@ -137,8 +164,12 @@ const run = async function (dataFile: string) {
   }).build();
 
   // carry out some sample detections
+  let needsEnterprise = false;
   for (const values of exampleConstants.defaultEvidenceValues) {
-    await analyse(values, pipeline);
+    needsEnterprise = await analyse(values, pipeline) || needsEnterprise;
+  }
+  if (needsEnterprise) {
+    console.log(ExampleUtils.getEnterpriseNote(CONTACT_US));
   }
 
   ExampleUtils.checkDataFile(pipeline, dataFile);
@@ -152,10 +183,19 @@ const args = process.argv.slice(2);
 const dataFile = args.length > 0 ? args[0] : ExampleUtils.findDataFile(LITE_V_4_1_HASH);
 
 if (dataFile !== undefined) {
-  run(dataFile);
+  // Every end of the example prints where to go next, a failure included.
+  run(dataFile)
+    .catch((e: unknown) => {
+      // Printed and the process still fails, so a broken example is not
+      // hidden by the section below.
+      console.error(String(e));
+      process.exitCode = 1;
+    })
+    .then(() => console.log(FIND_OUT_MORE));
 } else {
   console.error('Failed to find a device detection ' +
     'data file. Make sure the cxx/data submodule ' +
     'has been fetched by running ' +
     '`git submodule update --init --recursive`.');
+  console.log(FIND_OUT_MORE);
 }

@@ -117,6 +117,7 @@ const UNKNOWN_NAME = 'Unknown';
  * goes through here so that the bounds are decided once and no lookup
  * subscripts the table with a value it has not checked, which would raise
  * at the caller rather than answer with no address.
+ *
  * @param {number} terms a Terms value
  * @returns {{name: string, url: string|null}|null} the row, or null
  */
@@ -141,6 +142,7 @@ const Terms = Object.freeze({
   /**
    * The Terms value for a raw index byte, being UNKNOWN for every index
    * this package does not know.
+   *
    * @param {number} index the 1-byte terms index (0-255)
    * @returns {number} the Terms value
    */
@@ -149,6 +151,7 @@ const Terms = Object.freeze({
   },
   /**
    * The cross language name of a Terms value.
+   *
    * @param {number} terms a Terms value
    * @returns {string} for example "ModelTermsForMarketing2"
    */
@@ -161,6 +164,7 @@ const Terms = Object.freeze({
    * for NOT_STATED and for UNKNOWN. Never an empty string, and never an
    * address built from the index. The address is returned and never
    * fetched.
+   *
    * @param {number} terms a Terms value
    * @returns {string|null} for example "https://m4ow.uk/mtm/2.txt"
    */

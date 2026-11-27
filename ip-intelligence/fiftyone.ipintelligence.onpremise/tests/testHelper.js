@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const fs = require('fs');
+const path = require('path');
 
 const liteDataFileName = '51Degrees-LiteV41.ipi';
 const enterpriseDataFileName = '51Degrees-EnterpriseIpiV41.ipi';
@@ -31,9 +32,8 @@ const datafiles = [enterpriseDataFileName, liteDataFileName];
 
 // Directories to search for data files. Ordered based on priorities.
 const fileDirs = [
-  (process.env.directory || __dirname) + '/../tests/',
-  (process.env.directory || __dirname) +
-  '/../../../cxx/data/ip-intelligence/'];
+  path.join(__dirname, '../tests/'),
+  path.join(__dirname, '../../../cxx/data/ip-intelligence/')];
 
 let testDataFile;
 
@@ -50,7 +50,7 @@ const getDataFilePath = function (fileName) {
       return fullPath;
     }
   }
-  throw (`No data file '${fileName}' found at
+  throw new Error(`No data file '${fileName}' found at
     '${fileDirs.join(', ')}'!`);
 };
 
@@ -76,7 +76,7 @@ const getTestDataFile = function () {
       }
     };
     if (testDataFile === undefined) {
-      throw (`No data file found. Looked for
+      throw new Error(`No data file found. Looked for
         '${datafiles.join(', ')}' at
         '${fileDirs.join(', ')}'!`);
     }

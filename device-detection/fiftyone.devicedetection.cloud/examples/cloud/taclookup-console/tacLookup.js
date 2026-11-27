@@ -61,6 +61,99 @@ const DataExtension =
 
 const constants = require(path.join(__dirname, '/../../../constants.js'));
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/device-detection',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tDevice detection documentation: https://51degrees.com/documentation/_device_detection__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=find-out-more-contact'
+].join('\n');
+
+// Printed in place of the lookups when the resource key does not carry the
+// hardware lookup.
+const NO_HARDWARE_LOOKUP =
+  'The resource key does not include HardwarePlatform.Profiles, the ' +
+  'hardware lookup this example needs, so no devices are listed. Create a ' +
+  'resource key that includes it at ' +
+  'https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=no-hardware-lookup, ' +
+  'or contact us about it at ' +
+  'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=no-hardware-lookup.';
+
+// Whether the resource key carries the hardware lookup. The hardware
+// engine's properties come from the cloud service's list of the properties
+// the key can access, so this is known before any lookup is made. The first
+// wait can share the request made as the engine was built, so when it fails
+// the cloud request engine is asked once more before anything is decided. A
+// second failure is the cloud service's error, and is thrown.
+const hasHardwareLookup = async function (hardwareEngine) {
+  try {
+    await hardwareEngine.ready();
+  } catch (errors) {
+    await hardwareEngine.ready();
+  }
+  const properties = hardwareEngine.properties;
+  return properties !== undefined && properties !== null &&
+    properties.profiles !== undefined;
+};
+
+// The errors that stopped the example, which arrive as a list, as lists
+// within a list, or as an error that holds a list.
+const errorsIn = function (reason) {
+  if (Array.isArray(reason)) {
+    return [].concat(...reason.map(errorsIn));
+  }
+  if (reason !== null && typeof reason === 'object' &&
+    Array.isArray(reason.errors)) {
+    return errorsIn(reason.errors);
+  }
+  return [reason];
+};
+
+// Whether an error came from a request to the cloud service, which the cloud
+// request engine names CloudRequestError.
+const isCloudRequestError = function (error) {
+  return error instanceof Error && error.name === 'CloudRequestError';
+};
+
+// The text of an error, with the status code the cloud service answered with
+// when the text does not already give one.
+const messageOf = function (error) {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+  const status = error.httpStatusCode;
+  return typeof status === 'number' && !/status code/i.test(error.message)
+    ? `${error.message} (status code ${status})`
+    : error.message;
+};
+
+// Ends the example with the error that stopped it and an exit code that
+// says it failed. Errors from requests to the cloud service are described
+// as a failed request by their messages alone. Any other error is a fault
+// the example did not expect, so its stack trace follows the message.
+const endWithError = function (reason) {
+  const errors = errorsIn(reason);
+  const messages = errors.map(messageOf).join(' ');
+  if (errors.length > 0 && errors.every(isCloudRequestError)) {
+    console.error('The example stopped because the request to the cloud ' +
+      `service failed. ${messages}`);
+  } else {
+    console.error(`The example stopped: ${messages}`);
+    for (const error of errors) {
+      if (error instanceof Error && error.stack) {
+        console.error(error.stack);
+      }
+    }
+  }
+  console.log(FIND_OUT_MORE);
+  process.exitCode = 1;
+};
+
 const analyseTac = async function (tac, pipeline, output) {
   // Create a flowdata instance.
   const flowData = pipeline.createFlowData();
@@ -78,7 +171,7 @@ const analyseTac = async function (tac, pipeline, output) {
   const profiles = DataExtension.getProfilesHelper(flowData.hardware);
 
   if (profiles.length === 0) {
-    output.write(DataExtension.getNoProfilesMessage());
+    output.write('\tNo devices are associated with this TAC.\n');
     return;
   }
 
@@ -106,7 +199,7 @@ const run = async function (options, output) {
       'https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required to get a paid subscription with more ' +
       'properties. Once subscribed, a resource key with the properties ' +
       'required by this example can be created at ' +
-      'https://configure.51degrees.com/hYzn3TV3?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
+      'https://51degrees.com/configure/QKyYH5XT?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.cloud-examples-cloud-taclookup-console-taclookup.js&utm_term=resource-key-required. You can now populate the ' +
       'environment variable mentioned at the start of this message with the ' +
       'resource key or pass it as the first argument on the command line.'
     );
@@ -131,6 +224,11 @@ const run = async function (options, output) {
   // Valid types are info, debug, warn, error
   pipeline.on('error', console.error);
 
+  if (!await hasHardwareLookup(pipeline.getElement('hardware'))) {
+    output.write(NO_HARDWARE_LOOKUP + '\n');
+    return;
+  }
+
   const tac1 = '35925406';
   const tac2 = '86386802';
 
@@ -149,14 +247,19 @@ if (process.env.JEST_WORKER_ID === undefined) {
   const resourceKey = args.length > 0 ? args[0] : ExampleUtils.getResourceKeyFromEnv();
 
   // Load the configuration from a config file to a JSON object.
-  const options = JSON.parse(fs.readFileSync('51d.json'), 'utf8');
+  // From the example's own folder, so that the example runs from any
+  // working folder.
+  const options = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '51d.json'), 'utf8'));
 
   const resourceKeyFromConfig = OptionsExtension.getResourceKey(options);
   if (!resourceKeyFromConfig || resourceKeyFromConfig.startsWith('!!')) {
     OptionsExtension.setResourceKey(options, resourceKey);
   }
 
-  run(options, process.stdout);
+  run(options, process.stdout)
+    .then(() => console.log(FIND_OUT_MORE))
+    .catch(endWithError);
 };
 
 module.exports = {

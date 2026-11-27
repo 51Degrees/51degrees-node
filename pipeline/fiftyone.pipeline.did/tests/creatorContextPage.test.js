@@ -46,6 +46,12 @@ const PAGE = path.join(
 // reports, once the page has made it safe for a URL.
 const CREATED_URL_SAFE = 'prob-lic_value';
 
+/**
+ * Runs the demo page in the harness and reads the record it prints.
+ *
+ * @param {string} [given] the 51Did to pass to the page, if any
+ * @returns {object} the record of what the page did
+ */
 function runPage (given) {
   const args = [HARNESS, PAGE];
   if (given !== undefined) { args.push(given); }
@@ -56,6 +62,11 @@ function runPage (given) {
   return JSON.parse(lines[lines.length - 1]);
 }
 
+/**
+ * Reads the script block out of the demo page.
+ *
+ * @returns {string} the script in the page's script element
+ */
 function scriptBlock () {
   const page = fs.readFileSync(PAGE, 'utf8');
   // A checkout on Windows has carriage returns in it, so the ends of

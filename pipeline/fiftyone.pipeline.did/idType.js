@@ -40,6 +40,7 @@ const IdType = Object.freeze({
 
   /**
    * Decodes the identifier type from the top two bits (6-7) of a flags byte.
+   *
    * @param {number} flags the 1-byte flags value (0-255)
    * @returns {number} the IdType value
    */
@@ -49,6 +50,7 @@ const IdType = Object.freeze({
 
   /**
    * The human-readable name of an IdType value.
+   *
    * @param {number} type an IdType value, being 0 to 3 as fromFlags returns
    * @returns {string} the name of that type, for example "Probabilistic"
    */

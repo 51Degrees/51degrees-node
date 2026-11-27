@@ -20,41 +20,5 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-module.exports = {
-  // Environment variables name for testing
-  envVars: {
-    // The variable the examples read their resource key from.
-    superResourceKeyVariable: '_51DEGREES_RESOURCE_KEY_SUPER',
-    /**
-     * @deprecated The name the variable had before, which is read only
-     * when the variable superResourceKeyVariable names is unset or empty.
-     * Use superResourceKeyVariable.
-     */
-    superResourceKeyEnvVar: 'TEST_SUPER_RESOURCE_KEY',
-    /**
-     * @deprecated No test reads a resource key under this name. Use
-     * superResourceKeyVariable.
-     */
-    ipiResourceKeyEnvVar: 'TEST_IPI_RESOURCE_KEY',
-    /**
-     * @deprecated No test reads a licence key under this name. The licence
-     * key is read from the _51DEGREES_LICENSE_KEY environment variable.
-     */
-    licenseKeyEnvVar: 'TEST_LICENSE_KEY'
-  },
-  // IP addresses for testing
-  ipAddresses: {
-    // An IPv4 address allocated in Switzerland.
-    switzerlandIpv4: '194.209.0.1',
-    // An IPv4 address allocated in Belgium.
-    belgiumIpv4: '91.183.0.1',
-    // An IPv4 address allocated in Austria.
-    austriaIpv4: '77.119.0.1',
-    // A Google public DNS IPv4 address.
-    googleIpv4: '8.8.8.8',
-    // An IPv6 documentation address.
-    documentationIpv6: '2001:0db8:085a:0000:0000:8a2e:0370:7334',
-    // An invalid IP address.
-    invalidIp: 'not.an.ip.address'
-  }
-};
+// Keeps a require of the path this module had before it moved to lib.
+module.exports = require('../lib/testConstants');

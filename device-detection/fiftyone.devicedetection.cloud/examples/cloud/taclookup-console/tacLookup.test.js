@@ -30,6 +30,7 @@ const require51 = (requestedPackage) => {
 };
 
 const fs = require('fs');
+const util = require('util');
 
 const example = require(path.join(__dirname, '/tacLookup.js'));
 
@@ -40,16 +41,19 @@ const ExampleOutput = shared.exampleOutput.ExampleOutput;
 
 const OptionsExtension = shared.optionsExtension;
 
+const { checkHardwareLookupOutput } = require(
+  path.join(__dirname, '..', '..', '..', 'tests', 'hardwareLookupOutput.js'));
+
 describe('Examples', () => {
   test('cloud tac lookup', async () => {
     const resourceKey = keyUtils.getResourceKey(
-      tc.envVars.superResourceKeyEnvVar);
+      tc.envVars.resourceKeyBespokeEnvVar);
 
     if (!resourceKey) {
       // The message names the variable that was wanted, so whoever reads
       // the run knows what to set.
       throw new Error(keyUtils.missingResourceKeyMessage(
-        tc.envVars.superResourceKeyEnvVar));
+        tc.envVars.resourceKeyBespokeEnvVar));
     }
 
     // Load the configuration from a config file to a JSON object.
@@ -59,21 +63,27 @@ describe('Examples', () => {
 
     const output = new ExampleOutput();
 
-    await example.run(options, output);
+    // The example logs pipeline errors to the console, so those are kept
+    // with what it writes. The spy still calls through.
+    const spy = jest.spyOn(console, 'error');
+    let logged = '';
+    try {
+      await example.run(options, output);
+    } finally {
+      logged = spy.mock.calls
+        .map((args) => util.format(...args) + '\n').join('');
+      spy.mockRestore();
+    }
+    const printed = output.text() + logged;
 
-    // The example must reach both lookups.
-    expect(output.text()).toContain(
-      "Which devices are associated with the TAC '35925406'?");
-    expect(output.text()).toContain(
-      "Which devices are associated with the TAC '86386802'?");
+    checkHardwareLookupOutput(printed, {
+      keyName: tc.envVars.resourceKeyBespokeEnvVar,
+      name: 'TAC lookup',
+      subject: 'TAC',
+      values: ['35925406', '86386802']
+    });
 
-    // Nothing it printed may read as a programming fault, however little
-    // of the data this resource key is entitled to.
+    // Nothing it printed may read as a programming fault.
     expect(output.faults()).toEqual([]);
-
-    // Every lookup has to say something about the devices it found, either
-    // naming them or saying why it could not.
-    const deviceLines = output.lines().filter(line => line.startsWith('\t'));
-    expect(deviceLines.length).toBeGreaterThan(0);
   });
 });

@@ -1,8 +1,5 @@
 export = PipelineBuilder;
 /**
- * @typedef {import('./flowElement')} FlowElement
- */
-/**
  * A PipelineBuilder generates a Pipeline object
  * Before construction of the Pipeline, FlowElements are added to it
  * There are also options for how JavaScript is output from the Pipeline
@@ -60,8 +57,19 @@ declare class PipelineBuilder {
      * @type {FlowElement[]}
      */
     flowElements: FlowElement[];
+    /**
+     * A usage sharing element the builder adds after every other Flow
+     * Element when it builds, as the product builders do.
+     *
+     * @type {FlowElement|undefined}
+     */
+    usageSharingElement: FlowElement | undefined;
     dataFileUpdateService: any;
     addJavaScriptBuilder: boolean;
+    addSequenceElement: boolean;
+    addJsonBuilderElement: boolean;
+    addJavaScriptBuilderElement: boolean;
+    addSetHeadersElement: boolean;
     javascriptBuilderSettings: {
         objName: string;
         protocol: string;
@@ -70,11 +78,7 @@ declare class PipelineBuilder {
         enableCookies: boolean;
         minify: boolean;
     };
-    addSequenceElement: boolean;
-    addJsonBuilderElement: boolean;
-    addJavaScriptBuilderElement: boolean;
     useSetHeaderProperties: boolean;
-    addSetHeadersElement: boolean;
     suppressProcessExceptions: boolean;
     /**
      * Helper that loads a JSON configuration file from
@@ -82,6 +86,8 @@ declare class PipelineBuilder {
      *
      * @param {string} configPath path to a JSON configuration file
      * @returns {Pipeline} the constructed pipeline
+     * @throws {Error|string} an Error when the file cannot be read or does not
+     * hold JSON, and whatever buildFromConfiguration throws
      */
     buildFromConfigurationFile(configPath: string): Pipeline;
     /**
@@ -89,6 +95,9 @@ declare class PipelineBuilder {
      *
      * @param {object} config a JSON configuration object
      * @returns {Pipeline} the constructed pipeline
+     * @throws {string|Error} "Can't find" and the name, when an element the
+     * configuration names cannot be required by that name or as a path from
+     * the working folder, and the error an element's constructor throws
      */
     buildFromConfiguration(config: object): Pipeline;
     /**
@@ -103,10 +112,18 @@ declare class PipelineBuilder {
      */
     getSuppressProcessExceptions(config: object): boolean;
     /**
-     * Add required elements to an existing FlowElement array
+     * Add required elements to an existing FlowElement array. Each web
+     * integration element is added only where the array has no element with
+     * its key, compared ignoring case, so one the caller added is the one
+     * used and building twice adds nothing more. A JSON Builder goes
+     * immediately before a JavaScript Builder the caller added, which reads
+     * what it writes. The usage sharing element is always last, so it shares
+     * the Evidence every other element has added.
      *
      * @param {FlowElement[]} flowElements array of elements to add to
      * @returns {FlowElement[]} resulting array with required elements
+     * @throws {Error} when the usage sharing element is anywhere but last, or
+     * in a parallel group
      */
     addRequiredElements(flowElements: FlowElement[]): FlowElement[];
     /**

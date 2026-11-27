@@ -42,8 +42,8 @@ const IpIntelligenceOnPremisePipelineBuilder = require51(
 
 // A small but valid data file, as the engine copies it to a temporary
 // location and the enterprise file used in CI does not fit on the runners.
-const DataFile = path.resolve((process.env.directory || __dirname) +
-  '/../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
+const DataFile = path.resolve(__dirname,
+  '../../../cxx/data/ip-intelligence/51Degrees-IPIV4AsnIpiV41.ipi');
 
 const IpAddress = '8.8.8.8';
 
@@ -64,6 +64,7 @@ const processAndDrop = async (tempDir, registry) => {
   const pipeline = new IpIntelligenceOnPremisePipelineBuilder({
     dataFile: DataFile,
     shareUsage: false,
+    autoUpdate: false,
     createTempDataCopy: true,
     tempDataDir: tempDir
   }).build();

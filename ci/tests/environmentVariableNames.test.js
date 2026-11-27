@@ -20,96 +20,55 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
+// Every environment variable, secret and workflow variable this repository
+// reads or sets is named _51DEGREES_<NAME>, so wherever it appears it is
+// clearly a 51Degrees name. The only others are the names Node, jest,
+// GitHub or PowerShell define, and the secrets and variables only CI uses,
+// which are named for what they do. Both are listed below.
+
 const childProcess = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 
 // The repository root, two levels above this file.
 const REPOSITORY_ROOT = path.join(__dirname, '..', '..');
 
-// Both expressions below ignore letter case, because Windows does, so a
-// lower-case name reaches the same variable there and is banned too.
+const PREFIX = '_51DEGREES_';
 
-// A POSIX shell cannot set a variable whose name starts with a digit, so
-// every 51Degrees name carries a leading underscore. This matches the old
-// digit-initial form, and only where no word character runs before it, so
-// the correct '_51DEGREES_' form and a name holding the text inside a
-// longer word are both left alone. The old form is deprecated, and is read
-// only when the name that replaced it is not set, so it must not appear
-// outside the files listed below.
-const DIGIT_INITIAL_NAME = /(^|[^A-Za-z0-9_])(51DEGREES_[A-Za-z0-9_]*)/gi;
+// A read or a write of a name: the two forms Node offers, the two
+// PowerShell forms, and a secret or a variable in a workflow.
+const NAME_USE = new RegExp('(?:' + [
+  'process\\.env\\.',
+  'process\\.env\\[\\s*[\'"]',
+  '\\$env:',
+  '\\$\\{env:',
+  '\\bsecrets\\.',
+  '\\bvars\\.'
+].join('|') + ')([A-Za-z_][A-Za-z0-9_]*)', 'g');
 
-// The files that read a digit-initial name behind the name that replaced
-// it.
-const DIGIT_INITIAL_NAME_FILES = new Set([
-  path.join('device-detection', 'fiftyone.devicedetection.onpremise',
-    'examples', 'onpremise', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence', 'examples',
-    'gettingStarted.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence.cloud', 'examples',
-    'cloud', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence.onpremise',
-    'examples', 'onpremise', 'exampleUtils.js'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence.shared', 'tests',
-    'keyUtils.js')
-]);
+// The names only CI uses for the Human Confidence tests that call the
+// staging cloud service, which a customer never sets, each with where a
+// workflow fills it from. The staging cloud's API base is an organization
+// variable, and the Bespoke key the staging cloud resolves is an
+// organization secret.
+const STAGING_NAMES = {
+  CLOUD_STAGING_ENDPOINT: 'vars',
+  RESOURCE_KEY_BESPOKE_STAGING: 'secrets'
+};
 
-// The bare RESOURCE_KEY and LICENSE_KEY names are deprecated, and each is
-// read only when the name that replaced it is not set, so a read of one
-// must not appear outside the files listed below. Only a read is matched,
-// being the two forms Node offers and the two PowerShell forms, so the
-// same text in a placeholder such as '!!YOUR_RESOURCE_KEY!!' or in a
-// longer name such as TEST_SUPER_RESOURCE_KEY is left alone. A read is
-// what adds a fallback, whereas prose naming the old name cannot.
-const FALLBACK_NAME =
-  /(?:process\.env\.|process\.env\[\s*['"]|\$env:|\$\{env:)(RESOURCE_KEY|LICENSE_KEY)(?![A-Za-z0-9_])/gi;
-
-// The three examples that keep a data file up to date, in one product.
-const automaticUpdates = (family, product) => [
-  'dataFileSystemWatcher.js', 'updateOnStartUp.js', 'updatePollingInterval.js'
-].map((file) => path.join(family, product, 'examples', 'onpremise',
-  'automaticupdates', file));
-
-// The files that read a bare name behind the name that replaced it.
-const FALLBACK_NAME_FILES = new Set([
-  path.join('device-detection', 'fiftyone.devicedetection', 'examples',
-    'gettingStarted.js'),
-  path.join('device-detection', 'fiftyone.devicedetection', 'tests',
-    'deviceDetectionCloud.test.js'),
-  path.join('device-detection', 'fiftyone.devicedetection.cloud', 'tests',
-    'deviceDetectionCloud.test.js'),
-  ...automaticUpdates('device-detection',
-    'fiftyone.devicedetection.onpremise'),
-  path.join('ip-intelligence', 'fiftyone.ipintelligence', 'examples',
-    'gettingStarted.js'),
-  ...automaticUpdates('ip-intelligence', 'fiftyone.ipintelligence.onpremise'),
-  path.join('location', 'examples', 'combiningServices.js'),
-  path.join('location', 'examples', 'configureFromFile.js'),
-  path.join('location', 'examples', 'gettingStarted.js'),
-  path.join('location', 'examples', 'webIntegration.js'),
-  path.join('location', 'tests', 'geoLocationCloud.test.js'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'examples',
-    'creator-context-web', 'server.js')
-]);
-
-// The cloud endpoint is _51DEGREES_CLOUD_ENDPOINT, as in every other
-// 51Degrees language. The name it had before is deprecated, and is read
-// only when the new name is not set, so it must not appear outside the
-// files listed below, whether read, set or described. Only the whole name
-// is matched, so a longer name holding it is left alone.
-const OLD_NAME = /(^|[^A-Za-z0-9_])(FOD_CLOUD_API_URL)(?![A-Za-z0-9_])/gi;
-
-// The files that read the old cloud endpoint name behind the new one, word
-// the deprecation message or document that the old name is still read.
-const OLD_NAME_FILES = new Set([
-  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
-    'cloudRequestEngine.js'),
-  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine',
-    'errorMessages.js'),
-  path.join('pipeline', 'fiftyone.pipeline.cloudrequestengine', 'readme.md'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'didClient.js'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'readme.md'),
-  path.join('pipeline', 'fiftyone.pipeline.did', 'types', 'didClient.d.ts')
+// The names another tool defines, used as that tool requires, and the
+// secrets and variables only CI uses.
+const PLATFORM_NAMES = new Set([
+  // Node
+  'NODE_PATH', 'NODE_OPTIONS',
+  // jest and jest-junit
+  'JEST_WORKER_ID', 'JEST_JUNIT_OUTPUT_DIR',
+  // GitHub Actions
+  'GITHUB_ACTIONS', 'GITHUB_JOB',
+  // The secrets and variables only CI uses, which a customer never sets
+  'NPM_AUTH_TOKEN',
+  ...Object.keys(STAGING_NAMES)
 ]);
 
 // Reading a binary file as text yields no useful name and wastes time, so
@@ -119,14 +78,9 @@ const SKIPPED_EXTENSIONS = new Set([
   '.ttf', '.eot', '.pdf', '.zip', '.gz', '.hash', '.ipi', '.dat', '.node'
 ]);
 
-// This file names the old form on purpose, to describe what is banned.
-const SKIPPED_FILES = new Set([
-  path.join('ci', 'tests', 'environmentVariableNames.test.js')
-]);
-
 /**
- * Every file git tracks, which leaves out the cxx submodule and anything
- * a build produced.
+ * Every file git tracks, which leaves out the submodules and anything a
+ * build produced.
  *
  * @returns {string[]} the paths, relative to the repository root
  */
@@ -141,173 +95,267 @@ const trackedFiles = () => {
 };
 
 /**
- * Find every name one expression matches in one file.
+ * The names a text reads or sets.
  *
- * @param {string} file the path, relative to the repository root
- * @param {RegExp} expression the expression, whose last group is the name
- * @returns {string[]} one entry per occurrence, with its line and name
+ * @param {string} text the text to search
+ * @returns {string[]} one entry per use
  */
-const namesInFile = (file, expression) => {
-  const full = path.join(REPOSITORY_ROOT, file);
+const namesIn = (text) =>
+  [...text.matchAll(NAME_USE)].map((match) => match[1]);
 
-  if (!fs.existsSync(full) || !fs.statSync(full).isFile()) {
-    return [];
-  }
+/**
+ * Whether a name is one this repository may read or set.
+ *
+ * @param {string} name the name
+ * @returns {boolean} true when it is a 51Degrees name or a platform name
+ */
+const isAllowed = (name) =>
+  (name.startsWith(PREFIX) && name.length > PREFIX.length) ||
+  PLATFORM_NAMES.has(name);
 
+/**
+ * Every use of a name that is not allowed, across the repository.
+ *
+ * @returns {string[]} one entry per use, with its file, line and name
+ */
+const otherNamesInRepository = () => {
   const found = [];
-  const lines = fs.readFileSync(full, 'utf8').split('\n');
 
-  lines.forEach((line, index) => {
-    for (const match of line.matchAll(expression)) {
-      found.push(`${file}:${index + 1}: ${match[match.length - 1]}`);
+  for (const file of trackedFiles()) {
+    const full = path.join(REPOSITORY_ROOT, file);
+    if (SKIPPED_EXTENSIONS.has(path.extname(file).toLowerCase()) ||
+      path.normalize(file) === path.join('ci', 'tests', path.basename(__filename)) ||
+      !fs.existsSync(full) || !fs.statSync(full).isFile()) {
+      continue;
     }
-  });
+    fs.readFileSync(full, 'utf8').split('\n').forEach((line, index) => {
+      for (const name of namesIn(line)) {
+        if (!isAllowed(name)) {
+          found.push(`${file}:${index + 1}: ${name}`);
+        }
+      }
+    });
+  }
 
   return found;
 };
 
 /**
- * Find every name one expression matches across the whole repository.
+ * The names every env block of a workflow sets, at any depth.
  *
- * @param {RegExp} expression the expression, whose last group is the name
- * @param {Set<string>} allowedFiles files that may carry the name, which
- * are not searched
- * @returns {string[]} one entry per occurrence, with its file, line and name
+ * @param {*} node a workflow, or any part of one
+ * @returns {string[]} one entry per name
  */
-const namesInRepository = (expression, allowedFiles = new Set()) => {
-  const found = [];
-
-  for (const file of trackedFiles()) {
-    if (SKIPPED_FILES.has(path.normalize(file)) ||
-      allowedFiles.has(path.normalize(file))) {
-      continue;
-    }
-    if (SKIPPED_EXTENSIONS.has(path.extname(file).toLowerCase())) {
-      continue;
-    }
-    found.push(...namesInFile(file, expression));
+const envNamesIn = (node) => {
+  if (node === null || typeof node !== 'object') {
+    return [];
   }
-
-  return found;
+  const names = [];
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'env' && value !== null && typeof value === 'object') {
+      names.push(...Object.keys(value));
+    } else {
+      names.push(...envNamesIn(value));
+    }
+  }
+  return names;
 };
 
 describe('environment variable names', () => {
-  // A file that no longer carries an old name must leave its list, so no
-  // list outlasts the deprecated names.
-  const unusedFiles = (files, expression) => [...files].filter(
-    (file) => namesInFile(file, expression).length === 0);
+  it('reads and sets only 51Degrees names and platform names', () => {
+    expect(otherNamesInRepository()).toEqual([]);
+  });
 
-  it('names a variable that starts with a digit only where read', () => {
-    expect(namesInRepository(DIGIT_INITIAL_NAME, DIGIT_INITIAL_NAME_FILES))
+  it('finds a name in each form it is read or set in', () => {
+    // The dollar sign is kept apart so the text is not read as a template
+    // string.
+    const braced = '$' + '{env:_51DEGREES_DD_PATH} = $path';
+    const secret = '$' + '{{ secrets._51DEGREES_LICENSE_KEY }}';
+    const variable = '$' + '{{ vars._51DEGREES_CLOUD_ENDPOINT }}';
+
+    expect(namesIn('process.env._51DEGREES_RESOURCE_KEY || undefined'))
+      .toEqual(['_51DEGREES_RESOURCE_KEY']);
+    expect(namesIn("process.env['_51DEGREES_IPI_PATH']"))
+      .toEqual(['_51DEGREES_IPI_PATH']);
+    expect(namesIn('$env:_51DEGREES_EXAMPLE_URL = $url'))
+      .toEqual(['_51DEGREES_EXAMPLE_URL']);
+    expect(namesIn(braced)).toEqual(['_51DEGREES_DD_PATH']);
+    expect(namesIn(secret)).toEqual(['_51DEGREES_LICENSE_KEY']);
+    expect(namesIn(variable)).toEqual(['_51DEGREES_CLOUD_ENDPOINT']);
+
+    // A name read through a variable holding it is not a use, and neither
+    // is prose that ends a sentence with one of the words.
+    expect(namesIn('process.env[name]')).toEqual([]);
+    expect(namesIn('The job is given no secrets. It runs without them.'))
       .toEqual([]);
   });
 
-  it('lists no file that names no variable that starts with a digit', () => {
-    expect(unusedFiles(DIGIT_INITIAL_NAME_FILES, DIGIT_INITIAL_NAME))
-      .toEqual([]);
+  it('sets only 51Degrees names and platform names in a workflow', () => {
+    const found = [];
+    const other = [];
+
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const workflow = yaml.load(
+        fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8'));
+      for (const name of envNamesIn(workflow)) {
+        found.push(name);
+        if (!isAllowed(name)) {
+          other.push(`${file}: ${name}`);
+        }
+      }
+    }
+
+    expect(found.length).toBeGreaterThan(0);
+    expect(other).toEqual([]);
+    expect(envNamesIn({ jobs: { a: { steps: [{ env: { PORT: 1 } }] } } }))
+      .toEqual(['PORT']);
   });
 
-  it('reads a bare resource key or licence key name only where listed',
-    () => {
-      expect(namesInRepository(FALLBACK_NAME, FALLBACK_NAME_FILES))
-        .toEqual([]);
-    });
+  it('allows only a 51Degrees name or a platform name', () => {
+    expect(isAllowed('_51DEGREES_RESOURCE_KEY_BESPOKE')).toBe(true);
+    expect(isAllowed('JEST_WORKER_ID')).toBe(true);
+    expect(isAllowed('NPM_AUTH_TOKEN')).toBe(true);
+    expect(isAllowed('CLOUD_STAGING_ENDPOINT')).toBe(true);
+    expect(isAllowed('RESOURCE_KEY_BESPOKE_STAGING')).toBe(true);
+    // Only those two exact names, not one that looks like them.
+    expect(isAllowed('CLOUD_STAGING_ENDPOINT_URL')).toBe(false);
+    expect(isAllowed('RESOURCE_KEY_BESPOKE')).toBe(false);
+    expect(isAllowed('cloud_staging_endpoint')).toBe(false);
 
-  it('lists no file that reads no bare resource key or licence key name',
-    () => {
-      expect(unusedFiles(FALLBACK_NAME_FILES, FALLBACK_NAME)).toEqual([]);
-    });
-
-  it('names the old cloud endpoint variable only where read or documented',
-    () => {
-      expect(namesInRepository(OLD_NAME, OLD_NAME_FILES)).toEqual([]);
-    });
-
-  it('lists no file that does not name the old cloud endpoint variable',
-    () => {
-      expect(unusedFiles(OLD_NAME_FILES, OLD_NAME)).toEqual([]);
-    });
-
-  it('matches only a name that starts with the digit', () => {
-    const subject = (text) =>
-      [...text.matchAll(DIGIT_INITIAL_NAME)].map((match) => match[2]);
-
-    // The form in use is not a match, in either position.
-    expect(subject('_51DEGREES_DD_PATH')).toEqual([]);
-    expect(subject('$env:_51DEGREES_RESOURCE_KEY = $key')).toEqual([]);
-
-    // Neither is the text inside a longer word.
-    expect(subject('PREFIX51DEGREES_DD_PATH')).toEqual([]);
-
-    // The old form is a match, wherever it sits on the line.
-    expect(subject('51DEGREES_DD_PATH')).toEqual(['51DEGREES_DD_PATH']);
-    expect(subject("set '51DEGREES_IPI_PATH' now"))
-      .toEqual(['51DEGREES_IPI_PATH']);
-    expect(subject('51DEGREES_DD_PATH and 51DEGREES_IPI_PATH'))
-      .toEqual(['51DEGREES_DD_PATH', '51DEGREES_IPI_PATH']);
-
-    // In any letter case.
-    expect(subject('51degrees_dd_path')).toEqual(['51degrees_dd_path']);
+    // The prefix alone names nothing.
+    expect(isAllowed('_51DEGREES_')).toBe(false);
+    // The prefix has to come first, underscore included.
+    expect(isAllowed('MY_51DEGREES_NAME')).toBe(false);
+    expect(isAllowed('EXAMPLE_NAME')).toBe(false);
+    // Names keep their case, as Linux reads them.
+    expect(isAllowed('_51degrees_dd_path')).toBe(false);
   });
 
-  it('matches only the whole old cloud endpoint name', () => {
-    const subject = (text) =>
-      [...text.matchAll(OLD_NAME)].map((match) => match[2]);
+  // A 51Did license redeems only with a resource key of the same account,
+  // and the Basic tier test needs a key on that tier alone, so each key in
+  // a workflow comes from the value of its own name. Every resource key and
+  // every license key is an organization secret.
+  const assignment =
+    /^\s*(_51DEGREES_(?:RESOURCE|LICENSE)_KEY[A-Z0-9_]*)\s*:\s*(.*?)\s*$/;
 
-    // The name in use is not a match.
-    expect(subject('process.env._51DEGREES_CLOUD_ENDPOINT')).toEqual([]);
+  /**
+   * The value a workflow must fill a key from.
+   *
+   * @param {string} name the key's name
+   * @returns {string} the secret of the same name
+   */
+  const keySource = (name) => '$' + '{{ secrets.' + name + ' }}';
 
-    // Neither is a longer name holding the old one.
-    expect(subject('process.env.FOD_CLOUD_API_URL_V2')).toEqual([]);
-    expect(subject('MY_FOD_CLOUD_API_URL=x')).toEqual([]);
-
-    // The old name is a match, read, set or in prose.
-    expect(subject('process.env.FOD_CLOUD_API_URL'))
-      .toEqual(['FOD_CLOUD_API_URL']);
-    expect(subject("'FOD_CLOUD_API_URL' = 'https://cloud.example/'"))
-      .toEqual(['FOD_CLOUD_API_URL']);
-    expect(subject('FOD_CLOUD_API_URL=https://cloud.example/ node x.js'))
-      .toEqual(['FOD_CLOUD_API_URL']);
-
-    // In any letter case.
-    expect(subject('process.env.fod_cloud_api_url'))
-      .toEqual(['fod_cloud_api_url']);
+  it('expects every key from secrets', () => {
+    // The dollar sign is kept apart, as above.
+    for (const name of [
+      '_51DEGREES_RESOURCE_KEY',
+      '_51DEGREES_RESOURCE_KEY_51DID',
+      '_51DEGREES_RESOURCE_KEY_BASIC',
+      '_51DEGREES_RESOURCE_KEY_BESPOKE',
+      '_51DEGREES_RESOURCE_KEY_PRO',
+      '_51DEGREES_RESOURCE_KEY_ESSENTIALS',
+      '_51DEGREES_RESOURCE_KEY_V4_COMPLETE',
+      '_51DEGREES_RESOURCE_KEY_V4_FREE',
+      '_51DEGREES_RESOURCE_KEY_DOMAIN_RESTRICTED',
+      '_51DEGREES_RESOURCE_KEY_DOMAIN_RESTRICTED_51DEGREES',
+      '_51DEGREES_LICENSE_KEY_51DID'
+    ]) {
+      expect(keySource(name)).toBe('$' + '{{ secrets.' + name + ' }}');
+    }
   });
 
-  it('matches only a read of the bare name', () => {
-    const subject = (text) =>
-      [...text.matchAll(FALLBACK_NAME)].map((match) => match[1]);
+  it('reads no key from an organization variable in any file', () => {
+    // The dot is kept apart so this file does not match itself.
+    const keyVariable = new RegExp(
+      '\\bvars' + '\\.' + PREFIX + '(?:RESOURCE|LICENSE)_KEY');
+    const found = [];
 
-    // A read of the name in use is not a match.
-    expect(subject('process.env._51DEGREES_RESOURCE_KEY')).toEqual([]);
-    expect(subject("process.env['_51DEGREES_LICENSE_KEY']")).toEqual([]);
-    expect(subject('$env:_51DEGREES_RESOURCE_KEY = $key')).toEqual([]);
+    for (const file of trackedFiles()) {
+      const full = path.join(REPOSITORY_ROOT, file);
+      if (SKIPPED_EXTENSIONS.has(path.extname(file).toLowerCase()) ||
+        !fs.existsSync(full) || !fs.statSync(full).isFile()) {
+        continue;
+      }
+      fs.readFileSync(full, 'utf8').split('\n').forEach((line, index) => {
+        if (keyVariable.test(line)) {
+          found.push(`${file}:${index + 1}`);
+        }
+      });
+    }
 
-    // Neither is a read of a longer name that ends in the same text.
-    expect(subject('process.env.TEST_SUPER_RESOURCE_KEY')).toEqual([]);
-    expect(subject('process.env._51DEGREES_LICENSE_KEY_51DID')).toEqual([]);
+    expect(keyVariable.test(
+      '$' + '{{ vars' + '.' + PREFIX + 'RESOURCE_KEY_BASIC }}')).toBe(true);
+    expect(keyVariable.test(
+      '$' + '{{ secrets.' + PREFIX + 'RESOURCE_KEY_BASIC }}')).toBe(false);
+    expect(found).toEqual([]);
+  });
 
-    // Neither is the placeholder, nor prose naming the old name.
-    expect(subject("const PLACEHOLDER = '!!YOUR_RESOURCE_KEY!!';")).toEqual([]);
-    expect(subject('the RESOURCE_KEY name is no longer read')).toEqual([]);
+  it('fills each key in a workflow from the secret of the same name', () => {
+    const names = [];
+    const wrong = [];
 
-    // A read of the bare name is a match, in each of the three forms.
-    expect(subject('process.env.RESOURCE_KEY')).toEqual(['RESOURCE_KEY']);
-    expect(subject("process.env['LICENSE_KEY']")).toEqual(['LICENSE_KEY']);
-    expect(subject('$env:RESOURCE_KEY = $TestResourceKey'))
-      .toEqual(['RESOURCE_KEY']);
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const lines = fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8')
+        .split('\n');
+      lines.forEach((line, index) => {
+        const match = line.match(assignment);
+        if (match) {
+          names.push(match[1]);
+          if (match[2] !== keySource(match[1])) {
+            wrong.push(`${file}:${index + 1}: ${match[1]}: ${match[2]}`);
+          }
+        }
+      });
+    }
 
-    // PowerShell's braced form is the same read. The dollar sign is kept
-    // apart so the text is not read as a template string.
-    const braced = (name) => '$' + '{env:' + name + '} = $key';
-    expect(subject(braced('LICENSE_KEY'))).toEqual(['LICENSE_KEY']);
-    expect(subject(braced('_51DEGREES_LICENSE_KEY'))).toEqual([]);
+    // The Cloud 51Did workflow fills both kinds of key, so the test cannot
+    // pass by finding none of either.
+    expect(names.some((name) => name.startsWith(PREFIX + 'RESOURCE_KEY')))
+      .toBe(true);
+    expect(names.some((name) => name.startsWith(PREFIX + 'LICENSE_KEY')))
+      .toBe(true);
+    expect(wrong).toEqual([]);
+  });
 
-    // Including a read behind the name in use.
-    expect(subject('process.env._51DEGREES_RESOURCE_KEY || ' +
-      'process.env.RESOURCE_KEY')).toEqual(['RESOURCE_KEY']);
+  it('fills each staging name in a workflow from its own organization ' +
+    'value', () => {
+    // The staging key is a secret and never a variable, so it is never
+    // shown in a log.
+    const stagingAssignment = new RegExp('^\\s*(' +
+      Object.keys(STAGING_NAMES).join('|') + ')\\s*:\\s*(.*?)\\s*$');
+    // The dollar sign is kept apart, as above.
+    const source = (name) =>
+      '$' + '{{ ' + STAGING_NAMES[name] + '.' + name + ' }}';
+    const names = new Set();
+    const wrong = [];
 
-    // In any letter case.
-    expect(subject('process.env.resource_key')).toEqual(['resource_key']);
+    for (const file of trackedFiles()) {
+      if (!/^\.github\/workflows\/.*\.ya?ml$/.test(file)) {
+        continue;
+      }
+      const lines = fs.readFileSync(path.join(REPOSITORY_ROOT, file), 'utf8')
+        .split('\n');
+      lines.forEach((line, index) => {
+        const match = line.match(stagingAssignment);
+        if (match) {
+          names.add(match[1]);
+          if (match[2] !== source(match[1])) {
+            wrong.push(`${file}:${index + 1}: ${match[1]}: ${match[2]}`);
+          }
+        }
+      });
+    }
+
+    // The Cloud Human Confidence workflow fills both, so the test cannot
+    // pass by finding neither.
+    expect([...names].sort()).toEqual(Object.keys(STAGING_NAMES).sort());
+    expect(wrong).toEqual([]);
   });
 });

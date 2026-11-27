@@ -44,8 +44,15 @@ const UNKNOWN_INDEX = 200;
 const USAGE_BITS = { nonMarketing: 0b001, standard: 0b011, personalized: 0b111 };
 const TYPE_BITS = { probabilistic: 0b00, random: 0b01, hashedEmail: 0b10 };
 
-// A payload ending at the match key for the type, with the flags byte set
-// for the type, the usage and whether the usage was worked out indirectly.
+/**
+ * A payload ending at the match key for the type, with the flags byte set
+ * for the type, the usage and whether the usage was worked out indirectly.
+ *
+ * @param {string} type the key of the type in TYPE_BITS
+ * @param {string} usage the key of the usage in USAGE_BITS
+ * @param {boolean} indirect whether the usage was worked out indirectly
+ * @returns {Uint8Array} the payload
+ */
 function payloadFor (type, usage, indirect) {
   const payload = type === 'random'
     ? randomPayloadEndingAtMatchKey()
@@ -55,7 +62,11 @@ function payloadFor (type, usage, indirect) {
   return payload;
 }
 
-// Every type, usage and terms state an identifier can be in, as base 64.
+/**
+ * Every type, usage and terms state an identifier can be in, as base 64.
+ *
+ * @returns {string[]} the identifiers
+ */
 function everyIdentifier () {
   const all = [];
   for (const type of Object.keys(TYPE_BITS)) {
@@ -73,7 +84,11 @@ function everyIdentifier () {
   return all;
 }
 
-// Values that are not a 51Did, each for a different reason.
+/**
+ * Values that are not a 51Did, each for a different reason.
+ *
+ * @returns {string[]} the values
+ */
 function everyRefusal () {
   const good = envelopeBytes(canonicalPayload());
   const base64 = (bytes) => Buffer.from(bytes).toString('base64');
@@ -223,13 +238,13 @@ describe('reader', () => {
 
   it('loads without the OWID library', () => {
     jest.isolateModules(() => {
-      jest.doMock('owid', () => {
+      jest.doMock('../owid-js/v1.js', () => {
         throw new Error('the reader must not load the OWID library');
       });
       const isolated = require('../reader');
       expect(isolated.read(envelopeBase64(withTerms(canonicalPayload(), 1))).terms)
         .toBe(MODEL_TERMS_2_URL);
     });
-    jest.dontMock('owid');
+    jest.dontMock('../owid-js/v1.js');
   });
 });

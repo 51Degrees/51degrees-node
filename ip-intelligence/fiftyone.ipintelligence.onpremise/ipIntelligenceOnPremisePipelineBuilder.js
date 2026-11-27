@@ -42,13 +42,18 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
    * @param {string} [options.licenceKeys] license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremisepipelinebuilder.js&utm_term=constructor.
-   * This parameter MUST be set when using a data file.
-   * If you do not wish to use a key then you can specify
-   * an empty string, but this will cause automatic updates
-   * to be disabled.
+   * A key is needed only when autoUpdate or updateOnStart is on with the
+   * default dataUpdateUrl, and the engine refuses to build without one
+   * then. The file system watcher needs no key.
    * @param {string} options.dataFile dataFile path for the on premise engine
    * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
    * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
+   * @param {string} [options.dataUpdateProduct] the product to ask the data
+   * update service for, such as IPIV4Enterprise. When it is set, every
+   * request for a data file carries it in a Product parameter. With none
+   * set, the first request names no product, which is all that license keys
+   * holding one product need. Set it when license keys that hold several
+   * products download the data file on start-up.
    * @param {boolean} [options.autoUpdate] whether to autoUpdate the dataFile
    * @param {string} [options.dataUpdateUrl] base url for the datafile
    * update service
@@ -91,6 +96,7 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
       dataFile = null,
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
+      dataUpdateProduct,
       autoUpdate = true,
       dataUpdateUrl = null,
       pollingInterval = 30,
@@ -110,7 +116,9 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
     // Check if share usage enabled and add it to the pipeline if so
 
     if (shareUsage) {
-      this.flowElements.push(new ShareUsageElement());
+      // Usage sharing goes after every other Flow Element when the
+      // Pipeline is built.
+      this.usageSharingElement = new ShareUsageElement();
     }
 
     if (dataUpdateUrl == null) {
@@ -118,7 +126,7 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
     }
 
     if (cacheSize) {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
     this.flowElements.push(new IpIntelligenceOnPremise(
       {
@@ -127,6 +135,7 @@ class IpIntelligenceOnPremisePipelineBuilder extends PipelineBuilder {
         dataUpdateUrl,
         dataUpdateVerifyMd5,
         dataUpdateUseUrlFormatter,
+        dataUpdateProduct,
         fileSystemWatcher,
         pollingInterval,
         updateTimeMaximumRandomisation,

@@ -33,8 +33,6 @@ const fs = require('fs');
 
 const example = require(path.join(__dirname, '/gettingStarted.js'));
 
-const ExampleUtils = require(path.join(__dirname, '/../exampleUtils'));
-
 const shared = require51('fiftyone.ipintelligence.shared');
 const tc = shared.testConstants;
 const keyUtils = shared.keyUtils;
@@ -43,15 +41,13 @@ const OptionsExtension = shared.optionsExtension;
 const CloudRequestEngine =
   require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  tc.envVars.superResourceKeyVariable,
-  ExampleUtils.RESOURCE_KEY_VARIABLE);
+const resourceKeyName = tc.envVars.resourceKeyBespokeVariable;
 
 describe('Examples', () => {
   test('cloud getting started', async () => {
-    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
+    const resourceKey = keyUtils.getResourceKey(resourceKeyName);
     if (!resourceKey) {
-      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
+      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyName,
         'ip', 'the IP Intelligence properties of five addresses'));
     }
     await keyUtils.requireProduct(
@@ -72,6 +68,10 @@ describe('Examples', () => {
     expect(lines).toContain('Registered Country: CH');
     expect(lines).toContain('Registered Country: BE');
     expect(lines).toContain('Registered Country: AT');
+    // Each value is shown again with its weighting, as
+    // ip-intelligence required-examples.md lines 107 and 108 ask.
+    expect(lines.some((line) =>
+      /^Registered Country: CH, weighting (1|0\.\d+)$/.test(line))).toBe(true);
     expect(output.faults()).toEqual([]);
   });
 });

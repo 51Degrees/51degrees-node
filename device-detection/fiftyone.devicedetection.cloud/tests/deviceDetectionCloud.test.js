@@ -43,23 +43,16 @@ const errorMessages = require51('fiftyone.devicedetection.shared').errorMessages
 const fs = require('fs');
 const each = require('jest-each').default;
 
-const CSVDataFile = (process.env.directory || __dirname) + '/51Degrees.csv';
+const CSVDataFile = path.join(__dirname, '51Degrees.csv');
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
   'AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile' +
   '/11D167 Safari/9537.53';
 
-// The resource key is read from the '_51DEGREES_RESOURCE_KEY'
+// The resource key is read from the '_51DEGREES_RESOURCE_KEY_BESPOKE'
 // environment variable.
-// RESOURCE_KEY is the deprecated name of the same variable, read only
-// when _51DEGREES_RESOURCE_KEY is unset or empty.
-if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-    'instead.');
-}
-const myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-  process.env.RESOURCE_KEY || '!!YOUR_RESOURCE_KEY!!';
+const myResourceKey = process.env._51DEGREES_RESOURCE_KEY_BESPOKE ||
+  '!!YOUR_RESOURCE_KEY!!';
 
 describe('deviceDetectionCloud', () => {
   beforeAll(() => {

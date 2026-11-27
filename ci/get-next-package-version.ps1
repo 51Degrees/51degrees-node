@@ -3,31 +3,22 @@ param (
     [Parameter(Mandatory)][string]$VariableName
 )
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot/release-plan.ps1"
 
-# The whole repository has one version, tagged as a plain version such as
-# 4.5.96. Only the patch number moves here. The major and minor numbers
-# change only when someone edits FirstVersion before the first release or
-# pushes a tag by hand.
-
-# The version used while the repository has no version tag. It is above every
-# version the absorbed repositories published, so the first release from here
-# is an ordinary upgrade for each package.
-$FirstVersion = '4.5.98'
-
-$tags = @(git -C $RepoName tag --list |
-    Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-    Sort-Object { [version]$_ })
-$headTags = @(git -C $RepoName tag --points-at HEAD |
-    Where-Object { $_ -match '^\d+\.\d+\.\d+$' })
-
-if ($headTags) {
-    # Already released, so the publish sees the tag and does nothing.
-    $next = $headTags | Sort-Object { [version]$_ } | Select-Object -Last 1
-} elseif ($tags) {
-    $highest = [version]$tags[-1]
-    $next = "$($highest.Major).$($highest.Minor).$($highest.Build + 1)"
+# common-ci's publish carries one version through its jobs. Each package here
+# has its own version, so that one is only a label for the run: the highest
+# version this publish releases, or, when it releases nothing, the highest
+# version released so far. package-update-required.ps1 decides whether
+# anything is released, and build-package.ps1 and publish-package.ps1 give
+# each package its version and tag, all from the same release plan.
+$plan = @(Get-NodeReleasePlan $RepoName)
+if ($plan.Count -gt 0) {
+    $versions = @($plan.Version)
 } else {
-    $next = $FirstVersion
+    $versions = @(Get-Packages $RepoName |
+        Where-Object { $_.Publish -eq $true } |
+        ForEach-Object { "$(@(Get-ReleasedVersions $RepoName $_.Name)[-1])" })
 }
+$label = $versions | Sort-Object { [version]$_ } | Select-Object -Last 1
 
-Set-Variable -Scope Global -Name $VariableName -Value $next
+Set-Variable -Scope Global -Name $VariableName -Value $label

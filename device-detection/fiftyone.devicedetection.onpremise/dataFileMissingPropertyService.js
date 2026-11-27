@@ -22,9 +22,6 @@
 
 const MissingPropertyService = require('fiftyone.pipeline.engines').MissingPropertyService;
 
-const errorMessages = require('fiftyone.devicedetection.shared').errorMessages;
-const util = require('util');
-
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowElement} FlowElement
  */
@@ -35,32 +32,18 @@ const util = require('util');
  */
 class DeviceDetectionMissingPropertyService extends MissingPropertyService {
   /**
-   * Constructor for Missing Property Service that receives a requested property
-   * key that is missing in the data. If it is missing because the data does not
-   * exist in the data file that was chosen, it returns an error which
-   * states which data file the property can be found in.
+   * The data tiers that have a Property the metadata lists, where the
+   * engine's data file is not one of them, so the message says which
+   * licence or data file to upgrade to.
    *
-   * @param {string} key missing property key
-   * @param {FlowElement} flowElement the FlowElement the key was missing from
-   * @returns {never} throws an error
+   * @param {object} property the Property's metadata
+   * @param {FlowElement} flowElement the engine the Property was asked of
+   * @returns {string[] | undefined} the tiers that have the Property, or
+   * undefined where the engine's data file has it
    */
-  check (key, flowElement) {
-    if (flowElement.properties[key]) {
-      const currentDataFile = flowElement.engine.getProduct();
-      const dataFiles = flowElement.properties[key].dataFiles;
-
-      throw util.format(
-        errorMessages.propertyKeyDataFiles,
-        key,
-        dataFiles.join(' '),
-        currentDataFile);
-    } else {
-      throw util.format(
-        errorMessages.propertyNotFound,
-        key,
-        flowElement.dataKey
-      );
-    }
+  tiersWithProperty (property, flowElement) {
+    const tiers = property.dataFiles || [];
+    return tiers.includes(flowElement.engine.getProduct()) ? undefined : tiers;
   }
 }
 

@@ -1,19 +1,41 @@
 param (
     [Parameter(Mandatory)][string]$RepoName,
-    [string]$TestResourceKey
+    # False, from select-options.ps1, on every entry of a pull request but
+    # one, so the browser contract runs once.
+    [bool]$SeleniumContract = $true
 )
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-# The pipeline and location tests read the key from this.
-$env:_51DEGREES_RESOURCE_KEY = $TestResourceKey
+# The tests read each key under its own _51DEGREES_ name, which is in the
+# environment before this runs.
 
-./node/run-integration-tests.ps1 -RepoName $RepoName
+Push-Location $RepoName
+try {
+    Write-Host 'Running integration tests'
+    $env:JEST_JUNIT_OUTPUT_DIR = 'test-results/integration'
+    npm run integration-test
+} finally { Pop-Location }
+
+if (-not $SeleniumContract) {
+    Write-Host "Another entry runs the Selenium contract tests for this pull request."
+    exit
+}
 
 if ($IsLinux -and [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
     Write-Host "::warning title=Selenium skipped::Selenium contract skipped on linux-arm64 (no selenium-manager aarch64 build); covered on x64 and macOS-arm."
     exit
 }
+
+# The suite runs on .NET. A dotnet that is only a file, such as a link to an
+# SDK that has been removed, is opened rather than run, which sets no exit
+# code, so the tests would be reported as passed without running.
+$dotnet = Get-Command dotnet -CommandType Application -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if (-not $dotnet -or -not (Test-Path -PathType Leaf $dotnet.Source)) {
+    throw "The Selenium contract tests need .NET, and no dotnet program was found."
+}
+& $dotnet.Source --version
 
 # Starts one of this repository's web examples, runs the shared Selenium
 # contract tests against it, and stops it again. Throws if the tests fail,
@@ -31,7 +53,7 @@ function Invoke-ContractTests {
     try {
         # The background job is a new process, which inherits this process's
         # environment and current location when it starts.
-        $env:PORT = $Port
+        $env:_51DEGREES_EXAMPLE_HTTP_PORTS = $Port
         # PowerShell names ignore case, so the loop variable must not be $name,
         # which is the same variable as the $Name parameter.
         foreach ($variable in $Environment.Keys) {
@@ -47,10 +69,15 @@ function Invoke-ContractTests {
         curl -sS -o $(if ($IsWindows) { 'NUL' } else { '/dev/null' }) --retry 20 --retry-delay 3 --retry-max-time 120 --retry-connrefused "http://localhost:$Port"
         if ($LASTEXITCODE -ne 0) { throw "The $Name example did not start on port $Port." }
 
-        $env:EXAMPLE_URL = "http://localhost:$Port"
-        $env:EXAMPLE_LANG = 'node'
-        dotnet test selenium-api-tests -c Release --filter TestCategory=Contract
+        $env:_51DEGREES_EXAMPLE_URL = "http://localhost:$Port"
+        $env:_51DEGREES_EXAMPLE_LANG = 'node'
+        & $dotnet.Source test selenium-api-tests -c Release --filter TestCategory=Contract |
+            Tee-Object -Variable output | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "dotnet test exited with $LASTEXITCODE." }
+        # A run that found no test also exits with 0.
+        if (-not ($output -match 'Passed:\s+[1-9]')) {
+            throw "dotnet test reported no test that passed."
+        }
         Write-Host "Selenium contract tests passed against the $Name example."
     } catch {
         Write-Host "::error title=Selenium contract failed::The Selenium contract tests failed against the $Name example. $_"
@@ -58,6 +85,8 @@ function Invoke-ContractTests {
         throw
     } finally {
         if ($example) { Remove-Job -Force $example }
+        Remove-Item env:_51DEGREES_EXAMPLE_URL, env:_51DEGREES_EXAMPLE_LANG `
+            -ErrorAction SilentlyContinue
         foreach ($variable in $Environment.Keys) {
             [Environment]::SetEnvironmentVariable($variable, $null)
         }
@@ -69,23 +98,20 @@ if (-not (Test-Path selenium-api-tests)) {
     git clone --depth 1 https://github.com/51Degrees/selenium-api-tests.git
 }
 
-# The suite reads the cloud address when it starts, even when the example it
-# drives does not use the cloud.
-$env:CLOUD_ROOT_URL = "https://cloud.51degrees.com/"
-
 $failed = @()
 
-# Cloud example, pointed at the live cloud.
-if ($TestResourceKey) {
-    $env:PAID_RESOURCE_KEY = $TestResourceKey
+# Cloud example. It reads its resource key from _51DEGREES_RESOURCE_KEY, as
+# a person running it sets it, so that is set for this run to the key the
+# tests use. It calls the cloud service _51DEGREES_CLOUD_ENDPOINT names, or
+# the public one when that is not set.
+if ($env:_51DEGREES_RESOURCE_KEY_BESPOKE) {
     try {
         Invoke-ContractTests `
         -Name 'cloud' `
         -ExampleDir "$PSScriptRoot/../device-detection/fiftyone.devicedetection.cloud/examples/cloud/gettingstarted-web" `
         -Port 8096 `
         -Environment @{
-            '_51DEGREES_RESOURCE_KEY' = $TestResourceKey
-            '_51DEGREES_CLOUD_ENDPOINT' = 'https://cloud.51degrees.com/api/v4/'
+            '_51DEGREES_RESOURCE_KEY' = $env:_51DEGREES_RESOURCE_KEY_BESPOKE
         }
     } catch { $failed += 'cloud' }
 } else {
@@ -99,12 +125,6 @@ if ($TestResourceKey) {
 # its files in ./assets).
 $tacDataFile = Join-Path $PWD 'assets' 'TAC-HashV41.hash'
 if (Test-Path $tacDataFile) {
-    # The suite requires a resource key to be set, but the on-premise example
-    # never calls the cloud, so the value is not used. Keep the real one if the
-    # cloud run above set it.
-    if (-not $env:PAID_RESOURCE_KEY) {
-        $env:PAID_RESOURCE_KEY = 'not-used-by-the-on-premise-example'
-    }
     try {
         Invoke-ContractTests `
         -Name 'on-premise' `

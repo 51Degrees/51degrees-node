@@ -40,8 +40,6 @@ const fs = require('fs');
 // Load the example module
 const example = require(path.join(__dirname, '/gettingStarted.js'));
 
-const ExampleUtils = require(path.join(__dirname, '/../../exampleUtils'));
-
 const shared = require51('fiftyone.ipintelligence.shared');
 const tc = shared.testConstants;
 const keyUtils = shared.keyUtils;
@@ -49,18 +47,35 @@ const OptionsExtension = shared.optionsExtension;
 const CloudRequestEngine =
   require51('fiftyone.pipeline.cloudrequestengine').CloudRequestEngine;
 
-const resourceKeyNames = keyUtils.resourceKeyNames(
-  tc.envVars.superResourceKeyVariable,
-  ExampleUtils.RESOURCE_KEY_VARIABLE);
+const resourceKeyName = tc.envVars.resourceKeyBespokeVariable;
+
+// An IPv4 address registered to VMCBBUK in the United Kingdom, in the range
+// 82.12.34.0 to 82.12.34.255.
+const KNOWN_UK_IPV4 = '82.12.34.23';
+
+// The text of the value cell next to a label in the results tables, or
+// undefined when the page has no such row.
+const valueOf = (html, label) => {
+  const match = new RegExp('>' + label +
+    ':</td>\\s*<td class="c-eg-table__cell">([^<]*)</td>').exec(html);
+  return match ? match[1] : undefined;
+};
+
+// The test is skipped, and says which variable to set, when there is no
+// resource key.
+const resourceKey = keyUtils.getResourceKey(resourceKeyName);
+const run = resourceKey ? test : test.skip;
+const name = 'cloud mixed getting started web';
+const title = name +
+  (resourceKey ? '' : ` (skipped: '${resourceKeyName}' is not set)`);
+if (!resourceKey) {
+  console.warn(`Skipping '${name}': set the environment variable ` +
+    `'${resourceKeyName}' to a resource key that carries the ip and ` +
+    'device products to run it.');
+}
 
 describe('Examples', () => {
-  test('cloud mixed getting started web', async () => {
-    const resourceKey = keyUtils.getResourceKey(resourceKeyNames);
-    if (!resourceKey) {
-      throw new Error(keyUtils.missingResourceKeyMessage(resourceKeyNames,
-        ['ip', 'device'], 'IP Intelligence and device detection ' +
-        'properties of the request'));
-    }
+  run(title, async () => {
     const cloud = new CloudRequestEngine({ resourceKey });
     await keyUtils.requireProduct(cloud, 'ip');
     await keyUtils.requireProduct(cloud, 'device');
@@ -75,7 +90,18 @@ describe('Examples', () => {
 
     example.setPipeline(options);
     const response = await request(example.server)
-      .get('/?client-ip=8.8.8.8');
+      .get('/?client-ip=' + KNOWN_UK_IPV4);
     expect(response.statusCode).toBe(200);
+    const html = response.text;
+    expect(html).toContain('Device detection results');
+    expect(html).toContain('IP intelligence results');
+    expect(html).toContain(KNOWN_UK_IPV4);
+    expect(valueOf(html, 'Registered Name')).toContain('VMCBBUK');
+    expect([
+      valueOf(html, 'Country'), valueOf(html, 'Country Code')
+    ].join(' ')).toMatch(/United Kingdom|GB/);
+    expect([
+      valueOf(html, 'IP Range Start'), valueOf(html, 'IP Range End')
+    ].join(' ')).toMatch(/82\.12\.34\.0\b|82\.12\.34\.255\b/);
   });
 });

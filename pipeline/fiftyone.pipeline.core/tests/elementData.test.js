@@ -57,8 +57,6 @@ const testEngine = new Engine(
       );
 
       flowData.setElementData(data);
-
-      hasRun = true; // eslint-disable-line
     }
   }
 );
@@ -69,14 +67,10 @@ const flowData = new PipelineBuilder().add(testEngine).build().createFlowData();
 // error message is returned.
 test('missing property', done => {
   flowData.process().then(function () {
-    try {
-      flowData.get('testEngine').get('three');
-    } catch (e) {
-      expect(e.indexOf(
-        util.format(errorMessages.genericMissingProperties, 'three') +
+    expect(() => flowData.get('testEngine').get('three')).toThrow(
+      util.format(errorMessages.genericMissingProperties, 'three') +
         ' in data for element "testEngine".' +
-        util.format(errorMessages.noReasonUnknown)) !== -1).toBe(true);
-    }
+        util.format(errorMessages.noReasonUnknown));
 
     done();
   });

@@ -41,8 +41,8 @@ const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 const PipelineBuilder = require51('fiftyone.pipeline.core').PipelineBuilder;
 
-const DataFile = path.resolve((process.env.directory || __dirname) +
-  '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const DataFile = path.resolve(__dirname,
+  '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
@@ -66,6 +66,7 @@ const processAndDrop = async (tempDir, registry) => {
   const pipeline = new DeviceDetectionOnPremisePipelineBuilder({
     dataFile: DataFile,
     shareUsage: false,
+    autoUpdate: false,
     createTempDataCopy: true,
     tempDataDir: tempDir
   }).build();

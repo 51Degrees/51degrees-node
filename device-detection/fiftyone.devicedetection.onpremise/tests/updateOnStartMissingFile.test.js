@@ -41,8 +41,8 @@ const require51 = (requestedPackage) => {
 const DeviceDetectionOnPremisePipelineBuilder = require51(
   'fiftyone.devicedetection.onpremise').DeviceDetectionOnPremisePipelineBuilder;
 
-const DataFile = path.resolve((process.env.directory || __dirname) +
-  '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const DataFile = path.resolve(__dirname,
+  '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const MobileUserAgent =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 7_1 like Mac OS X) ' +
@@ -138,18 +138,37 @@ describe('update on start-up with no data file', () => {
   });
 
   // The engine reads the keys it accepts from the data file, which has not
-  // arrived yet, so until it does every key is kept and evidence added in
-  // the meantime is not lost.
-  test('keeps every key until the data file arrives', async () => {
+  // arrived yet. Until it does the engine accepts no Evidence, as nothing
+  // can change its results (advertize-accepted-evidence.md line 25), and
+  // keeps every key, so evidence added in the meantime is not lost.
+  test('accepts no Evidence and keeps every key until the data file ' +
+    'arrives', async () => {
     server = await serve(500);
     const pipeline = builderFor(server, folder, true).build();
     const engine = pipeline.getElement('device');
     expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
-      .toBe(true);
+      .toBeFalsy();
+    expect(engine.keptEvidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeTruthy();
     const flowData = pipeline.createFlowData();
     flowData.evidence.add('header.user-agent', MobileUserAgent);
-    expect(flowData.evidence.get('header.user-agent'))
+    expect(flowData.evidence.getAll()['header.user-agent'])
       .toBe(MobileUserAgent);
+  });
+
+  test('accepts the data file\'s keys and keeps no others once it ' +
+    'arrives', async () => {
+    server = await serve(200);
+    const pipeline = builderFor(server, folder, true).build();
+    const engine = pipeline.getElement('device');
+    const flowData = pipeline.createFlowData();
+    flowData.evidence.add('header.user-agent', MobileUserAgent);
+    await flowData.process();
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.user-agent'))
+      .toBeTruthy();
+    expect(engine.evidenceKeyFilter.filterEvidenceKey('header.anything'))
+      .toBeFalsy();
+    expect(engine.keptEvidenceKeyFilter).toBeUndefined();
   });
 
   test('still fails to build where the engine does not update on ' +

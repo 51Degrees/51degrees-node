@@ -14,7 +14,7 @@ declare class Evidence {
     constructor(flowData: FlowData);
     flowData: import("./flowData");
     evidenceStore: {};
-    keys: {};
+    keys: any;
     unacceptedStore: {};
     /**
      * The web request as server.http-request holds it, being every value
@@ -35,6 +35,7 @@ declare class Evidence {
      *
      * @param {string} key evidence key to add
      * @param {*} value value of evidence key
+     * @throws {Error} once the flow data has finished processing
      */
     add(key: string, value: any): void;
     /**

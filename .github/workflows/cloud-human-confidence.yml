@@ -1,0 +1,102 @@
+name: Cloud Human Confidence Tests
+
+# Runs the Human Confidence web example's live tests against the staging
+# cloud service, because the production cloud does not serve
+# HumanConfidenceSource yet. They are the files in
+# pipeline/fiftyone.pipeline.cloudrequestengine/tests that end
+# .staging.integration.test.js, which the integration-test script leaves
+# out. humanConfidenceWeb checks that a Bespoke key's passive answer carries
+# the source Passive, and humanConfidenceOutsideBespoke that the cloud
+# answers the Basic key's HumanConfidenceSource as null, with a reason.
+#
+# CLOUD_STAGING_ENDPOINT, the staging cloud's API base ending /api/v4/, is
+# an organization variable, and RESOURCE_KEY_BESPOKE_STAGING, a Bespoke key
+# the staging cloud resolves, is an organization secret. Only CI uses them.
+# The Basic key is the organization secret _51DEGREES_RESOURCE_KEY_BASIC,
+# which both clouds resolve.
+#
+# The run fails when a name is empty, when no test ran or when a test was
+# skipped. A cloud test that passes without calling the cloud has proved
+# nothing. A pull request from a fork gets no secrets, so run this workflow
+# from a branch in this repository.
+
+on:
+  workflow_dispatch:
+  # Nightly as well, so a change in what the service answers is found the
+  # next morning rather than by a customer.
+  schedule:
+    - cron: '30 6 * * *'
+  pull_request:
+    branches: [main, rc]
+    # Every file the staging tests load, the jest settings the run uses
+    # (the pipeline project in the root package.json and its setup file),
+    # and this workflow.
+    paths:
+      - 'pipeline/fiftyone.pipeline.cloudrequestengine/examples/human-confidence-web/**'
+      - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/humanConfidenceLive.js'
+      - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/liveCloudKeys.js'
+      - 'pipeline/fiftyone.pipeline.cloudrequestengine/tests/*.staging.integration.test.js'
+      - 'pipeline/setup.js'
+      - 'package.json'
+      - '.github/workflows/cloud-human-confidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cloud-human-confidence:
+    name: Cloud Human Confidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Human Confidence tests against the staging cloud
+        shell: pwsh
+        env:
+          CLOUD_STAGING_ENDPOINT: ${{ vars.CLOUD_STAGING_ENDPOINT }}
+          RESOURCE_KEY_BESPOKE_STAGING: ${{ secrets.RESOURCE_KEY_BESPOKE_STAGING }}
+          _51DEGREES_RESOURCE_KEY_BASIC: ${{ secrets._51DEGREES_RESOURCE_KEY_BASIC }}
+        run: |
+          $failed = $false
+          foreach ($name in 'CLOUD_STAGING_ENDPOINT',
+              'RESOURCE_KEY_BESPOKE_STAGING',
+              '_51DEGREES_RESOURCE_KEY_BASIC') {
+            if (-not [Environment]::GetEnvironmentVariable($name)) {
+              Write-Host ("::error::The organization variable or secret " +
+                "$name is empty or missing, so the tests cannot run.")
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+
+          # Run from the repository root, with the jest and the pipeline
+          # settings the integration tests use. The package's own older jest
+          # gives the tests no global fetch. Jest writes what ran to the
+          # results file, which is checked below, because a run that finds
+          # no test can still exit with 0.
+          $results = 'staging-test-results.json'
+          npx jest --ci --runInBand --selectProjects pipeline `
+            --testPathPattern '\.staging\.integration\.test\.js$' `
+            --json --outputFile $results
+          $code = $LASTEXITCODE
+          if (-not (Test-Path $results)) {
+            Write-Host '::error::Jest wrote no results, so no test ran.'
+            exit 1
+          }
+          $run = Get-Content -Raw $results | ConvertFrom-Json
+          if ($run.numTotalTests -eq 0) {
+            Write-Host '::error::No test ran, so the run proved nothing.'
+            exit 1
+          }
+          if ($run.numPendingTests + $run.numTodoTests -gt 0) {
+            Write-Host ('::error::A test was skipped, so the run proved ' +
+              'less than it should.')
+            exit 1
+          }
+          if ($code -ne 0) { exit $code }

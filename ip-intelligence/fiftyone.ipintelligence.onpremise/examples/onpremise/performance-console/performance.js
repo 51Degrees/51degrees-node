@@ -25,17 +25,17 @@
  *
  * This example is available in full on [GitHub](https://github.com/51Degrees/51degrees-node/blob/main/ip-intelligence/fiftyone.ipintelligence.onpremise/examples/onpremise/performance-console/performance.js).
  *
- * This example require module 'n-readlines' to operate. Please install the module
- * before running the example, by using the following command:
+ * This example requires the module 'js-yaml' to operate. Please install the
+ * module before running the example, by using the following command:
  *
  * ```
- * npm install n-readlines
+ * npm install js-yaml
  * ```
  *
  * Expected output:
  *
  * ```
- * Processing [...] IP addresses from [...]/evidence.csv
+ * Processing [...] evidence records from [...]/evidence.yml
  * Processing
  * Average [...] lookups per second.
  * Average [...] ms per IP address.
@@ -56,7 +56,7 @@ const require51 = (requestedPackage) => {
   }
 };
 
-const LineReader = require('n-readlines');
+const yaml = require('js-yaml');
 
 const IpIntelligenceOnPremisePipelineBuilder =
   require51('fiftyone.ipintelligence.onpremise').IpIntelligenceOnPremisePipelineBuilder;
@@ -89,12 +89,25 @@ const ASN_V_4_1_IPI = '51Degrees-IPIV4AsnIpiV41.ipi';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=enterprise-data-file';
 
-// This file contains IP addresses to use as evidence.
-const EVIDENCE_CSV = 'evidence.csv';
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-performance-console-performance.js&utm_term=find-out-more-contact'
+].join('\n');
+
+// This file contains evidence records, each with an IP address.
+const EVIDENCE = 'evidence.yml';
 
 const args = parser.parse_args();
 const datafile = args.datafile !== undefined ? args.datafile : ExampleUtils.findDataFile(ASN_V_4_1_IPI);
-const evidenceFile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(EVIDENCE_CSV);
+const evidenceFile = args.evidence !== undefined ? args.evidence : ExampleUtils.findFile(EVIDENCE);
 const jsonoutput = args.jsonoutput;
 
 // Check if files exists
@@ -104,7 +117,7 @@ if (!fs.existsSync(datafile)) {
       'data file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-  throw ("No data file at '" + datafile + "'");
+  throw new Error("No data file at '" + datafile + "'");
 }
 
 if (!fs.existsSync(evidenceFile)) {
@@ -112,7 +125,7 @@ if (!fs.existsSync(evidenceFile)) {
       'file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-  throw ("No evidence file at '" + evidenceFile + "'");
+  throw new Error("No evidence file at '" + evidenceFile + "'");
 }
 
 let ipsProcessed = 0;
@@ -122,7 +135,7 @@ let ipsCount = 0;
 let startExecutionTime;
 
 // Define an event listener for the 'FinishProcessing' event.
-// This listener is triggered once the processing of IP addresses is completed.
+// This listener is triggered once the processing of the evidence is completed.
 // It calculates and displays benchmark results and, if specified, writes them to a JSON file.
 const eventEmitter = new events.EventEmitter();
 eventEmitter.on('FinishProcessing', () => {
@@ -157,13 +170,15 @@ eventEmitter.on('FinishProcessing', () => {
       }
     }, null, 4));
   }
+
+  console.log(FIND_OUT_MORE);
 });
 eventEmitter.on('WarmupFinished', () => {
   console.log('Warmup finished');
   console.log('-----------------------------------------');
   console.log('Processing started');
-  run(function (ipAddress) {
-    processIp(ipAddress, false);
+  run(function (evidence) {
+    processEvidence(evidence, false);
   });
 });
 
@@ -195,17 +210,19 @@ const reportProgress = function (processed) {
     (processed === ipsCount ? '\n' : '\r'));
 };
 
-// Here we make a function that gets an IP address as evidence and
+// Here we make a function that gets an evidence record and
 // uses the IP Intelligence Engine to obtain the properties of the
 // associated IP range.
-const processIp = async function (ipAddress, warmup) {
+const processEvidence = async function (evidence, warmup) {
   // Create a FlowData element
   // This is used to add evidence and process it through the
   // FlowElements in the Pipeline.
   const flowData = pipeline.createFlowData();
 
-  // Add the IP address as evidence
-  flowData.evidence.add('query.client-ip', ipAddress);
+  // Add the values of the record as evidence
+  for (const [key, value] of Object.entries(evidence)) {
+    flowData.evidence.add(key, value === null ? '' : value.toString());
+  }
 
   // Run process on the flowData (this returns a promise)
   await flowData.process();
@@ -225,7 +242,7 @@ const processIp = async function (ipAddress, warmup) {
       eventEmitter.emit('WarmupFinished');
     }
   } else {
-    // Increment the number of IP addresses processed and
+    // Increment the number of records processed and
     // signal if the required number has been reached
     reportProgress(++ipsProcessed);
     if (ipsProcessed === ipsCount) {
@@ -234,35 +251,30 @@ const processIp = async function (ipAddress, warmup) {
   }
 };
 
-// Loop through the IP addresses in the file
-// and execute callback on each IP address
-const run = function (callback) {
-  const liner = new LineReader(evidenceFile);
-  let line;
+// The evidence records in the file, each a YAML document of evidence keys
+// and values.
+const evidenceRecords = yaml.loadAll(fs.readFileSync(evidenceFile, 'utf8'))
+  .filter((record) => record);
 
-  // Reset IP addresses processed count and start time
+// Loop through the evidence records
+// and execute callback on each one
+const run = function (callback) {
+  // Reset the processed count and start time
   ipsProcessed = 0;
   nameKnown = nameUnknown = 0;
   startExecutionTime = process.hrtime();
-  line = liner.next();
-  while (line) {
-    const value = line.toString('utf8').replace(/\r?\n|\r/g, '').trim();
-    // Skip empty lines and any header or comment lines.
-    if (value.length > 0 && !value.startsWith('#')) {
-      callback(value);
-    }
-    line = liner.next();
+  for (const record of evidenceRecords) {
+    callback(record);
   }
 };
 
-// Get the number of IP addresses
-run(function () {
-  ipsCount++;
-});
-console.log('Processing ' + ipsCount + ' IP addresses from ' + evidenceFile);
+// Get the number of evidence records
+ipsCount = evidenceRecords.length;
+console.log('Processing ' + ipsCount + ' evidence records from ' +
+  evidenceFile);
 
 // Run warmup for pipeline
 console.log('Warmup');
-run(function (ipAddress) {
-  processIp(ipAddress, true);
+run(function (evidence) {
+  processEvidence(evidence, true);
 });

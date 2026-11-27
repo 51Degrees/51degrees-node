@@ -38,6 +38,17 @@ const fs = require('fs');
 // First require the core Pipeline
 const FiftyOnePipelineCore = require(path.resolve(__dirname, '../../fiftyone.pipeline.core'));
 
+// Where to go next, shown at the end of the page.
+const FIND_OUT_MORE = `
+          <h3>Find out more</h3>
+          <ul>
+            <li>The Pipeline API: <a href="https://github.com/51Degrees/51degrees-node/tree/main/pipeline">https://github.com/51Degrees/51degrees-node/tree/main/pipeline</a></li>
+            <li><a href="https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-custom-elements">Flow elements of your own</a></li>
+            <li><a href="https://51degrees.com/documentation/_pipeline_api__features__automatic_datafile_updates.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-data-file-updates">Data file updates</a></li>
+            <li><a href="https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-build-your-own">Build your own</a></li>
+            <li><a href="https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-examples-onpremiseflowelement.js&utm_term=find-out-more-contact">Contact us</a></li>
+          </ul>`;
+
 // Next require the engines extension that extends flowElements to support
 // functionality such as auto updating datafiles,
 // caches and missing property services
@@ -122,9 +133,11 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
   processInternal (flowData) {
     let dateOfBirth = flowData.evidence.get('query.dateOfBirth');
 
-    // Collect data to save back into the flowData under this engine
+    // Collect data to save back into the flowData under this engine. The
+    // star sign is in the data from the start, null until it is known, so
+    // the page can read it when no date of birth was given.
 
-    const result = {};
+    const result = { starSign: null };
 
     // Lookup the date of birth using the provided and now parsed datafile
 
@@ -171,7 +184,7 @@ class Astrology extends FiftyOnePipelineEngines.Engine {
 
 //! [usage]
 const astrologyElement = new Astrology(
-  { datafile: (process.env.directory || __dirname) + '/astrology.json' }
+  { datafile: path.join(__dirname, 'astrology.json') }
 );
 
 const http = require('http');
@@ -182,7 +195,17 @@ const pipeline = new FiftyOnePipelineCore.PipelineBuilder()
 
 const server = http.createServer((req, res) => {
   if (req.url !== '/favicon.ico') {
+    // A Flow Data holds the evidence and results of this one request. It
+    // must not be used by two threads at once, so each request creates its
+    // own, and any value handed to other work is read from it first.
+    // Code that shares one Flow Data between tasks is responsible for any
+    // locking.
     const flowData = pipeline.createFlowData();
+    // Gives the Flow Data's Element Data back to the pools once the
+    // response has been sent, after every value it needs has been read.
+    // A request whose client goes away first is left to the garbage
+    // collector, as its Flow Data may still be processing.
+    res.on('finish', () => flowData.dispose());
 
     // Add any information from the request
     // (headers, cookies and additional client side provided information)
@@ -206,7 +229,7 @@ const server = http.createServer((req, res) => {
             <input type='date' name='dateOfBirth' id='dateOfBirth'>
             <input type='submit'>
           </form>
-          
+          ${FIND_OUT_MORE}
           `;
 
       res.statusCode = 200;
@@ -216,7 +239,9 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const portNum = process.env.PORT || 3000;
+const portNum = process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151;
 console.info('To test this example, browse to http://localhost:' + portNum);
-server.listen(portNum);
+// Only the machine the example runs on, at 127.0.0.1 rather than
+// localhost, which can resolve to the IPv6 loopback alone.
+server.listen(portNum, '127.0.0.1');
 //! [usage]

@@ -41,18 +41,27 @@ const NOT_A_51DID = {
 // is not white space.
 const SHOWN_AS_CODE = /[\p{White_Space}\uFEFF]/u;
 
-// The text with each white space character written as its code, so a test
-// name shows where it is.
+/**
+ * The text with each white space character written as its code, so a test
+ * name shows where it is.
+ *
+ * @param {string} text the text
+ * @returns {string} the text with white space shown as codes
+ */
 function show (text) {
   return Array.from(text, (c) => SHOWN_AS_CODE.test(c)
     ? '\\u' + c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')
     : c).join('');
 }
 
-// A signed envelope whose standard base64 holds both characters that
-// differ between the alphabets, so the conversion is exercised. The
-// signature is random, so envelopes are signed until one qualifies, which
-// takes one or two tries.
+/**
+ * A signed envelope whose standard base64 holds both characters that
+ * differ between the alphabets, so the conversion is exercised. The
+ * signature is random, so envelopes are signed until one qualifies, which
+ * takes one or two tries.
+ *
+ * @returns {Promise<string>} the envelope as standard base64
+ */
 async function standardWithBothSpecials () {
   const keyPair = await generateKeyPair();
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -64,14 +73,26 @@ async function standardWithBothSpecials () {
   throw new Error('No signed envelope held both + and / in 100 tries.');
 }
 
-// The standard text, and the URL-safe text with and without its padding.
+/**
+ * The standard text, and the URL-safe text with and without its padding.
+ *
+ * @param {string} standard the standard base64 text
+ * @returns {string[]} the three forms
+ */
 function forms (standard) {
   const urlSafe = standard.replace(/\+/g, '-').replace(/\//g, '_');
   return [standard, urlSafe, urlSafe.replace(/=+$/, '')];
 }
 
-// The text with the white space put in at a number of points spread evenly
-// through it, never at either end.
+/**
+ * The text with the white space put in at a number of points spread evenly
+ * through it, never at either end.
+ *
+ * @param {string} text the text
+ * @param {string} space the white space to put in
+ * @param {number} count how many times to put it in
+ * @returns {string} the spaced text
+ */
 function spaced (text, space, count) {
   let result = text;
   for (let point = count; point >= 1; point--) {
@@ -81,8 +102,12 @@ function spaced (text, space, count) {
   return result;
 }
 
-// Checks that both readers, and both surfaces of FodId, refuse the text as
-// invalid base64.
+/**
+ * Checks that both readers, and both surfaces of FodId, refuse the text as
+ * invalid base64.
+ *
+ * @param {string} text the text to read
+ */
 function expectInvalidBase64 (text) {
   const result = FodId.tryParse(text);
   expect(result.ok).toBe(false);

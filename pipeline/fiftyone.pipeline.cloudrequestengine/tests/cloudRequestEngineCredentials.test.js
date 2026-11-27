@@ -28,12 +28,28 @@ const util = require('util');
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const errorMessages = require('../errorMessages');
+const RequestClientError = require('../requestClientError');
 const sharedValues = require('../sharedValues');
 
 const resourceKey = 'AAAAAAAAAAAA';
 const licenseKey = 'LICENSEKEY1234567890';
 const requested = ['device.ismobile', 'device.istablet'];
 const base = sharedValues.baseURLDefault;
+
+// The engine takes its endpoint from _51DEGREES_CLOUD_ENDPOINT when that is
+// set. These tests check the requests to the default endpoint, so each test
+// runs with the variable cleared and puts it back afterwards.
+const savedEndpoint = process.env._51DEGREES_CLOUD_ENDPOINT;
+beforeEach(() => {
+  delete process.env._51DEGREES_CLOUD_ENDPOINT;
+});
+afterEach(() => {
+  if (savedEndpoint === undefined) {
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
+  } else {
+    process.env._51DEGREES_CLOUD_ENDPOINT = savedEndpoint;
+  }
+});
 
 // The cloud service refuses a license key with an error that names it.
 const refusal = 'Invalid license key(s) supplied: \'' + licenseKey + '\'';
@@ -55,11 +71,12 @@ class RecordingClient {
     const lower = url.toLowerCase();
     for (const [part, statusCode] of Object.entries(this.failures)) {
       if (lower.includes(part)) {
-        return Promise.reject({ // eslint-disable-line
-          statusCode,
-          headers: {},
-          content: JSON.stringify({ errors: [refusal] })
-        });
+        return Promise.reject(new RequestClientError(
+          `The request failed with status ${statusCode}`, {
+            statusCode,
+            headers: {},
+            content: JSON.stringify({ errors: [refusal] })
+          }));
       }
     }
     if (lower.includes('accessibleproperties')) {
@@ -224,7 +241,9 @@ describe('accepted combinations', () => {
 
   test('a list may be one comma separated string', () => {
     const engine = new CloudRequestEngine({
-      licenseKey, requestedProperties: ' device.ismobile , device.istablet,'
+      licenseKey,
+      requestedProperties: ' device.ismobile , device.istablet,',
+      requestClient: new RecordingClient()
     });
 
     expect(engine.requestedProperties).toEqual(requested);
@@ -236,7 +255,8 @@ describe('accepted combinations', () => {
     const engine = new CloudRequestEngine({
       resourceKey: ' ' + resourceKey + '\n',
       licenseKey: '   ',
-      requestedProperties: [' ', '']
+      requestedProperties: [' ', ''],
+      requestClient: new RecordingClient()
     });
 
     expect(engine.resourceKey).toBe(' ' + resourceKey + '\n');

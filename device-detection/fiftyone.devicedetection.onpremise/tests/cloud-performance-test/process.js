@@ -20,19 +20,20 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const DeviceDetectionOnPremisePipelineBuilder =
-  require((process.env.directory || __dirname) +
-  '/../../deviceDetectionOnPremisePipelineBuilder');
+const path = require('path');
+
+const DeviceDetectionOnPremisePipelineBuilder = require(path.join(
+  __dirname, '../../deviceDetectionOnPremisePipelineBuilder'));
 
 const fs = require('fs');
 
 // Load in a datafile
 
-const datafile = (process.env.directory || __dirname) + '/../../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
+const datafile = path.join(__dirname, '../../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 if (!fs.existsSync(datafile)) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched, then run its get-data-files.sh or get-data-files.ps1 script to download the file.");
-  throw ("No data file at '" + datafile + "'");
+  throw new Error("No data file at '" + datafile + "'");
 }
 
 const argv = process.argv.slice(2);

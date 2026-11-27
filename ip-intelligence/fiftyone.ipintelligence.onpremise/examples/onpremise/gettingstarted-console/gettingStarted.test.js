@@ -27,9 +27,17 @@ const {
 
 const example = require(path.join(__dirname, '/gettingStarted.js'));
 
+// A line giving a value of Registered Country with its weighting, which
+// ip-intelligence required-examples.md lines 107 and 108 ask an example to
+// show, 1 for a single answer.
+const WEIGHTING = /^\tRegistered Country: [A-Z]{2}, weighting (1|0\.\d+)$/m;
+
 describe('Examples', () => {
   test('onpremise getting started Lite data file', async () => {
-    await example.run(getDataFilePath(liteDataFileName), process.stdout);
-    expect(true);
+    let written = '';
+    await example.run(getDataFilePath(liteDataFileName), {
+      write: (text) => { written += text; }
+    });
+    expect(written).toMatch(WEIGHTING);
   });
 });

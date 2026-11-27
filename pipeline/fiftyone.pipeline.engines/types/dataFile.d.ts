@@ -110,6 +110,7 @@ declare class DataFile {
      * @param {string} identifier the identifier of the datafile
      */
     refresh(identifier: string): void;
+    onUpdateComplete: Function;
     updating: boolean;
     /**
      * Getter for the update url for the datafile update service to use
@@ -123,6 +124,15 @@ declare class DataFile {
      * @returns {string} url
      */
     urlFormatter(): string;
+    /**
+     * The name the data update service gives the product of the data file the
+     * engine has loaded. The update service asks for it when the license keys
+     * hold several products. It is empty where no data file is loaded, or the
+     * data file comes as one product.
+     *
+     * @returns {string} the product name
+     */
+    getUpdateProduct(): string;
 }
 declare namespace DataFile {
     export { FlowElement };

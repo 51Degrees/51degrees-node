@@ -22,9 +22,10 @@
 
 // Runs the base CloudEngine.processInternal against cloud answers where the
 // engine's element is missing, which is how the cloud service answers for a
-// product the resource key does not include, and where it is null.
+// product the resource key does not include, and where it is null. A
+// missing product is logged once for each engine, at warning level, naming
+// its data key (cloud-aspect-engine.md lines 63 to 68).
 
-const util = require('util');
 const path = require('path');
 const MockRequestClient = require('./classes/mockRequestClient');
 
@@ -38,10 +39,6 @@ const CloudRequestEngine = require('../cloudRequestEngine');
 const CloudEngine = require('../cloudEngine');
 const PipelineBuilder = require(
   path.resolve(__dirname, '../../fiftyone.pipeline.core/pipelineBuilder'));
-const coreErrorMessages = require(
-  path.resolve(__dirname, '../../fiftyone.pipeline.core/errorMessages'));
-const engineErrorMessages = require(
-  path.resolve(__dirname, '../../fiftyone.pipeline.engines/errorMessages'));
 
 const dataKey = 'ip';
 
@@ -68,11 +65,11 @@ const properties = {
 
 /**
  * Builds a pipeline whose cloud answer is the JSON given, and collects the
- * errors it logs.
+ * errors and warnings it logs.
  *
  * @param {object} json the answer from the cloud service
- * @returns {{pipeline: object, errors: string[]}} the pipeline and the
- * errors it has logged so far
+ * @returns {{pipeline: object, errors: string[], warnings: string[]}} the
+ * pipeline and the errors and warnings it has logged so far
  */
 function build (json) {
   const pipeline = new PipelineBuilder()
@@ -83,8 +80,10 @@ function build (json) {
     .add(new TestCloudEngine())
     .build();
   const errors = [];
+  const warnings = [];
   pipeline.on('error', (message) => errors.push(String(message)));
-  return { pipeline, errors };
+  pipeline.on('warn', (message) => warnings.push(String(message)));
+  return { pipeline, errors, warnings };
 }
 
 // Answers the discovery POST a license key alone makes, as well as the
@@ -100,11 +99,11 @@ class LicenseKeyClient extends MockRequestClient {
 
 /**
  * Builds a pipeline on a license key alone whose cloud answer is the JSON
- * given, and collects the errors it logs.
+ * given, and collects the errors and warnings it logs.
  *
  * @param {object} json the answer from the cloud service
- * @returns {{pipeline: object, errors: string[]}} the pipeline and the
- * errors it has logged so far
+ * @returns {{pipeline: object, errors: string[], warnings: string[]}} the
+ * pipeline and the errors and warnings it has logged so far
  */
 function buildOnLicenseKey (json) {
   const pipeline = new PipelineBuilder()
@@ -116,35 +115,37 @@ function buildOnLicenseKey (json) {
     .add(new TestCloudEngine())
     .build();
   const errors = [];
+  const warnings = [];
   pipeline.on('error', (message) => errors.push(String(message)));
-  return { pipeline, errors };
+  pipeline.on('warn', (message) => warnings.push(String(message)));
+  return { pipeline, errors, warnings };
 }
 
 /**
- * Reads a property and returns what reading it threw.
+ * Reads a property and returns the message of the error reading it threw.
  *
  * @param {object} flowData processed flow data
  * @param {string} property the property to read
- * @returns {*} the value thrown, or undefined if nothing was
+ * @returns {string} the message, or undefined if nothing was thrown
  */
 function thrownReading (flowData, property) {
   try {
     flowData.get(dataKey).get(property);
   } catch (e) {
-    return e;
+    return e.message;
   }
   return undefined;
 }
 
 const missingPropertyMessage =
-  util.format(coreErrorMessages.genericMissingProperties,
-    'registeredcountry') +
-  ' in data for element "' + dataKey + '".' +
-  util.format(engineErrorMessages.cloudNoPropertiesAccess, dataKey);
+  "Property 'registeredcountry' not found in data for element '" + dataKey +
+  "'. This is because your resource key does not include access to any " +
+  "properties under '" + dataKey + "'. Check or create a resource key " +
+  'with the properties you need on the configuration page at https://51degrees.com/configure?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.engines-errormessages.js&utm_term=missingpropertyproduct.';
 
-test('an answer without the element resolves and says the key lacks it',
+test('an answer without the element resolves and warns the key lacks it',
   async () => {
-    const { pipeline, errors } = build({
+    const { pipeline, errors, warnings } = build({
       device: { ismobile: false },
       javascriptProperties: []
     });
@@ -152,19 +153,21 @@ test('an answer without the element resolves and says the key lacks it',
 
     await flowData.process();
 
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain("'" + dataKey + "'");
-    expect(errors[0]).toContain(
+    expect(errors).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("'" + dataKey + "'");
+    expect(warnings[0]).toContain(
       "left the '" + dataKey + "' product out of the answer");
-    expect(errors[0]).toContain('accessibleproperties?resource=');
-    expect(errors[0]).not.toContain('undefined');
+    expect(warnings[0]).toContain('accessibleproperties?resource=');
+    expect(warnings[0]).not.toContain('undefined');
     expect(thrownReading(flowData, 'registeredcountry'))
       .toBe(missingPropertyMessage);
 
     // The key cannot gain the product between requests, so the second
     // request is not reported again.
     await pipeline.createFlowData().process();
-    expect(errors).toHaveLength(1);
+    expect(warnings).toHaveLength(1);
+    expect(errors).toEqual([]);
   });
 
 test('a null element logs the not populated prefix and the reason',
@@ -232,19 +235,20 @@ test('an element with values still reads them and logs nothing',
 describe('under a license key alone', () => {
   test('a missing element names requestedProperties as a cause',
     async () => {
-      const { pipeline, errors } = buildOnLicenseKey({
+      const { pipeline, errors, warnings } = buildOnLicenseKey({
         device: { ismobile: false },
         javascriptProperties: []
       });
       await pipeline.createFlowData().process();
 
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toContain(
-        "left the '" + dataKey + "' product out of the answer");
-      expect(errors[0]).toContain("'" + dataKey + "'");
-      expect(errors[0]).toContain('requestedProperties');
-      expect(errors[0]).not.toContain('resource key');
-      expect(errors[0]).not.toContain('undefined');
+      expect(errors).toEqual([]);
+      const missing = warnings.filter((text) =>
+        text.includes("left the '" + dataKey + "' product out of the answer"));
+      expect(missing).toHaveLength(1);
+      expect(missing[0]).toContain("'" + dataKey + "'");
+      expect(missing[0]).toContain('requestedProperties');
+      expect(missing[0]).not.toContain('resource key');
+      expect(missing[0]).not.toContain('undefined');
     });
 
   test('a null element with no reason names no resource key', async () => {

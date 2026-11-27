@@ -24,147 +24,81 @@ const path = require('path');
 
 const GeoLocation = require(path.resolve(__dirname, '..'));
 // These tests call the live cloud service, so each fails rather than skips
-// when no resource key is set. The names are tried in this order.
-const resourceKeyNames = [
-  '_51DEGREES_RESOURCE_KEY',
-  '_51DEGREES_RESOURCE_KEY_BESPOKE'
-];
-const currentResourceKey = resourceKeyNames
-  .map((name) => process.env[name])
-  .find((value) => value && value.trim());
-// RESOURCE_KEY is the deprecated name of _51DEGREES_RESOURCE_KEY, read only
-// when none of the names above is set.
-if (!currentResourceKey && process.env.RESOURCE_KEY) {
-  console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-    '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-    'instead.');
-}
-const myResourceKey = currentResourceKey || process.env.RESOURCE_KEY ||
-  '!!YOUR_RESOURCE_KEY!!';
+// when no resource key is set.
+const resourceKeyName = '_51DEGREES_RESOURCE_KEY_BESPOKE';
+const currentResourceKey = (process.env[resourceKeyName] || '').trim();
+const myResourceKey = currentResourceKey || '!!YOUR_RESOURCE_KEY!!';
 const noResourceKey = 'This test calls the live 51Degrees cloud service, ' +
-  'so it needs a resource key and there is nothing to fall back on. None ' +
-  'of ' + resourceKeyNames.join(', ') + ' is set, tried in that order. The ' +
+  'so it needs a resource key and there is nothing to fall back on. ' +
+  resourceKeyName + ' is not set. The ' +
   'key has to carry the location product, because the test asks the ' +
   'service for the location properties of a latitude and longitude. To ' +
   'see the products a key carries, open ' +
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>. ' +
-  'Create a key at https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation-tests-geolocationcloud.test.js&utm_term=resource-key-required.';
+  'Create a key at https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.geolocation-tests-geolocationcloud.test.js&utm_term=resource-key-required.';
 
 const TestLat = '51.4578261';
 const TestLon = '-0.975922996290084';
-const expectedProperties = {
-  location: [
-    'javascript',
-    'building',
-    'streetnumber',
-    'road',
-    'town',
-    // For some reason, the value of the 'county' property returned
-    // by the call to the cloud is always null on the build agent,
-    // despite working correctly locally.
-    // After spending the best part of a day trying to resolve this,
-    // we've  decided to exclude the county property from this test
-    // for the moment.
-    // 'county',
-    'region',
-    'state',
-    'zipcode',
-    'country',
-    'countrycode'
-  ],
-  location_digitalelement: [
-    'javascript',
-    'town',
-    'county',
-    'region',
-    'state',
-    'zipcode',
-    'country',
-    'countrycode'
-  ]
-};
 
-// Skip the rest of the examples when async is not available
-let isAsync = true;
+// Check that if no evidence is yet available for location
+// engine, accessing a valid property will return HasValue=false
+// and a correct error message.
+test('No evidence error message', done => {
+  if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
+    throw new Error(noResourceKey);
+  }
 
-try {
-  eval('async () => {}');
-} catch (e) {
-  isAsync = false;
-}
+  const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
+    resourceKey: myResourceKey
+  }).build();
+  const flowData = pipeline.createFlowData();
 
-if (isAsync) {
-  // Check that if no evidence is yet available for location
-  // engine, accessing a valid property will return HasValue=false
-  // and a correct error message.
-  test('No evidence error message', done => {
-    if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error(noResourceKey);
-    }
+  flowData.process().then(function () {
+    const country = flowData.location.country;
+    expect(country.hasValue).toBe(false);
 
-    const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
-      resourceKey: myResourceKey
-    }).build();
-    const flowData = pipeline.createFlowData();
+    // The key has to carry the location product, so a key without it fails
+    // here, showing the message the service gave in its place.
+    expect(country.noValueMessage).toContain('This property requires ' +
+      'evidence values from JavaScript running on the client. It ' +
+      'cannot be populated until a future request is made that ' +
+      'contains this additional data.');
 
-    flowData.process().then(function () {
-      const country = flowData.location.country;
-      expect(country.hasValue).toBe(false);
-
-      // Check if this is a subscription/rate limiting error
-      if (country.noValueMessage &&
-          (country.noValueMessage.indexOf('subscription does not contain') !== -1 ||
-           country.noValueMessage.indexOf('Location_products_missing') !== -1)) {
-        console.warn('WARNING: Test inconclusive - Resource key does not have required ' +
-                     'location products or rate limit exceeded. ' +
-                     'Message: ' + country.noValueMessage);
-        // Mark test as passing but with warning - subscription issue is not a test failure
-        done();
-        return;
-      }
-
-      // Normal test assertion for the expected JavaScript evidence message
-      expect(country.noValueMessage.indexOf('This property requires ' +
-        'evidence values from JavaScript running on the client. It ' +
-        'cannot be populated until a future request is made that ' +
-        'contains this additional data.') !== -1).toBe(true);
-
-      done();
-    });
+    done();
   });
+});
 
-  test('Available Properties 51Degrees', async done => {
-    if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error(noResourceKey);
-    }
+test('Available Properties 51Degrees', async done => {
+  if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
+    throw new Error(noResourceKey);
+  }
 
-    const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
-      resourceKey: myResourceKey,
-      locationProvider: 'fiftyonedegrees'
-    }).build();
-    const engine = pipeline.flowElements.location;
+  const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
+    resourceKey: myResourceKey,
+    locationProvider: 'fiftyonedegrees'
+  }).build();
+  const engine = pipeline.flowElements.location;
 
-    await testAvailableProperties(done, pipeline, engine);
-  });
+  await testAvailableProperties(done, pipeline, engine);
+});
 
-  test('Value Types 51Degrees', async done => {
-    if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
-      throw new Error(noResourceKey);
-    }
+test('Value Types 51Degrees', async done => {
+  if (myResourceKey === '!!YOUR_RESOURCE_KEY!!') {
+    throw new Error(noResourceKey);
+  }
 
-    const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
-      resourceKey: myResourceKey,
-      locationProvider: 'fiftyonedegrees'
-    }).build();
-    const engine = pipeline.flowElements.location;
+  const pipeline = new GeoLocation.GeoLocationPipelineBuilder({
+    resourceKey: myResourceKey,
+    locationProvider: 'fiftyonedegrees'
+  }).build();
+  const engine = pipeline.flowElements.location;
 
-    await testValueTypes(done, pipeline, engine);
-  });
-} else {
-  // Skip if async is not available (e.g node 6)
-  test.skip('Workaround', () => 1);
-}
+  await testValueTypes(done, pipeline, engine);
+});
 
+// Checks that every property the resource key carries for the engine comes
+// back with a value or a reason for having none. The key decides which
+// properties these are, as in the other languages' location tests.
 async function testAvailableProperties (done, pipeline, engine) {
   const flowData = pipeline.createFlowData();
 
@@ -173,7 +107,12 @@ async function testAvailableProperties (done, pipeline, engine) {
 
   await flowData.process();
 
-  expectedProperties[engine.dataKey].forEach(key => {
+  const keyProperties = getKeyProperties(done, engine);
+  if (keyProperties === null) {
+    return;
+  }
+
+  keyProperties.forEach(key => {
     try {
       const apv = flowData[engine.dataKey][key];
       if (apv === undefined) {
@@ -197,6 +136,9 @@ async function testAvailableProperties (done, pipeline, engine) {
   done();
 }
 
+// Checks that every property the resource key carries for the engine has a
+// value of the type the cloud service gives for it, or a reason for having
+// none, as in the other languages' location tests.
 async function testValueTypes (done, pipeline, engine) {
   const flowData = pipeline.createFlowData();
 
@@ -205,20 +147,41 @@ async function testValueTypes (done, pipeline, engine) {
 
   await flowData.process();
 
-  Object.keys(engine.properties).forEach(key => {
-    if (expectedProperties[engine.dataKey].includes(key)) {
-      const property = engine.properties[key.toLowerCase()];
-      const expectedType = property.type;
-      const apv = flowData[engine.dataKey][key];
+  const keyProperties = getKeyProperties(done, engine);
+  if (keyProperties === null) {
+    return;
+  }
 
-      expect(apv).not.toBeNull();
-      expect(apv).toBeDefined();
-      expect(apv.hasValue, 'No value for \'' + key + '\'. (' + apv.noValueMessage + ')').toBe(true);
+  keyProperties.forEach(key => {
+    const expectedType = engine.properties[key].type;
+    const apv = flowData[engine.dataKey][key];
+
+    expect(apv).not.toBeNull();
+    expect(apv).toBeDefined();
+    if (apv.hasValue === true) {
       expect(apv.value).toBe51DType(key, expectedType);
+    } else {
+      expect(apv.noValueMessage, 'No value and no reason for \'' + key + '\'.')
+        .toBeTruthy();
     }
   });
 
   done();
+}
+
+// Gives the names of the properties the resource key carries for the engine.
+// Where the key carries none, it fails the test with a message that names
+// the variable holding the key, and gives null.
+function getKeyProperties (done, engine) {
+  const keyProperties = Object.keys(engine.properties || {});
+  if (keyProperties.length === 0) {
+    done.fail(new Error('The resource key in ' + resourceKeyName +
+      ' carries no ' + engine.dataKey + ' properties, so there is nothing ' +
+      'to check. To see the products a key carries, open ' +
+      'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>.'));
+    return null;
+  }
+  return keyProperties;
 }
 
 expect.extend({

@@ -26,20 +26,17 @@ declare class AspectDataDictionary extends AspectData {
     }, ...args: any[]);
     contents: object;
     /**
+     * Returns the data to the state of a new instance, with no values and
+     * open for writing, before a pool gives it to another request.
+     */
+    reset(): void;
+    /**
      * getInternal retrieves a value from the dictionary
      *
      * @param {string} key property key
      * @returns {*} property value
      */
     getInternal(key: string): any;
-    /**
-     * Looks for a key in the dictionary ignoring its letter case, as the core
-     * dictionary does.
-     *
-     * @param {string} key property key
-     * @returns {*} property value, or undefined if there is none
-     */
-    getInternalIgnoringCase(key: string): any;
     [Symbol.iterator](): Generator<string, void, unknown>;
 }
 declare namespace AspectDataDictionary {

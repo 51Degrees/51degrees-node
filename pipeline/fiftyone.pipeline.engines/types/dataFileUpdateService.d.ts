@@ -42,6 +42,72 @@ declare class DataFileUpdateService {
      */
     once(listener: string | symbol, callback: Function): void;
     /**
+     * Writes a message to the log of the pipeline the service is attached to.
+     * With no pipeline, an error is written to the console, as a pipeline
+     * with no error listener does, so that it is not lost.
+     *
+     * The service's messages name the update URL, which carries the license
+     * keys, so every one of them is masked here. The pipeline's log does not
+     * mask, because each detection goes through it.
+     *
+     * @param {string} level the log level
+     * @param {*} message the message
+     */
+    log(level: string, message: any): void;
+    /**
+     * Reports how an update ended, to the listeners of 'updateComplete' and
+     * to the data file's own onUpdateComplete function, if it has one. An
+     * error thrown by any of them is logged, goes no further, and the
+     * callbacks after it are not called.
+     *
+     * @param {DataFile} dataFile the data file the update was for
+     * @param {string} status one of the AutoUpdateStatus values
+     */
+    complete(dataFile: DataFile, status: string): void;
+    /**
+     * The message for a data update service that could not be reached.
+     *
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} [updateUrl] the URL that was asked, where it is not the
+     * update URL of the data file
+     * @returns {string} the message to log
+     */
+    accessError(dataFile: DataFile, updateUrl?: string): string;
+    /**
+     * Reads the products the data update service lists for license keys that
+     * hold several, and sends the first request again with the product of the
+     * loaded data file added. Only the product is taken from the response.
+     * Where the product is not listed the check fails with an error that
+     * names it and the products listed. A response that lists no product is
+     * any other response, and the check fails with its status code.
+     *
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} updateUrl the URL of the first request
+     * @param {string | undefined} modifiedSince the If-Modified-Since header
+     * of the first request, if it had one
+     * @param {import('http').IncomingMessage} response the response that
+     * lists the products
+     * @param {number} [redirects] the redirects the check has followed
+     */
+    chooseProduct(dataFile: DataFile, updateUrl: string, modifiedSince: string | undefined, response: import("http").IncomingMessage, redirects?: number): void;
+    /**
+     * Refreshes the engine of a data file with the data now in place, and
+     * logs a failure. The caller reports the outcome.
+     *
+     * @param {DataFile} dataFile the data file to refresh
+     * @param {boolean} [fromFile] true where the data came from a file that
+     * was written, which is the case the message names a try count for
+     * @returns {boolean} true if the refresh worked
+     */
+    refreshDataFile(dataFile: DataFile, fromFile?: boolean): boolean;
+    /**
+     * Ends an update that failed, so that the next one can be scheduled.
+     *
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} status the AutoUpdateStatus to report
+     */
+    fail(dataFile: DataFile, status: string): void;
+    /**
      * Method that updates a datafile when it is due an update
      *
      * @param {DataFile} dataFile the datafile to update
@@ -53,32 +119,44 @@ declare class DataFileUpdateService {
      */
     updateDataFile(dataFile: DataFile, automatic?: boolean): boolean | void;
     /**
-     * Writes a message to the log of the pipeline the service is attached to.
+     * Asks the data update service for new data and applies what it sends.
+     * License keys that hold several products get a list of the products in
+     * place of the data. The request is then sent again, once, with the
+     * product of the loaded data file added. A response that sends the
+     * request on to another address is followed, and the address that
+     * answers is then the URL of the request.
      *
-     * @param {string} level the log level
-     * @param {*} message the message
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} updateUrl the URL to ask
+     * @param {{modifiedSince: (string | undefined), chooseProduct: (boolean |
+     * undefined), redirects: (number | undefined)}} [repeat] given where the
+     * request is not the first of the check, with the If-Modified-Since
+     * header of the first request, whether a product may still be chosen,
+     * which is not the case once the request names the product chosen, and
+     * the number of redirects followed
+     * @returns {boolean | void} returns false if the request failed
      */
-    log(level: string, message: any): void;
+    requestUpdate(dataFile: DataFile, updateUrl: string, repeat?: {
+        modifiedSince: (string | undefined);
+        chooseProduct?: (boolean | undefined);
+        redirects?: (number | undefined);
+    }): boolean | void;
     /**
-     * Reports how an update ended, to the listeners of 'updateComplete' and
-     * to the data file's own onUpdateComplete function, if it has one.
+     * Logs an error that has no message of its own, with its cause.
      *
-     * @param {DataFile} dataFile the data file the update was for
-     * @param {string} status one of the AutoUpdateStatus values
+     * @param {DataFile} dataFile the data file being updated
+     * @param {*} error the error, or whatever was thrown
      */
-    complete(dataFile: DataFile, status: string): void;
+    unhandled(dataFile: DataFile, error: any): void;
     /**
-     * Refreshes a data file that is held in memory with the bytes given. The
-     * data file keeps the data it has if the refresh fails. Nothing is
-     * downloaded and no file is written.
+     * Logs a download whose MD5 hash does not match the one the response
+     * carried.
      *
-     * @param {DataFile} dataFile the memory data file to refresh
-     * @param {Buffer | Uint8Array} buffer the new data
-     * @returns {boolean} false if the data file is already updating or the
-     * refresh failed, which is also logged and reported through the
-     * 'updateComplete' event
+     * @param {DataFile} dataFile the data file being updated
+     * @param {string} serverHash the hash the response carried
+     * @param {string} downloadHash the hash of the data that arrived
      */
-    updateFromMemory(dataFile: DataFile, buffer: Buffer | Uint8Array): boolean;
+    integrityFailed(dataFile: DataFile, serverHash: string, downloadHash: string): void;
     /**
      * Internal method called when the datafile has
      * been downloaded and is ready after an update
@@ -96,6 +174,18 @@ declare class DataFileUpdateService {
      * @param {string} filename the filename of the downloaded data
      */
     processFile(dataFile: DataFile, filename: string): void;
+    /**
+     * Refreshes a data file that is held in memory with the bytes given. The
+     * data file keeps the data it has if the refresh fails. Nothing is
+     * downloaded and no file is written.
+     *
+     * @param {DataFile} dataFile the memory data file to refresh
+     * @param {Buffer | Uint8Array} buffer the new data
+     * @returns {boolean} false if the data file is already updating or the
+     * refresh failed, which is also logged and reported through the
+     * 'updateComplete' event
+     */
+    updateFromMemory(dataFile: DataFile, buffer: Buffer | Uint8Array): boolean;
     /**
      * Internal method to check the next update of a
      * datafile at a polling interval set on the datafile

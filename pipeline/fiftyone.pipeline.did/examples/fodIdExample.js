@@ -45,10 +45,33 @@ const VERSION = 2;
 const DOMAIN = '51degrees.com';
 const DATE = 2900000; // minutes since 2020-01-01
 
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tThe specifications: https://github.com/51Degrees/specifications',
+  '\tWhat a 51Did is: https://51degrees.com/documentation/_identifiers__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-fodidexample.js&utm_term=find-out-more-identifiers',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-fodidexample.js&utm_term=find-out-more-contact'
+].join('\n');
+
+/**
+ * The four bytes of an unsigned 32-bit value, little-endian.
+ *
+ * @param {number} v the value
+ * @returns {number[]} the bytes, least significant first
+ */
 function uint32LE (v) {
   return [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF];
 }
 
+/**
+ * A Probabilistic payload granting standard marketing,
+ * with the terms byte an issuer writes.
+ *
+ * @returns {Uint8Array} the payload
+ */
 function samplePayload () {
   // One byte longer than the least length, because the terms byte follows
   // the match key. A 51Did whose payload stops at the match key carries
@@ -74,6 +97,13 @@ function samplePayload () {
   return p;
 }
 
+/**
+ * The bytes the signature covers: everything before the signature.
+ *
+ * @param {Uint8Array} payload the payload
+ * @param {number} date the OWID date in minutes since 2020-01-01
+ * @returns {Uint8Array} the bytes before the signature
+ */
 function noSigBytes (payload, date) {
   const out = [VERSION];
   for (let i = 0; i < DOMAIN.length; i++) { out.push(DOMAIN.charCodeAt(i)); }
@@ -84,6 +114,14 @@ function noSigBytes (payload, date) {
   return Uint8Array.from(out);
 }
 
+/**
+ * A 51Did signed with the private key, as an issuer creates one.
+ *
+ * @param {CryptoKey} privateKey the private key of the issuer
+ * @param {Uint8Array} payload the payload
+ * @param {number} date the OWID date in minutes since 2020-01-01
+ * @returns {Promise<string>} the 51Did as base64
+ */
 async function issue (privateKey, payload, date) {
   const noSig = noSigBytes(payload, date);
   const sig = new Uint8Array(await subtle.sign(
@@ -94,12 +132,22 @@ async function issue (privateKey, payload, date) {
   return Buffer.from(full).toString('base64');
 }
 
+/**
+ * DER bytes as a PEM block with the given label.
+ *
+ * @param {string} label the PEM label, such as PUBLIC KEY
+ * @param {Uint8Array} der the DER bytes
+ * @returns {string} the PEM text
+ */
 function toPem (label, der) {
   const b64 = Buffer.from(der).toString('base64');
   return `-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n` +
     `-----END ${label}-----\n`;
 }
 
+/**
+ * Issues a sample 51Did, then reads and verifies it, printing what it finds.
+ */
 async function run () {
   const keyPair = await subtle.generateKey(
     { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
@@ -157,6 +205,8 @@ async function run () {
   if (short.ok || short.status !== expected) {
     throw new Error('Expected InvalidTypePayloadLength for a short payload.');
   }
+
+  console.log(FIND_OUT_MORE);
 }
 
 run().catch((e) => { console.error(e); process.exit(1); });

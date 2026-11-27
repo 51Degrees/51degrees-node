@@ -14,17 +14,18 @@ ExternalProject_Add(ApacheBench
 )
 
 
-# The User-Agents come from the data submodule, whose script downloads the
-# file when it is missing.
+# The evidence records come from the data submodule, whose script downloads
+# the file when it is missing. runPerf.sh passes the copy to the benchmark,
+# so the copy's name has no spaces.
 set(DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../cxx/data")
-set(UA_FILE "20000 User Agents.csv")
+set(EVIDENCE_FILE "20000 Evidence Records.yml")
 execute_process(
-    COMMAND sh "${DATA_DIR}/get-data-files.sh" "${UA_FILE}"
+    COMMAND sh "${DATA_DIR}/get-data-files.sh" "${EVIDENCE_FILE}"
     RESULT_VARIABLE DATA_RESULT)
 if(NOT DATA_RESULT EQUAL 0)
-    message(FATAL_ERROR "${UA_FILE} could not be downloaded")
+    message(FATAL_ERROR "${EVIDENCE_FILE} could not be downloaded")
 endif()
-configure_file("${DATA_DIR}/device-detection/${UA_FILE}" uas.csv COPYONLY)
+configure_file("${DATA_DIR}/device-detection/${EVIDENCE_FILE}" evidence.yml COPYONLY)
 
 add_custom_target(perf ALL
     COMMAND cp ../runPerf.sh .

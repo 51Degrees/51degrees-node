@@ -34,10 +34,10 @@ const errorMessages = require51('fiftyone.devicedetection.shared').errorMessages
 
 const FiftyOneDegreesDeviceDetectionOnPremise = require51('fiftyone.devicedetection.onpremise');
 
-const DataFile = (process.env.directory || __dirname) + '/../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash';
-const BadVersionDataFile = (process.env.directory || __dirname) + '/BadVersionDataFile.hash';
-const BadHeaderDataFile = (process.env.directory || __dirname) + '/BadHeaderDataFile.hash';
-const SmallDataFile = (process.env.directory || __dirname) + '/SmallDataFile.hash';
+const DataFile = path.join(__dirname, '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
+const BadVersionDataFile = path.join(__dirname, 'BadVersionDataFile.hash');
+const BadHeaderDataFile = path.join(__dirname, 'BadHeaderDataFile.hash');
+const SmallDataFile = path.join(__dirname, 'SmallDataFile.hash');
 
 const badVersion = [1, 2, 3, 4];
 const goodVersion = [4, 1, 0, 0];
@@ -100,6 +100,8 @@ afterAll(() => {
   fs.unlinkSync(SmallDataFile);
 });
 
+// Updates are off so that each build reaches the bad data file. An update
+// on start-up with no license key fails the build before the file is read.
 describe('Bad data file error messages', () => {
   // Check that an error with appropriate message is
   // thrown when the data file contains bad version
@@ -111,7 +113,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'MaxPerformance',
           dataFilePath: BadVersionDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -132,7 +134,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'MaxPerformance',
           dataFilePath: BadHeaderDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -153,7 +155,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'MaxPerformance',
           dataFilePath: SmallDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };

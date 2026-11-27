@@ -77,9 +77,10 @@ const START_4 = new Date('2026-08-24T00:00:00Z');
 
 /**
  * A fetch stand-in recording every call and answering from a handler.
+ *
  * @param {function(string, object, number): object} handler given the URL,
  * the init and the call number, returns a response
- * @returns {function} the fetch function, with a `calls` array
+ * @returns {Function} the fetch function, with a `calls` array
  */
 function fakeFetch (handler) {
   const calls = [];
@@ -92,6 +93,13 @@ function fakeFetch (handler) {
   return fetch;
 }
 
+/**
+ * A response as the fake fetch answers, with the body as text.
+ *
+ * @param {number} status the HTTP status
+ * @param {string|object} body the body, written as JSON where not a string
+ * @returns {object} the response
+ */
 function response (status, body) {
   const text = typeof body === 'string' ? body : JSON.stringify(body);
   return { status, text: async () => text };
@@ -118,6 +126,13 @@ async function schedule () {
   return { pairs, pems, json };
 }
 
+/**
+ * A client whose fetch answers the key route with the given list.
+ *
+ * @param {object[]|Function} json the key list, or a function that returns it
+ * @param {object} [extra] more client options
+ * @returns {object} the client and its fake fetch
+ */
 function keyClient (json, extra = {}) {
   const fetch = fakeFetch((url) => {
     if (url.indexOf('id/key/') >= 0) {
@@ -131,6 +146,14 @@ function keyClient (json, extra = {}) {
   return { client, fetch };
 }
 
+/**
+ * A 51Did signed with the key pair and dated at the given time.
+ *
+ * @param {CryptoKeyPair} pair the key pair to sign with
+ * @param {Date} at the time the 51Did is dated
+ * @param {object} [options] the payload, version and domain to use
+ * @returns {Promise<FodId>} the signed 51Did
+ */
 async function signedAt (pair, at, options = {}) {
   return FodId.fromBase64(await signedWith(
     pair, options.payload || canonicalPayload(),
@@ -144,6 +167,7 @@ async function signedAt (pair, at, options = {}) {
 /**
  * One entry as the cloud's key route publishes it, with the dates in the
  * form the cloud writes them and endsAt where one is given.
+ *
  * @param {Date} startsAt when the key starts
  * @param {Date | null} endsAt when the key ends, or null for none
  * @param {string} publicKey the key as PEM
@@ -162,6 +186,7 @@ function published (startsAt, endsAt, publicKey) {
  * A client on a clock the test moves, whose key requests are answered with
  * the entries the test has published, filtered on the datetime parameter as
  * the cloud's key route filters them, once `cloud.answering` resolves.
+ *
  * @param {number} now the clock's first reading
  * @returns {{client: DidClient, fetch: Function, cloud: object}} the
  * client, the fetch stand-in, and the published entries with the clock
@@ -185,6 +210,7 @@ function publishingClient (now) {
 
 /**
  * The datetime parameter a recorded key request carried.
+ *
  * @param {object} call the recorded request
  * @returns {Date | null} the moment, or null when the request had none
  */
@@ -198,6 +224,7 @@ function datetimeOf (call) {
  * the global back once the function returns. A request the function starts
  * is made before the function returns, so its headers are chosen without
  * the global.
+ *
  * @param {function(): any} fn the function to run
  * @returns {any} what the function returned
  */
@@ -214,6 +241,7 @@ function withoutProcess (fn) {
 /**
  * A fetch stand-in that refuses to run as a method of anything but the
  * window, as a browser's fetch does, and otherwise answers from a handler.
+ *
  * @param {function(string, object, number): object} handler given the URL,
  * the init and the call number, returns a response
  * @returns {Function} the fetch function, with a `calls` array
@@ -233,48 +261,19 @@ function windowFetch (handler) {
 }
 
 describe('DidClient construction', () => {
-  // The name the endpoint variable had before, which is still read when
-  // the new name is not set. Built in two parts so the environment variable
-  // name check does not find it here.
-  const oldName = 'FOD' + '_CLOUD_API_URL';
   const saved = process.env._51DEGREES_CLOUD_ENDPOINT;
-  const savedOld = process.env[oldName];
-  let emitWarning;
-  beforeEach(() => {
-    delete process.env[oldName];
-    // Node's route for a deprecation, replaced so the calls can be counted
-    // and nothing is written to the test output.
-    emitWarning = jest.spyOn(process, 'emitWarning')
-      .mockImplementation(() => {});
-  });
   afterEach(() => {
-    emitWarning.mockRestore();
     if (saved === undefined) {
       delete process.env._51DEGREES_CLOUD_ENDPOINT;
     } else {
       process.env._51DEGREES_CLOUD_ENDPOINT = saved;
     }
-    if (savedOld === undefined) {
-      delete process.env[oldName];
-    } else {
-      process.env[oldName] = savedOld;
-    }
   });
 
-  /**
-   * The DidClient class of a newly loaded module, which has reported no
-   * deprecated name yet.
-   * @returns {typeof DidClient} the class
-   */
-  const newlyLoadedDidClient = () => {
-    let loaded;
-    jest.isolateModules(() => {
-      loaded = require('../didClient').DidClient;
-    });
-    return loaded;
-  };
-
   test('resourceKey is required', () => {
+    // The public cloud requires the key, so the endpoint the environment
+    // names is cleared for this test.
+    delete process.env._51DEGREES_CLOUD_ENDPOINT;
     expect(() => new DidClient({})).toThrow(TypeError);
     expect(() => new DidClient({ resourceKey: '' })).toThrow(TypeError);
     expect(() => new DidClient(null)).toThrow(TypeError);
@@ -291,75 +290,6 @@ describe('DidClient construction', () => {
     process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4';
     const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
     expect(client.endpoint).toBe('https://other.example/api/v4/');
-  });
-
-  test('endpoint reads the old variable name when the new one is not set', () => {
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    process.env[oldName] = 'https://old.example/api/v4';
-    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-    expect(client.endpoint).toBe('https://old.example/api/v4/');
-  });
-
-  test('endpoint reads the old variable name when the new one is empty', () => {
-    process.env._51DEGREES_CLOUD_ENDPOINT = '';
-    process.env[oldName] = 'https://old.example/api/v4/';
-    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-    expect(client.endpoint).toBe('https://old.example/api/v4/');
-  });
-
-  test('the new variable name wins when both are set', () => {
-    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
-    process.env[oldName] = 'https://old.example/api/v4/';
-    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-    expect(client.endpoint).toBe('https://other.example/api/v4/');
-  });
-
-  test('an empty old variable name counts as not set', () => {
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    process.env[oldName] = '';
-    const client = new DidClient({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-    expect(client.endpoint).toBe('https://cloud.51degrees.com/api/v4/');
-  });
-
-  test('reading the old variable name is reported as deprecated, once', () => {
-    const Fresh = newlyLoadedDidClient();
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    process.env[oldName] = 'https://old.example/api/v4/';
-
-    const first = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-    const second = new Fresh({ resourceKey: RESOURCE, fetch: fakeFetch(() => null) });
-
-    expect(first.endpoint).toBe('https://old.example/api/v4/');
-    expect(second.endpoint).toBe('https://old.example/api/v4/');
-    expect(emitWarning).toHaveBeenCalledTimes(1);
-    const [message, type] = emitWarning.mock.calls[0];
-    expect(type).toBe('DeprecationWarning');
-    expect(message).toContain(oldName);
-    expect(message).toContain('deprecated');
-    expect(message).toContain('_51DEGREES_CLOUD_ENDPOINT');
-  });
-
-  test('the old variable name is not reported when it is not used', () => {
-    const Fresh = newlyLoadedDidClient();
-    const build = (options) => new Fresh(Object.assign(
-      { resourceKey: RESOURCE, fetch: fakeFetch(() => null) }, options));
-
-    // Neither name set.
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    build();
-
-    // Both set, so the new name is the one read.
-    process.env._51DEGREES_CLOUD_ENDPOINT = 'https://other.example/api/v4/';
-    process.env[oldName] = 'https://old.example/api/v4/';
-    build();
-
-    // Only the old name set, and the endpoint option given, so the
-    // environment is not read.
-    delete process.env._51DEGREES_CLOUD_ENDPOINT;
-    expect(build({ endpoint: 'https://mine.example/api/v4/' }).endpoint)
-      .toBe('https://mine.example/api/v4/');
-
-    expect(emitWarning).not.toHaveBeenCalled();
   });
 
   test('endpoint option wins over the environment', () => {
@@ -393,6 +323,7 @@ describe('DidClient in a browser', () => {
 
   /**
    * A fetch stand-in answering the key, verify and redeem routes.
+   *
    * @param {object[]} json the published key list
    * @returns {Function} the fetch function, with a `calls` array
    */
@@ -1294,6 +1225,13 @@ describe('DidClient verifySignature', () => {
 describe('DidClient verify (cloud)', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
 
+  /**
+   * A client whose fetch answers every request with the given response.
+   *
+   * @param {number} status the HTTP status
+   * @param {string|object} body the response body
+   * @returns {object} the client and its fake fetch
+   */
   function verifyClient (status, body) {
     const fetch = fakeFetch(() => response(status, body));
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
@@ -1386,6 +1324,15 @@ describe('DidClient redeem', () => {
   const RESULT = 'sealed-result-value';
   const CHALLENGE = 'challenge-123';
 
+  /**
+   * A client with a licence key whose fetch answers every request with the
+   * given response.
+   *
+   * @param {number} status the HTTP status
+   * @param {string|object} body the response body
+   * @param {object} [extra] more client options
+   * @returns {object} the client and its fake fetch
+   */
   function redeemClient (status, body, extra = {}) {
     const fetch = fakeFetch(() => response(status, body));
     const client = new DidClient(Object.assign({

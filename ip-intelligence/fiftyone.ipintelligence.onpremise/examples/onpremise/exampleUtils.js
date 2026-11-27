@@ -74,61 +74,6 @@ const IPI_DATA_FILE_VARIABLE = '_51DEGREES_IPI_PATH';
 // before the folder hierarchy is searched.
 const DD_DATA_FILE_VARIABLE = '_51DEGREES_DD_PATH';
 
-/**
- * The name the IP intelligence variable had when it began with the digit.
- *
- * @deprecated Set the variable IPI_DATA_FILE_VARIABLE names. This name is
- * read only when that variable is unset or empty.
- */
-const IPI_DATA_FILE_ENV_VAR = '51DEGREES_IPI_PATH';
-
-/**
- * The name the device detection variable had when it began with the digit.
- *
- * @deprecated Set the variable DD_DATA_FILE_VARIABLE names. This name is
- * read only when that variable is unset or empty.
- */
-const DD_DATA_FILE_ENV_VAR = '51DEGREES_DD_PATH';
-
-// The old names already said to be deprecated, so each is said once.
-const reportedOldNames = new Set();
-
-/**
- * Prints, once for each old name, that the name is deprecated and which
- * name replaces it.
- *
- * @param {string} oldName the deprecated environment variable name
- * @param {string} name the name that replaces it
- */
-const reportOldName = function (oldName, name) {
-  if (reportedOldNames.has(oldName) === false) {
-    reportedOldNames.add(oldName);
-    console.warn(`The ${oldName} environment variable is deprecated and ` +
-      `${name} replaces it. Set ${name} instead.`);
-  }
-};
-
-/**
- * Reads an environment variable under its name and, when that is unset or
- * empty, under the deprecated names it had before, in order.
- *
- * @param {string} name the environment variable name
- * @param {...string} oldNames the deprecated names it had before
- * @returns {string|undefined} the value, or undefined when none is set
- */
-const readVariable = function (name, ...oldNames) {
-  if (process.env[name]) {
-    return process.env[name];
-  }
-  for (const oldName of oldNames) {
-    if (process.env[oldName]) {
-      reportOldName(oldName, name);
-      return process.env[oldName];
-    }
-  }
-  return undefined;
-};
-
 // Content types for the small set of static assets served by the web
 // examples. The shared pattern-library CSS and JS live under each
 // example's 'public' directory.
@@ -258,11 +203,10 @@ class ExampleUtils {
   }
 
   // Get the explicit path of the IP intelligence data file from the
-  // environment, read from the variable named by IPI_DATA_FILE_VARIABLE,
-  // then from the deprecated name when that is unset or empty. Returns
-  // undefined when neither is set.
+  // environment, read from the variable named by IPI_DATA_FILE_VARIABLE.
+  // Returns undefined when it is not set.
   static getDataFilePathFromEnv () {
-    return readVariable(IPI_DATA_FILE_VARIABLE, IPI_DATA_FILE_ENV_VAR);
+    return process.env[IPI_DATA_FILE_VARIABLE] || undefined;
   }
 
   // Get the path to an IP intelligence data file. The environment is
@@ -274,10 +218,9 @@ class ExampleUtils {
 
   // Get the path to a device detection data file. The environment
   // variable named by DD_DATA_FILE_VARIABLE is checked first for an
-  // explicit path, then the deprecated name when that is unset or empty.
-  // If neither is set then the file is found with findFile.
+  // explicit path. If it is not set then the file is found with findFile.
   static findDeviceDataFile (fileName) {
-    return readVariable(DD_DATA_FILE_VARIABLE, DD_DATA_FILE_ENV_VAR) ||
+    return process.env[DD_DATA_FILE_VARIABLE] ||
       this.findFile(fileName);
   }
 
@@ -326,6 +269,21 @@ class ExampleUtils {
   static getDataTier (pipeline) {
     const ipiEngine = pipeline.flowElements.ip;
     return ipiEngine ? ipiEngine.engine.getProduct() : undefined;
+  }
+
+  // True when a data file of the pipeline's IP Intelligence or device
+  // detection engine was published more than DATA_FILE_AGE_WARNING days ago.
+  static isDataFileOld (pipeline) {
+    return ['ip', 'device'].some((key) => {
+      const element = pipeline.flowElements[key];
+      if (element === undefined || element.engine === undefined) {
+        return false;
+      }
+      const published =
+        swigHelpers.swigDateToDate(element.engine.getPublishedTime());
+      return Date.now() >
+        published.getTime() + DATA_FILE_AGE_WARNING * MS_PER_DAY;
+    });
   }
 
   static checkDataFile (pipeline, filePath) {
@@ -478,7 +436,5 @@ module.exports = {
   NEEDS_ENTERPRISE,
   DATA_FILE_AGE_WARNING,
   IPI_DATA_FILE_VARIABLE,
-  DD_DATA_FILE_VARIABLE,
-  IPI_DATA_FILE_ENV_VAR,
-  DD_DATA_FILE_ENV_VAR
+  DD_DATA_FILE_VARIABLE
 };

@@ -10,6 +10,7 @@
     "pipeline/fiftyone.pipeline.cloudrequestengine",
     "pipeline/fiftyone.pipeline.did",
     "pipeline/fiftyone.pipeline.translation",
+    "pipeline/fiftyone.pipeline.derivedproperty",
     "device-detection/fiftyone.devicedetection",
     "device-detection/fiftyone.devicedetection.cloud",
     "device-detection/fiftyone.devicedetection.onpremise",
@@ -22,9 +23,9 @@
     "ip-intelligence/fiftyone.ipintelligence.translation"
   ],
   "scripts": {
-    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/)\"",
-    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"(performance\\.test\\.js|tierEntitlement\\.integration\\.test\\.js)\"",
-    "lint": "eslint . --ext .js",
+    "unit-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathIgnorePatterns=\"(examples/|performance\\.test\\.js|integration|location/|owid-js/)\"",
+    "integration-test": "node --expose-gc node_modules/jest/bin/jest.js --ci --reporters=jest-junit --reporters=default --runInBand --forceExit --coverage --coverageReporters=cobertura --testPathPattern=\"(examples/|integration|location/)\" --testPathIgnorePatterns=\"(performance\\.test\\.js|tierEntitlement\\.integration\\.test\\.js|\\.staging\\.integration\\.test\\.js)\"",
+    "lint": "eslint . --ext .js --max-warnings 0 --report-unused-disable-directives",
     "tsc": "tsc -b --force"
   },
   "repository": {
@@ -37,6 +38,7 @@
     "outputName": "test_results.xml"
   },
   "jest": {
+    "globalSetup": "<rootDir>/ci/jestGlobalSetup.js",
     "projects": [
       {
         "displayName": "ci",

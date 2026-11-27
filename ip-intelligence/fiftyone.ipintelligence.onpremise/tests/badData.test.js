@@ -35,9 +35,9 @@ const errorMessages = require51('fiftyone.ipintelligence.shared').errorMessages;
 
 const FiftyOneDegreesIpIntelligenceOnPremise = require51('fiftyone.ipintelligence.onpremise');
 
-const BadVersionDataFile = (process.env.directory || __dirname) + '/BadVersionDataFile.ipi';
-const BadHeaderDataFile = (process.env.directory || __dirname) + '/BadHeaderDataFile.ipi';
-const SmallDataFile = (process.env.directory || __dirname) + '/SmallDataFile.ipi';
+const BadVersionDataFile = path.join(__dirname, 'BadVersionDataFile.ipi');
+const BadHeaderDataFile = path.join(__dirname, 'BadHeaderDataFile.ipi');
+const SmallDataFile = path.join(__dirname, 'SmallDataFile.ipi');
 
 const badVersion = [1, 2, 3, 4];
 const goodVersion = [4, 1, 0, 0];
@@ -109,6 +109,8 @@ afterAll(() => {
   }
 });
 
+// Updates are off so that each build reaches the bad data file. An update
+// on start-up with no license key fails the build before the file is read.
 describe('Bad data file error messages', () => {
   // Check that an error with appropriate message is
   // thrown when the data file contains bad version
@@ -120,7 +122,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: BadVersionDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -137,7 +139,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: BadHeaderDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };
@@ -154,7 +156,7 @@ describe('Bad data file error messages', () => {
           performanceProfile: 'Balanced',
           dataFilePath: SmallDataFile,
           autoUpdate: false,
-          updateOnStart: true,
+          updateOnStart: false,
           licenceKeys: null
         });
     };

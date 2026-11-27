@@ -29,26 +29,12 @@
 
 const childProcess = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const request = require('supertest');
 
-const require51 = (requestedPackage) => {
-  try {
-    return require(path.join(__dirname, '/../../node_modules/', requestedPackage));
-  } catch (e) {
-    return require(requestedPackage);
-  }
-};
-
-const optionsExtension =
-  require51('fiftyone.devicedetection.shared').optionsExtension;
-
-const { ExampleUtils, NEEDS_ENTERPRISE, DATA_FILE_PATH_ENV_VAR } =
+const { NEEDS_ENTERPRISE } =
   require(path.join(__dirname, 'exampleUtils'));
 
-const LITE_V_4_1_HASH = '51Degrees-LiteV4.1.hash';
-const EVIDENCE = '20000 Evidence Records.yml';
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code';
 const NEEDS_LICENCE_KEY = 'which needs a licence key';
 const CHROME =
@@ -56,14 +42,18 @@ const CHROME =
   '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const TIMEOUT_MS = 300000;
 
+// Every example ends with a Find out more section, which gives this API's
+// folder and links to 51degrees.com tagged with the example.
+const FIND_OUT_MORE = 'Find out more';
+const REPOSITORY =
+  'https://github.com/51Degrees/51degrees-node/tree/main/device-detection';
+const FIND_OUT_MORE_LINK = 'utm_term=find-out-more';
+
 // The settings that name a data file or a licence key. A fresh clone has
 // none of them.
 const SETTINGS = [
   '_51DEGREES_DD_PATH',
-  DATA_FILE_PATH_ENV_VAR,
-  '_51DEGREES_LICENSE_KEY',
-  'LICENSE_KEY',
-  'LICENSEKEY'
+  '_51DEGREES_LICENSE_KEY'
 ];
 
 // Runs an example in its own process, from its own folder, as a person
@@ -89,14 +79,41 @@ const runExample = (file, args = []) => {
     });
 };
 
-// Checks the example finished, showing its error output when it did not,
-// and wrote each of the texts.
+// Checks the output ends with the Find out more section, which is a rule
+// of 79 equals signs, the heading, then one line per link, each a tab, a
+// label and an address, with this API's folder and a tagged 51degrees.com
+// link among them.
+const expectEndsWithFindOutMore = (stdout) => {
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const heading = lines.lastIndexOf(`${FIND_OUT_MORE}:`);
+  expect(heading).toBeGreaterThan(0);
+  expect(lines[heading - 1]).toBe('='.repeat(79));
+  const links = lines.slice(heading + 1);
+  for (const line of links) {
+    expect(line).toMatch(/^\t[A-Z][^:]*: https:\/\/\S+$/);
+  }
+  expect(links).toContain(`\tThis API: ${REPOSITORY}`);
+  expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
+};
+
+// Checks the example finished and wrote nothing to its error output,
+// wrote each of the texts, and ended with the Find out more section.
 const expectOutput = (result, ...texts) => {
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   for (const text of texts) {
     expect(result.stdout).toContain(text);
   }
+  expectEndsWithFindOutMore(result.stdout);
+};
+
+// Checks a page has the Find out more section after its results, with
+// this API's folder and a tagged 51degrees.com link.
+const expectPageEndsWithFindOutMore = (text) => {
+  const section = text.lastIndexOf(FIND_OUT_MORE);
+  expect(section).toBeGreaterThan(text.lastIndexOf(NEEDS_ENTERPRISE));
+  expect(text.slice(section)).toContain(REPOSITORY);
+  expect(text.slice(section)).toContain(FIND_OUT_MORE_LINK);
 };
 
 // The web examples run in this process, so the settings are removed from
@@ -140,20 +157,21 @@ describe('Examples without settings', () => {
   }, TIMEOUT_MS);
 
   test('offline processing marks the Enterprise properties', () => {
-    // The files are the ones the example finds itself, named so that the
-    // output is not written into the data folder.
-    const output = path.join(os.tmpdir(), 'offline-processing-free.yml');
+    // The example finds its data file and evidence file itself, and writes
+    // its output beside the evidence file, where the example says it is.
+    // The test reads the output there and then removes it.
+    const result = runExample('offlineprocessing-console/offlineProcessing.js');
+    const written = /See results in: '([^']+)'/.exec(result.stdout);
     try {
-      expectOutput(runExample('offlineprocessing-console/offlineProcessing.js', [
-        ExampleUtils.findFile(LITE_V_4_1_HASH),
-        ExampleUtils.findFile(EVIDENCE),
-        output
-      ]), CONTACT_US);
-      const yaml = fs.readFileSync(output, 'utf8');
+      expectOutput(result, CONTACT_US);
+      expect(written).not.toBeNull();
+      const yaml = fs.readFileSync(written[1], 'utf8');
       expect(yaml).toContain('# Some of these properties need the Enterprise data file.');
       expect(yaml).toContain(`device.hardwarevendor: ${NEEDS_ENTERPRISE}`);
     } finally {
-      fs.rmSync(output, { force: true });
+      if (written) {
+        fs.rmSync(written[1], { force: true });
+      }
     }
   }, TIMEOUT_MS);
 
@@ -177,13 +195,20 @@ describe('Examples without settings', () => {
     // Usage sharing is removed, so that the test sends nothing to 51Degrees.
     options.PipelineOptions.Elements = options.PipelineOptions.Elements.filter(
       (element) => !element.elementName.includes('shareUsage'));
-    optionsExtension.setDataFilePath(options, ExampleUtils.findFile(LITE_V_4_1_HASH));
-    optionsExtension.updateElementPath(options, dir);
-    example.setPipeline(options);
+    // The Pipeline is built in the example's own folder, as a person runs
+    // it, so the data file is the one its 51d.json names.
+    const cwd = process.cwd();
+    process.chdir(dir);
+    try {
+      example.setPipeline(options);
+    } finally {
+      process.chdir(cwd);
+    }
     const response = await request(example.server).get('/').set('User-Agent', CHROME);
     expect(response.statusCode).toBe(200);
     expect(response.text).toContain(NEEDS_ENTERPRISE);
     expect(response.text).toContain(CONTACT_US);
+    expectPageEndsWithFindOutMore(response.text);
   }, TIMEOUT_MS);
 
   test('the client hints web page marks the Enterprise properties', async () => {
@@ -193,5 +218,6 @@ describe('Examples without settings', () => {
     expect(response.statusCode).toBe(200);
     expect(response.text).toContain(NEEDS_ENTERPRISE);
     expect(response.text).toContain(CONTACT_US);
+    expectPageEndsWithFindOutMore(response.text);
   }, TIMEOUT_MS);
 });

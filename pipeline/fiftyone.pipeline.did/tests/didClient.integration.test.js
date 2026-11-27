@@ -20,12 +20,12 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// Live tests against the cloud. They fail rather than skip when no
-// resource key is set, and when the key gets an answer without the 51Did
-// a test needs. The resource key names are in liveCloudKeys.js. A license
-// key, needed to redeem where the account holds one, is read from
-// _51DEGREES_LICENSE_KEY_51DID first, the name CI passes. The endpoint
-// follows _51DEGREES_CLOUD_ENDPOINT as the client does.
+// Live tests against the cloud. They run once for each resource key that
+// is set, with the license of the same account where there is one, and
+// fail rather than skip when no resource key is set, and when a key gets
+// an answer without the 51Did a test needs. The key names are in
+// liveCloudKeys.js. The endpoint follows _51DEGREES_CLOUD_ENDPOINT as the
+// client does.
 
 const {
   FodId, DidClient, ContextResult, SignatureResult, DidNotSupportedError,
@@ -33,31 +33,30 @@ const {
 } = require('../index');
 const keys = require('./liveCloudKeys');
 
-const resourceKey = keys.findKey(keys.RESOURCE_KEY_NAMES);
-const licenceKey = keys.findKey(keys.LICENCE_KEY_NAMES);
+const runs = keys.runs();
 
-const noKey = keys.noKeyMessage(keys.RESOURCE_KEY_NAMES, 'FODid',
+const noKey = keys.noKeyMessage(
+  keys.KEY_PAIRS.map((pair) => pair.resourceKey), 'FODid',
   'FODiD.IdProbGlobal and FODiD.IdProbLic for each usage, which for the ' +
   'marketing usages also needs the CloudV5FODiD product', true);
 
-// Called first by every test, so each one fails with the message rather
-// than on whatever the missing key breaks first.
-const requireKey = () => {
-  if (!resourceKey) {
+// A run with no key fails, and so does a license whose resource key is
+// missing, because its licensed redeem would be left out.
+test('a resource key is set, and each license has its resource key', () => {
+  if (runs.length === 0) {
     throw new Error(noKey);
   }
-};
+  expect(keys.unpairedLicences()).toEqual([]);
+});
 
-describe('DidClient against the cloud', () => {
+// The tests, for one resource key and its license.
+const cloudTests = ({ resourceKey, licenceKey }) => {
   jest.setTimeout(30000);
 
   let client;
   let fodId;
 
   beforeAll(async () => {
-    if (!resourceKey) {
-      return;
-    }
     client = new DidClient({ resourceKey, licenceKey });
     // Created through the json endpoint, as a page or the cloud request
     // engine would, asking for the global probabilistic identifier.
@@ -89,7 +88,6 @@ describe('DidClient against the cloud', () => {
     'or set it to a host that offers the creator context.');
 
   test('parses, verifies offline and verifies through the cloud', async () => {
-    requireKey();
     expect(fodId.version).toBe(3);
     expect(fodId.date).toBeGreaterThan(0);
     const key = await client.publicKeyFor(fodId);
@@ -102,7 +100,6 @@ describe('DidClient against the cloud', () => {
   });
 
   test('redeem with a garbage result answers unreadable with 200', async () => {
-    requireKey();
     let result;
     try {
       result = await client.redeem(fodId, 'not-a-sealed-result', 'challenge');
@@ -192,7 +189,6 @@ describe('DidClient against the cloud', () => {
   // predating the Terms release would give.
   test('every usage reads back the terms and flags the service wrote',
     async () => {
-      requireKey();
       let checked = 0;
       for (const [name, usage, terms] of usages) {
         const identifiers = await identifiersFor(
@@ -209,7 +205,6 @@ describe('DidClient against the cloud', () => {
     });
 
   test('a consent string sets the usage is indirect bit', async () => {
-    requireKey();
     let proven = 0;
     for (const [tcString, usage, usageName] of consentStrings) {
       // No id.usage is sent. A stated usage wins over a consent string, so
@@ -269,7 +264,6 @@ describe('DidClient against the cloud', () => {
 
   test('redeem of a sealed result reads the verdict with a license key',
     async () => {
-      requireKey();
       // Created as a page creates it. Non-marketing, so every key with the
       // FODid product is entitled to it and the pass without a license key
       // runs too.
@@ -314,4 +308,9 @@ describe('DidClient against the cloud', () => {
         .toEqual([...FACTORS].sort());
       console.log('Redeemed with a license key: ' + result.raw);
     });
-});
+};
+
+for (const run of runs) {
+  describe(`DidClient against the cloud with ${run.name}`,
+    () => cloudTests(run));
+}

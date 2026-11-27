@@ -12,14 +12,17 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * @param {object} options the options for the pipeline builder
      * @param {string} [options.licenceKeys] license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
-     * This parameter MUST be set when using a data file.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates
-     * to be disabled.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremisepipelinebuilder.js&utm_term=constructor.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {string} options.dataFile dataFile path for the on premise engine
      * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
      * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
+     * @param {string} [options.dataUpdateProduct] the product to ask the data
+     * update service for, such as IPIV4Enterprise. When it is set, every
+     * request for a data file carries it in a Product parameter. With none
+     * set, the first request names no product.
      * @param {boolean} [options.autoUpdate] whether to autoUpdate the dataFile
      * @param {string} [options.dataUpdateUrl] base url for the datafile
      * update service
@@ -55,11 +58,12 @@ declare class IpIntelligenceOnPremisePipelineBuilder extends IpIntelligenceOnPre
      * DataFileUpdateService so the datafiles can receive
      * automatic updates
      */
-    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, createTempDataCopy, tempDataDir }: {
+    constructor({ dataFileUpdateService, licenceKeys, dataFile, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, dataUpdateProduct, autoUpdate, dataUpdateUrl, pollingInterval, updateTimeMaximumRandomisation, shareUsage, fileSystemWatcher, updateOnStart, cacheSize, restrictedProperties, performanceProfile, concurrency, createTempDataCopy, tempDataDir }: {
         licenceKeys?: string;
         dataFile: string;
         dataUpdateVerifyMd5?: boolean;
         dataUpdateUseUrlFormatter?: boolean;
+        dataUpdateProduct?: string;
         autoUpdate?: boolean;
         dataUpdateUrl?: string;
         pollingInterval?: number;

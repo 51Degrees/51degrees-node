@@ -37,7 +37,7 @@ The API can either use our cloud service to get its data or it can use a local (
 
 You will require a [resource key](https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud)
 to use the Cloud API. You can create resource keys using our
-[configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
+[configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud), see our
 [documentation](https://51degrees.com/documentation/_services__configurator.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) on how to use this.
 
 The cloud property tiers changed in May 2026. The examples and this documentation
@@ -46,14 +46,14 @@ the following device properties used by the examples: IsMobile, DeviceType,
 ScreenPixelsWidth, ScreenPixelsHeight, ScreenPixelsHeightJavaScript, the three
 `SetHeader*Accept-CH` properties, JavascriptGetHighEntropyValues, IsCrawler,
 DeviceId and UserAgents. A resource key that selects these free properties can be
-created [here](https://configure.51degrees.com/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+created [here](https://51degrees.com/configure/Wkqxf3Bs?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 
 The paid device properties used by the examples are: HardwareVendor, HardwareName,
 HardwareModel, PlatformVendor, PlatformName, PlatformVersion, BrowserVendor,
 BrowserName, BrowserVersion, ScreenPixelsWidthJavaScript and
 JavascriptHardwareProfile, plus the TAC and native model hardware profiles. A
 resource key that selects the free properties plus these paid properties can be
-created [here](https://configure.51degrees.com/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
+created [here](https://51degrees.com/configure/hYzn3TV3?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud).
 See [pricing](https://51degrees.com/pricing?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=cloud) to get a paid subscription with more properties.
 
 #### On-Premise
@@ -130,6 +130,7 @@ section explains how to do this.
     - Create a folder named `build`.
     - Run `node-gyp configure`
     - Run `node-gyp build`
+  - Compiler warnings are shown and do not stop the build. To make them errors, as the 51Degrees CI builds do, set the environment variable `_51DEGREES_WARNINGS_AS_ERRORS` to `true` before configuring.
   - Platform specific:
     - Windows
       - By default this will look for Visual Studio 2019 and a minimum Windows SDK version `10.0.18362.0`.
@@ -199,14 +200,10 @@ npm install jest --global
 
 You will also need to install any required packages for the examples in the **Examples** section.
 
-Add a 51Degrees cloud resource key in the fiftyone.devicedetection/package.json file for cloud tests. You can obtain a resource key from the [51Degrees Cloud Configurator](https://configure.51degrees.com/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY` in your test environment.
+The cloud tests need a 51Degrees cloud resource key that carries every property they ask for, including the `SetHeader*` properties. You can obtain a resource key from the [51Degrees configuration page](https://51degrees.com/configure/?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=tests) and assign it to the environment variable `_51DEGREES_RESOURCE_KEY_BESPOKE` in your test environment.
 
-There are other environment variables that you will also need to set in your test environment before running all tests:
-- `_51DEGREES_RESOURCE_KEY_SUPER`: This key contains all `SetHeader*` properties.
-- `_51DEGREES_RESOURCE_KEY_PLATFORM`: This key contains only the `SetHeaderPlatform*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_HARDWARE`: This key contains only the `SetHeaderHardware*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_BROWSER`: This key contains only the `SetHeaderBrowser*` property but no other `SetHeader` properties.
-- `_51DEGREES_RESOURCE_KEY_NO_SETHEADER`: This key contains no `SetHeader` properties.
+There is one other environment variable that you will also need to set in your test environment before running all tests:
+- `_51DEGREES_LICENSE_KEY_BESPOKE`: A cloud license key. The Accept-CH tests use it with `values=` naming the one property each needs, such as `device.SetHeaderBrowserAccept-CH`, or `device.IsMobile` for the case that sets no header. When it is not set, those tests are skipped, and their names say which variable to set.
 
 To run the tests, execute the following command in the root directory or a sub-module directory:
 
@@ -220,12 +217,12 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 (This is only intended to be run by 51Degrees developers internally):
 
 1. Ensure Swig is installed.
-   1. Use the 51Degrees fork of Swig, built from source from the `node-24-holder-this` branch of https://github.com/51Degrees/swig.
-   2. The fork is required because Swig releases still emit V8 API calls that were removed in the V8 shipped with recent Node versions, in particular `FunctionCallbackInfo::Holder()`, which the fork replaces with `This()`. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=native-code-updates).
+   1. Use SWIG 4.5.0 from https://www.swig.org.
+   2. SWIG 4.5.0 supports the V8 versions of Node 22, 24 and 26. The generated code must compile against the Node.js LTS versions targeted for testing, see the [tested versions page](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-node&utm_content=readme.md&utm_term=native-code-updates).
    3. All native modules loaded into one Node process must be generated by the same Swig version. Mixing modules generated by different Swig versions (for example this package and fiftyone.ipintelligence.onpremise) can crash the process, so regenerate and release them together.
 2. Update the `cxx` submodule at the root of the repository to reference the relevant commit.
 3. From terminal, navigate to fiftyone.pipeline.devicedetection and run:
-    a) swig -c++ -javascript -node hash_node.i
+    a) swig -Werror -c++ -javascript -node -I../../swig hash_node.i
 4. Commit changes to repository.
 5. Run the 'Build Device Detection Binaries for Node.js' Azure CI Pipeline.
 6. Copy the produced artifacts into the fiftyone.pipeline.devicedetection/build directory.
@@ -233,12 +230,13 @@ Process for rebuilding SWIG interfaces following an update to the device detecti
 
 ## TypeScript
 
-Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/common-ci/blob/main/node/generate-types.ps1#L10). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
+Types are generated and exported automatically from JSDoc comments using [this script](https://github.com/51Degrees/51degrees-node/blob/main/ci/generate-types.ps1). Upon generation types are committed into the repository into the package's `types` directory. Calling the generation step is manual for now, but later will be added as part of CI/CD pipeline.
 
 The TypeScript example with typechecking enabled is available under `onpremise/gettingstarted-console/gettingStarted.ts`.
 
-The example can be run as:
+In a clone of this repository, npm runs `npx` from the package folder, `device-detection/fiftyone.devicedetection.onpremise`, so the example is named from there. Build the native module first, as [AGENTS.md](../AGENTS.md) describes, then from the repository root run:
 
 ```
-npx ts-node gettingStarted.ts
+cd device-detection/fiftyone.devicedetection.onpremise
+npx ts-node examples/onpremise/gettingstarted-console/gettingStarted.ts
 ```

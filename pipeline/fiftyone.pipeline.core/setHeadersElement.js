@@ -27,6 +27,32 @@ const BasicListEvidenceKeyFilter = require('./basicListEvidenceKeyFilter');
 // SetHeader source headers separator
 const SOURCE_HEADER_SEPARATOR = ',';
 
+// The headers each Pipeline's elements can set, kept for each Pipeline,
+// because one Set Headers element can be added to several Pipelines whose
+// elements differ.
+const pipelineHeaders = new WeakMap();
+
+/**
+ * The headers a Pipeline's elements can set, made the first time the
+ * Pipeline asks.
+ *
+ * @param {SetHeadersElement} element the Set Headers element
+ * @param {Pipeline} pipeline the Pipeline
+ * @returns {object} the headers, as constructHeaders gives them
+ */
+const headersOf = function (element, pipeline) {
+  let headers = pipelineHeaders.get(pipeline);
+  if (headers === undefined) {
+    headers = element.constructHeaders(pipeline);
+    pipelineHeaders.set(pipeline, headers);
+  }
+  // Holds the first Pipeline's, as it always has.
+  if (element.headers === null) {
+    element.headers = headers;
+  }
+  return headers;
+};
+
 /**
  * @typedef {import('./pipeline')} Pipeline
  * @typedef {import('./flowData')} FlowData
@@ -49,6 +75,7 @@ class SetHeadersElement extends FlowElement {
         type: 'object'
       }
     };
+    /** @type {object} */
     this.headers = null;
   }
 
@@ -61,12 +88,12 @@ class SetHeadersElement extends FlowElement {
   getHeaderName (propertyName) {
     // Skip over the 'SetHeader' prefix.
     let str = propertyName.replace('SetHeader', '');
-    // Skip over the first uppercase character in the component
-    // name.
+    // Skip over the first character of the identifier, then every
+    // character up to the next upper-case one, because the identifier has
+    // no upper-case character after its first and may hold digits and
+    // other characters.
     str = str.substr(1);
-    // Now keep skipping until the next uppercase character is
-    // found.
-    while (str[0] >= 'a' && str[0] <= 'z') {
+    while (str.length > 0 && (str[0] < 'A' || str[0] > 'Z')) {
       str = str.substr(1);
     }
     return str;
@@ -114,14 +141,13 @@ class SetHeadersElement extends FlowElement {
    * @param {FlowData} flowData the FlowData being processed
    */
   processInternal (flowData) {
-    if (this.headers === null) {
-      this.headers = this.constructHeaders(flowData.pipeline);
-    }
-
-    const data = new ElementDataDictionary({
+    const data = this.pooledElementData(() => new ElementDataDictionary({
       flowElement: this,
-      contents: { responseheadersdictionary: this.getResponseHeaders(flowData) }
-    });
+      contents: {}
+    }));
+    data.contents = {
+      responseheadersdictionary: this.getResponseHeaders(flowData)
+    };
 
     flowData.setElementData(data);
   }
@@ -136,7 +162,8 @@ class SetHeadersElement extends FlowElement {
    */
   getResponseHeaders (flowData) {
     const result = {};
-    for (const [, header] of Object.entries(this.headers)) {
+    const headers = headersOf(this, flowData.pipeline);
+    for (const [, header] of Object.entries(headers)) {
       const headerValue = new Set();
       header.properties.forEach(property => {
         const keys = property.split('.');

@@ -70,11 +70,12 @@
  *   _51DEGREES_CLOUD_ENDPOINT. Optional. The cloud API base including the
  *     /api/v4/ segment, defaulting to https://cloud.51degrees.com/api/v4/.
  *     This is the same variable the cloud request engine honours.
- *   PORT. Optional, defaults to 5100.
+ *   _51DEGREES_EXAMPLE_HTTP_PORTS. Optional. The port to listen on,
+ *     defaulting to 5151.
  *
  * Node 18 or later (built-in fetch). Depends only on this package, which
  * is reached by path so the demo runs against the code beside it. Run:
- *   node server.js    then open http://localhost:5100/
+ *   node server.js    then open http://localhost:5151/
  */
 
 const { createServer } = require('http');
@@ -94,11 +95,24 @@ const {
 const readPage = () => readFileSync(join(__dirname, 'page.html'), 'utf8');
 const readCss = () => readFileSync(join(__dirname, 'examples-main.min.css'));
 
+// Where to go next, printed when the demo ends with no resource key. The
+// page holds the same links when the server runs.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tThe specifications: https://github.com/51Degrees/specifications',
+  '\tWhat a 51Did is: https://51degrees.com/documentation/_identifiers__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=find-out-more-documentation',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=find-out-more-contact'
+].join('\n');
+
 /**
  * The text of an error, whatever was thrown. fetch wraps the cause of a
  * transport failure, and the cause is the useful part since fetch itself
  * only says that it failed, and anything else that is not an Error is
  * printed as it is.
+ *
  * @param {any} error whatever was thrown
  * @returns {string} the message
  */
@@ -114,6 +128,7 @@ function messageOf (error) {
 
 /**
  * Whether a body is JSON, which decides the content type it is relayed with.
+ *
  * @param {string} text a response body
  * @returns {boolean} whether the text parses as JSON
  */
@@ -128,6 +143,7 @@ function isJson (text) {
 
 /**
  * Writes a JSON body with the given status.
+ *
  * @param {import('http').ServerResponse} response the response to write
  * @param {number} status the HTTP status
  * @param {object} body the JSON body
@@ -148,6 +164,7 @@ function sendJson (response, status, body) {
  * which is this server's own offline check of the identifier's signature
  * against the published public keys. The page ignores fields it does not
  * know, so page.html is the same for every language.
+ *
  * @param {DidClient} client the client holding the resource key, the
  * licence key and the endpoint
  * @returns {function(URL, import('http').ServerResponse): Promise<void>}
@@ -211,28 +228,17 @@ function redeemRoute (client) {
  * Reads the environment, builds the client and starts the server.
  */
 function main () {
-  // RESOURCE_KEY and LICENSE_KEY are the deprecated names of the two
-  // variables, each read only when its _51DEGREES_ name is unset or
-  // empty.
-  if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-    console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-      '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-      'instead.');
-  }
-  if (!process.env._51DEGREES_LICENSE_KEY && process.env.LICENSE_KEY) {
-    console.warn('The LICENSE_KEY environment variable is deprecated and ' +
-      '_51DEGREES_LICENSE_KEY replaces it. Set _51DEGREES_LICENSE_KEY ' +
-      'instead.');
-  }
-  const resource = process.env._51DEGREES_RESOURCE_KEY ||
-    process.env.RESOURCE_KEY;
-  const licence = process.env._51DEGREES_LICENSE_KEY ||
-    process.env.LICENSE_KEY || '';
-  const port = Number(process.env.PORT || 5100);
+  const resource = process.env._51DEGREES_RESOURCE_KEY;
+  const licence = process.env._51DEGREES_LICENSE_KEY || '';
+  const port = Number(process.env._51DEGREES_EXAMPLE_HTTP_PORTS || 5151);
   if (!resource) {
-    console.error('Set _51DEGREES_RESOURCE_KEY to the ' +
-      'resource key of the page.');
-    process.exit(1);
+    // With no resource key the demo has nothing to serve, so it says how
+    // to get one and ends.
+    console.log('Set _51DEGREES_RESOURCE_KEY to the resource key of the ' +
+      'page. Resource keys are created at ' +
+      'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.did-examples-creator-context-web-server.js&utm_term=resource-key-required');
+    console.log(FIND_OUT_MORE);
+    return;
   }
   if (!licence) {
     // Only an account that holds licence keys needs one to redeem,
@@ -288,7 +294,9 @@ function main () {
     }
     response.writeHead(404);
     response.end();
-  }).listen(port, () =>
+  // Only the machine the example runs on, at 127.0.0.1 rather than
+  // localhost, which can resolve to the IPv6 loopback alone.
+  }).listen(port, '127.0.0.1', () =>
     console.log(`51Did demo on http://localhost:${port}/`));
 }
 

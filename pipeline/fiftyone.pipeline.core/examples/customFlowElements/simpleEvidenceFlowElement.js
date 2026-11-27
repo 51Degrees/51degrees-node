@@ -27,7 +27,12 @@
  * which takes a birth date as evidence and uses it to check a
  * lookup table for a starsign.
  *
+ * Give a date of birth as YYYY-MM-DD to look up its star sign, for example
+ * `node simpleEvidenceFlowElement.js 1990-06-21`.
+ *
  */
+
+const path = require('path');
 
 // First require the core Pipeline
 // Note that this example is designed to be run from within the
@@ -35,9 +40,21 @@
 // then you'll need to replace the require below with the commented
 // out version below it.
 const FiftyOnePipelineCore = require(
-  (process.env.directory || __dirname) + '/../../'
+  path.join(__dirname, '../../')
 );
 // const FiftyOnePipelineCore = require("fiftyone.pipeline.core");
+
+// Where to go next, printed at the end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tFlow elements of your own: https://51degrees.com/documentation/_pipeline_api__examples__custom_element__index.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-custom-elements',
+  '\tPipeline API documentation: https://51degrees.com/documentation/_pipeline_api__concepts__pipeline_basics.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-documentation',
+  '\tBuild your own: https://51degrees.com/build-your-own?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-build-your-own',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.core-examples-customflowelements-simpleevidenceflowelement.js&utm_term=find-out-more-contact'
+].join('\n');
 
 // Function to get star sign from month and day
 const getStarSign = (month, day) => {
@@ -53,7 +70,7 @@ const getStarSign = (month, day) => {
     return 'taurus';
   } else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) {
     return 'gemini';
-  } else if ((month === 6 && day >= 22) || (month === 7 && day <= 22)) {
+  } else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) {
     return 'cancer';
   } else if ((month === 7 && day >= 23) || (month === 8 && day <= 23)) {
     return 'leo';
@@ -136,14 +153,17 @@ const pipeline = new FiftyOnePipelineCore.PipelineBuilder()
 // Create the flowData object used to set evidence on and get results from
 const flowData = pipeline.createFlowData();
 
-// Add the date of birth evidence
-flowData.evidence.add('query.dateOfBirth', '2019-09-26');
+// Add the date of birth evidence, the one given as YYYY-MM-DD on the command
+// line, or 26 September 2019 when none is given
+flowData.evidence.add('query.dateOfBirth', process.argv[2] || '2019-09-26');
 
 // Process the flowData
 flowData.process().then(function () {
   // Get the starsign from the results
 
   console.log(flowData.astrology.starSign);
+
+  console.log(FIND_OUT_MORE);
 });
 
 //! [usage]

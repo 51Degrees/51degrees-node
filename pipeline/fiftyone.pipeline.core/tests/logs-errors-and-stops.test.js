@@ -34,11 +34,12 @@ const syncPipeline = new PipelineBuilder()
   .add(setup.neverRun)
   .build();
 
-const syncFlowData = syncPipeline.createFlowData();
+// A flow data is processed once, so each test processes one of its own.
 test('error data is populated', done => {
   syncPipeline.suppressProcessExceptions = true;
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
-    expect(syncFlowData.errors.error).toBe('Something went wrong');
+    expect(syncFlowData.errors.error).toEqual(new Error('Something went wrong'));
 
     done();
   });
@@ -53,28 +54,37 @@ syncPipeline.on('error', function (error) {
 
 test('logging', done => {
   syncPipeline.suppressProcessExceptions = true;
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
-    expect(log).toBe("Error occurred during processing of error. 'Something went wrong'");
+    expect(log).toBe("Error occurred during processing of error. 'Error: Something went wrong'");
 
     done();
   });
 });
 
-test("Don't Suppress Exception", done => {
-  syncFlowData.process().then(function () {
-    done();
-  }).catch((e) => {
-    // When an error occurs, check that the expected values are populated.
-    expect(e.indexOf('Something went wrong') !== -1).toBe(true);
-  });
+test("Don't Suppress Exception", async () => {
+  // The earlier tests suppress process exceptions, so this test turns that
+  // off for itself and puts it back afterwards.
+  syncPipeline.suppressProcessExceptions = false;
+  try {
+    const syncFlowData = syncPipeline.createFlowData();
+    // Processing rejects with every error the elements gave.
+    const failure = await syncFlowData.process().then(
+      () => undefined, (e) => e);
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure.errors).toEqual([new Error('Something went wrong')]);
+  } finally {
+    syncPipeline.suppressProcessExceptions = true;
+  }
 });
 
 test('stop flag works', done => {
+  const syncFlowData = syncPipeline.createFlowData();
   syncFlowData.process().then(function () {
     try {
       syncFlowData.get('neverRun');
     } catch (e) {
-      expect(e.indexOf(util.format(errorMessages.noElementData,
+      expect(e.message.indexOf(util.format(errorMessages.noElementData,
         'neverRun', 'sequence, async, sync')) !== -1).toBe(true);
     }
     done();

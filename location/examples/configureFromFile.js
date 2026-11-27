@@ -35,7 +35,7 @@ properties you are interested in as well as any associated license keys
 that entitle you to increased request limits and/or paid-for properties.
 
 You can create a resource key using the 51Degrees
-[Configurator](https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=top).
+[configuration page](https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=top).
 
 Make sure to include the Country property, as it is required to run this
 example.
@@ -55,10 +55,24 @@ Which country is the location [51.458048,-0.9822207999999999] in? United Kingdom
 
 const PipelineBuilder = require('fiftyone.pipeline.core').PipelineBuilder;
 
-const fs = require('fs');
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/location',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tReverse geocoding documentation: https://51degrees.com/documentation/_reverse_geocoding__quickstart.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-documentation',
+  '\tResource keys: https://51degrees.com/documentation/_services__cloud__resource_keys.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-resource-keys',
+  '\tPricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=find-out-more-contact'
+].join('\n');
 
-const configFile = fs.readFileSync((process.env.directory || __dirname) +
-  '/51d.json');
+const fs = require('fs');
+const path = require('path');
+
+const configPath = path.join(__dirname, '51d.json');
+const configFile = fs.readFileSync(configPath);
 
 const config = JSON.parse(configFile);
 let resourceKeySet = true;
@@ -66,30 +80,8 @@ let resourceKeySetFromFile = true;
 // Check if a resource key has been set in the config file.
 if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
   .startsWith('!!')) {
-  let myResourceKey;
-  // Check if there is a resource key in the global variable and use it if
-  // there is one.
-  try {
-    myResourceKey = resourceKey;
-  } catch (e) {
-    if (e instanceof ReferenceError) {
-      console.log(e);
-    }
-  }
-
   // If not, check the resource key environment variable.
-  if (typeof myResourceKey === 'undefined' ||
-    myResourceKey.startsWith('!!')) {
-    // RESOURCE_KEY is the deprecated name of the same variable, read only
-    // when _51DEGREES_RESOURCE_KEY is unset or empty.
-    if (!process.env._51DEGREES_RESOURCE_KEY && process.env.RESOURCE_KEY) {
-      console.warn('The RESOURCE_KEY environment variable is deprecated and ' +
-        '_51DEGREES_RESOURCE_KEY replaces it. Set _51DEGREES_RESOURCE_KEY ' +
-        'instead.');
-    }
-    myResourceKey = process.env._51DEGREES_RESOURCE_KEY ||
-      process.env.RESOURCE_KEY;
-  }
+  const myResourceKey = process.env._51DEGREES_RESOURCE_KEY;
 
   if (myResourceKey) {
     // If there is a resource key in the environment variable then use it.
@@ -100,7 +92,7 @@ if (config.PipelineOptions.Elements[0].elementParameters.resourceKey
     // rest of the example.
     resourceKeySet = false;
     console.log('You need to create a resource key at ' +
-        'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and paste it into the 51d.json ' +
+        'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=examples-configurefromfile.js&utm_term=resource-key-required and set the environment variable _51DEGREES_RESOURCE_KEY to it, or paste it into the 51d.json ' +
         'config file, replacing !!YOUR_RESOURCE_KEY!!.');
   }
 
@@ -112,8 +104,7 @@ if (resourceKeySet) {
   if (resourceKeySetFromFile) {
     // Create a new pipeline from the supplied config file.
     pipeline = new PipelineBuilder()
-      .buildFromConfigurationFile((process.env.directory || __dirname) +
-        '/51d.json');
+      .buildFromConfigurationFile(configPath);
   } else {
     // Create a new pipeline from the config object.
     pipeline = new PipelineBuilder().buildFromConfiguration(config);
@@ -144,5 +135,7 @@ if (resourceKeySet) {
     }
   };
 
-  getCountry('51.458048', '-0.9822207999999999');
+  getCountry('51.458048', '-0.9822207999999999').then(() => console.log(FIND_OUT_MORE));
+} else {
+  console.log(FIND_OUT_MORE);
 }

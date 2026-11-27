@@ -24,14 +24,19 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * update service
      * @param {boolean} options.dataUpdateVerifyMd5 whether to check MD5 of datafile
      * @param {boolean} options.dataUpdateUseUrlFormatter whether to append default URL params for Data File download
-     * @param {Array<string>} options.restrictedProperties list of properties the engine
-     * will be restricted to
+     * @param {string} [options.dataUpdateProduct] the product to ask the data
+     * update service for, such as IPIV4Enterprise. When it is set, every
+     * request for a data file carries it in a Product parameter. With none
+     * set, the first request names no product.
+     * @param {Array<string>|string} options.restrictedProperties list of
+     * properties the engine will be restricted to, or one comma separated
+     * string of them, as a configuration file gives a list
      * @param {string} options.licenceKeys license key(s) used by the
      * data file update service. A key can be obtained from the
-     * 51Degrees website: https://51degrees.com/pricing.
-     * If you do not wish to use a key then you can specify
-     * an empty string, but this will cause automatic updates to
-     * be disabled.
+     * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-ipintelligenceonpremise.js&utm_term=constructor.
+     * A key is needed only when autoUpdate or updateOnStart is on with the
+     * default dataUpdateUrl, and the engine refuses to build without one
+     * then. The file system watcher needs no key.
      * @param {boolean} options.download whether to download the datafile
      * or store it in memory
      * @param {string} options.performanceProfile options are:
@@ -51,9 +56,10 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
      * @param {string} options.tempDataDir The directory to use for the
      * temporary data copy if 'createTempDataCopy' is set to true.
      * @param {boolean} options.updateOnStart whether to download / update
-     * the datafile on initialisation
+     * the datafile on initialisation. If there is no file at dataFilePath it
+     * is downloaded, and processing fails if the download does not work.
      */
-    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
+    constructor({ dataFilePath, autoUpdate, cache, dataUpdateUrl, dataUpdateVerifyMd5, dataUpdateUseUrlFormatter, dataUpdateProduct, restrictedProperties, licenceKeys, download, performanceProfile, reuseTempFile, concurrency, fileSystemWatcher, pollingInterval, updateTimeMaximumRandomisation, createTempDataCopy, tempDataDir, updateOnStart }: {
         dataFilePath: string;
         autoUpdate: boolean;
         pollingInterval: number;
@@ -62,7 +68,8 @@ declare class IpIntelligenceOnPremise extends IpIntelligenceOnPremise_base {
         dataUpdateUrl: string;
         dataUpdateVerifyMd5: boolean;
         dataUpdateUseUrlFormatter: boolean;
-        restrictedProperties: Array<string>;
+        dataUpdateProduct?: string;
+        restrictedProperties: Array<string> | string;
         licenceKeys: string;
         download: boolean;
         performanceProfile: string;

@@ -28,9 +28,95 @@ const errorMessages = require('./errorMessages');
  * @typedef {import('./flowData')} FlowData
  */
 
+// Held by Element Data with no lazy property. A field must never read as
+// undefined, because the proxy takes a missing field for a property name.
+const noLazyProperties = Object.freeze({});
+
+// The lazy properties of the data, by name in lower case, or undefined.
+const lazyProperties = (data) =>
+  data._lazy === noLazyProperties ? undefined : data._lazy;
+
+// The lazy property under a key, in any letter case, or undefined.
+const lazyEntry = (data, key) => {
+  const lazies = lazyProperties(data);
+  return lazies === undefined || typeof key !== 'string'
+    ? undefined
+    : lazies.get(key.toLowerCase());
+};
+
+// The value of a lazy property whose task has finished, or the task's
+// error. A JavaScript read cannot wait, so a read before the task has
+// finished is an error that names getAsync.
+const readLazy = (data, key, lazy) => {
+  if (lazy.state === 'fulfilled') {
+    return lazy.value;
+  }
+  if (lazy.state === 'rejected') {
+    throw lazy.error;
+  }
+  throw new Error(util.format(errorMessages.lazyPending, key,
+    data.flowElement.dataKey, key));
+};
+
+/**
+ * Throws if the flow elements that write the data have finished.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {string|symbol} key the name being written
+ * @throws {Error} once they have finished
+ */
+function refuseFinished (data, key) {
+  if (data._writes.finished) {
+    throw new Error(util.format(errorMessages.elementDataFinished,
+      String(key), data.flowElement.dataKey));
+  }
+}
+
+// The read only view of each contents object, made the first time the
+// contents are reached through the data once it has finished.
+const finishedViews = new WeakMap();
+
+/**
+ * A view of the object a dictionary keeps its values in, through which
+ * setting or deleting a value throws, as a write to the data itself does
+ * once it has finished. It is made only when the contents are reached
+ * after that, so reading a value never goes through it.
+ *
+ * @param {object} data the element data, not its proxy
+ * @param {object} contents the values
+ * @returns {object} the view
+ */
+function finishedView (data, contents) {
+  let view = finishedViews.get(contents);
+  if (view === undefined) {
+    view = new Proxy(contents, {
+      set: (values, key, value) => {
+        refuseFinished(data, key);
+        values[key] = value;
+        return true;
+      },
+      deleteProperty: (values, key) => {
+        refuseFinished(data, key);
+        delete values[key];
+        return true;
+      }
+    });
+    finishedViews.set(contents, view);
+  }
+  return view;
+}
+
 /**
  * Stores information created by a flowElement based on flowData.
- * Stored in flowData
+ * Stored in flowData. Element data is written only by the flow element that
+ * provides it, or the flow elements that share it, and only while they
+ * process. Once they have finished, a write through the element data, or
+ * into the contents object a dictionary keeps its values in, throws.
+ *
+ * Element data may come from a pool, and go back to it when the flow data
+ * that holds it is disposed. Keeping a reference to element data after its
+ * flow data is disposed is not supported, because the pool may give the
+ * instance to another request. Nothing checks for that on a read.
  */
 class ElementData {
   /**
@@ -39,18 +125,35 @@ class ElementData {
    * @param {object} options the options object
    * @param {FlowElement} options.flowElement the FlowElement this data
    * is part of
+   * @throws {Error} 'flowElement dataKey not found', when the FlowElement
+   * has no data key
    */
   constructor ({ flowElement }) {
     if (!flowElement.dataKey) {
-      throw 'flowElement dataKey not found';
+      throw new Error('flowElement dataKey not found');
     }
 
     this.flowElement = flowElement;
+
+    // Whether the flow elements that write the data have finished
+    // processing, when a write through the data throws. An object, as the
+    // proxy takes a field that reads as false for a property name. Names
+    // starting with an underscore hold the data's own state and are not
+    // writes.
+    this._writes = { finished: false };
+
+    // The pool the data came from, if any, and whether it is shared with
+    // other requests, as data a cache holds is, so it never goes back.
+    this._pooling = { pool: null, shared: false };
 
     // Returns a proxy so that we can use flowData.flowElementDataKey
     // As a shortcut to flowData.get("flowElementDataKey")
     return new Proxy(this, {
       get: (data, key) => {
+        // A dictionary reads its own values with no view in between.
+        if (key === '_contents') {
+          return data._contents;
+        }
         // This proxy can end up getting called by anything that tries
         // to access methods & properties on the object.
         // This can include things like the inspector if you do something like
@@ -69,8 +172,57 @@ class ElementData {
             }
           }
         }
+      },
+      // Element data is written only by the flow elements that write it,
+      // while they process, so a write once they have finished throws. A
+      // write into a dictionary's contents is checked by the view the
+      // contents give once the data has finished.
+      set: (data, key, value) => {
+        if (!(typeof key === 'string' && key.startsWith('_'))) {
+          refuseFinished(data, key);
+        }
+        data[key] = value;
+        return true;
       }
     });
+  }
+
+  /**
+   * The object a dictionary keeps its values in. Once the flow elements
+   * that write the data have finished, it is a view through which a write
+   * throws.
+   *
+   * @returns {object|undefined} the values
+   */
+  get contents () {
+    const contents = this._contents;
+    if (!this._writes.finished || contents === null ||
+      typeof contents !== 'object') {
+      return contents;
+    }
+    return finishedView(this, contents);
+  }
+
+  /**
+   * Sets the object a dictionary keeps its values in.
+   *
+   * @param {object} contents the values
+   */
+  set contents (contents) {
+    this._contents = contents;
+  }
+
+  /**
+   * Returns the data to the state of a new instance, with no values and
+   * open for writing, before a pool gives it to another request. Classes
+   * inheriting from elementData that hold values override this and call
+   * it.
+   */
+  reset () {
+    this._writes.finished = false;
+    // A lazy property of the last request is dropped. A task of it that
+    // has not finished keeps its own record, so it writes nothing here.
+    this._lazy = noLazyProperties;
   }
 
   /**
@@ -105,21 +257,139 @@ class ElementData {
    *
    * @param {string} key the key to retrieve a property value for
    * @returns {FlowData} value
+   * @throws {Error} a message naming the property and the element, when
+   * the data has no value for the key in any case
    */
   get (key) {
+    const lazy = lazyEntry(this, key);
+    if (lazy !== undefined) {
+      return readLazy(this, key, lazy);
+    }
     let value = this.getInternal(key);
     if (typeof value === 'undefined') {
       value = this.getInternalIgnoringCase(key);
       if (typeof value === 'undefined') {
-        throw util.format(errorMessages.genericMissingProperties, key) +
+        throw new Error(util.format(errorMessages.genericMissingProperties, key) +
           (typeof this.flowElement === 'undefined'
             ? ''
             : ' in data for element "' +
             this.flowElement.dataKey) + '".' +
-          util.format(errorMessages.noReasonUnknown);
+          util.format(errorMessages.noReasonUnknown));
       }
     }
     return value;
+  }
+
+  /**
+   * Adds a lazy property, whose value is the result of a task the Flow
+   * Element starts while it processes, such as a call to another resource.
+   * The task never reads the Flow Data. Readers wait for it with getAsync,
+   * and the Pipeline waits for every task before processing finishes, so a
+   * read once processing has finished has the value or the task's error.
+   *
+   * @param {string} key the property name
+   * @param {Promise} task the work that gives the value
+   * @throws {Error} once the flow elements that write the data have finished
+   */
+  addLazyProperty (key, task) {
+    refuseFinished(this, key);
+    let lazies = lazyProperties(this);
+    if (lazies === undefined) {
+      lazies = new Map();
+      this._lazy = lazies;
+    }
+    const lazy = { state: 'pending', recorded: false };
+    lazy.settled = Promise.resolve(task).then((value) => {
+      lazy.state = 'fulfilled';
+      lazy.value = value;
+    }, (error) => {
+      lazy.state = 'rejected';
+      lazy.error = error;
+    });
+    lazies.set(key.toLowerCase(), lazy);
+  }
+
+  /**
+   * Whether the property is lazy, in any letter case.
+   *
+   * @param {string} key the property name
+   * @returns {boolean} true if addLazyProperty added it
+   */
+  isLazyProperty (key) {
+    return lazyEntry(this, key) !== undefined;
+  }
+
+  /**
+   * Waits for the property's lazy task, where it has one, then gets the
+   * value as get does. Every reader of a lazy property waits for the same
+   * task, which runs once.
+   *
+   * @param {string} key the property name
+   * @returns {Promise<*>} the value, or the task's error
+   */
+  getAsync (key) {
+    const lazy = lazyEntry(this, key);
+    const wait = lazy === undefined ? Promise.resolve() : lazy.settled;
+    return wait.then(() => this.get(key));
+  }
+
+  /**
+   * Waits for the tasks of every lazy property.
+   *
+   * @returns {Promise<boolean>} true once every task has given its value,
+   * false once every task has finished and one or more failed
+   */
+  lazySettled () {
+    const map = lazyProperties(this);
+    if (map === undefined) {
+      return Promise.resolve(true);
+    }
+    const lazies = [...map.values()];
+    return Promise.all(lazies.map((lazy) => lazy.settled))
+      .then(() => lazies.every((lazy) => lazy.state === 'fulfilled'));
+  }
+
+  /**
+   * Whether the data has a lazy property, whether or not its task has
+   * finished.
+   *
+   * @returns {boolean} true once addLazyProperty has added a property
+   */
+  hasLazyProperties () {
+    return lazyProperties(this) !== undefined;
+  }
+
+  /**
+   * Whether a lazy property's task has not yet finished.
+   *
+   * @returns {boolean} true while a task is running
+   */
+  hasPendingLazyProperties () {
+    const lazies = lazyProperties(this);
+    return lazies !== undefined &&
+      [...lazies.values()].some((lazy) => lazy.state === 'pending');
+  }
+
+  /**
+   * Records the failure of each lazy property's task in the Flow Data's
+   * errors, as an error of the Flow Element that provides this data, once
+   * however many readers meet it. A reader that meets a failure while the
+   * Flow Data is processed calls this, and the Pipeline calls it before
+   * processing finishes.
+   *
+   * @param {FlowData} flowData the Flow Data being processed
+   */
+  recordLazyFailures (flowData) {
+    const lazies = lazyProperties(this);
+    if (lazies === undefined) {
+      return;
+    }
+    for (const lazy of lazies.values()) {
+      if (lazy.state === 'rejected' && lazy.recorded === false) {
+        lazy.recorded = true;
+        flowData.setError(lazy.error, this.flowElement);
+      }
+    }
   }
 
   /**
@@ -164,5 +434,9 @@ class ElementData {
     }
   }
 }
+
+// Every Element Data starts with no lazy property, so the default is kept
+// once here rather than on each.
+ElementData.prototype._lazy = noLazyProperties;
 
 module.exports = ElementData;

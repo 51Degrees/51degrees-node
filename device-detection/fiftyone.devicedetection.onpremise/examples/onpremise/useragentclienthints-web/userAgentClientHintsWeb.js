@@ -105,14 +105,15 @@ const tryServeStatic = (req, res) => {
   return true;
 };
 
-// Load in a datafile, which is downloaded into the cxx/data submodule if
+// Load in a datafile, named by the _51DEGREES_DD_PATH environment
+// variable when it is set, or downloaded into the cxx/data submodule if
 // it is missing.
 
-const datafile = ExampleUtils.findFile('51Degrees-LiteV4.1.hash');
+const datafile = ExampleUtils.findDataFile('51Degrees-LiteV4.1.hash');
 
 if (datafile === undefined) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched.");
-  throw ('No data file found');
+  throw new Error('No data file found');
 }
 
 // Helper function to read property values from flowData
@@ -163,7 +164,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // A Flow Data holds the evidence and results of this one request. It
+  // must not be used by two threads at once, so each request creates its
+  // own, and any value handed to other work is read from it first.
+  // Code that shares one Flow Data between tasks is responsible for any
+  // locking.
   const flowData = pipeline.createFlowData();
+  // Gives the Flow Data's Element Data back to the pools once the
+  // response has been sent, after every value it needs has been read.
+  // A request whose client goes away first is left to the garbage
+  // collector, as its Flow Data may still be processing.
+  res.on('finish', () => flowData.dispose());
 
   // Add any information from the request
   // (headers, cookies and additional client side provided information,
@@ -217,7 +228,7 @@ const server = http.createServer(async (req, res) => {
 // Don't run the server if under TEST
 if (process.env.JEST_WORKER_ID === undefined) {
   setPipeline(null);
-  const port = 3001;
+  const port = 5151;
   const hostname = 'localhost';
   server.listen(port, hostname);
   console.log(`Server listening on: http://${hostname}:${port}`);

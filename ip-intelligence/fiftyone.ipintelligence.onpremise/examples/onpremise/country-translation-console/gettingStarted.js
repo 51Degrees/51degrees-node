@@ -68,6 +68,19 @@ const LITE_V_4_1_IPI = '51Degrees-LiteV41.ipi';
 // example.
 const CONTACT_US = 'https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-country-translation-console-gettingstarted.js&utm_term=enterprise-data-file';
 
+// Where to go next, printed at every end of the example.
+const FIND_OUT_MORE = [
+  '',
+  '='.repeat(79),
+  'Find out more:',
+  '\tThis API: https://github.com/51Degrees/51degrees-node/tree/main/ip-intelligence',
+  '\tThe IP Intelligence engine: https://github.com/51Degrees/51degrees-cxx',
+  '\tThe Pipeline API: https://github.com/51Degrees/51degrees-node/tree/main/pipeline',
+  '\tIP Intelligence documentation: https://51degrees.com/documentation/_ip_intelligence__overview.html?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-country-translation-console-gettingstarted.js&utm_term=find-out-more-documentation',
+  '\tData files and pricing: https://51degrees.com/pricing?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-country-translation-console-gettingstarted.js&utm_term=find-out-more-pricing',
+  '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.ipintelligence.onpremise-examples-onpremise-country-translation-console-gettingstarted.js&utm_term=find-out-more-contact'
+].join('\n');
+
 /**
  * Read an ordered "All" list from the translation element data, returning an
  * empty array when it is not present.
@@ -171,18 +184,20 @@ const run = async function (dataFile, output, evidence) {
 // Don't run the example if under TEST.
 if (process.env.JEST_WORKER_ID === undefined) {
   const args = process.argv.slice(2);
-  // Use the supplied path for the data file or find the lite file that is
-  // included in the repository.
+  // Use the supplied path for the data file, the path in the
+  // _51DEGREES_IPI_PATH environment variable, or find the lite
+  // file that is included in the repository.
   const dataFile = args.length > 0
     ? args[0]
-    : ExampleUtils.findFile(LITE_V_4_1_IPI);
+    : ExampleUtils.findDataFile(LITE_V_4_1_IPI);
 
   if (dataFile !== undefined) {
-    run(dataFile, process.stdout);
+    run(dataFile, process.stdout).then(() => console.log(FIND_OUT_MORE));
   } else {
     console.error('Failed to find an IP intelligence data file. Make sure ' +
       'the cxx/data submodule has been fetched by running ' +
       '`git submodule update --init --recursive`.');
+    console.log(FIND_OUT_MORE);
   }
 };
 

@@ -30,78 +30,39 @@ const ACCESSIBLE_PROPERTIES_URL =
   'https://cloud.51degrees.com/api/v4/accessibleproperties?resource=<key>';
 
 // Where to create a resource key.
-const CONFIGURE_URL = 'https://configure.51degrees.com?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-tests-livecloudkeys.js&utm_term=resource-key-required';
-
-// The deprecated names, each with the name that replaced it. A deprecated
-// name comes last in a list, so it is read only when the names before it
-// are unset or empty.
-const DEPRECATED_NAMES = {
-  RESOURCE_KEY: '_51DEGREES_RESOURCE_KEY',
-  LICENSE_KEY: '_51DEGREES_LICENSE_KEY'
-};
-
-// The old names already said to be deprecated, so each is said once.
-const reportedOldNames = new Set();
-
-/**
- * Prints, once for each old name, that the name is deprecated and which
- * name replaces it.
- *
- * @param {string} oldName the deprecated environment variable name
- * @param {string} name the name that replaces it
- */
-const reportOldName = function (oldName, name) {
-  if (reportedOldNames.has(oldName) === false) {
-    reportedOldNames.add(oldName);
-    console.warn(`The ${oldName} environment variable is deprecated and ` +
-      `${name} replaces it. Set ${name} instead.`);
-  }
-};
+const CONFIGURE_URL = 'https://51degrees.com/configure?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-tests-livecloudkeys.js&utm_term=resource-key-required';
 
 module.exports = {
-  // The names the resource key is read from, in order.
-  RESOURCE_KEY_NAMES: [
-    '_51DEGREES_RESOURCE_KEY',
-    '_51DEGREES_RESOURCE_KEY_BESPOKE',
-    'RESOURCE_KEY'
-  ],
+  // The name the resource key is read from.
+  RESOURCE_KEY_NAME: '_51DEGREES_RESOURCE_KEY_BESPOKE',
 
   /**
-   * The first value set under the given names.
+   * The value set under the given name.
    *
-   * @param {Array<string>} names the environment variable names, in order
-   * @returns {string} the value, or an empty string when none is set
+   * @param {string} name the environment variable name
+   * @returns {string} the value, or an empty string when it is not set
    */
-  findKey: function (names) {
-    for (const name of names) {
-      const value = process.env[name];
-      if (value && value.trim()) {
-        if (DEPRECATED_NAMES[name]) {
-          reportOldName(name, DEPRECATED_NAMES[name]);
-        }
-        return value.trim();
-      }
-    }
-    return '';
+  findKey: function (name) {
+    const value = process.env[name];
+    return value && value.trim() ? value.trim() : '';
   },
 
   /**
    * The message a cloud test fails with when no resource key is set.
    *
-   * @param {Array<string>} names the environment variable names tried
+   * @param {string} name the environment variable name
    * @param {string} product the product the key has to carry
    * @param {string} asksFor what the tests ask the cloud service for
    * @param {boolean} [plural] true for a group of tests
    * @returns {string} the message
    */
-  noKeyMessage: function (names, product, asksFor, plural) {
+  noKeyMessage: function (name, product, asksFor, plural) {
     const start = plural
       ? 'These tests call the live 51Degrees cloud service, so they need'
       : 'This test calls the live 51Degrees cloud service, so it needs';
     const asker = plural ? 'the tests ask' : 'the test asks';
-    const current = names.filter((name) => !DEPRECATED_NAMES[name]);
     return `${start} a resource key and there is nothing to fall back on. ` +
-      `None of ${current.join(', ')} is set, tried in that order. The key ` +
+      `${name} is not set. The key ` +
       `has to carry the ${product} product, because ${asker} the service ` +
       `for ${asksFor}. To see the products a key carries, open ` +
       `${ACCESSIBLE_PROPERTIES_URL}. Create a key at ${CONFIGURE_URL}.`;

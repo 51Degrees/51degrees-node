@@ -20,11 +20,8 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-const util = require('util');
 const path = require('path');
 
-const coreErrorMessages = require(path.resolve(__dirname, '../../fiftyone.pipeline.core/errorMessages'));
-const errorMessages = require(path.resolve(__dirname, '../errorMessages'));
 const Engine = require(path.resolve(__dirname, '../engine'));
 const PipelineBuilder = require(path.resolve(__dirname, '../../fiftyone.pipeline.core/pipelineBuilder'));
 const AspectDataDictionary = require(path.resolve(__dirname, '../aspectDataDictionary'));
@@ -73,9 +70,11 @@ const testEngine = new Engine(
   }
 );
 
-const flowData = new PipelineBuilder().add(testEngine).build().createFlowData();
+// A flow data is processed once, so each test processes one of its own.
+const pipeline = new PipelineBuilder().add(testEngine).build();
 
 test('engine process', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     expect(flowData.get('testEngine').get('one')).toBe(1);
 
@@ -84,12 +83,14 @@ test('engine process', done => {
 });
 
 test('restricted properties', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('two');
     } catch (e) {
-      expect(e.indexOf(
-        util.format(errorMessages.propertyExcluded, 'two')) !== -1).toBe(true);
+      expect(e.message).toBe("Property 'two' not found in data for element " +
+        "'testEngine'. This is because the property has been excluded when " +
+        'configuring the engine.');
     }
 
     done();
@@ -123,19 +124,21 @@ test('restricted properties are compared ignoring case', async () => {
   try {
     caseFlowData.get('caseEngine').get('two');
   } catch (e) {
-    expect(e).toBe(util.format(errorMessages.propertyExcluded, 'two'));
+    expect(e.message).toBe("Property 'two' not found in data for element " +
+      "'caseEngine'. This is because the property has been excluded when " +
+      'configuring the engine.');
   }
 });
 
 test('missing property service', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     try {
       flowData.get('testEngine').get('three');
     } catch (e) {
-      expect(e.indexOf(
-        util.format(coreErrorMessages.genericMissingProperties, 'three') +
-        ' in data for element "testEngine".' +
-        util.format(coreErrorMessages.noReasonUnknown)) !== -1).toBe(true);
+      expect(e.message).toBe("Property 'three' not found in data for element " +
+        "'testEngine'. The reason for this is unknown. Please check that " +
+        'the aspect and property name are correct.');
     }
 
     done();
@@ -143,6 +146,7 @@ test('missing property service', done => {
 });
 
 test('cache', done => {
+  const flowData = pipeline.createFlowData();
   flowData.process().then(function () {
     expect(flowData.get('testEngine').get('noCache')).toBe(false);
 

@@ -11,7 +11,25 @@ export = JSONBundlerElement;
 declare class JSONBundlerElement extends FlowElement {
     constructor(...args: any[]);
     evidenceKeyFilter: BasicListEvidenceKeyFilter;
+    properties: {
+        json: {
+            name: string;
+            type: string;
+            description: string;
+        };
+    };
     propertyCache: {};
+    /**
+     * The sequence number the Sequence Element produced, which is its Element
+     * Data or, as a whole number a caller put in the evidence, query.sequence.
+     * Text from a query string does not count.
+     *
+     * @param {FlowData} flowData the FlowData being processed
+     * @returns {number} the sequence number
+     * @throws {Error} when there is no sequence number, which a Sequence
+     * Element placed before the JSON Builder gives
+     */
+    getSequence(flowData: FlowData): number;
     /**
      * The JSON Builder extracts all properties and serializes them into JSON
      *

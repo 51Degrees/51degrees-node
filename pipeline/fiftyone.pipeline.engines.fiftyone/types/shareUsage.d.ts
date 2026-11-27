@@ -9,6 +9,14 @@ declare const ShareUsage_base: typeof import("fiftyone.pipeline.engines/types/en
  */
 declare class ShareUsage extends ShareUsage_base {
     /**
+     * The time in milliseconds, from a clock that only goes forward, which
+     * decides when the values that do not change while the element lives are
+     * written again. Tests replace it to move time on.
+     *
+     * @returns {number} the time now in milliseconds
+     */
+    static now(): number;
+    /**
      * Constructor for ShareUsage engine
      *
      * @param {object} options settings object for share usage.
@@ -25,26 +33,31 @@ declare class ShareUsage extends ShareUsage_base {
      * For example, the 51Degrees cloud service uses a value of 2500.
      * @param {string} options.cookie The name of the cookie that holds the
      * session id. It has no effect unless trackSession is true. The cookie
-     * itself is not shared unless shareAll is true.
-     * @param {Array<string>|null} options.queryWhitelist By default query
-     * string and HTTP form parameters are not shared unless prefixed with
-     * '51D_'. If you need to share query string parameters, a list can be
-     * specified here. null shares every parameter.
-     * @param {Array<string>} options.headerBlacklist By default, all HTTP
-     * headers except Cookie are shared. Individual headers can
-     * be excluded from sharing by adding them to this list.
+     * itself is never shared unless its name starts with '51D_', as no other
+     * cookie is.
+     * @param {boolean} options.shareAllQueryStringParameters Deprecated, and
+     * has no effect. A query string or HTTP form parameter is shared when its
+     * name starts with '51D_' or a Flow Element of the Pipeline accepts it,
+     * whatever the settings.
+     * @param {Array<string>|string|null} options.queryWhitelist Deprecated,
+     * and has no effect, as shareAllQueryStringParameters says.
+     * @param {Array<string>|string} options.headerBlacklist By default, all
+     * HTTP headers except Cookie are shared. Individual headers can be
+     * excluded from sharing by adding them to this list, or to one comma
+     * separated string of them, as a configuration file gives a list.
      * @param {number} options.sharePercentage approximate proportion of
      * requests to be shared. 1 = 100%, 0.5 = 50%, etc..
      * @param {string} options.endpoint The target destination for usage
      * sharing data. The default is https://devices-v4.51degrees.com/new.ashx.
      * @param {boolean} options.shareAll If true, all evidence is shared apart
-     * from the email address, the salt used for hashed email identifiers, and
-     * the request's query string and path. False by default.
+     * from the email address, the salt used for hashed email identifiers, the
+     * request's query string and path, and every cookie whose name does not
+     * start with '51D_'. False by default.
      * @param {boolean} options.trackSession If true, the cookie named by
      * cookie is used to tell user sessions apart, so evidence already shared
      * is shared again when it comes from a new session. False by default. It
-     * needs cookie to be set, and has no effect when shareAll is true,
-     * because every cookie is then shared and used to find repeats.
+     * needs cookie to be set, and works the same whether or not shareAll is
+     * true.
      * @param {number} options.maximumQueueSize The most entries held while
      * waiting to be sent. When the queue is full, new entries are dropped. The
      * default is 1000, or ten times requestedPackageSize if that is larger.
@@ -63,12 +76,13 @@ declare class ShareUsage extends ShareUsage_base {
      * @param {number} options.recoveryMultiplier What the pause is multiplied
      * by each time the send tried when a pause ends fails. 2 by default.
      */
-    constructor({ interval, requestedPackageSize, cookie, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll, trackSession, maximumQueueSize, requestTimeout, failuresToEnterRecovery, failuresWindowSeconds, initialRecoveryDelaySeconds, maxRecoveryDelaySeconds, recoveryMultiplier }?: {
+    constructor({ interval, requestedPackageSize, cookie, shareAllQueryStringParameters, queryWhitelist, headerBlacklist, sharePercentage, endpoint, shareAll, trackSession, maximumQueueSize, requestTimeout, failuresToEnterRecovery, failuresWindowSeconds, initialRecoveryDelaySeconds, maxRecoveryDelaySeconds, recoveryMultiplier }?: {
         interval: number;
         requestedPackageSize: number;
         cookie: string;
-        queryWhitelist: Array<string> | null;
-        headerBlacklist: Array<string>;
+        shareAllQueryStringParameters: boolean;
+        queryWhitelist: Array<string> | string | null;
+        headerBlacklist: Array<string> | string;
         sharePercentage: number;
         endpoint: string;
         shareAll: boolean;
@@ -98,6 +112,8 @@ declare class ShareUsage extends ShareUsage_base {
     backOff: ShareUsageBackOff;
     sending: boolean;
     resumeTimer: any;
+    processId: `${string}-${string}-${string}-${string}-${string}`;
+    invariantWrittenAt: number;
     endpoint: url.URL;
     http: typeof import("http") | typeof import("https");
     /**
@@ -128,6 +144,26 @@ declare class ShareUsage extends ShareUsage_base {
      * provided
      */
     getDataFromEvidence(flowData: FlowData): ShareUsageData;
+    /**
+     * Whether a key is shared. A query string or form parameter the filter
+     * leaves out is still shared when a Flow Element of the Pipeline accepts
+     * it, being Evidence the Pipeline uses, as the element's specification
+     * lists it where the element gives that list.
+     *
+     * @param {ShareUsageEvidenceKeyFilter} filter the filter to ask first
+     * @param {string} key the evidence key
+     * @param {FlowData} flowData the flow data being processed
+     * @returns {boolean} true if the key is shared
+     */
+    shares(filter: ShareUsageEvidenceKeyFilter, key: string, flowData: FlowData): boolean;
+    /**
+     * Marks the usage sharing element, which a Pipeline builder puts after
+     * every other Flow Element, outside any parallel group, and refuses
+     * anywhere else.
+     *
+     * @returns {boolean} true
+     */
+    get isUsageSharing(): boolean;
     getConstantXml(): string;
     constantXml: string;
     /**

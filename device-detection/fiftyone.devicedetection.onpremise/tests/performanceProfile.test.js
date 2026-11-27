@@ -41,7 +41,7 @@ const {
 } = require51('fiftyone.devicedetection.onpremise');
 
 const LiteDataFile = path.resolve(
-  process.env.directory || __dirname,
+  __dirname,
   '../../../cxx/data/device-detection/51Degrees-LiteV4.1.hash');
 
 const haveLiteDataFile = fs.existsSync(LiteDataFile);
@@ -145,8 +145,8 @@ describeWithLite('performanceProfile', () => {
   }
 
   test('an engine left at its defaults uses Balanced', () => {
-    // eslint-disable-next-line no-new
-    new DeviceDetectionOnPremise(engineOptions);
+    expect(new DeviceDetectionOnPremise(engineOptions))
+      .toBeInstanceOf(DeviceDetectionOnPremise);
     expectBalanced();
   });
 

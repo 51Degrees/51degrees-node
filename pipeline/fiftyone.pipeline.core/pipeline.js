@@ -22,12 +22,98 @@
 
 const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
+const ElementData = require('./elementData');
 const EventEmitter = require('events');
+const EvidenceKeyFilter = require('./evidenceKeyFilter');
 
 /**
  * @typedef {import('./flowElement')} FlowElement
  * @typedef {any} DataFileUpdateService
  */
+
+/**
+ * The Evidence a Pipeline accepts, being every key one of its FlowElements
+ * accepts. Each element's filter is read when a key is checked, as an
+ * element's list can change once its data or the cloud service's answer
+ * arrives.
+ */
+class PipelineEvidenceKeyFilter extends EvidenceKeyFilter {
+  /**
+   * Constructor for PipelineEvidenceKeyFilter
+   *
+   * @param {Pipeline} pipeline the Pipeline whose elements are asked
+   */
+  constructor (pipeline) {
+    super();
+    this.pipeline = pipeline;
+  }
+
+  /**
+   * Whether any of the Pipeline's elements accepts the key.
+   *
+   * @param {string} key the evidence key to check
+   * @returns {boolean} whether any element accepts the key
+   */
+  filterEvidenceKey (key) {
+    return Object.values(this.pipeline.flowElements).some(element =>
+      element.evidenceKeyFilter &&
+      element.evidenceKeyFilter.filterEvidenceKey(key));
+  }
+}
+
+/**
+ * Records whether the flow elements that write an element data have
+ * finished, which the element data checks before a write. Anything that is
+ * not element data is left alone.
+ *
+ * @param {ElementData|undefined} data the element data
+ * @param {boolean} finished whether they have finished
+ */
+function setFinished (data, finished) {
+  if (data instanceof ElementData) {
+    data._writes.finished = finished;
+  }
+}
+
+/**
+ * Whether any Element Data in the Flow Data has a lazy property, read by
+ * walking its list once with nothing made, so a Flow Data with none
+ * finishes processing without waiting.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @returns {boolean} true if a lazy property was added to any of its data
+ */
+function hasLazyProperties (flowData) {
+  for (let node = flowData.elementDataHead; node !== null; node = node.next) {
+    if (node.data instanceof ElementData && node.data.hasLazyProperties()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Waits for the task of every lazy property in the Flow Data, then records
+ * each failed task as an error of the Flow Element whose data holds it,
+ * unless a reader has already. A JavaScript read cannot wait, so processing
+ * finishes only once every task has, and a read after that has the value.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @returns {Promise|undefined} resolved once every task has finished
+ */
+function settleLazyProperties (flowData) {
+  const all = [...new Set(Object.values(flowData.data))].filter((data) =>
+    data !== null && typeof data === 'object' &&
+    typeof data.lazySettled === 'function');
+  const pending = all.filter((data) => data.hasPendingLazyProperties());
+  const record = () => all.forEach((data) =>
+    data.recordLazyFailures(flowData));
+  if (pending.length === 0) {
+    record();
+    return undefined;
+  }
+  return Promise.all(pending.map((data) => data.lazySettled())).then(record);
+}
 
 /**
  * Pipeline holding a list of flowElements for processing, can create
@@ -47,19 +133,25 @@ class Pipeline {
   constructor (flowElements = [], suppressProcessExceptions = false, dataFileUpdateService = null) {
     const pipeline = this;
 
-    // The chain of flowElements to run, including arrays of parallel elements
-    this.flowElementsChain = flowElements;
+    // The chain of flowElements to run, including arrays of parallel
+    // elements. A frozen copy, so a built Pipeline cannot change whatever
+    // happens to the lists it was given.
+    this.flowElementsChain = /** @type {FlowElement[]} */ (Object.freeze(
+      flowElements.map((slot) =>
+        Array.isArray(slot) ? Object.freeze([...slot]) : slot)));
 
     // If true then pipeline will suppress exceptions added to FlowData.
     this.suppressProcessExceptions = suppressProcessExceptions;
 
     /**
      * A logger for emitting messages
+     *
      * @type {EventEmitter}
      */
     this.eventEmitter = new EventEmitter();
 
-    // Flattened dictionary of flowElements the pipeline contains
+    // Flattened dictionary of flowElements the pipeline contains, frozen
+    // once the constructor has filled it
     /**
      * @type {object}
      */
@@ -90,7 +182,22 @@ class Pipeline {
       });
     };
 
-    storeInFlowElementList(flowElements);
+    storeInFlowElementList(this.flowElementsChain);
+    Object.freeze(this.flowElements);
+
+    // The position of each data key in Pipeline order, by which a FlowData
+    // lists its ElementData.
+    /**
+     * @type {Map<string, number>}
+     */
+    this.dataKeyOrder = new Map(Object.keys(this.flowElements)
+      .map((key, index) => [key, index]));
+
+    // The Evidence the Pipeline accepts, from its elements' filters.
+    /**
+     * @type {EvidenceKeyFilter}
+     */
+    this.evidenceKeyFilter = new PipelineEvidenceKeyFilter(this);
 
     // Empty property database, later populated and possibly
     // updated by flowElements' property lists
@@ -115,7 +222,9 @@ class Pipeline {
     const processMethod = function () {
       const promiseChain = [];
 
-      const makeProcessPromise = function (flowElement) {
+      // Runs one FlowElement. A failure is the FlowElement's error, added
+      // to the FlowData by onError, which by default adds it at once.
+      const makeProcessPromise = function (flowElement, onError) {
         return function (flowData) {
           if (flowData.stopped) {
             return Promise.resolve(flowData);
@@ -128,62 +237,117 @@ class Pipeline {
 
           return new Promise(function (resolve) {
             const setError = function (error) {
-              flowData.setError(error, flowElement);
+              if (onError) {
+                onError(error);
+              } else {
+                flowData.setError(error, flowElement);
+              }
 
               return resolve(flowData);
             };
 
             const local = {};
 
+            // Element data another flow element added under this key is
+            // open for writing again while this one processes.
+            setFinished(flowData.tryGet(flowElement.dataKey), false);
+
             let process;
 
             try {
               process = Promise.resolve(flowElement.process(flowData, local));
             } catch (e) {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
               return setError(e);
             }
 
-            process
-              .then(function () {
-                resolve(flowData);
-              })
-              .catch(setError);
+            // The data is finished in the same step that ends the Flow
+            // Element, whether it succeeded or failed.
+            process.then(function () {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
+              resolve(flowData);
+            }, function (error) {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
+              setError(error);
+            });
           });
         };
       };
 
       pipeline.flowElementsChain.forEach(function (item) {
         if (Array.isArray(item)) {
+          // A parallel group runs its members together and finishes once
+          // every member has. An error a member throws is held until then,
+          // and added in the order the members were added to the group.
           promiseChain.push(function (flowData) {
-            const promises = [];
+            const thrown = item.map(() => undefined);
 
-            item.forEach(function (flowElement) {
-              const promise = makeProcessPromise(flowElement)(flowData);
-
-              promises.push(promise);
+            return Promise.all(item.map(function (flowElement, index) {
+              return makeProcessPromise(flowElement, function (error) {
+                thrown[index] = { error };
+              })(flowData);
+            })).then(function () {
+              thrown.forEach(function (failure, index) {
+                if (failure !== undefined) {
+                  flowData.setError(failure.error, item[index]);
+                }
+              });
+              return flowData;
             });
-
-            return Promise.all(promises.map((p) => p.catch((e) => e)))
-              .then((results) => flowData)
-              .catch((e) => console.log(e));
           });
         } else {
           promiseChain.push(makeProcessPromise(item));
         }
       });
 
+      // Processing has finished, whether or not it rejected, and every
+      // lazy task has finished, so the flow data and every element data in
+      // it, including any the caller added, are read only.
+      const finish = function (flowData) {
+        flowData.processed = true;
+        // One walk of the list, which needs no order, and marks data that
+        // later data under the same key replaced as well.
+        for (let node = flowData.elementDataHead; node !== null;
+          node = node.next) {
+          setFinished(node.data, true);
+        }
+        // A flow data disposed while it processed gives its element data
+        // back to the pools now that nothing writes it.
+        if (flowData.disposed) {
+          flowData.dispose();
+        }
+      };
+
+      // Every error has been recorded once processing has finished.
+      const result = function (flowData) {
+        const errors = Object.values(flowData.errors);
+        if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
+          throw new AggregateError(errors,
+            'Errors occurred during processing of ' +
+            Object.keys(flowData.errors).join(', '));
+        }
+        return flowData;
+      };
+
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
         }, Promise.resolve(flowData)).then(function () {
-          // Processing has finished, so every error has been recorded.
-          const errors = Object.values(flowData.errors);
-          if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
-            throw new AggregateError(errors,
-              'Errors occurred during processing of ' +
-              Object.keys(flowData.errors).join(', '));
+          // With no lazy property there is nothing to wait for, so the
+          // flow data finishes here.
+          if (!hasLazyProperties(flowData)) {
+            finish(flowData);
+            return result(flowData);
           }
-          return flowData;
+          return Promise.resolve(settleLazyProperties(flowData))
+            .finally(function () { finish(flowData); })
+            .then(function () { return result(flowData); });
+        }, function (error) {
+          // Processing rejected, but a lazy task may still record its
+          // failure, so wait for every task before the Flow Data finishes.
+          return Promise.resolve(settleLazyProperties(flowData))
+            .finally(function () { finish(flowData); })
+            .then(function () { throw error; });
         });
       };
     };
@@ -228,7 +392,7 @@ class Pipeline {
     // error is written to the console instead, masked, because the console
     // is the end of the line. A failed detection's message arrives already
     // masked by FlowData.setError. The cloud engine also logs an error here
-    // for a missing or null element while the detection carries on.
+    // for a null element while the detection carries on.
     if (type === 'error' && this.eventEmitter.listenerCount('error') === 0) {
       console.error(LicenseKeys.mask(message));
       return;

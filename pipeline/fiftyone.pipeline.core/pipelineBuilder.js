@@ -21,6 +21,7 @@
  * ********************************************************************* */
 
 const Pipeline = require('./pipeline');
+const errorMessages = require('./errorMessages');
 
 const fs = require('fs');
 const path = require('path');
@@ -28,6 +29,31 @@ const path = require('path');
 /**
  * @typedef {import('./flowElement')} FlowElement
  */
+
+// Whether a Flow Element is the usage sharing element, which marks itself
+// so that the core needs no reference to its package.
+const isUsageSharing = (element) => element !== null &&
+  typeof element === 'object' && element.isUsageSharing === true;
+
+/**
+ * Refuses a list of Flow Elements that puts the usage sharing element
+ * anywhere but last, or in a parallel group, because it shares the Evidence
+ * every other Flow Element has added and must read it while nothing else
+ * changes it.
+ *
+ * @param {Array} flowElements the Flow Elements, with each parallel group as
+ * an array
+ * @throws {Error} when the usage sharing element is anywhere else
+ */
+function refuseMisplacedUsageSharing (flowElements) {
+  flowElements.forEach((slot, index) => {
+    if (Array.isArray(slot)
+      ? slot.some(isUsageSharing)
+      : isUsageSharing(slot) && index !== flowElements.length - 1) {
+      throw new Error(errorMessages.usageSharingNotLast);
+    }
+  });
+}
 
 /**
  * A PipelineBuilder generates a Pipeline object
@@ -79,6 +105,14 @@ class PipelineBuilder {
      */
     this.flowElements = [];
 
+    /**
+     * A usage sharing element the builder adds after every other Flow
+     * Element when it builds, as the product builders do.
+     *
+     * @type {FlowElement|undefined}
+     */
+    this.usageSharingElement = undefined;
+
     if (settings.dataFileUpdateService) {
       this.dataFileUpdateService = settings.dataFileUpdateService;
     }
@@ -118,6 +152,8 @@ class PipelineBuilder {
    *
    * @param {string} configPath path to a JSON configuration file
    * @returns {Pipeline} the constructed pipeline
+   * @throws {Error|string} an Error when the file cannot be read or does not
+   * hold JSON, and whatever buildFromConfiguration throws
    */
   buildFromConfigurationFile (configPath) {
     const file = fs.readFileSync(configPath, 'utf8');
@@ -132,6 +168,9 @@ class PipelineBuilder {
    *
    * @param {object} config a JSON configuration object
    * @returns {Pipeline} the constructed pipeline
+   * @throws {Error} "Can't find" and the name, when an element the
+   * configuration names cannot be required by that name or as a path from
+   * the working folder, and the error an element's constructor throws
    */
   buildFromConfiguration (config) {
     let flowElements = [];
@@ -147,7 +186,7 @@ class PipelineBuilder {
 
           FlowElement = require(localPath);
         } catch (e) {
-          throw "Can't find " + element.elementName;
+          throw new Error("Can't find " + element.elementName);
         }
       }
 
@@ -192,16 +231,52 @@ class PipelineBuilder {
   }
 
   /**
-   * Add required elements to an existing FlowElement array
+   * Add required elements to an existing FlowElement array. Each web
+   * integration element is added only where the array has no element with
+   * its key, compared ignoring case, so one the caller added is the one
+   * used and building twice adds nothing more. A JSON Builder goes
+   * immediately before a JavaScript Builder the caller added, which reads
+   * what it writes. The usage sharing element is always last, so it shares
+   * the Evidence every other element has added.
    *
    * @param {FlowElement[]} flowElements array of elements to add to
    * @returns {FlowElement[]} resulting array with required elements
+   * @throws {Error} when the usage sharing element is anywhere but last, or
+   * in a parallel group
    */
   addRequiredElements (flowElements) {
-    return this.getSequenceElements()
-      .concat(flowElements)
-      .concat(this.getJavaScriptElements())
-      .concat(this.getHttpElements());
+    const keyOf = (element) => String(element.dataKey).toLowerCase();
+    const present = new Set(flowElements.flat().map(keyOf));
+    const absent = (element) => !present.has(keyOf(element));
+
+    // A usage sharing element that ends the list stays last, after the
+    // elements added here, and one this builder adds itself goes last.
+    const last = [];
+    if (flowElements.length > 0 &&
+      isUsageSharing(flowElements[flowElements.length - 1])) {
+      last.push(flowElements[flowElements.length - 1]);
+      flowElements = flowElements.slice(0, -1);
+    }
+    if (this.usageSharingElement &&
+      !last.includes(this.usageSharingElement) &&
+      !flowElements.flat().includes(this.usageSharingElement)) {
+      last.push(this.usageSharingElement);
+    }
+
+    const elements = this.getSequenceElements().filter(absent)
+      .concat(flowElements);
+    for (const element of this.getJavaScriptElements().filter(absent)) {
+      const javascriptBuilder = elements.findIndex(
+        (added) => keyOf(added) === 'javascriptbuilder');
+      if (element.dataKey === 'jsonbundler' && javascriptBuilder !== -1) {
+        elements.splice(javascriptBuilder, 0, element);
+      } else {
+        elements.push(element);
+      }
+    }
+    const all = elements.concat(this.getHttpElements().filter(absent), last);
+    refuseMisplacedUsageSharing(all);
+    return all;
   }
 
   /**

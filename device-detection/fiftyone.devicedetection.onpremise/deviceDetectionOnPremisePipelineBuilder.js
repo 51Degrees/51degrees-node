@@ -43,13 +43,18 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
    * @param {string} [options.licenceKeys] license key(s) used by the
    * data file update service. A key can be obtained from the
    * 51Degrees website: https://51degrees.com/pricing?utm_source=code&utm_medium=comment&utm_campaign=51degrees-node&utm_content=fiftyone.devicedetection.onpremise-devicedetectiononpremisepipelinebuilder.js&utm_term=constructor.
-   * This parameter MUST be set when using a data file.
-   * If you do not wish to use a key then you can specify
-   * an empty string, but this will cause automatic updates
-   * to be disabled.
+   * A key is needed only when autoUpdate or updateOnStart is on with the
+   * default dataUpdateUrl, and the engine refuses to build without one
+   * then. The file system watcher needs no key.
    * @param {string} options.dataFile dataFile path for the on premise engine
    * @param {boolean} [options.dataUpdateVerifyMd5] whether to check MD5 of datafile
    * @param {boolean} [options.dataUpdateUseUrlFormatter] whether to append default URL params for Data File download
+   * @param {string} [options.dataUpdateProduct] the product to ask the data
+   * update service for, such as V4TAC or V4Enterprise. When it is set,
+   * every request for a data file carries it in a Product parameter. With
+   * none set, the first request names no product, which is all that license
+   * keys holding one product need. Set it when license keys that hold
+   * several products download the data file on start-up.
    * @param {boolean} [options.autoUpdate] whether to autoUpdate the dataFile
    * @param {string} [options.dataUpdateUrl] base url for the datafile
    * @param {number} [options.pollingInterval] How often to poll for
@@ -67,6 +72,10 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
    * engine.
    * @param {Array<string>} [options.restrictedProperties] list of properties the engine
    * will be restricted to
+   * @param {Array<string>|string} [options.indexedProperties] list of
+   * Properties whose values the native code indexes to the profiles holding
+   * them, so the engine's profileIdsForPropertyValue finds them without
+   * reading every profile
    * @param {string} [options.performanceProfile] used to control the tradeoff
    * between performance and system memory usage (Only applies to on-premise,
    * not cloud) options are: LowMemory, MaxPerformance, Balanced,
@@ -119,6 +128,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       dataFile = null,
       dataUpdateVerifyMd5 = true,
       dataUpdateUseUrlFormatter = true,
+      dataUpdateProduct,
       autoUpdate = true,
       dataUpdateUrl = null,
       pollingInterval = 30,
@@ -128,6 +138,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       updateOnStart = false,
       cacheSize = null,
       restrictedProperties,
+      indexedProperties,
       performanceProfile = 'Balanced',
       concurrency = os.cpus().length,
       updateMatchedUserAgent,
@@ -136,13 +147,14 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
       difference,
       allowUnmatched = false,
       createTempDataCopy,
-      tempDataDir
+      tempDataDir,
+      suppressProcessExceptions
     }) {
     super(...arguments);
 
     const deprecatedOptions = ['usePredictiveGraph', 'usePerformanceGraph'];
     for (const option of deprecatedOptions) {
-      if (arguments[0].hasOwnProperty(option)) {
+      if (Object.prototype.hasOwnProperty.call(arguments[0], option)) {
         console.warn(`{${option}} option is deprecated and has no effect on the configuration`);
       }
     }
@@ -150,7 +162,9 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
     // Check if share usage enabled and add it to the pipeline if so
 
     if (shareUsage) {
-      this.flowElements.push(new ShareUsageElement());
+      // Usage sharing goes after every other Flow Element when the
+      // Pipeline is built.
+      this.usageSharingElement = new ShareUsageElement();
     }
 
     if (dataUpdateUrl == null) {
@@ -158,7 +172,7 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
     }
 
     if (cacheSize) {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
     this.flowElements.push(new DeviceDetectionOnPremise(
       {
@@ -167,11 +181,13 @@ class DeviceDetectionOnPremisePipelineBuilder extends PipelineBuilder {
         dataUpdateUrl,
         dataUpdateVerifyMd5,
         dataUpdateUseUrlFormatter,
+        dataUpdateProduct,
         fileSystemWatcher,
         pollingInterval,
         updateTimeMaximumRandomisation,
         licenceKeys,
         restrictedProperties,
+        indexedProperties,
         performanceProfile,
         concurrency,
         updateMatchedUserAgent,
