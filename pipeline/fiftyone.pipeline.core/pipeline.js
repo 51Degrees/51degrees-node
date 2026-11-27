@@ -76,6 +76,23 @@ function setFinished (data, finished) {
 }
 
 /**
+ * Whether any Element Data in the Flow Data has a lazy property, read by
+ * walking its list once with nothing made, so a Flow Data with none
+ * finishes processing without waiting.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @returns {boolean} true if a lazy property was added to any of its data
+ */
+function hasLazyProperties (flowData) {
+  for (let node = flowData.elementDataHead; node !== null; node = node.next) {
+    if (node.data instanceof ElementData && node.data.hasLazyProperties()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Waits for the task of every lazy property in the Flow Data, then records
  * each failed task as an error of the Flow Element whose data holds it,
  * unless a reader has already. A JavaScript read cannot wait, so processing
@@ -244,14 +261,15 @@ class Pipeline {
               return setError(e);
             }
 
-            process
-              .finally(function () {
-                setFinished(flowData.tryGet(flowElement.dataKey), true);
-              })
-              .then(function () {
-                resolve(flowData);
-              })
-              .catch(setError);
+            // The data is finished in the same step that ends the Flow
+            // Element, whether it succeeded or failed.
+            process.then(function () {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
+              resolve(flowData);
+            }, function (error) {
+              setFinished(flowData.tryGet(flowElement.dataKey), true);
+              setError(error);
+            });
           });
         };
       };
@@ -282,37 +300,54 @@ class Pipeline {
         }
       });
 
+      // Processing has finished, whether or not it rejected, and every
+      // lazy task has finished, so the flow data and every element data in
+      // it, including any the caller added, are read only.
+      const finish = function (flowData) {
+        flowData.processed = true;
+        // One walk of the list, which needs no order, and marks data that
+        // later data under the same key replaced as well.
+        for (let node = flowData.elementDataHead; node !== null;
+          node = node.next) {
+          setFinished(node.data, true);
+        }
+        // A flow data disposed while it processed gives its element data
+        // back to the pools now that nothing writes it.
+        if (flowData.disposed) {
+          flowData.dispose();
+        }
+      };
+
+      // Every error has been recorded once processing has finished.
+      const result = function (flowData) {
+        const errors = Object.values(flowData.errors);
+        if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
+          throw new AggregateError(errors,
+            'Errors occurred during processing of ' +
+            Object.keys(flowData.errors).join(', '));
+        }
+        return flowData;
+      };
+
       return function (flowData) {
         return promiseChain.reduce(function (cur, next) {
           return cur.then(next);
         }, Promise.resolve(flowData)).then(function () {
-          return settleLazyProperties(flowData);
+          // With no lazy property there is nothing to wait for, so the
+          // flow data finishes here.
+          if (!hasLazyProperties(flowData)) {
+            finish(flowData);
+            return result(flowData);
+          }
+          return Promise.resolve(settleLazyProperties(flowData))
+            .finally(function () { finish(flowData); })
+            .then(function () { return result(flowData); });
         }, function (error) {
           // Processing rejected, but a lazy task may still record its
           // failure, so wait for every task before the Flow Data finishes.
           return Promise.resolve(settleLazyProperties(flowData))
+            .finally(function () { finish(flowData); })
             .then(function () { throw error; });
-        }).finally(function () {
-          // Processing has finished, whether or not it rejected, and every
-          // lazy task has finished, so the flow data and every element
-          // data in it, including any the caller added, are read only.
-          flowData.processed = true;
-          flowData.listElementData().forEach((data) =>
-            setFinished(data, true));
-          // A flow data disposed while it processed gives its element data
-          // back to the pools now that nothing writes it.
-          if (flowData.disposed) {
-            flowData.dispose();
-          }
-        }).then(function () {
-          // Processing has finished, so every error has been recorded.
-          const errors = Object.values(flowData.errors);
-          if (errors.length > 0 && !pipeline.suppressProcessExceptions) {
-            throw new AggregateError(errors,
-              'Errors occurred during processing of ' +
-              Object.keys(flowData.errors).join(', '));
-          }
-          return flowData;
         });
       };
     };
