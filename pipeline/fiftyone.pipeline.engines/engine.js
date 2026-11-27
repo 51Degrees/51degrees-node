@@ -141,7 +141,7 @@ class Engine extends FlowElement {
    * and adds it to the cache (if a cache is present)
    *
    * @param {FlowData} flowData FlowData to process
-   * @returns {Promise<true|void>} result of processing
+   * @returns {Promise<*>} resolved once processing has finished
    */
   process (flowData) {
     const engine = this;
@@ -155,6 +155,10 @@ class Engine extends FlowElement {
       if (this.inCache(flowData, key)) {
         return Promise.resolve(true);
       }
+    } else {
+      // With no cache there is nothing to do once processing has finished,
+      // so no step is added after it.
+      return Promise.resolve(this.processInternal(flowData));
     }
 
     return Promise.resolve(this.processInternal(flowData)).then(function () {

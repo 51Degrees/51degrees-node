@@ -25,11 +25,12 @@ const errorMessages = require('./errorMessages');
 const Evidence = require('./evidence');
 const LicenseKeys = require('./licenseKeys');
 const ElementDataPool = require('./elementDataPool');
+const ElementData = require('./elementData');
+const { findNode } = require('./elementDataList');
 
 /**
  * @typedef {import('./pipeline')} Pipeline
  * @typedef {import('./flowElement')} FlowElement
- * @typedef {import('./elementData')} ElementData
  */
 
 /**
@@ -109,8 +110,9 @@ class FlowData {
     this.disposed = false;
 
     // The Element Data, as a list whose head is the newest node. A node
-    // holds the data key, the Element Data and the next node, and never
-    // changes once added, so a reader follows the links with no lock. One
+    // holds the data key, the Element Data, the state Element Data keeps
+    // of whether it is finished, and the next node, and never changes once
+    // added, so a reader follows the links with no lock. One
     // thread runs JavaScript, so a plain write adds a node even while the
     // members of a parallel group run.
     this.elementDataHead = null;
@@ -136,6 +138,12 @@ class FlowData {
           }
           return value;
         }
+      },
+      // A write goes straight to the Flow Data. With no trap, the engine
+      // takes a slower path that defines the property through the proxy.
+      set: (data, key, value) => {
+        data[key] = value;
+        return true;
       }
     });
   }
@@ -264,6 +272,7 @@ class FlowData {
     this.elementDataHead = {
       key: data.flowElement.dataKey,
       data,
+      state: data instanceof ElementData ? data._state : undefined,
       next: this.elementDataHead
     };
 
@@ -280,29 +289,8 @@ class FlowData {
    * @returns {ElementData|undefined} data from the FlowElement
    */
   tryGet (flowElementDataKey) {
-    const exact = (key) => {
-      for (let node = this.elementDataHead; node !== null;
-        node = node.next) {
-        if (node.key === key) {
-          return node.data;
-        }
-      }
-      return undefined;
-    };
-    const data = exact(flowElementDataKey);
-    if (data !== undefined || typeof flowElementDataKey !== 'string') {
-      return data;
-    }
-    // The list holds the newest first, so the last match is the key added
-    // first, and its newest data is then found by that key.
-    const lower = flowElementDataKey.toLowerCase();
-    let first;
-    for (let node = this.elementDataHead; node !== null; node = node.next) {
-      if (typeof node.key === 'string' && node.key.toLowerCase() === lower) {
-        first = node.key;
-      }
-    }
-    return first === undefined ? undefined : exact(first);
+    const node = findNode(this.elementDataHead, flowElementDataKey);
+    return node === undefined ? undefined : node.data;
   }
 
   /**
