@@ -26,9 +26,7 @@
 // machine, which needs no real license key, so no test here reaches the
 // Distributor.
 
-const childProcess = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const example = require(path.join(__dirname, 'updatedatafile.js'));
@@ -36,6 +34,8 @@ const example = require(path.join(__dirname, 'updatedatafile.js'));
 const ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
 const DataUpdateStandIn = require(path.join(ROOT, 'pipeline',
   'fiftyone.pipeline.engines', 'tests', 'dataUpdateStandIn'));
+const ExampleProcess = require(path.join(ROOT, 'pipeline',
+  'fiftyone.pipeline.engines', 'tests', 'exampleProcess'));
 const DataFileUpdateService = require(path.join(ROOT, 'pipeline',
   'fiftyone.pipeline.engines', 'dataFileUpdateService'));
 const DeviceDetectionOnPremisePipelineBuilder = require(path.join(ROOT,
@@ -58,7 +58,11 @@ const OTHER_PRODUCT = 'IPIV4Enterprise';
 const DATA_FILE = path.join(ROOT, 'cxx', 'data', 'device-detection',
   'Enterprise-HashV41.hash');
 
-const TIMEOUT_MS = 10 * 60 * 1000;
+// The two runs of the example took 25 s together on a hosted Windows
+// runner, 14 s on Ubuntu and 11 s on macOS, so one run has 120 s, and the
+// test a minute more to stop it and clean up.
+const RUN_LIMIT_MS = 120 * 1000;
+const TIMEOUT_MS = RUN_LIMIT_MS + 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('the product the update example asks for', () => {
@@ -114,89 +118,76 @@ const dataFileProduct = () => {
   return product;
 };
 
-// Runs the example in its own process, so that the file watcher and the
-// polling it starts end with it. The process loads the example as a module
-// and runs it with the settings given, rather than as a person runs it,
-// which would ask whether to go on. No license key or data file setting
-// reaches it, and its temporary files go in the folder given.
-const runExample = (folder, settings) => new Promise((resolve) => {
-  const remove = new Set(['_51DEGREES_LICENSE_KEY', '_51DEGREES_DD_PATH']);
-  const env = {};
-  for (const [name, value] of Object.entries(process.env)) {
-    if (!remove.has(name.toUpperCase())) {
-      env[name] = value;
-    }
-  }
-  // The example runs only its module part when this is set.
-  env.JEST_WORKER_ID = env.JEST_WORKER_ID || '1';
-  env.TMPDIR = env.TMP = env.TEMP = folder;
-  const script = 'const s = JSON.parse(process.argv[2]);' +
-    'require(process.argv[1]).run(s.dataFile, s.licenseKey, false, ' +
-    'process.stdout, s.product, s.dataUpdateUrl).then(' +
-    '() => process.exit(0), (e) => { console.error(e); process.exit(1); });';
-  const child = childProcess.spawn(process.execPath,
-    ['-e', script, path.join(__dirname, 'updatedatafile.js'),
-      JSON.stringify(settings)],
-    { cwd: __dirname, env });
-  let output = '';
-  child.stdout.on('data', (data) => { output += data; });
-  child.stderr.on('data', (data) => { output += data; });
-  child.on('close', (status) => resolve({ status, output }));
-});
-
 describe('the update example against a stand-in for the Distributor', () => {
-  let folder;
+  let product;
+  let newer;
+  let served;
   let standIn;
+  let folder;
+  let running;
+
+  // One stand-in serves both tests the same newer copy of the data file,
+  // which the example only reads, so it is copied and compressed once. The
+  // requests it received are cleared before each test.
+  beforeAll(async () => {
+    product = dataFileProduct();
+    served = ExampleProcess.makeFolder(DATA_FILE);
+    const servedFile = path.join(served, 'served.hash');
+    fs.copyFileSync(DATA_FILE, servedFile);
+    newer = new Date(
+      DataUpdateStandIn.readPublished(DATA_FILE).getTime() + DAY_MS);
+    DataUpdateStandIn.writePublished(servedFile, newer);
+    standIn = await DataUpdateStandIn.start(
+      [OTHER_PRODUCT, product], servedFile);
+  }, TIMEOUT_MS);
+
+  afterAll(() => ExampleProcess.cleanUp([
+    () => standIn && standIn.stop(),
+    () => served && ExampleProcess.removeFolder(served)
+  ]));
 
   beforeEach(() => {
-    folder = fs.mkdtempSync(path.join(os.tmpdir(), 'update-example-'));
+    folder = ExampleProcess.makeFolder(DATA_FILE);
+    if (standIn) {
+      standIn.requests = [];
+    }
   });
 
-  afterEach(async () => {
-    if (standIn) {
-      await standIn.stop();
-      standIn = undefined;
-    }
-    fs.rmSync(folder, { recursive: true, force: true });
-  });
+  // The example is stopped before anything it holds open is removed. Its
+  // data file, the copy it makes of it and its temporary copy are all in
+  // the folder.
+  afterEach(() => ExampleProcess.cleanUp([
+    () => running && running.stop(),
+    () => ExampleProcess.removeFolder(folder),
+    () => { running = undefined; }
+  ]));
 
   // Runs the example on a copy of the data file, with its update URL
-  // pointed at the stand-in. The stand-in lists the data file's product
-  // and serves another copy of the data file with its published date
-  // moved on a day, so the copy is newer than the file the example starts
-  // from. The update has completed when the example's data file holds that
-  // date. Resolves with the requests the stand-in received.
-  const update = async (product, productArgument) => {
+  // pointed at the stand-in, which serves a copy of the data file with its
+  // published date moved on a day, so it is newer than the file the
+  // example starts from. Each test starts from its own copy, because the
+  // example replaces it. The update has completed when the example's data
+  // file holds that date. Writes the time of each step of the run, and
+  // resolves with the requests the stand-in received.
+  const update = async (productArgument) => {
     const dataFile = path.join(folder, path.basename(DATA_FILE));
     fs.copyFileSync(DATA_FILE, dataFile);
-    const served = path.join(folder, 'served.hash');
-    fs.copyFileSync(DATA_FILE, served);
-    const newer = new Date(
-      DataUpdateStandIn.readPublished(DATA_FILE).getTime() + DAY_MS);
-    DataUpdateStandIn.writePublished(served, newer);
-    standIn = await DataUpdateStandIn.start(
-      [OTHER_PRODUCT, product], served);
 
-    const result = await runExample(folder, {
+    running = ExampleProcess.start(path.join(__dirname, 'updatedatafile.js'), {
       dataFile,
       licenseKey: STAND_IN_KEY,
       product: productArgument,
       dataUpdateUrl: standIn.url
-    });
-
-    // What the example wrote is shown when it did not finish.
-    expect({
-      status: result.status,
-      output: result.status === 0 ? '' : result.output
-    }).toEqual({ status: 0, output: '' });
+    }, folder, RUN_LIMIT_MS);
+    await running.finished();
+    process.stdout.write(running.timeline('Device Detection update example, ' +
+      `product ${productArgument || 'none'}`) + '\n');
     expect(DataUpdateStandIn.readPublished(dataFile)).toEqual(newer);
     return standIn.requests;
   };
 
   test('with no product asks for the product of the data file', async () => {
-    const product = dataFileProduct();
-
-    const requests = await update(product, undefined);
+    const requests = await update(undefined);
 
     // The first request names no product and gets the list. The second
     // asks for the product of the data file and gets the newer file.
@@ -207,9 +198,7 @@ describe('the update example against a stand-in for the Distributor', () => {
   }, TIMEOUT_MS);
 
   test('with a product asks for that product', async () => {
-    const product = dataFileProduct();
-
-    const requests = await update(product, product);
+    const requests = await update(product);
 
     expect(requests[0]).toEqual({ product, status: 200 });
     expect(requests.filter((request) => request.product === null))
