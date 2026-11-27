@@ -22,7 +22,7 @@
 
 const LicenseKeys = require('./licenseKeys');
 const FlowData = require('./flowData');
-const ElementData = require('./elementData');
+const { findNode } = require('./elementDataList');
 const EventEmitter = require('events');
 const EvidenceKeyFilter = require('./evidenceKeyFilter');
 
@@ -63,16 +63,30 @@ class PipelineEvidenceKeyFilter extends EvidenceKeyFilter {
 
 /**
  * Records whether the flow elements that write an element data have
- * finished, which the element data checks before a write. Anything that is
- * not element data is left alone.
+ * finished, which the element data checks before a write. The state is
+ * read from the Flow Data's list, so the element data's proxy is not used.
+ * Anything that is not element data is left alone.
  *
- * @param {ElementData|undefined} data the element data
+ * @param {object|undefined} node the node of the Flow Data's list that
+ * holds the element data
  * @param {boolean} finished whether they have finished
  */
-function setFinished (data, finished) {
-  if (data instanceof ElementData) {
-    data._writes.finished = finished;
+function setFinished (node, finished) {
+  if (node !== undefined && node.state !== undefined) {
+    node.state.finished = finished;
   }
+}
+
+/**
+ * Records whether the flow elements that write the element data under a
+ * data key have finished, finding the data as FlowData.tryGet does.
+ *
+ * @param {FlowData} flowData the Flow Data being processed
+ * @param {string} dataKey the data key
+ * @param {boolean} finished whether they have finished
+ */
+function setKeyFinished (flowData, dataKey, finished) {
+  setFinished(findNode(flowData.elementDataHead, dataKey), finished);
 }
 
 /**
@@ -85,7 +99,7 @@ function setFinished (data, finished) {
  */
 function hasLazyProperties (flowData) {
   for (let node = flowData.elementDataHead; node !== null; node = node.next) {
-    if (node.data instanceof ElementData && node.data.hasLazyProperties()) {
+    if (node.state !== undefined && node.state.lazy !== undefined) {
       return true;
     }
   }
@@ -223,11 +237,21 @@ class Pipeline {
       const promiseChain = [];
 
       // Runs one FlowElement. A failure is the FlowElement's error, added
-      // to the FlowData by onError, which by default adds it at once.
+      // to the FlowData by onError, which by default adds it at once. The
+      // step awaits the element's own promise, so it adds no promise of
+      // its own around it.
       const makeProcessPromise = function (flowElement, onError) {
-        return function (flowData) {
+        const setError = function (flowData, error) {
+          if (onError) {
+            onError(error);
+          } else {
+            flowData.setError(error, flowElement);
+          }
+        };
+
+        return async function (flowData) {
           if (flowData.stopped) {
-            return Promise.resolve(flowData);
+            return flowData;
           }
 
           pipeline.eventEmitter.emit(
@@ -235,42 +259,24 @@ class Pipeline {
             'processing ' + flowElement.dataKey
           );
 
-          return new Promise(function (resolve) {
-            const setError = function (error) {
-              if (onError) {
-                onError(error);
-              } else {
-                flowData.setError(error, flowElement);
-              }
+          const local = {};
 
-              return resolve(flowData);
-            };
+          // Element data another flow element added under this key is
+          // open for writing again while this one processes.
+          setKeyFinished(flowData, flowElement.dataKey, false);
 
-            const local = {};
-
-            // Element data another flow element added under this key is
-            // open for writing again while this one processes.
-            setFinished(flowData.tryGet(flowElement.dataKey), false);
-
-            let process;
-
-            try {
-              process = Promise.resolve(flowElement.process(flowData, local));
-            } catch (e) {
-              setFinished(flowData.tryGet(flowElement.dataKey), true);
-              return setError(e);
-            }
-
-            // The data is finished in the same step that ends the Flow
-            // Element, whether it succeeded or failed.
-            process.then(function () {
-              setFinished(flowData.tryGet(flowElement.dataKey), true);
-              resolve(flowData);
-            }, function (error) {
-              setFinished(flowData.tryGet(flowElement.dataKey), true);
-              setError(error);
-            });
-          });
+          // The data is finished in the same step that ends the Flow
+          // Element, whether it succeeded or failed, including a failure
+          // thrown before it returned a promise.
+          try {
+            await flowElement.process(flowData, local);
+          } catch (error) {
+            setKeyFinished(flowData, flowElement.dataKey, true);
+            setError(flowData, error);
+            return flowData;
+          }
+          setKeyFinished(flowData, flowElement.dataKey, true);
+          return flowData;
         };
       };
 
@@ -309,7 +315,7 @@ class Pipeline {
         // later data under the same key replaced as well.
         for (let node = flowData.elementDataHead; node !== null;
           node = node.next) {
-          setFinished(node.data, true);
+          setFinished(node, true);
         }
         // A flow data disposed while it processed gives its element data
         // back to the pools now that nothing writes it.
@@ -329,26 +335,37 @@ class Pipeline {
         return flowData;
       };
 
-      return function (flowData) {
-        return promiseChain.reduce(function (cur, next) {
-          return cur.then(next);
-        }, Promise.resolve(flowData)).then(function () {
-          // With no lazy property there is nothing to wait for, so the
-          // flow data finishes here.
-          if (!hasLazyProperties(flowData)) {
-            finish(flowData);
-            return result(flowData);
+      // Each step is awaited in turn, so no promise is resolved with
+      // another, which would take an extra step each time. The first step
+      // still starts after process() returns.
+      return async function (flowData) {
+        try {
+          await undefined;
+          for (const step of promiseChain) {
+            await step(flowData);
           }
-          return Promise.resolve(settleLazyProperties(flowData))
-            .finally(function () { finish(flowData); })
-            .then(function () { return result(flowData); });
-        }, function (error) {
+        } catch (error) {
           // Processing rejected, but a lazy task may still record its
           // failure, so wait for every task before the Flow Data finishes.
-          return Promise.resolve(settleLazyProperties(flowData))
-            .finally(function () { finish(flowData); })
-            .then(function () { throw error; });
-        });
+          try {
+            await settleLazyProperties(flowData);
+          } finally {
+            finish(flowData);
+          }
+          throw error;
+        }
+        // With no lazy property there is nothing to wait for, so the flow
+        // data finishes here.
+        if (hasLazyProperties(flowData)) {
+          try {
+            await settleLazyProperties(flowData);
+          } finally {
+            finish(flowData);
+          }
+        } else {
+          finish(flowData);
+        }
+        return result(flowData);
       };
     };
 

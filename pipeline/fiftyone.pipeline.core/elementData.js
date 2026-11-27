@@ -28,13 +28,13 @@ const errorMessages = require('./errorMessages');
  * @typedef {import('./flowData')} FlowData
  */
 
-// Held by Element Data with no lazy property. A field must never read as
-// undefined, because the proxy takes a missing field for a property name.
-const noLazyProperties = Object.freeze({});
-
 // The lazy properties of the data, by name in lower case, or undefined.
-const lazyProperties = (data) =>
-  data._lazy === noLazyProperties ? undefined : data._lazy;
+// Data made without the constructor, such as a hardware profile, has no
+// state and so no lazy property.
+const lazyProperties = (data) => {
+  const state = data._state;
+  return state === undefined ? undefined : state.lazy;
+};
 
 // The lazy property under a key, in any letter case, or undefined.
 const lazyEntry = (data, key) => {
@@ -66,7 +66,7 @@ const readLazy = (data, key, lazy) => {
  * @throws {Error} once they have finished
  */
 function refuseFinished (data, key) {
-  if (data._writes.finished) {
+  if (data._state.finished) {
     throw new Error(util.format(errorMessages.elementDataFinished,
       String(key), data.flowElement.dataKey));
   }
@@ -136,11 +136,13 @@ class ElementData {
     this.flowElement = flowElement;
 
     // Whether the flow elements that write the data have finished
-    // processing, when a write through the data throws. An object, as the
-    // proxy takes a field that reads as false for a property name. Names
-    // starting with an underscore hold the data's own state and are not
-    // writes.
-    this._writes = { finished: false };
+    // processing, when a write through the data throws, and its lazy
+    // properties, if any. An object, as the proxy takes a field that reads
+    // as false for a property name, and the Flow Data's list holds it, so
+    // the Pipeline reads and marks it without going through the proxy.
+    // Names starting with an underscore hold the data's own state and are
+    // not writes.
+    this._state = { finished: false, lazy: undefined };
 
     // The pool the data came from, if any, and whether it is shared with
     // other requests, as data a cache holds is, so it never goes back.
@@ -196,7 +198,7 @@ class ElementData {
    */
   get contents () {
     const contents = this._contents;
-    if (!this._writes.finished || contents === null ||
+    if (!this._state.finished || contents === null ||
       typeof contents !== 'object') {
       return contents;
     }
@@ -219,10 +221,10 @@ class ElementData {
    * it.
    */
   reset () {
-    this._writes.finished = false;
+    this._state.finished = false;
     // A lazy property of the last request is dropped. A task of it that
     // has not finished keeps its own record, so it writes nothing here.
-    this._lazy = noLazyProperties;
+    this._state.lazy = undefined;
   }
 
   /**
@@ -296,7 +298,7 @@ class ElementData {
     let lazies = lazyProperties(this);
     if (lazies === undefined) {
       lazies = new Map();
-      this._lazy = lazies;
+      this._state.lazy = lazies;
     }
     const lazy = { state: 'pending', recorded: false };
     lazy.settled = Promise.resolve(task).then((value) => {
@@ -434,9 +436,5 @@ class ElementData {
     }
   }
 }
-
-// Every Element Data starts with no lazy property, so the default is kept
-// once here rather than on each.
-ElementData.prototype._lazy = noLazyProperties;
 
 module.exports = ElementData;

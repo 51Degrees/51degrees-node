@@ -62,11 +62,9 @@ const build = () => new core.PipelineBuilder()
   .build();
 
 // The promises process() makes for this Pipeline, with no lazy property,
-// as measured on Node.js 20, 22 and 24 when this test was written: 39, of
-// which this test's own wait makes one. Before the dictionaries stopped
-// wrapping their values and process() stopped waiting when nothing was
-// lazy, it was 79. A change that adds a step to every process() makes more.
-const PromisesPerProcess = 39;
+// as measured on Node.js 20, 22 and 24: 33, of which this test's own wait
+// makes one. A change that adds a step to every process() makes more.
+const PromisesPerProcess = 33;
 
 /**
  * Counts the Proxies made while work runs.
