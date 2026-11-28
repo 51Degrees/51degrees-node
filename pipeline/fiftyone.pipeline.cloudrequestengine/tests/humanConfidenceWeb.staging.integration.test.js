@@ -50,9 +50,8 @@ describe('Human Confidence example against the staging cloud service', () => {
           'Bespoke', 'HumanConfidence and HumanConfidenceSource'));
       }
       const response = live.fakeResponse();
-      await demoRoutes({
-        resource, license: '', api, fetch: live.namingTheProperties
-      }).passive(live.visitor, response);
+      await demoRoutes({ resource, license: '', api })
+        .passive(live.visitor, response);
 
       const answer = JSON.parse(response.body);
       expect(answer.error).toBeUndefined();

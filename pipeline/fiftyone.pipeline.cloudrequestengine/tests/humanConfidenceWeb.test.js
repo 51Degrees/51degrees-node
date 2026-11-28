@@ -19,11 +19,10 @@
  * in the end user terms of the application under an appropriate heading,
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
-
 // The Human Confidence web example. Its three server routes are driven with
-// a stand-in for the cloud service, so no network is touched. Each route
-// must pass on what it is given, and answer the page with what the cloud
-// said.
+// a stand-in for the cloud service, given to the example's Cloud Request
+// Engine, so no network is touched. The example only reads the two
+// Properties from its Pipeline, and never redeems a sealed result itself.
 //
 // The example is then started as its own process, as a person starts it,
 // to check the page it serves, the endpoint and port it reads, and what it
@@ -42,10 +41,11 @@ const { demoRoutes } = require('../examples/human-confidence-web/server');
 const API = 'https://cloud.example/api/v4/';
 const RESOURCE = 'AQTestResourceKey';
 const LICENSE = 'AQTestLicenseKey';
+const SEALED = 'sealedResultNotReal_0123456789';
 
 // What the cloud's accessibleproperties answers for a key, with the
 // properties named under one product.
-const accessible = (...names) => JSON.stringify({
+const accessible = (...names) => ({
   Products: {
     derived: {
       DataTier: 'CloudV5Pro',
@@ -54,28 +54,49 @@ const accessible = (...names) => JSON.stringify({
   }
 });
 
+// The evidence keys the stand-in lists. Only two are headers.
+const KEYS = [
+  'header.user-agent', 'header.Sec-CH-UA', 'query.user-agent',
+  'server.client-ip'
+];
+
 /**
- * A stand-in for fetch that records each call and answers from a function.
+ * A stand-in for the Cloud Request Engine's HTTP client that records each
+ * JSON call and answers it from a function.
  *
- * @param {function(string, object): object} answer given the URL and the
- * form fields sent, returns the status and body to answer with, or throws
- * @returns {Function} the stand-in, with the calls made in its calls member
+ * @param {object} options options
+ * @param {function(object): object} [options.json] given the JSON call's
+ * content, returns the answer, or throws to fail the call
+ * @param {object} [options.properties] the accessible properties answer
+ * @param {*} [options.failure] what every request rejects with
+ * @returns {object} the stand-in, with the calls made in its calls member
  */
-function cloudAnswering (answer) {
-  const stand = async (url, options = {}) => {
-    const fields = options.body === undefined
-      ? undefined
-      : Object.fromEntries(new URLSearchParams(String(options.body)));
-    stand.calls.push({ url, method: options.method || 'GET', fields });
-    const { status = 200, body = '' } = answer(url, fields);
-    return {
-      status,
-      ok: status >= 200 && status < 300,
-      text: async () => body
-    };
+function cloudAnswering ({
+  json = () => ({}),
+  properties = accessible('HumanConfidence', 'HumanConfidenceSource'),
+  failure
+} = {}) {
+  const client = {
+    calls: [],
+    get (url) {
+      if (failure !== undefined) return Promise.reject(failure);
+      return Promise.resolve(JSON.stringify(
+        url.includes('evidencekeys') ? KEYS : properties));
+    },
+    post (url, content) {
+      if (failure !== undefined) return Promise.reject(failure);
+      if (url.includes('accessibleproperties')) {
+        return Promise.resolve(JSON.stringify(properties));
+      }
+      client.calls.push({ url, content: Object.assign({}, content) });
+      try {
+        return Promise.resolve(JSON.stringify(json(content)));
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
   };
-  stand.calls = [];
-  return stand;
+  return client;
 }
 
 /**
@@ -99,90 +120,55 @@ function fakeResponse () {
   };
 }
 
-const routesWith = (fetch, license = LICENSE) =>
-  demoRoutes({ resource: RESOURCE, license, api: API, fetch });
+const routesWith = (requestClient, license = LICENSE) =>
+  demoRoutes({ resource: RESOURCE, license, api: API, requestClient });
 
-const unreachable = () => {
-  const failure = new TypeError('fetch failed');
-  failure.cause = new Error('ECONNREFUSED');
-  throw failure;
-};
+// A failure with no answer from the cloud service.
+const UNREACHABLE = { headers: {}, content: 'connect ECONNREFUSED' };
+
+const visitor = (remoteAddress = '203.0.113.7') => ({
+  headers: {
+    'user-agent': 'Mozilla/5.0 (test)',
+    'sec-ch-ua': '"Chromium";v="140"',
+    authorization: 'Bearer secret',
+    cookie: 'session=1',
+    'client-ip': '198.51.100.1'
+  },
+  socket: { remoteAddress }
+});
 
 describe('Human Confidence example /check route', () => {
   test('a key that carries HumanConfidence is reported as carrying it',
     async () => {
-      const cloud = cloudAnswering(() => ({
-        body: accessible('HumanConfidence', 'HumanConfidenceSource')
-      }));
       const response = fakeResponse();
-      await routesWith(cloud).check(response);
+      await routesWith(cloudAnswering()).check(response);
 
       expect(response.status).toBe(200);
       expect(response.headers['Content-Type']).toBe('application/json');
       expect(JSON.parse(response.body)).toEqual({ humanConfidence: true });
-      expect(cloud.calls).toEqual([{
-        url: API + 'accessibleproperties?resource=' + RESOURCE,
-        method: 'GET',
-        fields: undefined
-      }]);
     });
 
   test('a key that does not carry it is reported as not carrying it',
     async () => {
-      const cloud = cloudAnswering(() => ({ body: accessible('IsMobile') }));
       const response = fakeResponse();
-      await routesWith(cloud).check(response);
+      await routesWith(cloudAnswering({ properties: accessible('IsMobile') }))
+        .check(response);
       expect(JSON.parse(response.body)).toEqual({ humanConfidence: false });
     });
 
-  test('a cloud that refuses the key answers with the status', async () => {
-    const cloud = cloudAnswering(() => ({
-      status: 400, body: '{"errors":["bad key"]}'
-    }));
+  test('an unreachable cloud answers with the error', async () => {
     const response = fakeResponse();
-    await routesWith(cloud).check(response);
-    expect(JSON.parse(response.body))
-      .toEqual({ error: 'HTTP 400: {"errors":["bad key"]}' });
-  });
-
-  test('an unreachable cloud answers with the cause', async () => {
-    const response = fakeResponse();
-    await routesWith(cloudAnswering(unreachable)).check(response);
-    expect(JSON.parse(response.body)).toEqual({ error: 'ECONNREFUSED' });
+    await routesWith(cloudAnswering({ failure: UNREACHABLE })).check(response);
+    expect(JSON.parse(response.body).error).toContain('ECONNREFUSED');
   });
 });
 
 describe('Human Confidence example /passive route', () => {
-  // The cloud lists two headers, so only those two are passed on.
-  const passiveCloud = (result) => cloudAnswering((url) =>
-    url === API + 'evidencekeys'
-      ? {
-          body: JSON.stringify([
-            'header.user-agent', 'header.Sec-CH-UA', 'query.user-agent',
-            'server.client-ip'
-          ])
-        }
-      : result);
-
-  const visitor = (remoteAddress = '203.0.113.7') => ({
-    headers: {
-      'user-agent': 'Mozilla/5.0 (test)',
-      'sec-ch-ua': '"Chromium";v="140"',
-      authorization: 'Bearer secret',
-      cookie: 'session=1',
-      'client-ip': '198.51.100.1'
-    },
-    socket: { remoteAddress }
-  });
-
   test('passes on the headers the cloud lists and the address, and ' +
-    'answers with the source and level the cloud gave', async () => {
-    const cloud = passiveCloud({
-      body: JSON.stringify({
-        derived: {
-          humanconfidence: 'Medium',
-          humanconfidencesource: 'Passive'
-        }
+    'answers with the two Properties', async () => {
+    const cloud = cloudAnswering({
+      json: () => ({
+        derived: { humanconfidence: 'Medium', humanconfidencesource: 'Passive' }
       })
     });
     const response = fakeResponse();
@@ -191,44 +177,26 @@ describe('Human Confidence example /passive route', () => {
     expect(response.status).toBe(200);
     expect(JSON.parse(response.body))
       .toEqual({ source: 'Passive', humanConfidence: 'Medium' });
-    expect(cloud.calls[1]).toEqual({
-      url: API + RESOURCE + '.json',
-      method: 'POST',
-      fields: {
-        'user-agent': 'Mozilla/5.0 (test)',
-        'sec-ch-ua': '"Chromium";v="140"',
-        'client-ip': '203.0.113.7'
-      }
-    });
-  });
-
-  test('never sends the license key', async () => {
-    const cloud = passiveCloud({ body: '{"derived":{}}' });
-    await routesWith(cloud).passive(visitor(), fakeResponse());
-    expect(JSON.stringify(cloud.calls)).not.toContain(LICENSE);
-  });
-
-  test('asks the cloud for its evidence keys once', async () => {
-    const cloud = passiveCloud({ body: '{"derived":{}}' });
-    const routes = routesWith(cloud);
-    await routes.passive(visitor(), fakeResponse());
-    await routes.passive(visitor(), fakeResponse());
-    expect(cloud.calls.map((call) => call.url)).toEqual([
-      API + 'evidencekeys',
-      API + RESOURCE + '.json',
-      API + RESOURCE + '.json'
-    ]);
+    expect(cloud.calls).toHaveLength(1);
+    expect(cloud.calls[0].url).toBe(API + RESOURCE + '.json');
+    const content = cloud.calls[0].content;
+    expect(content['user-agent']).toBe('Mozilla/5.0 (test)');
+    expect(content['sec-ch-ua']).toBe('"Chromium";v="140"');
+    expect(content['client-ip']).toBe('203.0.113.7');
+    expect(JSON.stringify(content)).not.toContain('Bearer secret');
+    expect(JSON.stringify(content)).not.toContain('session=1');
+    expect(content.humanconfidence).toBeUndefined();
   });
 
   test('sends an IPv4 address mapped to IPv6 as IPv4', async () => {
-    const cloud = passiveCloud({ body: '{"derived":{}}' });
+    const cloud = cloudAnswering({ json: () => ({ derived: {} }) });
     await routesWith(cloud)
       .passive(visitor('::ffff:203.0.113.7'), fakeResponse());
-    expect(cloud.calls[1].fields['client-ip']).toBe('203.0.113.7');
+    expect(cloud.calls[0].content['client-ip']).toBe('203.0.113.7');
   });
 
   test('an answer without the properties gives neither', async () => {
-    const cloud = passiveCloud({ body: '{"device":{"ismobile":false}}' });
+    const cloud = cloudAnswering({ json: () => ({ derived: {} }) });
     const response = fakeResponse();
     await routesWith(cloud).passive(visitor(), response);
     expect(JSON.parse(response.body))
@@ -236,7 +204,7 @@ describe('Human Confidence example /passive route', () => {
   });
 
   // A key outside the Bespoke product is answered with no source, with or
-  // without a level. The route gives what the cloud gave and makes up
+  // without a level. The route gives what the Pipeline gave and makes up
   // neither.
   test.each([null, 'Medium'])(
     'an answer for a key outside Bespoke gives no source (level %p)',
@@ -251,91 +219,150 @@ describe('Human Confidence example /passive route', () => {
         derived.humanconfidencenullreason =
           'The key does not give this property a value.';
       }
-      const cloud = passiveCloud({ body: JSON.stringify({ derived }) });
+      const cloud = cloudAnswering({ json: () => ({ derived }) });
       const response = fakeResponse();
       await routesWith(cloud).passive(visitor(), response);
       expect(JSON.parse(response.body))
         .toEqual({ source: null, humanConfidence: level });
     });
 
-  test('a cloud failure answers with the status and the body', async () => {
-    const cloud = passiveCloud({ status: 403, body: 'Forbidden' });
+  test('a cloud failure answers with the error', async () => {
+    const cloud = cloudAnswering({
+      json: () => {
+        throw Object.assign(new Error('Forbidden'),
+          { statusCode: 403, headers: {}, content: 'Forbidden' });
+      }
+    });
     const response = fakeResponse();
     await routesWith(cloud).passive(visitor(), response);
-    expect(JSON.parse(response.body))
-      .toEqual({ error: 'HTTP 403: Forbidden' });
-  });
-
-  test('an unreachable cloud answers with the cause', async () => {
-    const response = fakeResponse();
-    await routesWith(cloudAnswering(unreachable))
-      .passive(visitor(), response);
-    expect(JSON.parse(response.body)).toEqual({ error: 'ECONNREFUSED' });
+    expect(JSON.parse(response.body).error).toContain('403');
   });
 });
 
-describe('Human Confidence example /redeem route', () => {
-  test('redeems the sealed value with the license key and relays the ' +
-    'answer as the cloud gave it', async () => {
-    const answer = '{"humanConfidence":"High","secondsSinceVerified":1}';
-    const cloud = cloudAnswering(() => ({ body: answer }));
+describe('Human Confidence example /active route', () => {
+  // The answer the cloud service gives a JSON call, High where the call
+  // holds the sealed result with the transaction the page was given.
+  const redeeming = (transaction) => (content) => {
+    const redeems = content.humanconfidence === SEALED &&
+      content.transaction === transaction();
+    return {
+      derived: {
+        humanconfidence: redeems ? 'High' : 'Medium',
+        humanconfidencesource: 'Active'
+      }
+    };
+  };
+
+  /**
+   * A new page from the routes, with the transaction its script address
+   * carries.
+   *
+   * @param {object} routes the routes
+   * @returns {{page: string, script: string, transaction: string}} the page
+   */
+  const newPage = (routes) => {
+    const page = routes.page();
+    return Object.assign(page,
+      { transaction: new URL(page.script).searchParams.get('transaction') });
+  };
+
+  test('gives each page an id and a script address with its transaction',
+    () => {
+      const routes = routesWith(cloudAnswering());
+      const first = newPage(routes);
+      const second = newPage(routes);
+      expect(first.script.startsWith(API + RESOURCE + '.js?transaction='))
+        .toBe(true);
+      expect(first.page).not.toBe(second.page);
+      expect(first.transaction).not.toBe(second.transaction);
+      expect(first.script).not.toContain(first.page);
+    });
+
+  test('gives the sealed result and the page id to its Pipeline and ' +
+    'answers with the two Properties the Pipeline gives', async () => {
+    const page = {};
+    const cloud = cloudAnswering({ json: redeeming(() => page.transaction) });
+    const routes = routesWith(cloud);
+    Object.assign(page, newPage(routes));
     const response = fakeResponse();
-    await routesWith(cloud).redeem('sealed+value/=', response);
+    await routes.active(visitor(), SEALED, page.page, response);
 
     expect(response.status).toBe(200);
-    expect(response.headers['Content-Type']).toBe('application/json');
-    expect(response.body).toBe(answer);
-    expect(cloud.calls).toEqual([{
-      url: API + 'hc/redeem',
-      method: 'POST',
-      fields: { value: 'sealed+value/=', license: LICENSE }
-    }]);
+    expect(JSON.parse(response.body))
+      .toEqual({ source: 'Active', humanConfidence: 'High' });
+    // Redeemed in the Pipeline's own JSON call, with the License Key and
+    // the page's transaction, and through nothing else.
+    expect(cloud.calls).toHaveLength(1);
+    expect(cloud.calls[0].url).toBe(API + RESOURCE + '.json');
+    expect(cloud.calls[0].content).toMatchObject({
+      humanconfidence: SEALED, transaction: page.transaction, license: LICENSE
+    });
+    expect(cloud.calls[0].content.humanconfidencepage).toBeUndefined();
   });
 
-  test('a second redeem of the same value relays replayed', async () => {
-    let redeemed = false;
-    const cloud = cloudAnswering(() => {
-      const body = redeemed
-        ? '{"result":"replayed"}'
-        : '{"humanConfidence":"High","secondsSinceVerified":1}';
-      redeemed = true;
-      return { body };
+  test('a sealed result sent again for the same page is Medium, and is ' +
+    'not sent to the cloud again', async () => {
+    const page = {};
+    const cloud = cloudAnswering({ json: redeeming(() => page.transaction) });
+    const routes = routesWith(cloud);
+    Object.assign(page, newPage(routes));
+    await routes.active(visitor(), SEALED, page.page, fakeResponse());
+    const second = fakeResponse();
+    await routes.active(visitor(), SEALED, page.page, second);
+    expect(JSON.parse(second.body))
+      .toEqual({ source: 'Active', humanConfidence: 'Medium' });
+    expect(cloud.calls).toHaveLength(2);
+    expect(cloud.calls[1].content.humanconfidence).toBeUndefined();
+  });
+
+  test('a page id the server did not give is Medium, and the sealed ' +
+    'result is not sent', async () => {
+    const cloud = cloudAnswering({ json: redeeming(() => undefined) });
+    const response = fakeResponse();
+    await routesWith(cloud).active(visitor(), SEALED, 'notAPage', response);
+    expect(JSON.parse(response.body))
+      .toEqual({ source: 'Active', humanConfidence: 'Medium' });
+    expect(cloud.calls[0].content.humanconfidence).toBeUndefined();
+  });
+
+  test('with no license key the sealed result is not redeemed, and the ' +
+    'level is Medium', async () => {
+    const cloud = cloudAnswering({
+      json: () => ({ derived: { humanconfidence: 'High' } })
+    });
+    const routes = routesWith(cloud, '');
+    const response = fakeResponse();
+    await routes.active(visitor(), SEALED, newPage(routes).page, response);
+    expect(JSON.parse(response.body))
+      .toEqual({ source: 'Active', humanConfidence: 'Medium' });
+    expect(cloud.calls[0].content.humanconfidence).toBeUndefined();
+  });
+
+  test('a cloud that fails gives Medium and Active', async () => {
+    const cloud = cloudAnswering({
+      json: () => {
+        throw Object.assign(new Error('down'),
+          { statusCode: 500, headers: {}, content: 'down' });
+      }
     });
     const routes = routesWith(cloud);
-    await routes.redeem('sealed', fakeResponse());
-    const second = fakeResponse();
-    await routes.redeem('sealed', second);
-    expect(JSON.parse(second.body)).toEqual({ result: 'replayed' });
-  });
-
-  test('sends no license field when no license key is set', async () => {
-    const cloud = cloudAnswering(() => ({ body: '{"result":"unreadable"}' }));
-    await routesWith(cloud, '').redeem('sealed', fakeResponse());
-    expect(cloud.calls[0].fields).toEqual({ value: 'sealed' });
-  });
-
-  test('relays a status other than 200 with its body', async () => {
-    const cloud = cloudAnswering(() => ({
-      status: 400, body: '{"errors":["value is required"]}'
-    }));
     const response = fakeResponse();
-    await routesWith(cloud).redeem('', response);
-    expect(response.status).toBe(400);
-    expect(response.body).toBe('{"errors":["value is required"]}');
+    await routes.active(visitor(), SEALED, newPage(routes).page, response);
+    expect(JSON.parse(response.body))
+      .toEqual({ source: 'Active', humanConfidence: 'Medium' });
   });
+});
 
-  test('a service that does not redeem is named', async () => {
-    const cloud = cloudAnswering(() => ({ status: 404, body: 'Not found' }));
-    const response = fakeResponse();
-    await routesWith(cloud).redeem('sealed', response);
-    expect(JSON.parse(response.body).error).toContain(API);
-  });
+describe('Human Confidence example source', () => {
+  const read = (name) => fs.readFileSync(path.join(FOLDER, name), 'utf8');
 
-  test('an unreachable cloud answers 502 with the cause', async () => {
-    const response = fakeResponse();
-    await routesWith(cloudAnswering(unreachable)).redeem('sealed', response);
-    expect(response.status).toBe(502);
-    expect(JSON.parse(response.body)).toEqual({ error: 'ECONNREFUSED' });
+  test('never calls a redeem endpoint or sends a value field', () => {
+    for (const name of ['server.js', 'page.html']) {
+      const text = read(name);
+      expect([name, /hc\/redeem/.test(text)]).toEqual([name, false]);
+      expect([name, /set\("value"|form\.get\('value'\)/.test(text)])
+        .toEqual([name, false]);
+    }
   });
 });
 
@@ -409,25 +436,27 @@ describe('Human Confidence example as a process', () => {
     }
   };
 
-  // The line of the page that carries the API base.
-  const apiLine = (base) => 'var API = "' + base + '";';
+  // The start of the line of the page that carries the script address.
+  const scriptLine = (base) =>
+    'var SCRIPT = "' + base + RESOURCE + '.js?transaction=';
 
   test('the endpoint variable set gives its endpoint', async () => {
     const page = await pageServedWith({
       _51DEGREES_CLOUD_ENDPOINT: 'https://cloud.example/api/v4'
     });
-    expect(page).toContain(apiLine('https://cloud.example/api/v4/'));
+    expect(page).toContain(scriptLine('https://cloud.example/api/v4/'));
   }, 30000);
 
   test('the endpoint variable not set gives the public cloud', async () => {
     const page = await pageServedWith({});
-    expect(page).toContain(apiLine('https://cloud.51degrees.com/api/v4/'));
+    expect(page).toContain(scriptLine('https://cloud.51degrees.com/api/v4/'));
   }, 30000);
 
   test('the page carries the resource key and never the license key',
     async () => {
       const page = await pageServedWith({});
-      expect(page).toContain('var RESOURCE = "' + RESOURCE + '";');
+      expect(page).toContain(RESOURCE);
+      expect(page).toMatch(/var PAGE = "[\w-]{16,}";/);
       expect(page).not.toContain(LICENSE);
     }, 30000);
 

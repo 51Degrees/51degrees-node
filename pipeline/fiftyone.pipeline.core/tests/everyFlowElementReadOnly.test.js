@@ -48,6 +48,8 @@ const READ_ONLY_TESTS = {
     'pipeline/fiftyone.pipeline.cloudrequestengine/tests/readOnly.test.js',
   CloudEngine:
     'pipeline/fiftyone.pipeline.cloudrequestengine/tests/readOnly.test.js',
+  DerivedCloudEngine:
+    'pipeline/fiftyone.pipeline.cloudrequestengine/tests/readOnly.test.js',
   TranslationEngine:
     'pipeline/fiftyone.pipeline.translation/tests/readOnly.test.js',
   DerivedPropertyElement:

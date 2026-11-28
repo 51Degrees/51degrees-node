@@ -143,6 +143,24 @@ test('the engine never sends a reserved name from evidence', async () => {
   expect(content['my-own-thing']).toBe('a value');
 });
 
+// The engine keeps the transaction a sealed Human Confidence result is
+// redeemed with, so human-confidence.md says Evidence whose key strips to
+// transaction or challenge, in any letter case, MUST be left out of the call.
+test('the engine never sends a transaction or a challenge from evidence',
+  async () => {
+    const content = await sendEvidence({
+      'query.transaction': 'evidence_transaction',
+      'header.Challenge': 'evidence_challenge',
+      'cookie.TRANSACTION': 'evidence_cookie',
+      'query.my-own-thing': 'a value'
+    });
+
+    expect(JSON.stringify(content)).not.toContain('evidence_');
+    expect(Object.keys(content).some(
+      (name) => /^(transaction|challenge)$/i.test(name))).toBe(false);
+    expect(content['my-own-thing']).toBe('a value');
+  });
+
 // A web integration adds the web request itself under server.http-request.
 // It is a view of the whole request and not a value to send, so the
 // specification at e972d136 says it MUST be left out.

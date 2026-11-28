@@ -1,3 +1,5 @@
+export let humanConfidencePageNeedsResourceKey: string;
+export let derivedKeyTaken: string;
 export let evidenceConflict: string;
 export let noCredential: string;
 export let licenseKeyNeedsProperties: string;

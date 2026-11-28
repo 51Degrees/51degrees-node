@@ -21,6 +21,18 @@
  * ********************************************************************* */
 
 module.exports = {
+  // Thrown by newHumanConfidencePage when the engine has no resource key.
+  humanConfidencePageNeedsResourceKey: 'CloudRequestEngine needs a ' +
+    'resourceKey to start a Human Confidence page, because the page loads ' +
+    'the 51Degrees client script with it. The license key stays on the ' +
+    'server and is never put in a page.',
+  // Thrown when a Pipeline holds the derived cloud engine and another
+  // element that gives Element Data under the same key.
+  derivedKeyTaken: 'DerivedCloudEngine gives its Element Data under ' +
+    "'derived', and the Pipeline already holds %s under that key. One " +
+    "Pipeline can hold one element for 'derived'. In a Pipeline that uses " +
+    'the cloud, the cloud service gives HumanConfidence, so leave the ' +
+    'DerivedPropertyElement out.',
   // warning message to be shown for conflicted evidences
   evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s",
   // Refused when the engine is built, each saying why the cloud service
