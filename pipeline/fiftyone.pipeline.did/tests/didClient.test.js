@@ -2065,11 +2065,14 @@ describe('DidClient redeem', () => {
     });
   });
 
-  test('a 200 that is not a JSON object raises DidClientError', async () => {
+  test('a 200 that is not a JSON object is unreadable, not an error', async () => {
     const { client } = redeemClient(200, 'not json');
-    await expect(client.redeem(fod, RESULT, TRANSACTION)).rejects.toMatchObject({
-      name: 'DidClientError', statusCode: 200, body: 'not json'
-    });
+    const result = await client.redeem(fod, RESULT, TRANSACTION);
+    expect(result.statusCode).toBe(200);
+    expect(result.raw).toBe('not json');
+    expect(result.status).toBe(RedeemStatus.UNREADABLE);
+    expect(result.context).toBe(ContextResult.UNREADABLE);
+    expect(result.signature).toBe(SignatureResult.UNKNOWN);
   });
 
   test('a transport failure propagates', async () => {
@@ -2479,11 +2482,32 @@ describe('ContextResult obsolete members', () => {
 });
 
 describe('RedeemResult.fromResponse', () => {
-  test('builds from a body and refuses a non-object', () => {
+  test('builds from a body', () => {
     const result = RedeemResult.fromResponse(200, '{"context":"verified"}');
     expect(result.context).toBe(ContextResult.VERIFIED);
-    expect(() => RedeemResult.fromResponse(200, '[]')).toThrow(DidClientError);
-    expect(() => RedeemResult.fromResponse(200, 'x')).toThrow(DidClientError);
+  });
+
+  // A 200 whose body is not a JSON object, or holds neither status nor
+  // context, gives Unreadable for the Redemption and Context outcomes and
+  // Unknown for the Signature outcome, and throws nothing.
+  test.each([
+    ['not JSON', 'x'],
+    ['empty', ''],
+    ['a JSON array', '[]'],
+    ['a JSON string', '"verified"'],
+    ['JSON null', 'null'],
+    ['an object with neither member', '{}'],
+    ['a signature with neither member', '{"signature":"verified"}'],
+    ['an invalid signature with neither member',
+      '{"signature":"invalid","humanConfidence":"High"}'],
+    ['both members null', '{"status":null,"context":null,"signature":"verified"}']
+  ])('a 200 that is %s is unreadable', (name, body) => {
+    const result = RedeemResult.fromResponse(200, body);
+    expect(result.status).toBe(RedeemStatus.UNREADABLE);
+    expect(result.context).toBe(ContextResult.UNREADABLE);
+    expect(result.signature).toBe(SignatureResult.UNKNOWN);
+    expect(result.raw).toBe(body);
+    expect(result.statusCode).toBe(200);
   });
 
   test('toJSON writes verifiedAt to the second', () => {

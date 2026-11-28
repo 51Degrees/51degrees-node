@@ -708,7 +708,10 @@ a 51Did is refused before the request with a `DidArgumentError` naming the
 status, a cloud that refuses the 51Did raises `DidArgumentError` (HTTP 400),
 a host that does not offer the creator context raises `DidNotSupportedError`
 (HTTP 404), and any other status raises `DidClientError` carrying
-`statusCode` and `body`. A transport failure raises the error `fetch` raised.
+`statusCode` and `body`. A 200 whose body is not a JSON object, or holds
+neither `status` nor `context`, raises nothing. Its `status` and `context`
+are `unreadable` and its `signature` is `unknown`. A transport failure raises
+the error `fetch` raised.
 
 ## Verifying in a browser
 

@@ -509,7 +509,10 @@ class RedeemResult {
    * 503 is handled. A 503 means first use could not be confirmed, whatever
    * its body holds, so it is `unconfirmed` in both `status` and `context`,
    * and nothing else is read from the body, which may be empty, not JSON,
-   * or claim another outcome. The body is kept in `raw`.
+   * or claim another outcome. A 200 whose body is not a JSON object, or
+   * holds neither `status` nor `context`, is `unreadable` in both, with
+   * the signature `unknown`, and nothing else is read from it. The body is
+   * kept in `raw`.
    * @param {number} statusCode the HTTP status
    * @param {string} raw the response body
    * @returns {RedeemResult} the typed result
@@ -524,10 +527,12 @@ class RedeemResult {
     const parsed = tryParseJson(raw);
     const isObject = parsed !== null && typeof parsed === 'object' &&
       !Array.isArray(parsed);
-    if (!isObject) {
-      throw new DidClientError(
-        `Redeem answered HTTP ${statusCode} with a body that is not a ` +
-        `JSON object: ${raw}`, statusCode, raw);
+    // A body that is not a JSON object, or holds neither status nor
+    // context, says nothing about the redemption. Nothing is read from it,
+    // so status and context are unreadable and signature is unknown. No
+    // error is raised, because the cloud did answer.
+    if (!isObject || (parsed.status == null && parsed.context == null)) {
+      return new RedeemResult(statusCode, raw, {});
     }
     return new RedeemResult(statusCode, raw, parsed);
   }
