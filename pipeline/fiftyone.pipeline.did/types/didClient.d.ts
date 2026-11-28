@@ -610,7 +610,7 @@ export const HumanConfidence: Readonly<{
  * REPLAYED, UNREADABLE and UNCONFIRMED) are obsolete. Read
  * {@link RedeemResult#status} and compare it to {@link RedeemStatus}
  * instead. They keep their values and go on working, because the cloud still
- * writes the same words to `context`, and each warns once when first used.
+ * writes the same words to `context`. Their docs mark them deprecated.
  */
 export const ContextResult: Readonly<{
     /** Every factor matched the browser and connection that created it. */
@@ -639,13 +639,13 @@ export const ContextResult: Readonly<{
      * @deprecated Use RedeemStatus.EXPIRED, compared to RedeemResult.status.
      * @returns {'expired'} the word
      */
-    readonly EXPIRED: "expired";
+    EXPIRED: "expired";
     /**
      * The sealed result had already been redeemed on that instance.
      * @deprecated Use RedeemStatus.REPLAYED, compared to RedeemResult.status.
      * @returns {'replayed'} the word
      */
-    readonly REPLAYED: "replayed";
+    REPLAYED: "replayed";
     /**
      * The sealed result could not be read. Every cryptographic failure, a
      * missing licence key included, comes back as this one word by design,
@@ -654,14 +654,14 @@ export const ContextResult: Readonly<{
      * RedeemResult.status.
      * @returns {'unreadable'} the word
      */
-    readonly UNREADABLE: "unreadable";
+    UNREADABLE: "unreadable";
     /**
      * First use could not be confirmed (503). The caller may retry.
      * @deprecated Use RedeemStatus.UNCONFIRMED, compared to
      * RedeemResult.status.
      * @returns {'unconfirmed'} the word
      */
-    readonly UNCONFIRMED: "unconfirmed";
+    UNCONFIRMED: "unconfirmed";
 }>;
 /**
  * The signature outcome of a redemption, as the cloud reports it in the

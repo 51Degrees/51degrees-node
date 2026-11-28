@@ -2509,7 +2509,8 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
 
 // The four reasons a sealed result was not redeemed are obsolete members of
 // ContextResult. They keep their values, because the cloud still writes them
-// to context, and each warns once.
+// to context. Their docs mark them deprecated, and reading them gives no
+// warning, so a test run that throws on a deprecation still passes.
 describe('ContextResult obsolete members', () => {
   const OBSOLETE = [
     ['EXPIRED', 'expired'],
@@ -2536,15 +2537,13 @@ describe('ContextResult obsolete members', () => {
     }
   }
 
-  test.each(OBSOLETE)('%s keeps its value and warns once', (name, word) => {
+  test.each(OBSOLETE)('%s keeps its value as a plain member and gives no warning', (name, word) => {
     freshPackage((did, spy) => {
-      expect(did.ContextResult[name]).toBe(word);
-      expect(did.ContextResult[name]).toBe(word);
+      const member = Object.getOwnPropertyDescriptor(did.ContextResult, name);
+      expect(member.value).toBe(word);
+      expect(member.get).toBeUndefined();
       expect(did.ContextResult[name]).toBe(did.RedeemStatus[name]);
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenCalledWith(
-        'ContextResult.' + name + ' is obsolete. Use RedeemStatus.' + name + '.',
-        expect.objectContaining({ type: 'DeprecationWarning' }));
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 

@@ -121,40 +121,6 @@ const KNOWN_HUMAN_CONFIDENCE = new Map(Object.values(HumanConfidence)
   .map((value) => [value.toLowerCase(), value]));
 
 /**
- * The obsolete names that have already warned in this process, so each
- * warns once.
- *
- * @type {Set<string>}
- */
-const warnedObsolete = new Set();
-
-/**
- * Warns, once per process, that an obsolete name was used. On Node the
- * warning is a `DeprecationWarning`, so `--no-deprecation` silences it and
- * `--throw-deprecation` makes it throw. Elsewhere it goes to the console.
- *
- * @param {string} name the obsolete name
- * @param {string} replacement the name to use instead
- */
-function warnObsolete (name, replacement) {
-  if (warnedObsolete.has(name)) {
-    return;
-  }
-  warnedObsolete.add(name);
-  const message = name + ' is obsolete. Use ' + replacement + '.';
-  if (typeof process !== 'undefined' && process &&
-    typeof process.emitWarning === 'function') {
-    process.emitWarning(message, {
-      type: 'DeprecationWarning',
-      code: 'FIFTYONE_DID_OBSOLETE'
-    });
-  } else if (typeof console !== 'undefined' &&
-    typeof console.warn === 'function') {
-    console.warn('DeprecationWarning: ' + message);
-  }
-}
-
-/**
  * The creator context outcome of a redemption, as the cloud reports it in
  * the `context` field. The values are the cloud's own strings, so a result
  * can be compared to a constant or printed as received.
@@ -163,7 +129,7 @@ function warnObsolete (name, replacement) {
  * REPLAYED, UNREADABLE and UNCONFIRMED) are obsolete. Read
  * {@link RedeemResult#status} and compare it to {@link RedeemStatus}
  * instead. They keep their values and go on working, because the cloud still
- * writes the same words to `context`, and each warns once when first used.
+ * writes the same words to `context`. Their docs mark them deprecated.
  */
 const ContextResult = Object.freeze({
   /** Every factor matched the browser and connection that created it. */
@@ -191,22 +157,14 @@ const ContextResult = Object.freeze({
    * The sealed result was redeemed outside the freshness window.
    *
    * @deprecated Use RedeemStatus.EXPIRED, compared to RedeemResult.status.
-   * @returns {'expired'} the word
    */
-  get EXPIRED () {
-    warnObsolete('ContextResult.EXPIRED', 'RedeemStatus.EXPIRED');
-    return 'expired';
-  },
+  EXPIRED: 'expired',
   /**
    * The sealed result had already been redeemed on that instance.
    *
    * @deprecated Use RedeemStatus.REPLAYED, compared to RedeemResult.status.
-   * @returns {'replayed'} the word
    */
-  get REPLAYED () {
-    warnObsolete('ContextResult.REPLAYED', 'RedeemStatus.REPLAYED');
-    return 'replayed';
-  },
+  REPLAYED: 'replayed',
   /**
    * The sealed result could not be read. Every cryptographic failure, a
    * missing licence key included, comes back as this one word by design,
@@ -214,23 +172,15 @@ const ContextResult = Object.freeze({
    *
    * @deprecated Use RedeemStatus.UNREADABLE, compared to
    * RedeemResult.status.
-   * @returns {'unreadable'} the word
    */
-  get UNREADABLE () {
-    warnObsolete('ContextResult.UNREADABLE', 'RedeemStatus.UNREADABLE');
-    return 'unreadable';
-  },
+  UNREADABLE: 'unreadable',
   /**
    * First use could not be confirmed (503). The caller may retry.
    *
    * @deprecated Use RedeemStatus.UNCONFIRMED, compared to
    * RedeemResult.status.
-   * @returns {'unconfirmed'} the word
    */
-  get UNCONFIRMED () {
-    warnObsolete('ContextResult.UNCONFIRMED', 'RedeemStatus.UNCONFIRMED');
-    return 'unconfirmed';
-  }
+  UNCONFIRMED: 'unconfirmed'
 });
 
 /**

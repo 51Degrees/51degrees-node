@@ -672,9 +672,9 @@ itself, and any other word, `notcheckable` included, is `unreadable`. A
 status this package does not know is `unreadable`. The cloud still writes the
 reason to `context` too, so `ContextResult.EXPIRED`, `REPLAYED`, `UNREADABLE`
 and `UNCONFIRMED` keep their values, but they are obsolete in favor of
-`RedeemStatus`, and each warns once with a `DeprecationWarning` when first
-used. `toJSON` leaves out `status` and the Human Confidence fields, so the
-Value reaches a page only where the server sends it.
+`RedeemStatus`, and their docs mark them deprecated. `toJSON` leaves out
+`status` and the Human Confidence fields, so the Value reaches a page only
+where the server sends it.
 
 An HTTP 503 is `unconfirmed` whatever its body says, an empty body or one
 that is not JSON included, so `status`, `context` and `contextRaw` are all
