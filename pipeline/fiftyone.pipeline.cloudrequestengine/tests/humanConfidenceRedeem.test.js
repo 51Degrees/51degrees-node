@@ -26,7 +26,7 @@
 
 const util = require('util');
 const { PipelineBuilder, FlowElement } = require('fiftyone.pipeline.core');
-const { LruCache } = require('fiftyone.pipeline.engines');
+const { LruCache, MissingPropertyService } = require('fiftyone.pipeline.engines');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const DerivedCloudEngine = require('../derivedCloudEngine');
 const errorMessages = require('../errorMessages');
@@ -844,5 +844,92 @@ describe('DerivedCloudEngine', () => {
       expect(() => new PipelineBuilder({ addJavaScriptBuilder: false })
         .add(engine).add(other).add(new DerivedCloudEngine()).build())
         .toThrow(/'derived'/);
+    });
+});
+
+describe('HumanConfidence the cloud engine copies from a response', () => {
+  // Text the cloud service could give that is not a Value, such as a new
+  // sealed result.
+  const FRESH_SEALED = 'freshSealedNotReal_fedcba9876543210-xyz';
+
+  /**
+   * The reason a read gives for a Property the response leaves out.
+   *
+   * @param {object} flowData the processed Flow Data
+   * @param {string} key the Property's key
+   * @returns {string} the reason
+   */
+  const missingReason = (flowData, key) => {
+    try {
+      new MissingPropertyService().check(key, flowData.pipeline.flowElements.derived);
+    } catch (error) {
+      return error.message;
+    }
+    return undefined;
+  };
+
+  test.each([
+    ['a new sealed result', FRESH_SEALED],
+    ['a word in the wrong case', 'high'],
+    ['Unknown', 'Unknown'],
+    ['empty', ''],
+    ['not a string', 5]
+  ])('on a request that carries a sealed result, gives Medium and Active ' +
+    'where the response the engine reads holds %s', async (name, value) => {
+    const { engine, pipeline } = build();
+    // The response as the cloud engine reads it, whatever the Cloud Request
+    // Engine did with it.
+    jest.spyOn(engine, 'getData').mockImplementation(() => Promise.resolve(
+      JSON.stringify({
+        derived: { humanconfidence: value, humanconfidencesource: 'Passive' }
+      })));
+    const { flowData, rejection } = await run(pipeline,
+      sealedRequest(engine).evidence);
+
+    expect(rejection).toBeUndefined();
+    expect(read(flowData)).toEqual(MEDIUM_ACTIVE);
+  });
+
+  test.each([
+    ['a sealed result', FRESH_SEALED],
+    ['a word in the wrong case', 'high'],
+    ['empty', ''],
+    ['not a string', 5]
+  ])('on a request with no sealed result, gives no value and the missing ' +
+    'property reason where the response holds %s', async (name, value) => {
+    const cloud = new Cloud({
+      answer: {
+        derived: { humanconfidence: value, humanconfidencesource: 'Active' }
+      }
+    });
+    const { pipeline } = build({ cloud });
+    const { flowData, rejection } = await run(pipeline,
+      { 'header.user-agent': 'Mozilla/5.0 (test)' });
+
+    expect(rejection).toBeUndefined();
+    const property = flowData.derived.humanconfidence;
+    expect(property.hasValue).toBe(false);
+    expect(property.noValueMessage).toBe(
+      missingReason(flowData, 'humanconfidence'));
+    expect(property.noValueMessage).toMatch(
+      /^Property 'humanconfidence' not found in data for element 'derived'\./);
+    // HumanConfidenceSource is given as the response gives it.
+    expect(flowData.derived.humanconfidencesource.value).toBe('Active');
+  });
+
+  test.each(['High', 'Medium', 'Low', 'Unknown'])(
+    'on a request with no sealed result, gives %s as the response gives it',
+    async (value) => {
+      const cloud = new Cloud({
+        answer: {
+          derived: { humanconfidence: value, humanconfidencesource: 'Passive' }
+        }
+      });
+      const { pipeline } = build({ cloud });
+      const { flowData } = await run(pipeline,
+        { 'header.user-agent': 'Mozilla/5.0 (test)' });
+
+      expect(read(flowData)).toEqual(
+        { HumanConfidence: value, HumanConfidenceSource: 'Passive' });
     });
 });

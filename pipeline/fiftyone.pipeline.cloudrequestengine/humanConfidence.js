@@ -48,6 +48,10 @@ const requestedProperty = 'derived.HumanConfidence';
 // The Values a sealed result redeems to.
 const values = ['High', 'Medium', 'Low'];
 
+// The Values HumanConfidence has on a request with no sealed result, as the
+// Property's metadata gives them.
+const passiveValues = values.concat(['Unknown']);
+
 // The Value and source for a sealed result that was not redeemed.
 const notRedeemedValue = 'Medium';
 const activeSource = 'Active';
@@ -251,6 +255,39 @@ function setValues (answer, redeemed) {
   answer[derivedKey] = derived;
 }
 
+/**
+ * Keeps the HumanConfidence a cloud engine copies from a response to the
+ * Property's Values. On a request that carries a sealed result, anything
+ * other than exactly High, Medium or Low gives Medium, with
+ * HumanConfidenceSource Active. On any other request, a value that is not
+ * one of the Property's Values gives no value and the reason a read gives
+ * for a Property the response leaves out, and one with a null reason is
+ * left as it is.
+ *
+ * @param {object} contents the AspectPropertyValues by key, which are
+ * changed
+ * @param {boolean} sealed whether the request carries a sealed result
+ * @param {Function} AspectPropertyValue the class of the values
+ * @param {Function} missingReason gives the reason for a key
+ */
+function keepValues (contents, sealed, AspectPropertyValue, missingReason) {
+  const property = contents[valueProperty];
+  if (sealed) {
+    if (property === undefined || property.hasValue === false ||
+      values.includes(property.value) === false) {
+      contents[valueProperty] = new AspectPropertyValue(
+        null, notRedeemedValue);
+      contents[sourceProperty] = new AspectPropertyValue(null, activeSource);
+    }
+    return;
+  }
+  if (property !== undefined && property.hasValue &&
+    passiveValues.includes(property.value) === false) {
+    contents[valueProperty] = new AspectPropertyValue(
+      missingReason(valueProperty));
+  }
+}
+
 module.exports = {
   sealedEvidence,
   pageEvidence,
@@ -265,5 +302,6 @@ module.exports = {
   pageOf,
   Transactions,
   hide,
-  setValues
+  setValues,
+  keepValues
 };

@@ -184,6 +184,12 @@ class CloudEngine extends Engine {
         });
       }
 
+      if (engine.dataKey === humanConfidence.derivedKey) {
+        humanConfidence.keepValues(result,
+          humanConfidence.sealedResult(flowData.evidence) !== undefined,
+          AspectPropertyValue, (key) => missingReason(engine, key));
+      }
+
       const data = new AspectDataDictionary(
         {
           flowElement: engine,
@@ -239,6 +245,23 @@ class CloudEngine extends Engine {
  */
 function hasData (flowData, dataKey) {
   return flowData.tryGet(dataKey) !== undefined;
+}
+
+/**
+ * The reason a read gives for a Property the response leaves out.
+ *
+ * @param {CloudEngine} engine the engine
+ * @param {string} key the Property's key
+ * @returns {string|undefined} the reason
+ */
+function missingReason (engine, key) {
+  let reason;
+  try {
+    new engines.MissingPropertyService().check(key, engine);
+  } catch (error) {
+    reason = error.message;
+  }
+  return reason;
 }
 
 /**
