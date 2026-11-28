@@ -342,6 +342,53 @@ describe('a sealed Human Confidence result', () => {
   });
 });
 
+// Only a query.humanconfidence that is not empty is a sealed result. A value
+// anywhere else is neither sent nor redeemed, and the request's own
+// transaction and challenge stay out of the call.
+describe('a sealed result under another key', () => {
+  test.each([
+    ['a header', { 'header.humanconfidence': SEALED }],
+    ['a cookie', { 'cookie.HumanConfidence': SEALED }],
+    ['server.', { 'server.humanconfidence': SEALED }],
+    ['no prefix', { humanconfidence: SEALED }],
+    ['a header, beside an empty query value', {
+      'query.humanconfidence': '',
+      'header.humanconfidence': SEALED
+    }]
+  ])('in %s is not sent, redeemed or cached', async (name, more) => {
+    // The stand-in redeems whatever it is sent as humanconfidence.
+    const cloud = new Cloud({
+      answer: (content) => content.humanconfidence === undefined
+        ? { derived: { humanconfidence: 'Low', humanconfidencesource: 'Passive' } }
+        : REDEEMED
+    });
+    const { engine, pipeline } = build({
+      cloud, cache: new LruCache({ size: 10 })
+    });
+    const { page } = engine.newHumanConfidencePage();
+    const plain = { 'header.user-agent': 'Mozilla/5.0 (test)' };
+    const { flowData } = await run(pipeline, Object.assign({
+      'query.humanconfidencepage': page,
+      'query.transaction': 'fromThePage',
+      'header.transaction': 'fromAHeader',
+      'cookie.challenge': 'fromACookie'
+    }, plain, more));
+
+    expect(cloud.posts).toHaveLength(1);
+    const sent = Object.keys(cloud.posts[0].content).filter((key) =>
+      /^(humanconfidence|transaction|challenge)$/i.test(key));
+    expect(sent).toEqual([]);
+    expect(read(flowData)).toEqual(
+      { HumanConfidence: 'Low', HumanConfidenceSource: 'Passive' });
+
+    // The answer cached for the same Evidence is the one with no Value.
+    const { flowData: after } = await run(pipeline, plain);
+    expect(cloud.posts).toHaveLength(1);
+    expect(read(after)).toEqual(
+      { HumanConfidence: 'Low', HumanConfidenceSource: 'Passive' });
+  });
+});
+
 // Each case in "Where the sealed result is not redeemed" gives Medium and
 // Active, and the read adds no error of its own.
 describe('a sealed Human Confidence result not redeemed', () => {
@@ -401,6 +448,34 @@ describe('a sealed Human Confidence result not redeemed', () => {
     expect(cloud.posts[1].content.transaction).toBeUndefined();
   });
 
+  test('where the page\'s transaction has been kept longer than ten minutes',
+    async () => {
+      const { engine, pipeline, cloud } = build();
+      await engine.ready();
+      const start = Date.now();
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(start);
+      try {
+        const { evidence } = sealedRequest(engine);
+        clock.mockReturnValue(start + 10 * 60 * 1000 + 1);
+        const { flowData } = await run(pipeline, evidence);
+
+        expectMediumActive(flowData);
+        expect(cloud.posts[0].content.humanconfidence).toBeUndefined();
+        expect(cloud.posts[0].content.transaction).toBeUndefined();
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+  test('where the Pipeline has no Cloud Request Engine, as the derived ' +
+    'cloud engine is refused there', () => {
+    // The derived property element's own tests cover a Pipeline that gives
+    // HumanConfidence with no Cloud Request Engine.
+    expect(() => new PipelineBuilder({ addJavaScriptBuilder: false })
+      .add(new DerivedCloudEngine()).build())
+      .toThrow(/No CloudRequestEngine/);
+  });
+
   test('where the engine made no request, as discovery failed', async () => {
     const cloud = new Cloud({ getFailure: new Error('unreachable') });
     const { engine, pipeline } = build({ cloud });
@@ -447,7 +522,11 @@ describe('a sealed Human Confidence result not redeemed', () => {
     }],
     ['humanconfidence is Unknown', { derived: { humanconfidence: 'Unknown' } }],
     ['humanconfidence is another word', { derived: { humanconfidence: 'high' } }],
-    ['the response is not JSON', 'not json']
+    ['the response is not JSON', 'not json'],
+    ['the response is JSON null', 'null'],
+    ['the response is a JSON list', '[{"derived":{"humanconfidence":"High"}}]'],
+    ['the response is a JSON number', '5'],
+    ['the response is a JSON string', '"High"']
   ])('where %s', async (name, answer) => {
     const cloud = new Cloud({ answer });
     const { engine, pipeline } = build({ cloud });
@@ -469,17 +548,30 @@ describe('the sealed result, the transaction and the License Key', () => {
     String(value);
 
   /**
-   * Checks no part of the three values is in the text, the last 4
-   * characters of the License Key included.
+   * Every run of four characters of a value, each of which counts as a
+   * part of it.
+   *
+   * @param {string} value the value
+   * @returns {Array<string>} the parts
+   */
+  const partsOf = (value) => Array.from({ length: value.length - 3 },
+    (unused, i) => value.slice(i, i + 4));
+
+  /**
+   * Checks the text holds neither the sealed result nor the transaction,
+   * and no part of the License Key, its last four characters included.
    *
    * @param {string} text the text
-   * @param {string} transaction the transaction
+   * @param {string} [transaction] the transaction
    */
   const expectNone = (text, transaction) => {
-    for (const secret of [SEALED, transaction, LICENSE, LICENSE.slice(-8),
-      encodeURIComponent(SEALED)]) {
-      expect([secret, text.includes(secret)]).toEqual([secret, false]);
+    for (const secret of [SEALED, transaction, encodeURIComponent(SEALED)]) {
+      if (secret !== undefined) {
+        expect([secret, text.includes(secret)]).toEqual([secret, false]);
+      }
     }
+    expect(partsOf(LICENSE).filter((part) => text.includes(part)))
+      .toEqual([]);
   };
 
   test.each([
@@ -535,9 +627,84 @@ describe('the sealed result, the transaction and the License Key', () => {
     });
     await run(pipeline, evidence);
 
-    expect(logs.some((log) => /conflicts with/.test(String(log)))).toBe(true);
     expectNone(shown(logs), transaction);
   });
+
+  test('are in no evidence conflict warning when the evidence holds them ' +
+    'under other names', async () => {
+    const { engine, pipeline, logs } = build();
+    const { page, script } = engine.newHumanConfidencePage();
+    const transaction = new URL(script).searchParams.get('transaction');
+    // The page sends each value back under a name of its own, as a header
+    // and as a cookie, so each name conflicts with itself.
+    const { flowData } = await run(pipeline, {
+      'header.user-agent': 'Mozilla/5.0 (test)',
+      'query.humanconfidence': SEALED,
+      'query.humanconfidencepage': page,
+      'header.t': transaction,
+      'cookie.t': transaction,
+      'header.copy': SEALED,
+      'cookie.copy': SEALED,
+      'header.k': LICENSE,
+      'cookie.k': LICENSE
+    });
+
+    expect(read(flowData).HumanConfidence).toBe('High');
+    const warnings = logs.filter((log) => /conflicts with/.test(String(log)));
+    expect(warnings).toHaveLength(3);
+    expectNone(shown(logs), transaction);
+  });
+});
+
+describe('the License Key on a request with no sealed result', () => {
+  const shown = (value) =>
+    util.inspect(value, { depth: null, showHidden: true }) + '\n' +
+    String(value);
+  const parts = Array.from({ length: LICENSE.length - 3 },
+    (unused, i) => LICENSE.slice(i, i + 4));
+  const partsIn = (text) => parts.filter((part) => text.includes(part));
+
+  test.each([
+    ['a failed call', (echo) => ({
+      postFailure: { statusCode: 403, headers: {}, content: echo }
+    })],
+    ['an errors list', (echo) => ({
+      answer: { errors: [echo] }
+    })],
+    ['a warning', (echo) => ({
+      answer: { warnings: [echo], derived: REDEEMED.derived }
+    })]
+  ])('is in no part in any message when the cloud echoes it in %s',
+    async (name, answerOf) => {
+      const echo = `license=${LICENSE} key ${LICENSE}.`;
+      const { pipeline, logs } = build({ cloud: new Cloud(answerOf(echo)) });
+      const { flowData, rejection } = await run(pipeline,
+        { 'header.user-agent': 'Mozilla/5.0 (test)' });
+
+      expect(logs.length + Object.keys(flowData.errors).length)
+        .toBeGreaterThan(0);
+      expect(partsIn(shown(logs))).toEqual([]);
+      expect(partsIn(shown(flowData.errors))).toEqual([]);
+      expect(partsIn(shown(rejection))).toEqual([]);
+    });
+
+  test('is in no part in any message where the setting holds two keys',
+    async () => {
+      const other = 'SECONDKEYNOTREAL9876';
+      const { pipeline, logs } = build({
+        licenseKey: LICENSE + '|' + other,
+        cloud: new Cloud({
+          answer: { errors: [`Not valid: ${LICENSE}, and ${other}.`] }
+        })
+      });
+      const { flowData } = await run(pipeline,
+        { 'header.user-agent': 'Mozilla/5.0 (test)' });
+
+      const text = shown(logs) + shown(flowData.errors);
+      expect(text).toContain('[hidden]');
+      expect(partsIn(text)).toEqual([]);
+      expect(text).not.toContain(other.slice(-4));
+    });
 });
 
 describe('HumanConfidence with a credential that does not carry it', () => {

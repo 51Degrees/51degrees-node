@@ -163,14 +163,15 @@ describe('a cloud answer that the request engine refuses', () => {
       expect(shown(errors)).toContain('getaddrinfo ENOTFOUND cloud.example');
     });
 
-  test('an error naming the license key has the key masked', async () => {
-    const { rejected, errors } = await answerWith({
-      body: JSON.stringify({ errors: [`Key ${LICENSE_KEY} is not valid.`] })
-    }, LICENSE_KEY);
+  test('an error naming the license key has the key left out whole',
+    async () => {
+      const { rejected, errors } = await answerWith({
+        body: JSON.stringify({ errors: [`Key ${LICENSE_KEY} is not valid.`] })
+      }, LICENSE_KEY);
 
-    expect(rejected).toBe(true);
-    expect(shown(errors)).not.toContain(LICENSE_KEY);
-  });
+      expect(rejected).toBe(true);
+      expect(shown(errors)).not.toContain(LICENSE_KEY.slice(-4));
+    });
 
   test('one with an empty errors array and data is used', async () => {
     const { rejected, errors } = await answerWith({

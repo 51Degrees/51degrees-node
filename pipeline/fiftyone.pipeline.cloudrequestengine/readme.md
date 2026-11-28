@@ -110,19 +110,25 @@ requests to the instance that started it.
 Where a sealed result is not redeemed, `humanconfidence` is `Medium` and
 `humanconfidencesource` is `Active`. That happens when the engine has no
 License Key, when the request names no page the engine started, when the
-page's transaction was used before, when the call fails or does not
-complete in time, and when the response gives no `High`, `Medium` or
-`Low`. In the first three cases the engine does not send the sealed result. A failed call is recorded once
+page's transaction was used before or has expired, when the call fails,
+and when the response gives no `High`, `Medium` or `Low`. In the first
+three cases the engine does not send the sealed result. The engine sends
+the sealed result only from `query.humanconfidence`, never from a header,
+a cookie or any other Evidence. A failed call is recorded once
 as the `CloudRequestEngine`'s error, and reading either Property never
 throws for it.
 
 A request that carries a sealed result is never served from or stored in
 the engine's cache. No log entry or error message holds the sealed result,
-the transaction or the License Key.
+the transaction or any part of the License Key. The JavaScript Builder
+leaves `query.humanconfidence` and `query.humanconfidencepage` out of its
+script.
 
 The `DerivedCloudEngine` gives its Element Data under `derived`, as the
 `DerivedPropertyElement` does, so a Pipeline holds one or the other. In a
-Pipeline that uses the cloud, the cloud service gives HumanConfidence.
+Pipeline that uses the cloud, the cloud service gives HumanConfidence. The
+`DerivedPropertyElement` can't redeem a sealed result, so on a request that
+carries one it gives `Medium` and `Active`.
 
 Naming HumanConfidence delays the client script's complete handlers by the
 time the browser tests take and one more request. A page can read the

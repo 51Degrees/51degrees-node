@@ -31,7 +31,11 @@ const CloudRequestEngine = require('../cloudRequestEngine');
 const MockRequestClient = require('./classes/mockRequestClient');
 
 const KEY = 'TESTKEYNOTREALABCDEFGH1234';
-const MASKED = '**********************1234';
+// The key is left out whole, so not even its last four characters are kept.
+const HIDDEN = '[hidden]';
+// Every run of four characters of the key, each of which counts as a part.
+const PARTS = Array.from({ length: KEY.length - 3 },
+  (unused, i) => KEY.slice(i, i + 4));
 const RESOURCE = 'AQTestResourceKey';
 
 // The answers the cloud service gives for a refused license key, and one
@@ -86,7 +90,7 @@ function build (answer) {
 }
 
 describe('a license key the cloud names in its answer', () => {
-  test.each(ANSWERS)('is masked when processing fails, for %s',
+  test.each(ANSWERS)('is hidden whole when processing fails, for %s',
     async (name, answer) => {
       const { pipeline, logs } = build(answer);
       const flowData = pipeline.createFlowData();
@@ -102,13 +106,14 @@ describe('a license key the cloud names in its answer', () => {
         ['the rejected error', rejection]
       ]) {
         const text = shown(value);
-        expect([what, text.includes(KEY)]).toEqual([what, false]);
-        expect([what, text.includes(MASKED)]).toEqual([what, true]);
+        expect([what, PARTS.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
       }
-      expect(flowData.errors.cloud[0].errorMessage).toContain(MASKED);
+      expect(flowData.errors.cloud[0].errorMessage).toContain(HIDDEN);
     });
 
-  test.each(ANSWERS)('is masked when the engine cannot get ready, for %s',
+  test.each(ANSWERS)('is hidden whole when the engine is not ready, for %s',
     async (name, answer) => {
       const { engine, logs } = build(answer);
       const rejection = await engine.ready().then(
@@ -122,8 +127,9 @@ describe('a license key the cloud names in its answer', () => {
         ['the engine errors', engine.errors]
       ]) {
         const text = shown(value);
-        expect([what, text.includes(KEY)]).toEqual([what, false]);
-        expect([what, text.includes(MASKED)]).toEqual([what, true]);
+        expect([what, PARTS.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
       }
     });
 });

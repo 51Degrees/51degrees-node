@@ -53,7 +53,8 @@ afterEach(() => {
 
 // The cloud service refuses a license key with an error that names it.
 const refusal = 'Invalid license key(s) supplied: \'' + licenseKey + '\'';
-const maskedLicenseKey = '****************7890';
+// The key is left out whole, so not even its last four characters are kept.
+const hiddenLicenseKey = '[hidden]';
 
 // Records every request and answers each endpoint with canned data, the
 // data request with dataAnswer where one is given. A request whose URL
@@ -318,8 +319,8 @@ describe('the license key stays out of URLs and logs', () => {
           expect(logged.length + thrown.length).toBeGreaterThan(0);
           const text = util.inspect([logged, thrown], { depth: 10 });
           expect(text).toContain('Invalid license key(s) supplied: \'' +
-            maskedLicenseKey + '\'');
-          expect(text).not.toContain(licenseKey);
+            hiddenLicenseKey + '\'');
+          expect(text).not.toContain(licenseKey.slice(-4));
         }
       }
     });

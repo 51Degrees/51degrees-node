@@ -142,15 +142,28 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getErrorMessages(responseBody: string, url: string): any[];
     /**
+     * Text for a log entry or an error message, with the License Key left out
+     * whole, and each key in it where the setting holds several. No part of
+     * the key is kept, as human-confidence.md asks for every message the
+     * engine builds from a request or a response:
+     * https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#what-a-package-never-exposes
+     *
+     * @param {*} text the text
+     * @param {Array<string|undefined>} [withheld] other values to leave out,
+     * such as a sealed Human Confidence result and its transaction
+     * @returns {string} the text without them
+     */
+    hideSecrets(text: any, withheld?: Array<string | undefined>): string;
+    /**
      * Logs each entry of the warnings array of a cloud response as a warning,
-     * with the license key masked as it is in the errors, because the cloud's
-     * text can name the key it was sent.
+     * with the License Key left out, because the cloud's text can name the
+     * key it was sent.
      *
      * @param {*} answer the response, parsed from JSON
      * @param {Array<object>} pipelines the pipelines to log to
      * @param {Array<string|undefined>} [withheld] for a request that carries a
-     * sealed Human Confidence result, the values the warnings must not hold.
-     * The License Key is then left out whole.
+     * sealed Human Confidence result, the other values the warnings must not
+     * hold
      */
     logWarnings(answer: any, pipelines: Array<object>, withheld?: Array<string | undefined>): void;
     /**
@@ -163,7 +176,7 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     getErrorsFromResponse(response: import("http").ServerResponse, url: string): Array<CloudRequestError>;
     /**
      * The errors an answer with a success status carries, being one for each
-     * entry of its errors array, with the license key masked, or one saying
+     * entry of its errors array, with the license key left out, or one saying
      * the answer is empty. An answer that is not JSON is left to its reader.
      *
      * @param {string} body the answer

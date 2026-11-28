@@ -63,17 +63,6 @@ declare class CloudEngine extends CloudEngine_base {
      * @returns {Promise<void> | void} Completion promise
      */
     processInternal(flowData: FlowData): Promise<void> | void;
-    /**
-     * Processes, and for the derived element on a request that carries a
-     * sealed Human Confidence result, gives HumanConfidence Medium and
-     * HumanConfidenceSource Active wherever the response gives no Value. A
-     * failed request is then recorded once, as the Cloud Request Engine's
-     * error, and this engine adds no error of its own.
-     *
-     * @param {FlowData} flowData FlowData to process
-     * @returns {Promise<void>} Completion promise
-     */
-    process(flowData: FlowData): Promise<void>;
 }
 declare namespace CloudEngine {
     export { Pipeline, FlowElement, FlowData, CloudRequestEngine };

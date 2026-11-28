@@ -53,7 +53,7 @@ const notRedeemedValue = 'Medium';
 const activeSource = 'Active';
 
 // What a sealed result, a transaction or a License Key is replaced with in
-// a log entry or an error message.
+// a log entry or an error message. No part of any of them is kept.
 const hidden = '[hidden]';
 
 // How long a page's transaction is kept, and how many are kept at most.
@@ -187,8 +187,8 @@ class Transactions {
 }
 
 /**
- * Replaces each secret in a text, as written and URL encoded, so a log entry
- * or an error message holds none of it.
+ * Replaces each secret in a text, as written and URL encoded with upper or
+ * lower case escapes, so a log entry or an error message holds none of it.
  *
  * @param {string} text the text
  * @param {Array<string|undefined>} withheld the values to leave out
@@ -199,7 +199,9 @@ function hide (text, withheld) {
   const forms = [];
   for (const secret of withheld) {
     if (typeof secret === 'string' && secret !== '') {
-      forms.push(secret, encodeURIComponent(secret));
+      const encoded = encodeURIComponent(secret);
+      forms.push(secret, encoded, encoded.replace(
+        /%[0-9A-F]{2}/g, (escape) => escape.toLowerCase()));
     }
   }
   // Longer forms first, so a secret inside another is not left in part.

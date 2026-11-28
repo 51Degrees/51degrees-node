@@ -46,7 +46,15 @@ const uglifyJS = require('uglify-js');
 // different on every page view, so a record holding one could never match.
 // The same two are excluded by the .NET builder, which is the reference for
 // this behaviour.
-const excludedParameters = ['session-id', 'sequence'];
+//
+// The sealed Human Confidence result and the page id sent beside it are
+// left out as well. A package never puts the sealed result into the
+// JavaScript Builder's output, and the page id only names the page the
+// sealed result came from, so the script has no use for it. See
+// https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#what-a-package-never-exposes
+const excludedParameters = [
+  'session-id', 'sequence', 'humanconfidence', 'humanconfidencepage'
+];
 
 // The object name is written into the script as the name of a global
 // variable, as a session storage key and inside string literals, with no
@@ -366,7 +374,7 @@ class JavaScriptBuilderElement extends FlowElement {
 
     // The parameters are the query evidence, each named by everything after
     // the first dot of its key so that a name such as id.usage is kept whole,
-    // and leaving out the two the script appends itself. The script joins
+    // and leaving out the names in excludedParameters. The script joins
     // them into its request body as they stand, so each name and value is
     // encoded here. They are written with or without a callback URL, as the
     // script reads them either way.

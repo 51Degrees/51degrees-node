@@ -92,6 +92,11 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-examples-human-confidence-web-server.js&utm_term=find-out-more-contact'
 ].join('\n');
 
+// What the page is told when the Properties can't be read. The details go
+// to this server's log instead, because an error's text can name a
+// credential, and no page may receive any part of the License Key.
+const READ_FAILED = 'The Properties could not be read. See the log on the server.';
+
 /**
  * The text of an error, whatever was thrown. A Pipeline that fails gives
  * an AggregateError, whose errors say what went wrong.
@@ -107,6 +112,21 @@ function messageOf (error) {
     return error.message;
   }
   return String(error);
+}
+
+/**
+ * Logs an error on this server, with the License Key left out, and gives
+ * what the page is told in its place.
+ *
+ * @param {any} error whatever was thrown
+ * @param {string} license the License Key, or an empty string
+ * @returns {{error: string}} the answer for the page
+ */
+function failed (error, license) {
+  const text = messageOf(error);
+  console.error('Human Confidence demo: ' +
+    (license ? text.split(license).join('[hidden]') : text));
+  return { error: READ_FAILED };
 }
 
 /**
@@ -199,7 +219,7 @@ function demoRoutes ({ resource, license, api, requestClient }) {
     await flowData.process().catch((error) => { failure = error; });
     const derived = flowData.tryGet('derived');
     if (derived === undefined) {
-      return { error: messageOf(failure) };
+      return failed(failure, license);
     }
     return {
       source: valueOf(derived, 'humanconfidencesource'),
@@ -234,7 +254,7 @@ function demoRoutes ({ resource, license, api, requestClient }) {
           humanConfidence: Object.keys(derived).includes('humanconfidence')
         });
       } catch (error) {
-        sendJson(response, 200, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     },
 
@@ -251,7 +271,7 @@ function demoRoutes ({ resource, license, api, requestClient }) {
       try {
         sendJson(response, 200, await read(request, {}));
       } catch (error) {
-        sendJson(response, 200, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     },
 
@@ -274,7 +294,7 @@ function demoRoutes ({ resource, license, api, requestClient }) {
           'query.humanconfidencepage': page
         }));
       } catch (error) {
-        sendJson(response, 200, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     }
   };
@@ -381,7 +401,7 @@ function main () {
       `Human Confidence demo on http://localhost:${port}/, using ${api}`));
 }
 
-module.exports = { demoRoutes };
+module.exports = { demoRoutes, READ_FAILED };
 
 if (require.main === module) {
   main();

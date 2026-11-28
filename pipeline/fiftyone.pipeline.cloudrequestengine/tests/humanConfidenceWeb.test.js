@@ -36,7 +36,27 @@ const path = require('path');
 
 const FOLDER = path.join(__dirname, '..', 'examples', 'human-confidence-web');
 const SERVER = path.join(FOLDER, 'server.js');
-const { demoRoutes } = require('../examples/human-confidence-web/server');
+const {
+  demoRoutes, READ_FAILED
+} = require('../examples/human-confidence-web/server');
+
+/**
+ * Runs a function with console.error collected rather than printed.
+ *
+ * @param {Function} action the function, which may return a promise
+ * @returns {Promise<Array<string>>} what was logged
+ */
+async function errorsLoggedBy (action) {
+  const logged = [];
+  const spy = jest.spyOn(console, 'error')
+    .mockImplementation((...items) => logged.push(items.join(' ')));
+  try {
+    await action();
+  } finally {
+    spy.mockRestore();
+  }
+  return logged;
+}
 
 const API = 'https://cloud.example/api/v4/';
 const RESOURCE = 'AQTestResourceKey';
@@ -156,11 +176,14 @@ describe('Human Confidence example /check route', () => {
       expect(JSON.parse(response.body)).toEqual({ humanConfidence: false });
     });
 
-  test('an unreachable cloud answers with the error', async () => {
-    const response = fakeResponse();
-    await routesWith(cloudAnswering({ failure: UNREACHABLE })).check(response);
-    expect(JSON.parse(response.body).error).toContain('ECONNREFUSED');
-  });
+  test('an unreachable cloud is logged, and the page is told to look there',
+    async () => {
+      const response = fakeResponse();
+      const logged = await errorsLoggedBy(() =>
+        routesWith(cloudAnswering({ failure: UNREACHABLE })).check(response));
+      expect(JSON.parse(response.body)).toEqual({ error: READ_FAILED });
+      expect(logged.join('\n')).toContain('ECONNREFUSED');
+    });
 });
 
 describe('Human Confidence example /passive route', () => {
@@ -226,17 +249,45 @@ describe('Human Confidence example /passive route', () => {
         .toEqual({ source: null, humanConfidence: level });
     });
 
-  test('a cloud failure answers with the error', async () => {
-    const cloud = cloudAnswering({
-      json: () => {
-        throw Object.assign(new Error('Forbidden'),
-          { statusCode: 403, headers: {}, content: 'Forbidden' });
-      }
+  test('a cloud failure is logged, and the page is told to look there',
+    async () => {
+      const cloud = cloudAnswering({
+        json: () => {
+          throw Object.assign(new Error('Forbidden'),
+            { statusCode: 403, headers: {}, content: 'Forbidden' });
+        }
+      });
+      const response = fakeResponse();
+      const logged = await errorsLoggedBy(() =>
+        routesWith(cloud).passive(visitor(), response));
+      expect(JSON.parse(response.body)).toEqual({ error: READ_FAILED });
+      expect(logged.join('\n')).toContain('403');
     });
-    const response = fakeResponse();
-    await routesWith(cloud).passive(visitor(), response);
-    expect(JSON.parse(response.body).error).toContain('403');
-  });
+
+  test.each(['check', 'passive', 'active'])(
+    'no part of a License Key the cloud names reaches the page or the log, ' +
+    'on %s', async (route) => {
+      const key = 'LK0123456789WXYZ';
+      const parts = Array.from({ length: key.length - 3 },
+        (unused, i) => key.slice(i, i + 4));
+      const refusal = {
+        statusCode: 403,
+        headers: {},
+        content: JSON.stringify({ errors: [`The key ${key} is not valid.`] })
+      };
+      const routes = routesWith(cloudAnswering({ failure: refusal }), key);
+      const response = fakeResponse();
+      const logged = await errorsLoggedBy(() => route === 'check'
+        ? routes.check(response)
+        : route === 'passive'
+          ? routes.passive(visitor(), response)
+          : routes.active(visitor(), SEALED, 'aPage', response));
+
+      expect(JSON.parse(response.body)).toEqual({ error: READ_FAILED });
+      expect(logged.length).toBeGreaterThan(0);
+      const text = response.body + '\n' + logged.join('\n');
+      expect(parts.filter((part) => text.includes(part))).toEqual([]);
+    });
 });
 
 describe('Human Confidence example /active route', () => {

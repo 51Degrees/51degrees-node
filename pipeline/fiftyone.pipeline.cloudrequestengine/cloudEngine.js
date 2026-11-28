@@ -202,7 +202,7 @@ class CloudEngine extends Engine {
    * error, and this engine adds no error of its own.
    *
    * @param {FlowData} flowData FlowData to process
-   * @returns {Promise<void>} Completion promise
+   * @returns {Promise<true|void>} Completion promise, as for any engine
    */
   process (flowData) {
     if (this.dataKey !== humanConfidence.derivedKey ||

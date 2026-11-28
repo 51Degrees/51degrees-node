@@ -48,6 +48,12 @@ const SETTINGS = ['scripts', 'scriptFiles'];
 /** The reason given where a source property is simply not there. */
 const NOT_PRESENT = 'property not present on this request';
 
+// The Evidence that carries a sealed Human Confidence result, and the two
+// Properties a request that carries one gives, in lower case.
+const SEALED_RESULT_EVIDENCE = 'query.humanconfidence';
+const HUMAN_CONFIDENCE = 'humanconfidence';
+const HUMAN_CONFIDENCE_SOURCE = 'humanconfidencesource';
+
 /**
  * The Output fields given in each property's metadata beyond the name,
  * type, category, description and isList every element gives, with the
@@ -189,6 +195,7 @@ class DerivedPropertyElement extends FlowElement {
         ? new AspectPropertyValue(result.message)
         : new AspectPropertyValue(null, result.value);
     });
+    notRedeemed(flowData, data);
   }
 
   // -------------------------------------------------------------------
@@ -598,6 +605,52 @@ function supplies (element, name) {
  */
 function findElementData (flowData, key) {
   return flowData.tryGet(key);
+}
+
+/**
+ * On a request that carries a sealed Human Confidence result, gives
+ * HumanConfidence Medium and HumanConfidenceSource Active where this
+ * element gives HumanConfidence. The element can't redeem the sealed
+ * result, so it must not give a High or Low worked out from the request
+ * alone. See
+ * https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#where-the-sealed-result-is-not-redeemed
+ *
+ * @param {FlowData} flowData the flow data being processed.
+ * @param {object} data the derived element data.
+ */
+function notRedeemed (flowData, data) {
+  const value = Object.keys(data.contents)
+    .find((name) => name.toLowerCase() === HUMAN_CONFIDENCE);
+  if (value === undefined || !carriesSealedResult(flowData.evidence)) {
+    return;
+  }
+  const source = Object.keys(data.contents)
+    .find((name) => name.toLowerCase() === HUMAN_CONFIDENCE_SOURCE);
+  data.contents[value] = new AspectPropertyValue(null, 'Medium');
+  data.contents[source || 'HumanConfidenceSource'] =
+    new AspectPropertyValue(null, 'Active');
+}
+
+/**
+ * Whether the evidence holds query.humanconfidence, in any letter case,
+ * with a value that is not empty, whether an element accepts it or not.
+ *
+ * @param {object} evidence the flow data's evidence.
+ * @returns {boolean} true for a request that carries a sealed result.
+ */
+function carriesSealedResult (evidence) {
+  const unaccepted = typeof evidence.getUnaccepted === 'function'
+    ? evidence.getUnaccepted()
+    : {};
+  for (const store of [evidence.getAll(), unaccepted]) {
+    for (const [key, value] of Object.entries(store)) {
+      if (key.toLowerCase() === SEALED_RESULT_EVIDENCE &&
+        value !== undefined && value !== null && String(value) !== '') {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**
