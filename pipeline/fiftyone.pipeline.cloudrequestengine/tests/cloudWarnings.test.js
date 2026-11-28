@@ -120,6 +120,27 @@ describe('cloud warnings', () => {
     expect(warning).toContain('[hidden]');
   });
 
+  test.each([', ', ' | '])(
+    'a key a warning names alone is left out where the setting holds ' +
+    'several separated by "%s"', async (separator) => {
+      const second = 'SECONDKEY0987654321';
+      const { warnings } = await logged({
+        licenseKey: LICENSE_KEY + separator + second,
+        requestedProperties: ['device.ismobile'],
+        requestClient: new LicenseKeyClient({
+          properties,
+          json: Object.assign(
+            { warnings: ['Key "' + second + '" expires soon.'] }, json)
+        })
+      });
+      const warning = warnings.find((text) => text.startsWith('Key '));
+      expect(warning).toBeDefined();
+      const parts = Array.from({ length: second.length - 3 },
+        (unused, i) => second.slice(i, i + 4));
+      expect(parts.filter((part) => warning.includes(part))).toEqual([]);
+      expect(warning).toContain('[hidden]');
+    });
+
   test('a response with no warnings logs none', async () => {
     const { warnings } = await logged({
       resourceKey: 'AAAAAAAAAAAA',

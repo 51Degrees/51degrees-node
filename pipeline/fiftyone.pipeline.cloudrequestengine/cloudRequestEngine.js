@@ -596,7 +596,9 @@ class CloudRequestEngine extends Engine {
   hideSecrets (text, withheld = []) {
     const keys = this.licenseKey === ''
       ? []
-      : [this.licenseKey].concat(this.licenseKey.split(/[,|]/));
+      : [this.licenseKey].concat(this.licenseKey.split(/[,|]/)
+          .map((key) => key.trim())
+          .filter((key) => key !== ''));
     return humanConfidence.hide(String(text), withheld.concat(keys));
   }
 

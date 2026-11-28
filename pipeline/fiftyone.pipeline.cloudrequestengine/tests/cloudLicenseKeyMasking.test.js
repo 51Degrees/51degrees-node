@@ -133,3 +133,49 @@ describe('a license key the cloud names in its answer', () => {
       }
     });
 });
+
+describe('a key the cloud names alone where the setting holds several', () => {
+  test.each([', ', ' | '])(
+    'is hidden whole when processing fails, for keys separated by "%s"',
+    async (separator) => {
+      const second = 'SECONDKEYNOTREAL0987654321';
+      const parts = Array.from({ length: second.length - 3 },
+        (unused, i) => second.slice(i, i + 4));
+      const engine = new CloudRequestEngine({
+        resourceKey: RESOURCE,
+        licenseKey: KEY + separator + second,
+        requestClient: new MockRequestClient({
+          error: {
+            statusCode: 401,
+            headers: {},
+            content: '{ "status":"401", "errors": ["Invalid license ' +
+              'key(s) supplied: \\u0027' + second + '\\u0027"] }'
+          }
+        })
+      });
+      const pipeline = new PipelineBuilder({
+        addJavaScriptBuilder: false,
+        useSetHeaderProperties: false
+      }).add(engine).build();
+      const logs = [];
+      for (const level of ['error', 'warn', 'info', 'debug']) {
+        pipeline.on(level, (message) => logs.push(message));
+      }
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.add('header.user-agent', 'iPhone');
+      const rejection = await flowData.process().then(
+        () => undefined, (error) => error);
+
+      expect(flowData.errors.cloud).toBeDefined();
+      for (const [what, value] of [
+        ['the log entries', logs],
+        ['the flow data errors', flowData.errors],
+        ['the rejected error', rejection]
+      ]) {
+        const text = shown(value);
+        expect([what, parts.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
+      }
+    });
+});
