@@ -482,8 +482,10 @@ export class RedeemResult {
      * know maps to `unreadable`, so an unrecognised status is never mistaken
      * for success. A cloud that sends no `status` wrote the same word to
      * `context`, so the status is then read from `context`: one of the four
-     * reasons is that reason, any other word the context check gives is
-     * `success`, and anything else is `unreadable`. An HTTP 503 is always
+     * reasons is that reason, a verdict the check reached (`verified`,
+     * `mismatch`, `nocontext`, `misconfigured` or `invaliddate`) is
+     * `success`, and anything else, `notcheckable` included, is
+     * `unreadable`. An HTTP 503 is always
      * `unconfirmed`, whatever its body says.
      */
     status: string;

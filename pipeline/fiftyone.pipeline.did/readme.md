@@ -662,7 +662,10 @@ obsolete names, so the call works with a cloud that reads only those. Read
 `status` first. Only `success` carries an unsealed result, being `signature`,
 `context`, `factors` and the Human Confidence Value, and the other four say
 why the sealed result was not redeemed. A cloud that sends no `status` wrote
-the reason to `context`, so `status` is then read from `context`, and a
+the reason to `context`, so `status` is then read from `context`. A
+verdict the check reached (`verified`, `mismatch`, `nocontext`,
+`misconfigured` or `invaliddate`) is `success`, each of the four reasons is
+itself, and any other word, `notcheckable` included, is `unreadable`. A
 status this package does not know is `unreadable`. The cloud still writes the
 reason to `context` too, so `ContextResult.EXPIRED`, `REPLAYED`, `UNREADABLE`
 and `UNCONFIRMED` keep their values, but they are obsolete in favor of

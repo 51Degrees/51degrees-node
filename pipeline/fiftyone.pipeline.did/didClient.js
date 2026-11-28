@@ -228,21 +228,24 @@ const ContextResult = Object.freeze({
 });
 
 /**
- * The words the creator context check itself gives, read here without
- * touching the obsolete members of {@link ContextResult}.
+ * The verdicts the creator context check reaches. Where an answer holds no
+ * `status`, only these words show that the sealed result redeemed, so
+ * only these read as success. They are read here without touching the
+ * obsolete members of {@link ContextResult}.
  */
 const VERDICT_CONTEXTS = new Set([
-  'verified', 'mismatch', 'nocontext', 'notcheckable', 'misconfigured',
-  'invaliddate'
+  'verified', 'mismatch', 'nocontext', 'misconfigured', 'invaliddate'
 ]);
 
 /**
- * Every word `context` can hold: a verdict, or the reason a sealed result
- * was not redeemed, which the cloud writes to `context` as well as to
- * `status`.
+ * Every word `context` can hold: a verdict, `notcheckable`, or the reason
+ * a sealed result was not redeemed, which the cloud writes to `context` as
+ * well as to `status`. `notcheckable` is a Context outcome but not a
+ * verdict, so with no `status` it gives no success.
  */
 const KNOWN_CONTEXTS = new Set([
   ...VERDICT_CONTEXTS,
+  'notcheckable',
   ...Object.values(RedeemStatus).filter((word) => word !== RedeemStatus.SUCCESS)
 ]);
 
@@ -426,8 +429,10 @@ class RedeemResult {
      * know maps to `unreadable`, so an unrecognised status is never mistaken
      * for success. A cloud that sends no `status` wrote the same word to
      * `context`, so the status is then read from `context`: one of the four
-     * reasons is that reason, any other word the context check gives is
-     * `success`, and anything else is `unreadable`. An HTTP 503 is always
+     * reasons is that reason, a verdict the check reached (`verified`,
+     * `mismatch`, `nocontext`, `misconfigured` or `invaliddate`) is
+     * `success`, and anything else, `notcheckable` included, is
+     * `unreadable`. An HTTP 503 is always
      * `unconfirmed`, whatever its body says.
      */
     this.status = readStatus(body.status, this.context);
@@ -1365,8 +1370,8 @@ function maskLicence (text, licence) {
  * Reads the `status` of a redeem answer. A word this package does not know
  * is `unreadable`. Where the cloud sent no `status`, it wrote the reason to
  * `context`, so the status is read from the context already read: a reason
- * is that reason, a word the context check gives is `success`, and anything
- * else is `unreadable`.
+ * is that reason, a verdict the check reached is `success`, and anything
+ * else, `notcheckable` included, is `unreadable`.
  * @param {*} word the value the cloud sent for `status`
  * @param {string} context the context already read, one of
  * {@link ContextResult}

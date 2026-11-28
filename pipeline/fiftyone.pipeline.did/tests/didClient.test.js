@@ -2383,11 +2383,25 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
       .toBe(RedeemStatus.UNREADABLE);
   });
 
-  test('every context the check gives is success when no status is sent', () => {
+  test('every verdict the check reaches is success when no status is sent', () => {
     for (const context of ['verified', 'mismatch', 'nocontext',
-      'notcheckable', 'misconfigured', 'invaliddate']) {
+      'misconfigured', 'invaliddate']) {
       expect(RedeemResult.fromResponse(200, JSON.stringify({ context })).status)
         .toBe(RedeemStatus.SUCCESS);
+    }
+  });
+
+  test('with no status, notcheckable is unreadable and stays the context', () => {
+    const result = RedeemResult.fromResponse(200,
+      JSON.stringify({ signature: 'verified', context: 'notcheckable' }));
+    expect(result.status).toBe(RedeemStatus.UNREADABLE);
+    expect(result.context).toBe(ContextResult.NOT_CHECKABLE);
+  });
+
+  test('with no status, each reason is its own status', () => {
+    for (const context of ['expired', 'replayed', 'unreadable', 'unconfirmed']) {
+      expect(RedeemResult.fromResponse(200, JSON.stringify({ context })).status)
+        .toBe(context);
     }
   });
 });
