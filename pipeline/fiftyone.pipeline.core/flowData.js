@@ -339,7 +339,7 @@ class FlowData {
    *
    * @param {string} flowElementDataKey the datakey of a FlowElement
    * @returns {ElementData} data from the FlowElement
-   * @throws {string} a message naming the data key and the data keys there
+   * @throws {Error} a message naming the data key and the data keys there
    * are, when no element has given data under the key in any case
    */
   get (flowElementDataKey) {
@@ -350,7 +350,7 @@ class FlowData {
       const message = util.format(errorMessages.noElementData,
         flowElementDataKey, orderedNodes(this)
           .map((node) => node.key).join(', '));
-      throw message;
+      throw new Error(message);
     }
     return elementData;
   }

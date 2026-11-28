@@ -134,7 +134,7 @@ test('caching example', () => {
   const result = runExample(path.join(EXAMPLES, 'caching.js'));
 
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   // The second request with the same user id is answered from the cache.
   expect(result.stdout).toContain('Fetched from cache');
   expectEndsWithFindOutMore(result.stdout);

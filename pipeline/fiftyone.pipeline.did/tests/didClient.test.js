@@ -79,9 +79,10 @@ const START_4 = new Date('2026-08-24T00:00:00Z');
 
 /**
  * A fetch stand-in recording every call and answering from a handler.
+ *
  * @param {function(string, object, number): object} handler given the URL,
  * the init and the call number, returns a response
- * @returns {function} the fetch function, with a `calls` array
+ * @returns {Function} the fetch function, with a `calls` array
  */
 function fakeFetch (handler) {
   const calls = [];
@@ -94,6 +95,13 @@ function fakeFetch (handler) {
   return fetch;
 }
 
+/**
+ * A response as the fake fetch answers, with the body as text.
+ *
+ * @param {number} status the HTTP status
+ * @param {string|object} body the body, written as JSON where not a string
+ * @returns {object} the response
+ */
 function response (status, body) {
   const text = typeof body === 'string' ? body : JSON.stringify(body);
   return { status, text: async () => text };
@@ -120,6 +128,13 @@ async function schedule () {
   return { pairs, pems, json };
 }
 
+/**
+ * A client whose fetch answers the key route with the given list.
+ *
+ * @param {object[]|Function} json the key list, or a function that returns it
+ * @param {object} [extra] more client options
+ * @returns {object} the client and its fake fetch
+ */
 function keyClient (json, extra = {}) {
   const fetch = fakeFetch((url) => {
     if (url.indexOf('id/key/') >= 0) {
@@ -133,6 +148,14 @@ function keyClient (json, extra = {}) {
   return { client, fetch };
 }
 
+/**
+ * A 51Did signed with the key pair and dated at the given time.
+ *
+ * @param {CryptoKeyPair} pair the key pair to sign with
+ * @param {Date} at the time the 51Did is dated
+ * @param {object} [options] the payload, version and domain to use
+ * @returns {Promise<FodId>} the signed 51Did
+ */
 async function signedAt (pair, at, options = {}) {
   return FodId.fromBase64(await signedWith(
     pair, options.payload || canonicalPayload(),
@@ -146,6 +169,7 @@ async function signedAt (pair, at, options = {}) {
 /**
  * One entry as the cloud's key route publishes it, with the dates in the
  * form the cloud writes them and endsAt where one is given.
+ *
  * @param {Date} startsAt when the key starts
  * @param {Date | null} endsAt when the key ends, or null for none
  * @param {string} publicKey the key as PEM
@@ -164,6 +188,7 @@ function published (startsAt, endsAt, publicKey) {
  * A client on a clock the test moves, whose key requests are answered with
  * the entries the test has published, filtered on the datetime parameter as
  * the cloud's key route filters them, once `cloud.answering` resolves.
+ *
  * @param {number} now the clock's first reading
  * @returns {{client: DidClient, fetch: Function, cloud: object}} the
  * client, the fetch stand-in, and the published entries with the clock
@@ -187,6 +212,7 @@ function publishingClient (now) {
 
 /**
  * The datetime parameter a recorded key request carried.
+ *
  * @param {object} call the recorded request
  * @returns {Date | null} the moment, or null when the request had none
  */
@@ -200,6 +226,7 @@ function datetimeOf (call) {
  * the global back once the function returns. A request the function starts
  * is made before the function returns, so its headers are chosen without
  * the global.
+ *
  * @param {function(): any} fn the function to run
  * @returns {any} what the function returned
  */
@@ -216,6 +243,7 @@ function withoutProcess (fn) {
 /**
  * A fetch stand-in that refuses to run as a method of anything but the
  * window, as a browser's fetch does, and otherwise answers from a handler.
+ *
  * @param {function(string, object, number): object} handler given the URL,
  * the init and the call number, returns a response
  * @returns {Function} the fetch function, with a `calls` array
@@ -297,6 +325,7 @@ describe('DidClient in a browser', () => {
 
   /**
    * A fetch stand-in answering the key, verify and redeem routes.
+   *
    * @param {object[]} json the published key list
    * @returns {Function} the fetch function, with a `calls` array
    */
@@ -1199,6 +1228,13 @@ describe('DidClient verifySignature', () => {
 describe('DidClient verify (cloud)', () => {
   const fod = FodId.fromBase64(envelopeBase64(canonicalPayload()));
 
+  /**
+   * A client whose fetch answers every request with the given response.
+   *
+   * @param {number} status the HTTP status
+   * @param {string|object} body the response body
+   * @returns {object} the client and its fake fetch
+   */
   function verifyClient (status, body) {
     const fetch = fakeFetch(() => response(status, body));
     const client = new DidClient({ resourceKey: RESOURCE, endpoint: ENDPOINT, fetch });
@@ -1327,6 +1363,21 @@ describe('DidClient verifyDetailed', () => {
   const NOT_RETURNED = 'The remote server did not return humanConfidence ' +
     'or humanConfidenceNullReason, so it gives no Human Confidence Value.';
 
+  /**
+   *
+   * @param status
+   * @param body
+   * @param extra
+   */
+  /**
+   * A client whose verify request is answered with the given status and
+   * body.
+   *
+   * @param {number} status the HTTP status to answer with
+   * @param {string} body the body to answer with
+   * @param {object} [extra] more client options
+   * @returns {DidClient} the client
+   */
   function verifyClient (status, body, extra = {}) {
     const fetch = fakeFetch(() => response(status, body));
     const client = new DidClient(Object.assign({
@@ -1564,6 +1615,15 @@ describe('DidClient redeem', () => {
   const RESULT = 'sealed-result-value';
   const TRANSACTION = 'transaction-123';
 
+  /**
+   * A client with a licence key whose fetch answers every request with the
+   * given response.
+   *
+   * @param {number} status the HTTP status
+   * @param {string|object} body the response body
+   * @param {object} [extra] more client options
+   * @returns {object} the client and its fake fetch
+   */
   function redeemClient (status, body, extra = {}) {
     const fetch = fakeFetch(() => response(status, body));
     const client = new DidClient(Object.assign({
@@ -2248,6 +2308,7 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
   /**
    * The members a caller read before `status` and the Human Confidence
    * fields were added.
+   *
    * @param {RedeemResult} result the result
    * @returns {object} those members
    */
@@ -2460,6 +2521,7 @@ describe('ContextResult obsolete members', () => {
   /**
    * Loads a fresh copy of the package, so no warning has been given yet,
    * and runs the function with process.emitWarning recorded.
+   *
    * @param {function(object, jest.SpyInstance): void} fn given the package
    * and the spy
    */

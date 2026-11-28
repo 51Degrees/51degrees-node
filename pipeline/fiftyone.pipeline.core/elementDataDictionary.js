@@ -54,8 +54,8 @@ class ElementDataDictionary extends ElementData {
   }
 
   * [Symbol.iterator] () {
-    for (let i = 0; i < Object.keys(this.contents).length; i += 1) {
-      yield Object.keys(this.contents)[i];
+    for (let i = 0; i < Object.keys(this._contents).length; i += 1) {
+      yield Object.keys(this._contents)[i];
     }
   }
 
@@ -66,7 +66,7 @@ class ElementDataDictionary extends ElementData {
    * @returns {number} integer value
    */
   getInternal (key) {
-    return this.contents[key];
+    return this._contents[key];
   }
 
   /**
@@ -82,9 +82,9 @@ class ElementDataDictionary extends ElementData {
       return undefined;
     }
     const lowerKey = key.toLowerCase();
-    for (const name of Object.keys(this.contents)) {
+    for (const name of Object.keys(this._contents)) {
       if (name.toLowerCase() === lowerKey) {
-        return this.contents[name];
+        return this._contents[name];
       }
     }
     return undefined;

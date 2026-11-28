@@ -95,6 +95,10 @@ cp binding.51d binding.gyp
 node-gyp rebuild
 ```
 
+Compiler warnings are shown and do not stop the build. To make them errors,
+as the CI builds do, set the environment variable
+`_51DEGREES_WARNINGS_AS_ERRORS` to `true` before `node-gyp` configures.
+
 Then copy `build/Release/<module>.node` to
 `build/<module>-<platform>-<arch>-<node major version>.node`, for example
 `build/FiftyOneDeviceDetectionHashV4-darwin-arm64-24.node`.
@@ -120,15 +124,16 @@ says.
 
 ## Regenerating the SWIG wrappers
 
-The wrappers are generated and must not be edited by hand. Use the
-`node-24-holder-this` branch of the
-[51Degrees fork of SWIG](https://github.com/51Degrees/swig), and run:
+The wrappers are generated and must not be edited by hand. Use SWIG 4.5.0
+(https://www.swig.org), and run the commands below. The `swig` folder
+holds copies of SWIG's runtime files and fragments that SWIG reads ahead of
+its own, changed so the wrappers build with no compiler warning.
 
 ```
 cd device-detection/fiftyone.devicedetection.onpremise
-swig -c++ -javascript -node hash_node.i
+swig -Werror -c++ -javascript -node -I../../swig hash_node.i
 cd ../../ip-intelligence/fiftyone.ipintelligence.onpremise
-swig -c++ -javascript -node ipi_node.i
+swig -Werror -c++ -javascript -node -I../../swig ipi_node.i
 ```
 
 ## History

@@ -50,7 +50,7 @@ const getDataFilePath = function (fileName) {
       return fullPath;
     }
   }
-  throw (`No data file '${fileName}' found at
+  throw new Error(`No data file '${fileName}' found at
     '${fileDirs.join(', ')}'!`);
 };
 
@@ -76,7 +76,7 @@ const getTestDataFile = function () {
       }
     };
     if (testDataFile === undefined) {
-      throw (`No data file found. Looked for
+      throw new Error(`No data file found. Looked for
         '${datafiles.join(', ')}' at
         '${fileDirs.join(', ')}'!`);
     }

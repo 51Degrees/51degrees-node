@@ -48,7 +48,7 @@ class Languages {
   addLanguage (locale, translator) {
     if (locale === null || locale === undefined || translator === null ||
       translator === undefined) {
-      throw 'A locale and translator must be supplied.';
+      throw new Error('A locale and translator must be supplied.');
     }
     this.translators[locale] = translator;
   }

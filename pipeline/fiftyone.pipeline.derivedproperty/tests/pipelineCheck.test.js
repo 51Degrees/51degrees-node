@@ -117,8 +117,7 @@ function writes (script, output) {
  */
 function faults (elements) {
   try {
-    // eslint-disable-next-line no-new
-    new core.Pipeline(elements);
+    expect(new core.Pipeline(elements)).toBeInstanceOf(core.Pipeline);
   } catch (error) {
     expect(error).toBeInstanceOf(PipelineConfigurationError);
     expect(error.message).toBe('The derived property element cannot be ' +

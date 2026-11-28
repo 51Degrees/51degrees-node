@@ -78,6 +78,12 @@ function cloudAnswering (answer) {
   return stand;
 }
 
+/**
+ * A stand-in for an HTTP response that records the status, headers and body
+ * written to it.
+ *
+ * @returns {object} the response stand-in
+ */
 function fakeResponse () {
   return {
     status: null,

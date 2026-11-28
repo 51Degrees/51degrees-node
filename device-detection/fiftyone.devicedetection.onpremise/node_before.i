@@ -86,3 +86,89 @@ fail:
   SWIGV8_RETURN(SWIGV8_UNDEFINED());
 }
 %}
+
+/*
+ * Override the overloaded constructor and function templates. SWIG names the
+ * error handler parameter the same as its global error handler, so that the
+ * error macros in the wrapped code reach the parameter, and compilers report
+ * the parameter as hiding the global. Here the parameter has its own name,
+ * and the macros reach it through a define that lasts only for the function.
+ */
+%fragment("js_overloaded_ctor", "templates") %{
+static SwigV8ReturnValue $jswrapper(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler) {
+#define SWIGV8_ErrorHandler overloadErrorHandler
+  SWIGV8_HANDLESCOPE();
+
+  SWIGV8_OBJECT self = SWIGV8_ARGS_THIS(args);
+  $jslocals
+  if(self->InternalFieldCount() < 1) SWIG_exception_fail(SWIG_ERROR, "Illegal call of constructor $jswrapper.");
+  if(args.Length() < $jsargrequired || args.Length() > $jsargcount) SWIG_exception_fail(SWIG_ERROR, "Illegal number of arguments for $jswrapper.");
+  $jscode
+
+  SWIGV8_SetPrivateData(self, result, SWIGTYPE_$jsmangledtype, SWIG_POINTER_OWN);
+  SWIGV8_RETURN(self);
+
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
+}
+%}
+
+%fragment ("js_overloaded_function", "templates")
+%{
+static SwigV8ReturnValue $jswrapper(const SwigV8Arguments &args, V8ErrorHandler &overloadErrorHandler)
+{
+#define SWIGV8_ErrorHandler overloadErrorHandler
+  SWIGV8_HANDLESCOPE();
+
+  SWIGV8_VALUE jsresult;
+  $jslocals
+  $jscode
+  SWIGV8_RETURN(jsresult);
+
+  goto fail;
+fail:
+  SWIGV8_RETURN(SWIGV8_UNDEFINED());
+#undef SWIGV8_ErrorHandler
+}
+%}
+
+/*
+ * Override the getter and setter templates. V8 passes every accessor the
+ * property name, the value being set and the callback information, and a
+ * wrapper does not always use them, which compilers report as unreferenced
+ * parameters. Each is marked as intentionally unused.
+ */
+%fragment("js_getter", "templates")
+%{
+static SwigV8ReturnValue $jswrapper(v8::Local<v8::Name> property, const SwigV8PropertyCallbackInfo &info) {
+  SWIGV8_HANDLESCOPE();
+  (void)property;
+
+  SWIGV8_VALUE jsresult;
+  $jslocals
+  $jscode
+  SWIGV8_RETURN_INFO(jsresult, info);
+
+  goto fail;
+fail:
+  SWIGV8_RETURN_INFO(SWIGV8_UNDEFINED(), info);
+}
+%}
+
+%fragment("js_setter", "templates")
+%{
+static void $jswrapper(v8::Local<v8::Name> property, v8::Local<v8::Value> value, const SwigV8PropertyCallbackInfoVoid &info) {
+  SWIGV8_HANDLESCOPE();
+  (void)property;
+  (void)value;
+  (void)info;
+
+  $jslocals
+  $jscode
+  goto fail;
+fail:
+  return;
+}
+%}

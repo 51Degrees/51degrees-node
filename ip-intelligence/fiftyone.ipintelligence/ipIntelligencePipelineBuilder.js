@@ -117,7 +117,7 @@ class IpIntelligencePipelineBuilder extends PipelineBuilder {
     if (dataFile) {
       // Cache is not supported for on-premise engine.
       if (cacheSize) {
-        throw errorMessages.cacheNotSupport;
+        throw new Error(errorMessages.cacheNotSupport);
       }
 
       this.flowElements.push(new IpIntelligenceOnPremise(

@@ -48,10 +48,10 @@ const readYamlFiles = (directory, prefix) => {
   try {
     files = fs.readdirSync(directory);
   } catch (e) {
-    throw 'The translations directory \'' + directory + '\' could not be ' +
+    throw new Error('The translations directory \'' + directory + '\' could not be ' +
       'read. Ensure the cxx/data submodule has been fetched with ' +
       '\'git submodule update --init --recursive\', or supply a ' +
-      'translationsPath option. ' + e;
+      'translationsPath option. ' + e);
   }
   files.forEach((file) => {
     const lower = file.toLowerCase();

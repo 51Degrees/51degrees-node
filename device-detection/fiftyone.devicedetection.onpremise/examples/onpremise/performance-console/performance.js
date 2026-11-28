@@ -118,7 +118,7 @@ if (!fs.existsSync(datafile)) {
       'data file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-  throw ("No data file at '" + datafile + "'");
+  throw new Error("No data file at '" + datafile + "'");
 }
 
 if (!fs.existsSync(evidenceFile)) {
@@ -126,7 +126,7 @@ if (!fs.existsSync(evidenceFile)) {
       'file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-  throw ("No evidence file at '" + evidenceFile + "'");
+  throw new Error("No evidence file at '" + evidenceFile + "'");
 }
 
 let userAgentsProcessed = 0;

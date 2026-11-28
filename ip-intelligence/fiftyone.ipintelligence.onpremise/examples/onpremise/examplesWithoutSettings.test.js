@@ -109,11 +109,11 @@ const expectEndsWithFindOutMore = (stdout) => {
   expect(links.some((line) => line.includes(FIND_OUT_MORE_LINK))).toBe(true);
 };
 
-// Checks the example finished, showing its error output when it did not,
+// Checks the example finished and wrote nothing to its error output,
 // wrote each of the texts, and ended with the Find out more section.
 const expectOutput = (result, ...texts) => {
   expect({ status: result.status, stderr: result.stderr })
-    .toEqual({ status: 0, stderr: expect.any(String) });
+    .toEqual({ status: 0, stderr: '' });
   for (const text of texts) {
     expect(result.stdout).toContain(text);
   }

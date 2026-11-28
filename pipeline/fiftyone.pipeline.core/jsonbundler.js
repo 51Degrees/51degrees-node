@@ -293,7 +293,7 @@ class JSONBundlerElement extends FlowElement {
 
           // Check if value is of the aspect property value type
 
-          if (valueContainer.hasOwnProperty('hasValue')) {
+          if (Object.prototype.hasOwnProperty.call(valueContainer, 'hasValue')) {
             // Check if it has a value
 
             if (valueContainer.hasValue) {

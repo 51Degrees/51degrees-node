@@ -59,6 +59,8 @@ class HardwareProfileData extends AspectDataDictionary {
     Object.defineProperties(profile, {
       flowElement: { value: flowElement },
       contents: { value: values },
+      // Where a dictionary reads its values.
+      _contents: { value: values },
       missingPropertyService: { value: missingPropertyService }
     });
     Object.entries(values).forEach(function ([name, value]) {

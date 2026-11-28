@@ -113,7 +113,7 @@ const datafile = ExampleUtils.findDataFile('51Degrees-LiteV4.1.hash');
 
 if (datafile === undefined) {
   console.error("The datafile required by this example is not present. Please ensure that the 'cxx/data' submodule has been fetched.");
-  throw ('No data file found');
+  throw new Error('No data file found');
 }
 
 // Helper function to read property values from flowData

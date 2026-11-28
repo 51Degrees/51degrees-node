@@ -271,6 +271,12 @@ describe('FodId', () => {
     expect(typeFor(0b1100_0101)).toBe(IdType.RESERVED);
   });
 
+  /**
+   * The type a 51Did reports when its flags byte is the given value.
+   *
+   * @param {number} flags the flags byte
+   * @returns {number} the IdType value
+   */
   function typeFor (flags) {
     const p = canonicalPayload();
     p[layout.FLAGS_OFFSET] = flags;
@@ -747,8 +753,12 @@ describe('FodId', () => {
 
   // ----- Both base64 alphabets -----
 
-  // A payload whose envelope base64 contains both characters that differ
-  // between the alphabets, so the URL-safe form is a real conversion.
+  /**
+   * A payload whose envelope base64 contains both characters that differ
+   * between the alphabets, so the URL-safe form is a real conversion.
+   *
+   * @returns {Uint8Array} the payload
+   */
   function alphabetPayload () {
     const p = canonicalPayload();
     // 0xFB 0xFF 0xBF encodes to "+/+/" in standard base64.
@@ -825,14 +835,20 @@ describe('FodId', () => {
 describe('FodId.tryParse and tryFromByteArray', () => {
   const LONG_DOMAIN = 'a-self-hosted-container.example.internal.51degrees.com';
 
-  // The offset of the four byte payload length field in an envelope built
-  // by the shared builders (version, domain, terminator, four date bytes).
+  /**
+   * The offset of the four byte payload length field in an envelope built
+   * by the shared builders (version, domain, terminator, four date bytes).
+   *
+   * @param {string} [domain] the creator domain
+   * @returns {number} the offset
+   */
   function lengthFieldOffset (domain = DOMAIN) {
     return 1 + domain.length + 1 + 4;
   }
 
   /**
    * Asserts the three facts every successful read reports.
+   *
    * @param {object} result the read
    * @returns {FodId} the value, for further assertions
    */
@@ -846,6 +862,7 @@ describe('FodId.tryParse and tryFromByteArray', () => {
 
   /**
    * Asserts the three facts every failed read reports.
+   *
    * @param {object} result the read
    * @param {string} status the expected status
    */
@@ -859,6 +876,7 @@ describe('FodId.tryParse and tryFromByteArray', () => {
   /**
    * Runs a read while watching every route to a key or a signature check,
    * and asserts none was taken.
+   *
    * @param {function(): object} read the read to run
    * @returns {object} what the read returned
    */

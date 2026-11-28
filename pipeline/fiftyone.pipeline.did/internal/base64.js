@@ -35,6 +35,7 @@ const URL_SAFE_ONLY = /[-_]/;
  * The text without the white space before and after it. A loop, because a
  * regular expression anchored at the end takes time growing with the
  * square of the length of any run of white space inside the text.
+ *
  * @param {string} value the text
  * @returns {string} the text without white space at either end
  */
@@ -66,6 +67,7 @@ function trimWhiteSpace (value) {
  * `atob` refuses the URL safe one. `Uint8Array.fromBase64` is in newer
  * browsers and not in Node 24. `atob` needs no padding, which is added
  * because `FodId.toStandardBase64` answers with the form the cloud issues.
+ *
  * @param {string} value base 64 in either alphabet, with or without padding
  * @returns {string|null} the standard alphabet form, padded, or null where
  * the text is refused

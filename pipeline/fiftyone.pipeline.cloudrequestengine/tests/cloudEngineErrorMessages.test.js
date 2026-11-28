@@ -93,7 +93,7 @@ test('missing property service - no properties for resource key', done => {
     try {
       flowData.get('testEngineNoProperties').get('one');
     } catch (e) {
-      expect(e).toBe("Property 'one' not found in data for element " +
+      expect(e.message).toBe("Property 'one' not found in data for element " +
         "'testEngineNoProperties'. This is because your resource key does " +
         'not include access to any properties under ' +
         "'testEngineNoProperties'. Check or create a resource key with the " +
@@ -114,7 +114,7 @@ test('missing property service - property not included in resource key', done =>
     try {
       flowData.get('testEngine').get('three');
     } catch (e) {
-      expect(e).toBe("Property 'three' not found in data for element " +
+      expect(e.message).toBe("Property 'three' not found in data for element " +
         "'testEngine'. This is because your resource key does not include " +
         'access to this property. The properties included for your key ' +
         "under 'testEngine' are one,two. Check or change your key on the " +
@@ -135,7 +135,7 @@ test('missing property service - listed but not in the results', done => {
     try {
       flowData.get('testEngineMissingContents').get('two');
     } catch (e) {
-      expect(e).toBe("Property 'two' not found in data for element " +
+      expect(e.message).toBe("Property 'two' not found in data for element " +
         "'testEngineMissingContents'. This is because the property has " +
         'been excluded when configuring the engine.');
     }

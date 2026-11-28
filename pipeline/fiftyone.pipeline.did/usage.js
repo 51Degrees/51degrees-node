@@ -57,6 +57,7 @@ const Usage = Object.freeze({
    * writes a flags byte without bit 0, so a payload carrying 000 is
    * damaged or forged and FodId refuses it with
    * `FodId.ParseStatus.NO_USAGE` before this is asked.
+   *
    * @param {number} flags the 1-byte flags value (0-255)
    * @returns {number} the Usage value
    * @throws {RangeError} when bits 0-2 are all clear
@@ -70,6 +71,7 @@ const Usage = Object.freeze({
   },
   /**
    * The cross language name of a Usage value.
+   *
    * @param {number} usage a Usage value, 1 to 3
    * @returns {string|null} for example "NonMarketing", or null for a value
    * that is not a Usage
@@ -79,6 +81,7 @@ const Usage = Object.freeze({
   },
   /**
    * The cloud's id.usage value for a Usage value.
+   *
    * @param {number} usage a Usage value, 1 to 3
    * @returns {string|null} for example "non-marketing", or null for a value
    * that is not a Usage

@@ -31,19 +31,19 @@
             2,
             "always"
         ],
-        "jsdoc/check-alignment": 1,
-        "jsdoc/check-param-names": 1,
-        "jsdoc/check-tag-names": 1,
-        "jsdoc/check-types": 1,
-        "jsdoc/require-description": 1,
-        "jsdoc/require-param": 1,
-        "jsdoc/require-param-description": 1,
-        "jsdoc/require-param-name": 1,
-        "jsdoc/require-param-type": 1,
-        "jsdoc/require-returns": 1,
-        "jsdoc/require-returns-check": 1,
-        "jsdoc/require-returns-description": 1,
-        "jsdoc/require-returns-type": 1,
-        "jsdoc/valid-types": 1
+        "jsdoc/check-alignment": "error",
+        "jsdoc/check-param-names": "error",
+        "jsdoc/check-tag-names": "error",
+        "jsdoc/check-types": "error",
+        "jsdoc/require-description": "error",
+        "jsdoc/require-param": "error",
+        "jsdoc/require-param-description": "error",
+        "jsdoc/require-param-name": "error",
+        "jsdoc/require-param-type": "error",
+        "jsdoc/require-returns": "error",
+        "jsdoc/require-returns-check": "error",
+        "jsdoc/require-returns-description": "error",
+        "jsdoc/require-returns-type": "error",
+        "jsdoc/valid-types": "error"
     }
 }

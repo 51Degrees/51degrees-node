@@ -32,6 +32,9 @@ const shareUsageVersion = '1.1';
 
 // Data received by the local usage receiver.
 let received = [];
+// Errors the local usage receiver met unzipping what was sent, which each
+// test checks there are none of once it has finished.
+let receiveErrors = [];
 // Local server used to capture usage sent.
 let server = null;
 
@@ -51,7 +54,11 @@ const requestListener = function (req, res) {
   gunzip.on('data', function (chunk) {
     data += chunk;
   });
-  gunzip.on('error', (e) => fail(e)); // eslint-disable-line
+  gunzip.on('error', (e) => {
+    receiveErrors.push(e);
+    res.writeHead(500);
+    res.end();
+  });
   // Return an OK response.
   gunzip.on('end', () => {
     received.push(data);
@@ -60,16 +67,18 @@ const requestListener = function (req, res) {
   });
 };
 
-beforeEach(() => { // eslint-disable-line
+beforeEach(() => {
   received = [];
+  receiveErrors = [];
   // Set up the local server. This is HTTP rather than HTTPS to avoid
   // having to use local certificates.
   server = http.createServer(requestListener);
   server.listen(8080);
 });
 
-afterEach(() => { // eslint-disable-line
+afterEach(() => {
   server.close();
+  expect(receiveErrors).toEqual([]);
 });
 
 /**

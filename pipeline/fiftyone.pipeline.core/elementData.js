@@ -72,31 +72,38 @@ function refuseFinished (data, key) {
   }
 }
 
+// The read only view of each contents object, made the first time the
+// contents are reached through the data once it has finished.
+const finishedViews = new WeakMap();
+
 /**
- * Wraps the object a dictionary keeps its values in, so that setting or
- * deleting a value through it once the data has finished throws, as a
- * write to the data itself does.
+ * A view of the object a dictionary keeps its values in, through which
+ * setting or deleting a value throws, as a write to the data itself does
+ * once it has finished. It is made only when the contents are reached
+ * after that, so reading a value never goes through it.
  *
  * @param {object} data the element data, not its proxy
- * @param {*} contents the values
- * @returns {*} the values, wrapped if they are an object
+ * @param {object} contents the values
+ * @returns {object} the view
  */
-function guardContents (data, contents) {
-  if (contents === null || typeof contents !== 'object') {
-    return contents;
+function finishedView (data, contents) {
+  let view = finishedViews.get(contents);
+  if (view === undefined) {
+    view = new Proxy(contents, {
+      set: (values, key, value) => {
+        refuseFinished(data, key);
+        values[key] = value;
+        return true;
+      },
+      deleteProperty: (values, key) => {
+        refuseFinished(data, key);
+        delete values[key];
+        return true;
+      }
+    });
+    finishedViews.set(contents, view);
   }
-  return new Proxy(contents, {
-    set: (values, key, value) => {
-      refuseFinished(data, key);
-      values[key] = value;
-      return true;
-    },
-    deleteProperty: (values, key) => {
-      refuseFinished(data, key);
-      delete values[key];
-      return true;
-    }
-  });
+  return view;
 }
 
 /**
@@ -118,12 +125,12 @@ class ElementData {
    * @param {object} options the options object
    * @param {FlowElement} options.flowElement the FlowElement this data
    * is part of
-   * @throws {string} 'flowElement dataKey not found', when the FlowElement
+   * @throws {Error} 'flowElement dataKey not found', when the FlowElement
    * has no data key
    */
   constructor ({ flowElement }) {
     if (!flowElement.dataKey) {
-      throw 'flowElement dataKey not found';
+      throw new Error('flowElement dataKey not found');
     }
 
     this.flowElement = flowElement;
@@ -133,25 +140,20 @@ class ElementData {
     // proxy takes a field that reads as false for a property name. Names
     // starting with an underscore hold the data's own state and are not
     // writes.
-    Object.defineProperty(this, '_writes', {
-      value: { finished: false }
-    });
-
-    Object.defineProperty(this, '_lazy', {
-      value: noLazyProperties,
-      writable: true
-    });
+    this._writes = { finished: false };
 
     // The pool the data came from, if any, and whether it is shared with
     // other requests, as data a cache holds is, so it never goes back.
-    Object.defineProperty(this, '_pooling', {
-      value: { pool: null, shared: false }
-    });
+    this._pooling = { pool: null, shared: false };
 
     // Returns a proxy so that we can use flowData.flowElementDataKey
     // As a shortcut to flowData.get("flowElementDataKey")
     return new Proxy(this, {
       get: (data, key) => {
+        // A dictionary reads its own values with no view in between.
+        if (key === '_contents') {
+          return data._contents;
+        }
         // This proxy can end up getting called by anything that tries
         // to access methods & properties on the object.
         // This can include things like the inspector if you do something like
@@ -173,16 +175,41 @@ class ElementData {
       },
       // Element data is written only by the flow elements that write it,
       // while they process, so a write once they have finished throws. A
-      // dictionary's contents are wrapped when set, so a write into them is
-      // checked too.
+      // write into a dictionary's contents is checked by the view the
+      // contents give once the data has finished.
       set: (data, key, value) => {
         if (!(typeof key === 'string' && key.startsWith('_'))) {
           refuseFinished(data, key);
         }
-        data[key] = key === 'contents' ? guardContents(data, value) : value;
+        data[key] = value;
         return true;
       }
     });
+  }
+
+  /**
+   * The object a dictionary keeps its values in. Once the flow elements
+   * that write the data have finished, it is a view through which a write
+   * throws.
+   *
+   * @returns {object|undefined} the values
+   */
+  get contents () {
+    const contents = this._contents;
+    if (!this._writes.finished || contents === null ||
+      typeof contents !== 'object') {
+      return contents;
+    }
+    return finishedView(this, contents);
+  }
+
+  /**
+   * Sets the object a dictionary keeps its values in.
+   *
+   * @param {object} contents the values
+   */
+  set contents (contents) {
+    this._contents = contents;
   }
 
   /**
@@ -230,7 +257,7 @@ class ElementData {
    *
    * @param {string} key the key to retrieve a property value for
    * @returns {FlowData} value
-   * @throws {string} a message naming the property and the element, when
+   * @throws {Error} a message naming the property and the element, when
    * the data has no value for the key in any case
    */
   get (key) {
@@ -242,12 +269,12 @@ class ElementData {
     if (typeof value === 'undefined') {
       value = this.getInternalIgnoringCase(key);
       if (typeof value === 'undefined') {
-        throw util.format(errorMessages.genericMissingProperties, key) +
+        throw new Error(util.format(errorMessages.genericMissingProperties, key) +
           (typeof this.flowElement === 'undefined'
             ? ''
             : ' in data for element "' +
             this.flowElement.dataKey) + '".' +
-          util.format(errorMessages.noReasonUnknown);
+          util.format(errorMessages.noReasonUnknown));
       }
     }
     return value;
@@ -407,5 +434,9 @@ class ElementData {
     }
   }
 }
+
+// Every Element Data starts with no lazy property, so the default is kept
+// once here rather than on each.
+ElementData.prototype._lazy = noLazyProperties;
 
 module.exports = ElementData;

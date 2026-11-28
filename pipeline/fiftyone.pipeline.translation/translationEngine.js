@@ -108,15 +108,15 @@ class TranslationEngine extends FlowElement {
     super();
 
     if (!translations || translations.length === 0) {
-      throw 'At least one property translation must be configured.';
+      throw new Error('At least one property translation must be configured.');
     }
     if (!sources || Object.keys(sources).length === 0) {
-      throw 'At least one source file must be configured.';
+      throw new Error('At least one source file must be configured.');
     }
     // The specification's names win over the deprecated ones.
     const sourceKey = sourceElementDataKey ?? sourceDataKey;
     if (typeof sourceKey !== 'string' || sourceKey.trim() === '') {
-      throw 'The source element key must be configured.';
+      throw new Error('The source element key must be configured.');
     }
     const missing = TranslationEngine.toMissingTranslationBehavior(
       missingTranslationBehavior ?? behavior);
@@ -272,8 +272,8 @@ class TranslationEngine extends FlowElement {
       const locale = TranslationEngine.getLanguageName(fileName);
       const translations = yaml.load(sources[fileName]);
       if (translations === null || translations === undefined) {
-        throw 'The source for ' + fileName + ' could not be parsed into a ' +
-          'valid translation lookup.';
+        throw new Error('The source for ' + fileName + ' could not be parsed into a ' +
+          'valid translation lookup.');
       }
       languages.addLanguage(locale, new Translator(translations, behavior));
     });
@@ -289,17 +289,17 @@ class TranslationEngine extends FlowElement {
    */
   static getLanguageName (name) {
     if (typeof name !== 'string' || name.trim() === '') {
-      throw 'Source name cannot be null or whitespace.';
+      throw new Error('Source name cannot be null or whitespace.');
     }
     const parts = name.split('.');
     if (parts.length < 3) {
-      throw 'Source name \'' + name + '\' does not have the correct format. ' +
-        'It should be \'somename.locale.yml\' e.g. \'countries.en_GB.yml\'.';
+      throw new Error('Source name \'' + name + '\' does not have the correct format. ' +
+        'It should be \'somename.locale.yml\' e.g. \'countries.en_GB.yml\'.');
     }
     const locale = TranslationEngine.validateLocale(parts[parts.length - 2]);
     if (locale === null) {
-      throw 'Source name \'' + name + '\' does not contain a valid locale ' +
-        'code.';
+      throw new Error('Source name \'' + name + '\' does not contain a valid locale ' +
+        'code.');
     }
     return locale;
   }
@@ -311,7 +311,7 @@ class TranslationEngine extends FlowElement {
    *
    * @param {*} value the value given
    * @returns {string} the MissingTranslationBehavior value
-   * @throws {string} when the value names no MissingTranslationBehavior
+   * @throws {Error} when the value names no MissingTranslationBehavior
    */
   static toMissingTranslationBehavior (value) {
     if (value === undefined || value === null) {
@@ -327,9 +327,9 @@ class TranslationEngine extends FlowElement {
       }
     }
     const names = Object.keys(MissingTranslationBehavior);
-    throw 'The missing translation behavior \'' + value + '\' is not one ' +
+    throw new Error('The missing translation behavior \'' + value + '\' is not one ' +
       'of ' + names.slice(0, -1).join(', ') + ' or ' +
-      names[names.length - 1] + '.';
+      names[names.length - 1] + '.');
   }
 
   /**

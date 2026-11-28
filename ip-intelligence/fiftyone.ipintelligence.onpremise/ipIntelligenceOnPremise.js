@@ -196,11 +196,11 @@ class IpIntelligenceOnPremise extends Engine {
     let dataFileType;
 
     if (typeof cache !== 'undefined') {
-      throw errorMessages.cacheNotSupport;
+      throw new Error(errorMessages.cacheNotSupport);
     }
 
     if (typeof dataFilePath === 'undefined') {
-      throw errorMessages.dataFilePathRequired;
+      throw new Error(errorMessages.dataFilePathRequired);
     }
     // Only polling and the update on start-up download from the
     // Distributor, so only they need a license key. The file system
@@ -217,8 +217,9 @@ class IpIntelligenceOnPremise extends Engine {
         needKey.push('updateOnStart');
       }
       if (needKey.length > 0) {
-        throw util.format(errorMessages.licenseKeyRequiredForUpdates,
-          needKey.join(', '), needKey.join(' and '));
+        throw new Error(util.format(
+          errorMessages.licenseKeyRequiredForUpdates,
+          needKey.join(', '), needKey.join(' and ')));
       }
     }
     // A file that is not there is downloaded when the engine updates on
@@ -228,7 +229,7 @@ class IpIntelligenceOnPremise extends Engine {
       (licenceKeys && licenceKeys.length > 0));
     const fileMissing = fs.existsSync(dataFilePath) === false;
     if (fileMissing && !downloadsOnStart) {
-      throw util.format(errorMessages.fileNotFound, dataFilePath);
+      throw new Error(util.format(errorMessages.fileNotFound, dataFilePath));
     }
     // look at dataFile extension to detect type
     const ext = path.parse(dataFilePath).ext;
@@ -241,7 +242,8 @@ class IpIntelligenceOnPremise extends Engine {
 
       // Check if the directory containing the native modules exists.
       if (fs.existsSync(moduleDir) === false) {
-        throw util.format(errorMessages.moduleDirNotFound, moduleDir, moduleName);
+        throw new Error(util.format(
+          errorMessages.moduleDirNotFound, moduleDir, moduleName));
       } else {
         // Try to load the native module for the current platform
         // and node version.
@@ -256,7 +258,7 @@ class IpIntelligenceOnPremise extends Engine {
           fs.readdirSync(moduleDir).forEach(file => {
             const parts = file.split(/-|\./);
             const plat = parts[1] === 'win32' ? 'windows' : parts[1];
-            if (modules.hasOwnProperty(plat)) {
+            if (Object.prototype.hasOwnProperty.call(modules, plat)) {
               modules[plat].push(parts[2]);
             } else {
               modules[plat] = [parts[2]];
@@ -273,11 +275,11 @@ class IpIntelligenceOnPremise extends Engine {
           }
 
           // Let the user know what's gone wrong.
-          throw util.format(
+          throw new Error(util.format(
             errorMessages.nativeModuleNotFound,
             moduleName,
             availableModules,
-            err);
+            err));
         }
       }
       // Matches the value returned by the native engine's getType
@@ -285,7 +287,7 @@ class IpIntelligenceOnPremise extends Engine {
       // a newer data file.
       dataFileType = 'IPIV41';
     } else {
-      throw errorMessages.invalidFileExtension;
+      throw new Error(errorMessages.invalidFileExtension);
     }
 
     // Create vector for restricted properties
@@ -319,9 +321,9 @@ class IpIntelligenceOnPremise extends Engine {
         config.setHighPerformance();
         break;
       default:
-        throw util.format(
+        throw new Error(util.format(
           errorMessages.invalidPerformanceProfile,
-          performanceProfile);
+          performanceProfile));
     }
 
     // If auto update is enabled then we must use a temporary copy of the file
@@ -418,6 +420,17 @@ class IpIntelligenceOnPremise extends Engine {
       updateTimeMaximumRandomisation,
       tempDataDirectory: tempDataDir,
       useUrlFormatter: dataUpdateUseUrlFormatter
+    };
+
+    // Until the engine has loaded a data file, the product to ask the data
+    // update service for is read from the header of the file at the path.
+    // A native module without the function gives no product.
+    dataFileSettings.getProductFromFile = function (filePath) {
+      const nativeEngine = swigWrapper['Engine' + swigWrapperType + 'Swig'];
+      if (typeof nativeEngine.getProductFromFile !== 'function') {
+        return '';
+      }
+      return nativeEngine.getProductFromFile(filePath);
     };
 
     // An engine with no data file yet has no published date, so the update

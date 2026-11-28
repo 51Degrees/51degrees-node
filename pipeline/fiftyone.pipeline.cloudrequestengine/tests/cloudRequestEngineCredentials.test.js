@@ -28,6 +28,7 @@ const util = require('util');
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const errorMessages = require('../errorMessages');
+const RequestClientError = require('../requestClientError');
 const sharedValues = require('../sharedValues');
 
 const resourceKey = 'AAAAAAAAAAAA';
@@ -39,10 +40,10 @@ const base = sharedValues.baseURLDefault;
 // set. These tests check the requests to the default endpoint, so each test
 // runs with the variable cleared and puts it back afterwards.
 const savedEndpoint = process.env._51DEGREES_CLOUD_ENDPOINT;
-beforeEach(() => { // eslint-disable-line
+beforeEach(() => {
   delete process.env._51DEGREES_CLOUD_ENDPOINT;
 });
-afterEach(() => { // eslint-disable-line
+afterEach(() => {
   if (savedEndpoint === undefined) {
     delete process.env._51DEGREES_CLOUD_ENDPOINT;
   } else {
@@ -70,11 +71,12 @@ class RecordingClient {
     const lower = url.toLowerCase();
     for (const [part, statusCode] of Object.entries(this.failures)) {
       if (lower.includes(part)) {
-        return Promise.reject({ // eslint-disable-line
-          statusCode,
-          headers: {},
-          content: JSON.stringify({ errors: [refusal] })
-        });
+        return Promise.reject(new RequestClientError(
+          `The request failed with status ${statusCode}`, {
+            statusCode,
+            headers: {},
+            content: JSON.stringify({ errors: [refusal] })
+          }));
       }
     }
     if (lower.includes('accessibleproperties')) {

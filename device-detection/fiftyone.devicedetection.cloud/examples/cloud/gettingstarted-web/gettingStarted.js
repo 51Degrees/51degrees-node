@@ -182,7 +182,7 @@ const setPipeline = (options) => {
   const resourceKey = OptionsExtension.getResourceKey(options);
   // If we don't have a resource key then log an error
   if (!resourceKey) {
-    throw NO_RESOURCE_KEY_MESSAGE;
+    throw new Error(NO_RESOURCE_KEY_MESSAGE);
   }
 
   // 'suppressProcessExceptions' is set to true in 51d.json

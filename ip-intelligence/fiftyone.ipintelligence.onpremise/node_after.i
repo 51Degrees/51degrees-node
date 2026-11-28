@@ -38,7 +38,7 @@
     const std::string& get(const std::string &key) {
         return $self->operator[](key);
     }
-    int size() {
+    size_t size() {
         return $self->size();
     }
 };

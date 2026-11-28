@@ -122,17 +122,17 @@ function buildOnLicenseKey (json) {
 }
 
 /**
- * Reads a property and returns what reading it threw.
+ * Reads a property and returns the message of the error reading it threw.
  *
  * @param {object} flowData processed flow data
  * @param {string} property the property to read
- * @returns {*} the value thrown, or undefined if nothing was
+ * @returns {string} the message, or undefined if nothing was thrown
  */
 function thrownReading (flowData, property) {
   try {
     flowData.get(dataKey).get(property);
   } catch (e) {
-    return e;
+    return e.message;
   }
   return undefined;
 }

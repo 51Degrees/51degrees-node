@@ -61,7 +61,7 @@ const STAGING_NAMES = {
 // secrets and variables only CI uses.
 const PLATFORM_NAMES = new Set([
   // Node
-  'NODE_PATH',
+  'NODE_PATH', 'NODE_OPTIONS',
   // jest and jest-junit
   'JEST_WORKER_ID', 'JEST_JUNIT_OUTPUT_DIR',
   // GitHub Actions

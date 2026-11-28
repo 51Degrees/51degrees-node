@@ -85,7 +85,7 @@ module.exports = {
   error: new FlowElement({
     dataKey: 'error',
     processInternal: function (flowData) {
-      throw 'Something went wrong';
+      throw new Error('Something went wrong');
     }
   }),
 

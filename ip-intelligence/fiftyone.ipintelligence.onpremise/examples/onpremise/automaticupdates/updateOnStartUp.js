@@ -93,7 +93,7 @@ if (myLicenseKey === '!!YOUR_LICENSE_KEY!!') {
       'data file. Make sure the cxx/data submodule ' +
       'has been fetched by running ' +
       '`git submodule update --init --recursive`.');
-    throw ("No data file at '" + datafile + "'");
+    throw new Error("No data file at '" + datafile + "'");
   }
 
   const customDataFileUpdateUrl = null; // Specify your custom server hosting a data file

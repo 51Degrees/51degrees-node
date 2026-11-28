@@ -56,6 +56,7 @@ const START_4 = new Date('2026-08-24T00:00:00Z');
 /**
  * A schedule of three real key pairs and the JSON the key endpoint would
  * answer with, newest first so that the reader's ordering is exercised.
+ *
  * @returns {Promise<{pairs: object[], pems: string[], json: object[]}>}
  * the pairs, their public keys as PEM and the published list
  */
@@ -79,6 +80,7 @@ async function schedule () {
 /**
  * One entry as the cloud's key route publishes it, with the dates in the
  * form the cloud writes them and endsAt where one is given.
+ *
  * @param {Date} startsAt when the key starts
  * @param {Date | null} endsAt when the key ends, or null for none
  * @param {string} publicKey the key as PEM
@@ -96,6 +98,7 @@ function published (startsAt, endsAt, publicKey) {
 /**
  * The list the cloud publishes during the second period, which holds the
  * keys that have started, each with its end.
+ *
  * @param {string[]} pems the public keys of the schedule
  * @returns {ReadonlyArray<object>} the list read into entries
  */
@@ -108,6 +111,7 @@ function startedList (pems) {
 
 /**
  * An identifier signed with the pair at the moment, as a FodId.
+ *
  * @param {object} pair the key pair to sign with
  * @param {Date} at the creation moment
  * @returns {Promise<FodId>} the identifier
