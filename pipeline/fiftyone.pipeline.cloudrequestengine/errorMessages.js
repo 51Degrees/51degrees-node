@@ -33,6 +33,16 @@ module.exports = {
     "Pipeline can hold one element for 'derived'. In a Pipeline that uses " +
     'the cloud, the cloud service gives HumanConfidence, so leave the ' +
     'DerivedPropertyElement out.',
+  // Why HumanConfidence or HumanConfidenceSource has no value, on a request
+  // that carries no sealed result, where the Pipeline has no Cloud Request
+  // Engine. It is given the Property's name and the data key first, as the
+  // missing property messages are.
+  missingPropertyNoCloudRequestEngine: "Property '%s' not found in data " +
+    "for element '%s'. This is because the Pipeline has no Cloud Request " +
+    'Engine, so the property has a value only on a request that carries a ' +
+    'sealed Human Confidence result in the evidence query.humanconfidence. ' +
+    'Add a CloudRequestEngine before the DerivedCloudEngine to get the ' +
+    'value from the cloud service.',
   // warning message to be shown for conflicted evidences
   evidenceConflict: "WARNING: '%s:%s' evidence conflicts with %s",
   // Refused when the engine is built, each saying why the cloud service

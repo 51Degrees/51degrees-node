@@ -130,6 +130,13 @@ Pipeline that uses the cloud, the cloud service gives HumanConfidence. The
 `DerivedPropertyElement` can't redeem a sealed result, so on a request that
 carries one it gives `Medium` and `Active`.
 
+A `DerivedCloudEngine` can also go in a Pipeline with no
+`CloudRequestEngine`, such as an on-premise one. Nothing is redeemed there.
+A request that carries a sealed result gives `Medium` and `Active`, with no
+error and no request, and any other request gives both Properties with no
+value and a `noValueMessage` that says why. To get the redeemed value, add
+the `CloudRequestEngine` before it.
+
 Naming HumanConfidence delays the client script's complete handlers by the
 time the browser tests take and one more request. A page can read the
 first response's Properties sooner through its change handlers.

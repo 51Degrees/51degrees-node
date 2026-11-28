@@ -29,6 +29,7 @@ const { PipelineBuilder, FlowElement } = require('fiftyone.pipeline.core');
 const { LruCache } = require('fiftyone.pipeline.engines');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const DerivedCloudEngine = require('../derivedCloudEngine');
+const errorMessages = require('../errorMessages');
 
 const RESOURCE = 'AQTestResourceKey';
 const LICENSE = 'TESTLICENSEKEYNOTREAL1234';
@@ -151,6 +152,32 @@ async function run (pipeline, evidence) {
   const rejection = await flowData.process().then(
     () => undefined, (error) => error);
   return { flowData, rejection };
+}
+
+/**
+ * A Pipeline of the derived cloud engine alone, with no Cloud Request
+ * Engine. Process exceptions are not suppressed, so any error rejects.
+ *
+ * @returns {object} the pipeline
+ */
+function withoutRequestEngine () {
+  return new PipelineBuilder({
+    addJavaScriptBuilder: false,
+    suppressProcessExceptions: false
+  }).add(new DerivedCloudEngine()).build();
+}
+
+/**
+ * Counts the HTTP and HTTPS requests made until restore is called.
+ *
+ * @returns {Function} gives the count, with restore to stop counting
+ */
+function watchRequests () {
+  const spies = [require('http'), require('https')].flatMap((module) =>
+    ['request', 'get'].map((name) => jest.spyOn(module, name)));
+  const count = () => spies.reduce((all, spy) => all + spy.mock.calls.length, 0);
+  count.restore = () => spies.forEach((spy) => spy.mockRestore());
+  return count;
 }
 
 /**
@@ -467,13 +494,25 @@ describe('a sealed Human Confidence result not redeemed', () => {
       }
     });
 
-  test('where the Pipeline has no Cloud Request Engine, as the derived ' +
-    'cloud engine is refused there', () => {
-    // The derived property element's own tests cover a Pipeline that gives
-    // HumanConfidence with no Cloud Request Engine.
-    expect(() => new PipelineBuilder({ addJavaScriptBuilder: false })
-      .add(new DerivedCloudEngine()).build())
-      .toThrow(/No CloudRequestEngine/);
+  test('where the Pipeline has no Cloud Request Engine, and no request is ' +
+    'made', async () => {
+    const pipeline = withoutRequestEngine();
+    const requests = watchRequests();
+    try {
+      const { flowData, rejection } = await run(pipeline, {
+        'header.user-agent': 'Mozilla/5.0 (test)',
+        'query.humanconfidence': SEALED,
+        'query.humanconfidencepage': 'anyPage'
+      });
+
+      expect(rejection).toBeUndefined();
+      expectMediumActive(flowData);
+      expect(flowData.errors || {}).toEqual({});
+      expect(flowData.tryGet('cloud')).toBeUndefined();
+      expect(requests()).toBe(0);
+    } finally {
+      requests.restore();
+    }
   });
 
   test('where the engine made no request, as discovery failed', async () => {
@@ -757,6 +796,42 @@ describe('newHumanConfidencePage', () => {
 });
 
 describe('DerivedCloudEngine', () => {
+  test.each([
+    ['carries no sealed result', {}],
+    ['carries an empty one', { 'query.humanconfidence': '' }],
+    ['carries one outside the query', { 'header.humanconfidence': SEALED }]
+  ])('with no Cloud Request Engine, on a request that %s, gives no value ' +
+    'and the reason', async (name, more) => {
+    const { flowData, rejection } = await run(withoutRequestEngine(),
+      Object.assign({ 'header.user-agent': 'Mozilla/5.0 (test)' }, more));
+
+    expect(rejection).toBeUndefined();
+    expect(flowData.errors || {}).toEqual({});
+    for (const wanted of ['HumanConfidence', 'HumanConfidenceSource']) {
+      const property = flowData.derived[wanted.toLowerCase()];
+      expect(property.hasValue).toBe(false);
+      expect(property.noValueMessage).toBe(util.format(
+        errorMessages.missingPropertyNoCloudRequestEngine, wanted, 'derived'));
+      expect(property.noValueMessage).toMatch(/no Cloud Request Engine/);
+    }
+  });
+
+  test('with no Cloud Request Engine, lists the two Properties', () => {
+    const engine = new DerivedCloudEngine();
+    new PipelineBuilder({ addJavaScriptBuilder: false }).add(engine).build();
+    expect(Object.keys(engine.properties))
+      .toEqual(['humanconfidence', 'humanconfidencesource']);
+  });
+
+  test('refuses a Pipeline with the Cloud Request Engine after it', () => {
+    const engine = new CloudRequestEngine({
+      resourceKey: RESOURCE, requestClient: new Cloud()
+    });
+    expect(() => new PipelineBuilder({ addJavaScriptBuilder: false })
+      .add(new DerivedCloudEngine()).add(engine).build())
+      .toThrow(/No CloudRequestEngine/);
+  });
+
   // The DerivedPropertyElement also gives its Element Data under 'derived'.
   // A Pipeline keeps one element for each data key, so the two would
   // replace each other's data without a word.
