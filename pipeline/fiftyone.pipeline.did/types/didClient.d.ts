@@ -67,7 +67,9 @@ export type CloudVerification = {
     /**
      * why `humanConfidence` is
      * not present, as the cloud gives it to a call that did not present such a
-     * key
+     * key. For a valid signature, where the answer holds neither
+     * `humanConfidence` nor `humanConfidenceNullReason`, it is a message
+     * saying the remote server did not return one.
      */
     humanConfidenceNullReason?: string;
 };
@@ -151,7 +153,9 @@ export type DidClientOptions = {
  * still visible. Not present where the answer has no such string.
  * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
  * not present, as the cloud gives it to a call that did not present such a
- * key
+ * key. For a valid signature, where the answer holds neither
+ * `humanConfidence` nor `humanConfidenceNullReason`, it is a message
+ * saying the remote server did not return one.
  */
 /**
  * Options for {@link DidClient}.
@@ -510,7 +514,9 @@ export class RedeemResult {
     /**
      * @type {string | undefined} why {@link RedeemResult#humanConfidence}
      * is not present, as the cloud gives it to a call that did not present a
-     * License Key valid for Human Confidence
+     * License Key valid for Human Confidence. On `success`, where the answer
+     * holds neither `humanConfidence` nor `humanConfidenceNullReason`, it is
+     * a message saying the remote server did not return one.
      */
     humanConfidenceNullReason: string | undefined;
     /** @type {string} one of {@link SignatureResult} */

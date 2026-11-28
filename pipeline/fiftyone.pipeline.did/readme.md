@@ -616,8 +616,11 @@ presents a licence key valid for Human Confidence, whoever holds it, and gives
 carries no Value, which is true of every 51Did made before the Value was
 added. A `humanConfidence` word this package does not know reads as 'Absent'
 too, and `humanConfidenceRaw` keeps it as sent. An answer without
-`humanConfidence` leaves both out. Verify and redeem read these fields the
-same way. Only an HTTP 200 can say the signature is valid. A 400 holding
+`humanConfidence` leaves both out. Where a valid signature or a `success`
+redeem answer holds neither `humanConfidence` nor
+`humanConfidenceNullReason`, as from a remote server that does not return
+the Value, there is no Value and `humanConfidenceNullReason` is a message
+saying the remote server did not return one. Verify and redeem read these fields the same way. Only an HTTP 200 can say the signature is valid. A 400 holding
 `valid` reads as invalid whatever `valid` says, with nothing else read from
 it, and any other status raises `DidClientError` whatever its body holds. `verify` itself is unchanged and never sends the licence key.
 

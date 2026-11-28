@@ -436,7 +436,8 @@ class RedeemResult {
      * `unconfirmed`, whatever its body says.
      */
     this.status = readStatus(body.status, this.context);
-    const fields = readHumanConfidenceFields(body);
+    const fields = readHumanConfidenceFields(body,
+      statusCode === 200 && this.status === RedeemStatus.SUCCESS);
     /**
      * @type {string | undefined} one of {@link HumanConfidence}, the Value
      * the 51Did carries, present on `success` for a call that presented a
@@ -455,7 +456,9 @@ class RedeemResult {
     /**
      * @type {string | undefined} why {@link RedeemResult#humanConfidence}
      * is not present, as the cloud gives it to a call that did not present a
-     * License Key valid for Human Confidence
+     * License Key valid for Human Confidence. On `success`, where the answer
+     * holds neither `humanConfidence` nor `humanConfidenceNullReason`, it is
+     * a message saying the remote server did not return one.
      */
     this.humanConfidenceNullReason = fields.humanConfidenceNullReason;
     /** @type {string} one of {@link SignatureResult} */
@@ -612,7 +615,9 @@ class RedeemResult {
  * still visible. Not present where the answer has no such string.
  * @property {string} [humanConfidenceNullReason] why `humanConfidence` is
  * not present, as the cloud gives it to a call that did not present such a
- * key
+ * key. For a valid signature, where the answer holds neither
+ * `humanConfidence` nor `humanConfidenceNullReason`, it is a message
+ * saying the remote server did not return one.
  */
 
 /**
@@ -862,7 +867,7 @@ class DidClient {
     const parsed = await this._verify(fodId, this._licenceKey !== null);
     /** @type {CloudVerification} */
     const answer = { valid: parsed.valid };
-    const fields = readHumanConfidenceFields(parsed);
+    const fields = readHumanConfidenceFields(parsed, parsed.valid === true);
     for (const name of Object.keys(fields)) {
       if (fields[name] !== undefined) {
         answer[name] = fields[name];
@@ -1412,22 +1417,42 @@ function readHumanConfidence (word) {
 }
 
 /**
+ * The message given in place of a Human Confidence Value where one is
+ * expected and the answer holds neither `humanConfidence` nor
+ * `humanConfidenceNullReason`, as from a remote server that does not
+ * return the Value.
+ */
+const HUMAN_CONFIDENCE_NOT_RETURNED = 'The remote server did not return ' +
+  'humanConfidence or humanConfidenceNullReason, so it gives no Human ' +
+  'Confidence Value.';
+
+/**
  * Reads the Human Confidence fields of a verify or redeem answer. Both
  * answers read them here, so they always read the same way.
  * @param {object} body the answer body
+ * @param {boolean} expected whether the answer is one that carries the
+ * Value or the reason it is not present, being a valid signature or a
+ * redeemed sealed result
  * @returns {{humanConfidence: (string | undefined),
  * humanConfidenceRaw: (string | undefined),
  * humanConfidenceNullReason: (string | undefined)}} the Value, the
  * `humanConfidence` word as sent where it is a string, and the reason the
- * Value is not present, each undefined where the answer did not send it
+ * Value is not present. Where the Value is expected and the answer holds
+ * neither member, the reason is {@link HUMAN_CONFIDENCE_NOT_RETURNED}.
+ * Otherwise each is undefined where the answer did not send it.
  */
-function readHumanConfidenceFields (body) {
+function readHumanConfidenceFields (body, expected) {
+  const humanConfidence = readHumanConfidence(body.humanConfidence);
+  const reason = optionalString(body.humanConfidenceNullReason);
   return {
-    humanConfidence: readHumanConfidence(body.humanConfidence),
+    humanConfidence,
     humanConfidenceRaw: typeof body.humanConfidence === 'string'
       ? body.humanConfidence
       : undefined,
-    humanConfidenceNullReason: optionalString(body.humanConfidenceNullReason)
+    humanConfidenceNullReason: reason === undefined &&
+      humanConfidence === undefined && expected
+      ? HUMAN_CONFIDENCE_NOT_RETURNED
+      : reason
   };
 }
 

@@ -1324,6 +1324,8 @@ describe('DidClient verifyDetailed', () => {
   const NULL_REASON = 'humanConfidence is a paid feature. You need a ' +
     'License Key valid for Human Confidence, presented on this call, to ' +
     'retrieve it. Visit https://51degrees.com/pricing for details';
+  const NOT_RETURNED = 'The remote server did not return humanConfidence ' +
+    'or humanConfidenceNullReason, so it gives no Human Confidence Value.';
 
   function verifyClient (status, body, extra = {}) {
     const fetch = fakeFetch(() => response(status, body));
@@ -1466,9 +1468,22 @@ describe('DidClient verifyDetailed', () => {
     }
   });
 
-  test('today\'s answer, with neither field, reads as before', async () => {
-    const { client } = verifyClient(200, { valid: true });
-    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: true });
+  test('a valid answer with neither field gives no Value and says so', async () => {
+    for (const body of [
+      { valid: true },
+      { valid: true, humanConfidence: null },
+      { valid: true, humanConfidenceNullReason: '' }
+    ]) {
+      const { client } = verifyClient(200, body, { licenceKey: LICENCE });
+      await expect(client.verifyDetailed(fod)).resolves.toEqual({
+        valid: true, humanConfidenceNullReason: NOT_RETURNED
+      });
+    }
+  });
+
+  test('an invalid answer with neither field gives no message', async () => {
+    const { client } = verifyClient(200, { valid: false });
+    await expect(client.verifyDetailed(fod)).resolves.toEqual({ valid: false });
   });
 
   test('400 invalid answers false with no Value', async () => {
@@ -2111,6 +2126,8 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
   const NULL_REASON = 'humanConfidence is a paid feature. You need a ' +
     'License Key valid for Human Confidence, presented on this call, to ' +
     'retrieve it. Visit https://51degrees.com/pricing for details';
+  const NOT_RETURNED = 'The remote server did not return humanConfidence ' +
+    'or humanConfidenceNullReason, so it gives no Human Confidence Value.';
   const OBSOLETE = [
     'result is obsolete. Use sealedResult.',
     'challenge is obsolete. Use transaction.'
@@ -2271,8 +2288,28 @@ describe('DidClient redeem with the status and Human Confidence fields', () => {
         outcome.httpStatus, JSON.stringify(outcome.today));
       expect(result.status).toBe(outcome.status);
       expect(result.humanConfidence).toBeUndefined();
-      expect(result.humanConfidenceNullReason).toBeUndefined();
+      // A success is where a Value is expected, so its absence is said.
+      expect(result.humanConfidenceNullReason).toBe(
+        outcome.status === RedeemStatus.SUCCESS ? NOT_RETURNED : undefined);
     });
+
+  test('a success with neither field gives no Value and says so', () => {
+    const result = RedeemResult.fromResponse(200, JSON.stringify({
+      status: 'success', signature: 'verified', context: 'verified'
+    }));
+    expect(result.humanConfidence).toBeUndefined();
+    expect(result.humanConfidenceRaw).toBeUndefined();
+    expect(result.humanConfidenceNullReason).toBe(NOT_RETURNED);
+    expect(result.toJSON()).toEqual({ signature: 'verified', context: 'verified' });
+  });
+
+  test('a status other than success with neither field gives no message', () => {
+    for (const status of ['expired', 'replayed', 'unreadable']) {
+      const result = RedeemResult.fromResponse(200,
+        JSON.stringify({ status, context: status }));
+      expect(result.humanConfidenceNullReason).toBeUndefined();
+    }
+  });
 
   test('the status words are the cloud\'s five', () => {
     expect(Object.isFrozen(RedeemStatus)).toBe(true);
