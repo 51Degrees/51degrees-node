@@ -597,16 +597,49 @@ with the cloud's message.
 
 ```js
 const valid = await client.verify(fodId);   // boolean
+
+// The same check, with the Human Confidence Value the 51Did carries.
+const checked = await client.verifyDetailed(fodId);
+checked.valid                      // boolean
+checked.humanConfidence            // HumanConfidence: 'High', 'Medium', 'Low'
+                                   //   or 'Absent', for a valid signature
+                                   //   with a licence key valid for Human
+                                   //   Confidence
+checked.humanConfidenceRaw         // the humanConfidence word as sent
+checked.humanConfidenceNullReason  // why humanConfidence is not present
 ```
+
+`verifyDetailed` sends the licence key where the client has one, in the body
+of a POST, never in a URL. The cloud gives the Value only to a call that
+presents a licence key valid for Human Confidence, whoever holds it, and gives
+`humanConfidenceNullReason` to any other call. 'Absent' means the 51Did
+carries no Value, which is true of every 51Did made before the Value was
+added. A `humanConfidence` word this package does not know reads as 'Absent'
+too, and `humanConfidenceRaw` keeps it as sent. An answer without
+`humanConfidence` leaves both out. Where a valid signature or a `success`
+redeem answer holds neither `humanConfidence` nor
+`humanConfidenceNullReason`, as from a remote server that does not return
+the Value, there is no Value and `humanConfidenceNullReason` is a message
+saying the remote server did not return one. Verify and redeem read these fields the same way. Only an HTTP 200 can say the signature is valid. A 400 holding
+`valid` reads as invalid whatever `valid` says, with nothing else read from
+it, and any other status raises `DidClientError` whatever its body holds. `verify` itself is unchanged and never sends the licence key.
 
 **4. Redeem a sealed creator context result.** The verify-context and
 verify-full endpoints are browser calls, because the creator context describes
-the browser's own connection, and they return the verdict only as an encrypted
-`result` the browser cannot read or forge. The party that acts on it redeems it
-on the server, with the licence key, against the 51Did it knows independently.
+the browser's own connection, and they return the verdict only as a sealed
+result the browser cannot read or forge, in `sealedResult` and in `result`,
+its older name. The party that acts on it redeems it on the server, with the
+licence key, against the 51Did it knows independently.
 
 ```js
-const redeemed = await client.redeem(fodId, result, challenge);
+const redeemed = await client.redeem(fodId, sealedResult, transaction);
+redeemed.status       // RedeemStatus: 'success', 'expired', 'replayed',
+                      // 'unreadable' or 'unconfirmed'
+redeemed.humanConfidence // on success, with a licence key valid for
+                      //   Human Confidence: 'High', 'Medium', 'Low'
+                      //   or 'Absent'
+redeemed.humanConfidenceRaw // the humanConfidence word as sent
+redeemed.humanConfidenceNullReason // why humanConfidence is not present
 redeemed.context      // ContextResult: 'verified', 'mismatch', 'nocontext',
                       // 'misconfigured', 'invaliddate', 'notcheckable',
                       // 'expired', 'replayed', 'unreadable', 'unconfirmed'
@@ -625,6 +658,29 @@ redeemed.statusCode   // 200, or 503 for 'unconfirmed', which may be retried
 redeemed.raw          // the body as received
 redeemed.toJSON()     // the cloud's own response shape, for relaying to a page
 ```
+
+The client sends the sealed result as `sealedResult` and the transaction as
+`transaction`, and the same values under `result` and `challenge`, their
+obsolete names, so the call works with a cloud that reads only those. Read
+`status` first. Only `success` carries an unsealed result, being `signature`,
+`context`, `factors` and the Human Confidence Value, and the other four say
+why the sealed result was not redeemed. A cloud that sends no `status` wrote
+the reason to `context`, so `status` is then read from `context`. A
+verdict the check reached (`verified`, `mismatch`, `nocontext`,
+`misconfigured` or `invaliddate`) is `success`, each of the four reasons is
+itself, and any other word, `notcheckable` included, is `unreadable`. A
+status this package does not know is `unreadable`. The cloud still writes the
+reason to `context` too, so `ContextResult.EXPIRED`, `REPLAYED`, `UNREADABLE`
+and `UNCONFIRMED` keep their values, but they are obsolete in favor of
+`RedeemStatus`, and their docs mark them deprecated. `toJSON` leaves out
+`status` and the Human Confidence fields, so the Value reaches a page only
+where the server sends it.
+
+An HTTP 503 is `unconfirmed` whatever its body says, an empty body or one
+that is not JSON included, so `status`, `context` and `contextRaw` are all
+`unconfirmed` and nothing else is read from it. The body is kept in `raw`. A `humanConfidence` word this
+package does not know reads as 'Absent', and `humanConfidenceRaw` keeps it as
+sent. An answer without `humanConfidence` leaves both out.
 
 The factor names are in `Factor`, in the order the cloud lists them. From
 cloud release 4.4.38 the operating system and the browser each have a name
@@ -655,7 +711,10 @@ a 51Did is refused before the request with a `DidArgumentError` naming the
 status, a cloud that refuses the 51Did raises `DidArgumentError` (HTTP 400),
 a host that does not offer the creator context raises `DidNotSupportedError`
 (HTTP 404), and any other status raises `DidClientError` carrying
-`statusCode` and `body`. A transport failure raises the error `fetch` raised.
+`statusCode` and `body`. A 200 whose body is not a JSON object, or holds
+neither `status` nor `context`, raises nothing. Its `status` and `context`
+are `unreadable` and its `signature` is `unknown`. A transport failure raises
+the error `fetch` raised.
 
 ## Verifying in a browser
 

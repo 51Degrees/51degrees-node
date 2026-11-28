@@ -118,23 +118,31 @@
       .catch(function (error) { show("passive-level", String(error), FAIL); });
   }
 
-  // Step 3. The server redeems the sealed value with its License Key.
+  // Step 3. The server redeems the sealed result with its License Key.
   function redeem(value) {
     var body = new URLSearchParams();
-    body.set("value", value);
+    body.set("sealedResult", value);
     return fetch("redeem", { method: "POST", body: body })
       .then(function (r) { return r.json(); });
   }
 
+  // What happened at the redeem: status, or result from a service released
+  // before status, which sent humanConfidence only on success.
+  function redeemStatus(answer) {
+    return answer.status || answer.result
+      || (answer.humanConfidence ? "success" : "");
+  }
+
   function showRedeemed(answer) {
-    if (answer.humanConfidence) {
+    var status = redeemStatus(answer);
+    if (status === "success") {
       show("redeem-detail", "redeemed " + answer.secondsSinceVerified
         + " s after the check", PASS);
       show("redeem-level", answer.humanConfidence,
         levelClass(answer.humanConfidence));
     } else {
-      show("redeem-detail", answer.result || answer.error || "no answer", FAIL);
-      show("redeem-level", "no level", NONE);
+      show("redeem-detail", status || answer.error || "no answer", FAIL);
+      show("redeem-level", "no Value", NONE);
     }
   }
 
@@ -176,9 +184,10 @@
           again.style.display = "";
           again.onclick = function () {
             redeem(value).then(function (second) {
+              var status = redeemStatus(second);
               document.getElementById("again-result").textContent =
-                " Second redeem: " + (second.result || second.humanConfidence
-                  || second.error);
+                " Second redeem: " + (status === "success"
+                  ? second.humanConfidence : status || second.error);
             });
           };
         }).catch(function (error) {

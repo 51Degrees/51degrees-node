@@ -288,7 +288,11 @@ describe('Human Confidence example /redeem route', () => {
     expect(cloud.calls).toEqual([{
       url: API + 'hc/redeem',
       method: 'POST',
-      fields: { value: 'sealed+value/=', license: LICENSE }
+      fields: {
+        sealedResult: 'sealed+value/=',
+        value: 'sealed+value/=',
+        license: LICENSE
+      }
     }]);
   });
 
@@ -308,10 +312,20 @@ describe('Human Confidence example /redeem route', () => {
     expect(JSON.parse(second.body)).toEqual({ result: 'replayed' });
   });
 
+  test('relays an answer with status as the cloud gave it', async () => {
+    const answer = '{"humanConfidence":"Medium","status":"replayed"}';
+    const cloud = cloudAnswering(() => ({ body: answer }));
+    const response = fakeResponse();
+    await routesWith(cloud).redeem('sealed', response);
+    expect(response.status).toBe(200);
+    expect(response.body).toBe(answer);
+  });
+
   test('sends no license field when no license key is set', async () => {
     const cloud = cloudAnswering(() => ({ body: '{"result":"unreadable"}' }));
     await routesWith(cloud, '').redeem('sealed', fakeResponse());
-    expect(cloud.calls[0].fields).toEqual({ value: 'sealed' });
+    expect(cloud.calls[0].fields)
+      .toEqual({ sealedResult: 'sealed', value: 'sealed' });
   });
 
   test('relays a status other than 200 with its body', async () => {
