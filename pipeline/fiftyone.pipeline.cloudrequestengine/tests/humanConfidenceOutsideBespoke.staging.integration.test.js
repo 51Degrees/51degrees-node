@@ -53,7 +53,7 @@ describe('Human Confidence example on the staging cloud service with a ' +
     const cloud = live.keepingAnswers();
     const response = live.fakeResponse();
     await demoRoutes({
-      resource, license: '', api, fetch: cloud.fetch
+      resource, license: '', api, requestClient: cloud.requestClient
     }).passive(live.visitor, response);
 
     const answer = JSON.parse(response.body);

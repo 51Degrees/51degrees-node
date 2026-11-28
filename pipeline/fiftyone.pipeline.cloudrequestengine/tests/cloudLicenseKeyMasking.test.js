@@ -31,7 +31,11 @@ const CloudRequestEngine = require('../cloudRequestEngine');
 const MockRequestClient = require('./classes/mockRequestClient');
 
 const KEY = 'TESTKEYNOTREALABCDEFGH1234';
-const MASKED = '**********************1234';
+// The key is left out whole, so not even its last four characters are kept.
+const HIDDEN = '[hidden]';
+// Every run of four characters of the key, each of which counts as a part.
+const PARTS = Array.from({ length: KEY.length - 3 },
+  (unused, i) => KEY.slice(i, i + 4));
 const RESOURCE = 'AQTestResourceKey';
 
 // The answers the cloud service gives for a refused license key, and one
@@ -86,7 +90,7 @@ function build (answer) {
 }
 
 describe('a license key the cloud names in its answer', () => {
-  test.each(ANSWERS)('is masked when processing fails, for %s',
+  test.each(ANSWERS)('is hidden whole when processing fails, for %s',
     async (name, answer) => {
       const { pipeline, logs } = build(answer);
       const flowData = pipeline.createFlowData();
@@ -102,13 +106,14 @@ describe('a license key the cloud names in its answer', () => {
         ['the rejected error', rejection]
       ]) {
         const text = shown(value);
-        expect([what, text.includes(KEY)]).toEqual([what, false]);
-        expect([what, text.includes(MASKED)]).toEqual([what, true]);
+        expect([what, PARTS.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
       }
-      expect(flowData.errors.cloud[0].errorMessage).toContain(MASKED);
+      expect(flowData.errors.cloud[0].errorMessage).toContain(HIDDEN);
     });
 
-  test.each(ANSWERS)('is masked when the engine cannot get ready, for %s',
+  test.each(ANSWERS)('is hidden whole when the engine is not ready, for %s',
     async (name, answer) => {
       const { engine, logs } = build(answer);
       const rejection = await engine.ready().then(
@@ -122,8 +127,55 @@ describe('a license key the cloud names in its answer', () => {
         ['the engine errors', engine.errors]
       ]) {
         const text = shown(value);
-        expect([what, text.includes(KEY)]).toEqual([what, false]);
-        expect([what, text.includes(MASKED)]).toEqual([what, true]);
+        expect([what, PARTS.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
+      }
+    });
+});
+
+describe('a key the cloud names alone where the setting holds several', () => {
+  test.each([', ', ' | '])(
+    'is hidden whole when processing fails, for keys separated by "%s"',
+    async (separator) => {
+      const second = 'SECONDKEYNOTREAL0987654321';
+      const parts = Array.from({ length: second.length - 3 },
+        (unused, i) => second.slice(i, i + 4));
+      const engine = new CloudRequestEngine({
+        resourceKey: RESOURCE,
+        licenseKey: KEY + separator + second,
+        requestClient: new MockRequestClient({
+          error: {
+            statusCode: 401,
+            headers: {},
+            content: '{ "status":"401", "errors": ["Invalid license ' +
+              'key(s) supplied: \\u0027' + second + '\\u0027"] }'
+          }
+        })
+      });
+      const pipeline = new PipelineBuilder({
+        addJavaScriptBuilder: false,
+        useSetHeaderProperties: false
+      }).add(engine).build();
+      const logs = [];
+      for (const level of ['error', 'warn', 'info', 'debug']) {
+        pipeline.on(level, (message) => logs.push(message));
+      }
+      const flowData = pipeline.createFlowData();
+      flowData.evidence.add('header.user-agent', 'iPhone');
+      const rejection = await flowData.process().then(
+        () => undefined, (error) => error);
+
+      expect(flowData.errors.cloud).toBeDefined();
+      for (const [what, value] of [
+        ['the log entries', logs],
+        ['the flow data errors', flowData.errors],
+        ['the rejected error', rejection]
+      ]) {
+        const text = shown(value);
+        expect([what, parts.filter((part) => text.includes(part))])
+          .toEqual([what, []]);
+        expect([what, text.includes(HIDDEN)]).toEqual([what, true]);
       }
     });
 });

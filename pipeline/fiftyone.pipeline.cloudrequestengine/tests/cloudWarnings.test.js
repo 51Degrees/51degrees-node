@@ -104,7 +104,7 @@ describe('cloud warnings', () => {
       expect(errors).toEqual([]);
     });
 
-  test('a license key a warning names is masked', async () => {
+  test('a license key a warning names is left out whole', async () => {
     const { warnings } = await logged({
       licenseKey: LICENSE_KEY,
       requestedProperties: ['device.ismobile'],
@@ -116,8 +116,30 @@ describe('cloud warnings', () => {
     });
     const warning = warnings.find((text) => text.startsWith('The key '));
     expect(warning).toBeDefined();
-    expect(warning).not.toContain(LICENSE_KEY);
+    expect(warning).not.toContain(LICENSE_KEY.slice(-4));
+    expect(warning).toContain('[hidden]');
   });
+
+  test.each([', ', ' | '])(
+    'a key a warning names alone is left out where the setting holds ' +
+    'several separated by "%s"', async (separator) => {
+      const second = 'SECONDKEY0987654321';
+      const { warnings } = await logged({
+        licenseKey: LICENSE_KEY + separator + second,
+        requestedProperties: ['device.ismobile'],
+        requestClient: new LicenseKeyClient({
+          properties,
+          json: Object.assign(
+            { warnings: ['Key "' + second + '" expires soon.'] }, json)
+        })
+      });
+      const warning = warnings.find((text) => text.startsWith('Key '));
+      expect(warning).toBeDefined();
+      const parts = Array.from({ length: second.length - 3 },
+        (unused, i) => second.slice(i, i + 4));
+      expect(parts.filter((part) => warning.includes(part))).toEqual([]);
+      expect(warning).toContain('[hidden]');
+    });
 
   test('a response with no warnings logs none', async () => {
     const { warnings } = await logged({

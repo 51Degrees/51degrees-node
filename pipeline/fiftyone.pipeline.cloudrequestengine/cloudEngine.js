@@ -24,6 +24,7 @@ const util = require('util');
 const engines = require('fiftyone.pipeline.engines');
 const core = require('fiftyone.pipeline.core');
 const errorMessages = require('./errorMessages');
+const humanConfidence = require('./humanConfidence');
 const Engine = engines.Engine;
 const AspectDataDictionary = engines.AspectDataDictionary;
 const AspectPropertyValue = core.AspectPropertyValue;
@@ -183,6 +184,12 @@ class CloudEngine extends Engine {
         });
       }
 
+      if (engine.dataKey === humanConfidence.derivedKey) {
+        humanConfidence.keepValues(result,
+          humanConfidence.sealedResult(flowData.evidence) !== undefined,
+          AspectPropertyValue, (key) => missingReason(engine, key));
+      }
+
       const data = new AspectDataDictionary(
         {
           flowElement: engine,
@@ -192,6 +199,69 @@ class CloudEngine extends Engine {
       flowData.setElementData(data);
     });
   }
+
+  /**
+   * Processes, and for the derived element on a request that carries a
+   * sealed Human Confidence result, gives HumanConfidence Medium and
+   * HumanConfidenceSource Active wherever the response gives no Value. A
+   * failed request is then recorded once, as the Cloud Request Engine's
+   * error, and this engine adds no error of its own.
+   *
+   * @param {FlowData} flowData FlowData to process
+   * @returns {Promise<true|void>} Completion promise, as for any engine
+   */
+  process (flowData) {
+    if (this.dataKey !== humanConfidence.derivedKey ||
+      humanConfidence.sealedResult(flowData.evidence) === undefined) {
+      return super.process(flowData);
+    }
+    // Never served from or stored in a cache, as the answer is for this
+    // request alone.
+    return Promise.resolve()
+      .then(() => this.processInternal(flowData))
+      .catch(() => undefined)
+      .then(() => {
+        if (hasData(flowData, this.dataKey) === false) {
+          flowData.setElementData(new AspectDataDictionary({
+            flowElement: this,
+            contents: {
+              [humanConfidence.valueProperty]: new AspectPropertyValue(
+                null, humanConfidence.notRedeemedValue),
+              [humanConfidence.sourceProperty]: new AspectPropertyValue(
+                null, humanConfidence.activeSource)
+            }
+          }));
+        }
+      });
+  }
+}
+
+/**
+ * Whether a Flow Data holds Element Data under a key.
+ *
+ * @param {FlowData} flowData the flow data
+ * @param {string} dataKey the key
+ * @returns {boolean} true when it does
+ */
+function hasData (flowData, dataKey) {
+  return flowData.tryGet(dataKey) !== undefined;
+}
+
+/**
+ * The reason a read gives for a Property the response leaves out.
+ *
+ * @param {CloudEngine} engine the engine
+ * @param {string} key the Property's key
+ * @returns {string|undefined} the reason
+ */
+function missingReason (engine, key) {
+  let reason;
+  try {
+    new engines.MissingPropertyService().check(key, engine);
+  } catch (error) {
+    reason = error.message;
+  }
+  return reason;
 }
 
 /**

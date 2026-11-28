@@ -29,8 +29,11 @@ const MaskCharacter = '*';
 const VisibleCharacters = 4;
 
 // A license key parameter in a URL or a message, such as license=,
-// licenseKey=, licenseKeys= or licenceKeys=, up to the end of its value.
-const KeyParameter = /((?:license|licence)(?:key)?s?=)([^&#\s'"]*)/gi;
+// licenseKey=, licenseKeys= or licenceKeys=, up to the end of its value. A
+// value another component has already replaced with [hidden] is left as it
+// is, so it is not masked a second time.
+const KeyParameter =
+  /((?:license|licence)(?:key)?s?=)(?!\[hidden\])([^&#\s'"]*)/gi;
 
 // Punctuation that ends a sentence or a clause after a parameter's value.
 // It is not part of the key.

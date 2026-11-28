@@ -59,6 +59,23 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getDiscoveryState(): CloudDiscoveryState | undefined;
     /**
+     * Starts a page that runs the 51Degrees browser tests. The engine gives
+     * the page a new transaction and keeps it, so a sealed Human Confidence
+     * result the page sends back redeems only for that page, and only once.
+     * Put script in the page as the address of the 51Degrees client script.
+     * The page sends the sealed result back as the humanconfidence parameter
+     * and page as the humanconfidencepage parameter, and the web integration
+     * adds them as the Evidence query.humanconfidence and
+     * query.humanconfidencepage.
+     *
+     * @returns {{page: string, script: string}} the page, and the address of
+     * the client script for it
+     */
+    newHumanConfidencePage(): {
+        page: string;
+        script: string;
+    };
+    /**
      * Check if the keys and properties have been fetched.
      *
      * True once the cloud service's evidence keys have arrived and its
@@ -105,6 +122,15 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     process(flowData: FlowData): Promise<any>;
     discovery: any;
     /**
+     * Processes through the cache, except for a request that carries a
+     * sealed Human Confidence result, which is neither served from the cache
+     * nor stored in it, so it always goes to the cloud service.
+     *
+     * @param {FlowData} flowData FlowData to process
+     * @returns {Promise} resolved once the FlowData is processed
+     */
+    processWithCache(flowData: FlowData): Promise<any>;
+    /**
      * The error messages a failed answer's body gives, being each entry of
      * its errors array, or the no data message when the body is empty. A body
      * that is not JSON, or has no errors array, gives none, so that
@@ -116,14 +142,30 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
      */
     getErrorMessages(responseBody: string, url: string): any[];
     /**
+     * Text for a log entry or an error message, with the License Key left out
+     * whole, and each key in it where the setting holds several. No part of
+     * the key is kept, as human-confidence.md asks for every message the
+     * engine builds from a request or a response:
+     * https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#what-a-package-never-exposes
+     *
+     * @param {*} text the text
+     * @param {Array<string|undefined>} [withheld] other values to leave out,
+     * such as a sealed Human Confidence result and its transaction
+     * @returns {string} the text without them
+     */
+    hideSecrets(text: any, withheld?: Array<string | undefined>): string;
+    /**
      * Logs each entry of the warnings array of a cloud response as a warning,
-     * with the license key masked as it is in the errors, because the cloud's
-     * text can name the key it was sent.
+     * with the License Key left out, because the cloud's text can name the
+     * key it was sent.
      *
      * @param {*} answer the response, parsed from JSON
      * @param {Array<object>} pipelines the pipelines to log to
+     * @param {Array<string|undefined>} [withheld] for a request that carries a
+     * sealed Human Confidence result, the other values the warnings must not
+     * hold
      */
-    logWarnings(answer: any, pipelines: Array<object>): void;
+    logWarnings(answer: any, pipelines: Array<object>, withheld?: Array<string | undefined>): void;
     /**
      * Used to handle errors from http requests
      *
@@ -134,7 +176,7 @@ declare class CloudRequestEngine extends CloudRequestEngine_base {
     getErrorsFromResponse(response: import("http").ServerResponse, url: string): Array<CloudRequestError>;
     /**
      * The errors an answer with a success status carries, being one for each
-     * entry of its errors array, with the license key masked, or one saying
+     * entry of its errors array, with the license key left out, or one saying
      * the answer is empty. An answer that is not JSON is left to its reader.
      *
      * @param {string} body the answer

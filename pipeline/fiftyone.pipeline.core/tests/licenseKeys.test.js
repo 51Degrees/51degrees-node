@@ -64,6 +64,11 @@ describe('LicenseKeys.mask', () => {
     expect(mask(input)).toBe(expected);
   });
 
+  test('leaves a key another component hid whole as it is', () => {
+    expect(mask('Refused license=[hidden] for a?licenseKeys=[hidden]'))
+      .toBe('Refused license=[hidden] for a?licenseKeys=[hidden]');
+  });
+
   test('leaves text with no key alone', () => {
     expect(mask('https://h/a?b=1')).toBe('https://h/a?b=1');
     expect(mask('')).toBe('');

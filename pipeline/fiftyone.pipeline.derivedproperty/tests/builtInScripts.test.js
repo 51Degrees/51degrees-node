@@ -28,7 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const pkg = require('..');
-const { SUBMODULE } = require('./helpers');
+const { SUBMODULE, SourceElement, pipelineOf } = require('./helpers');
 
 const SCRIPTS = path.join(SUBMODULE, 'scripts');
 
@@ -82,4 +82,53 @@ test('an unknown built in script names the ones there are', () => {
       `scripts in this package are ${pkg.builtInScriptNames().join(', ')}. ` +
       'A script from your own environment is added with scriptFiles ' +
       'rather than scripts');
+});
+
+// human-confidence.md, "Where the sealed result is not redeemed": a Pipeline
+// with no Cloud Request Engine can't redeem a sealed result, so a request
+// that carries one gives Medium and Active, never a High or Low.
+describe('HumanConfidence on a request that carries a sealed result', () => {
+  const run = async (evidence) => {
+    const pipeline = pipelineOf([
+      // A crawler, so the request alone gives Low.
+      new SourceElement('device', {
+        IsCrawler: true,
+        HasWebDriver: 'False',
+        IsHeadless: false,
+        IsVisible: 'True',
+        BrowserReleaseYear: 2026,
+        BrowserReleaseAge: 1,
+        BrowserPreviewYear: 0,
+        BrowserPreviewAge: 0
+      }),
+      new SourceElement('ip', {
+        HumanProbability: 9, ConnectionType: 'Broadband'
+      }),
+      new pkg.DerivedPropertyElementBuilder()
+        .addBuiltInScript('HumanConfidence')
+        .build()
+    ]);
+    const flowData = pipeline.createFlowData();
+    for (const [key, value] of Object.entries(evidence)) {
+      flowData.evidence.add(key, value);
+    }
+    await flowData.process();
+    return flowData;
+  };
+
+  test('is Medium, with the source Active', async () => {
+    const flowData = await run({ 'Query.HumanConfidence': 'aSealedResult' });
+    expect(flowData.derived.humanconfidence.value).toBe('Medium');
+    expect(flowData.derived.humanconfidencesource.value).toBe('Active');
+    expect(flowData.errors).toEqual({});
+  });
+
+  test.each([
+    ['no sealed result', {}],
+    ['an empty one', { 'query.humanconfidence': '' }],
+    ['one under a header', { 'header.humanconfidence': 'aSealedResult' }]
+  ])('is worked out as before with %s', async (name, evidence) => {
+    const flowData = await run(evidence);
+    expect(flowData.derived.humanconfidence.value).toBe('Low');
+  });
 });

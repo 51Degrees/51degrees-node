@@ -526,6 +526,35 @@ test('only query evidence becomes a parameter', async () => {
   expect(renderedParameters(script)).toStrictEqual({ mark: 'kept' });
 });
 
+// human-confidence.md, "What a package never exposes": the sealed result is
+// in neither builder's output, and nor is the page id that comes with it.
+test('neither builder gives the sealed Human Confidence result or its page',
+  async () => {
+    const humanPipeline = new core.PipelineBuilder({
+      javascriptBuilderSettings: { endPoint: '/json' }
+    })
+      .add(testEngine)
+      .build();
+    const humanData = humanPipeline.createFlowData();
+    for (const [key, value] of Object.entries({
+      'header.host': 'localhost',
+      'query.humanconfidence': 'aSealedResultNotReal',
+      'Query.HumanConfidencePage': 'aPageIdNotReal',
+      'query.mark': 'kept'
+    })) {
+      humanData.evidence.add(key, value);
+    }
+    await humanData.process();
+
+    const script = humanData.javascriptbuilder.javascript;
+    expect(renderedParameters(script)).toStrictEqual({ mark: 'kept' });
+    const json = JSON.stringify(humanData.jsonbundler.json);
+    for (const output of [script, json]) {
+      expect(output).not.toContain('aSealedResultNotReal');
+      expect(output).not.toContain('aPageIdNotReal');
+    }
+  });
+
 // Renders one script for each host given, all through the same element, and
 // returns them with the errors the pipeline logged.
 const renderScripts = async (hosts) => {

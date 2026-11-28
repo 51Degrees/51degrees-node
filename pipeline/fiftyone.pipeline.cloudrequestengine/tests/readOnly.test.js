@@ -20,12 +20,13 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-// The Element Data of the CloudRequestEngine and of a CloudEngine is read
-// only once each has finished.
+// The Element Data of the CloudRequestEngine, of a CloudEngine and of the
+// DerivedCloudEngine is read only once each has finished.
 
 const { PipelineBuilder } = require('fiftyone.pipeline.core');
 const CloudRequestEngine = require('../cloudRequestEngine');
 const CloudEngine = require('../cloudEngine');
+const DerivedCloudEngine = require('../derivedCloudEngine');
 const MockRequestClient = require('./classes/mockRequestClient');
 
 test('the cloud engines\' Element Data is read only once processed',
@@ -45,3 +46,23 @@ test('the cloud engines\' Element Data is read only once processed',
     expect(() => { flowData.device.probe = 1; })
       .toThrow('has finished processing');
   });
+
+// The DerivedCloudEngine gives its own Element Data where a call that
+// carried a sealed Human Confidence result failed. That data is read only
+// once processed too.
+test('the DerivedCloudEngine Element Data is read only once processed, ' +
+  'also where it gives Medium for a failed call', async () => {
+  const flowData = new PipelineBuilder({ addJavaScriptBuilder: false })
+    .add(new CloudRequestEngine({
+      resourceKey: 'AAAAAAAAAAAA',
+      licenseKey: 'BBBBBBBBBBBB',
+      requestClient: new MockRequestClient({ error: new Error('down') })
+    }))
+    .add(new DerivedCloudEngine())
+    .build().createFlowData();
+  flowData.evidence.add('query.humanconfidence', 'sealed');
+  await flowData.process().catch(() => undefined);
+  expect(flowData.derived.humanconfidence.value).toBe('Medium');
+  expect(() => { flowData.derived.probe = 1; })
+    .toThrow('has finished processing');
+});

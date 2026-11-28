@@ -28,16 +28,39 @@ const BasicListEvidenceKeyFilter = require('fiftyone.pipeline.core')
   .BasicListEvidenceKeyFilter;
 const EvidenceKeyFilter = require('fiftyone.pipeline.core')
   .EvidenceKeyFilter;
-const LicenseKeys = require('fiftyone.pipeline.core').LicenseKeys;
 const sharedValues = require('./sharedValues');
 const errorMessages = require('./errorMessages');
 const RequestClient = require('./requestClient');
 const CloudRequestError = require('./cloudRequestError');
 const CloudDiscoveryState = require('./cloudDiscoveryState');
+const humanConfidence = require('./humanConfidence');
 
-// Names the cloud service reads its credentials and property list from,
-// which Evidence must not supply under any prefix or in any letter case.
-const reservedFields = ['resource', 'license', 'licence', 'values'];
+// Names the cloud service reads its credentials, property list, sealed
+// Human Confidence result and transaction from, which Evidence must not
+// supply under any prefix or in any letter case. challenge is the older
+// name of transaction. The engine sends the sealed result itself, and only
+// from query.humanconfidence, so a value under a header, a cookie, another
+// prefix or none is never sent. The page a sealed result came from is only
+// for the engine, so it is not sent either.
+const reservedFields = [
+  'resource', 'license', 'licence', 'values', 'transaction', 'challenge',
+  'humanconfidence', 'humanconfidencepage'
+];
+
+// Names whose values are never written to a log entry: the sealed Human
+// Confidence result, the transaction and the License Key.
+const secretFields = [
+  'humanconfidence', 'transaction', 'challenge', 'license', 'licence'
+];
+
+// The transactions each engine has given to pages, kept where no consumer
+// can read them.
+const transactionStores = new WeakMap();
+
+// For a Flow Data whose request carries a sealed Human Confidence result,
+// the sealed result and the transaction, which no message built from its
+// Evidence may hold.
+const messageSecrets = new WeakMap();
 
 /**
  * @typedef {import('fiftyone.pipeline.core').FlowData} FlowData
@@ -328,6 +351,8 @@ class CloudRequestEngine extends Engine {
     // Properties of connected FlowElements
     this.flowElementProperties = {};
 
+    transactionStores.set(this, new humanConfidence.Transactions());
+
     if (discoveryStateGiven(discoveryState)) {
       // A saved copy is used in place of the discovery requests
       // (cloud-request-engine.md lines 307 to 314).
@@ -357,6 +382,31 @@ class CloudRequestEngine extends Engine {
     return keys === undefined || properties === undefined
       ? undefined
       : new CloudDiscoveryState(keys, properties);
+  }
+
+  /**
+   * Starts a page that runs the 51Degrees browser tests. The engine gives
+   * the page a new transaction and keeps it, so a sealed Human Confidence
+   * result the page sends back redeems only for that page, and only once.
+   * Put script in the page as the address of the 51Degrees client script.
+   * The page sends the sealed result back as the humanconfidence parameter
+   * and page as the humanconfidencepage parameter, and the web integration
+   * adds them as the Evidence query.humanconfidence and
+   * query.humanconfidencepage.
+   *
+   * @returns {{page: string, script: string}} the page, and the address of
+   * the client script for it
+   */
+  newHumanConfidencePage () {
+    if (this.resourceKey === '') {
+      throw new Error(errorMessages.humanConfidencePageNeedsResourceKey);
+    }
+    const { page, transaction } = transactionStores.get(this).issue();
+    return {
+      page,
+      script: this.baseURL + encodeURIComponent(this.resourceKey) +
+        '.js?transaction=' + encodeURIComponent(transaction)
+    };
   }
 
   /**
@@ -435,6 +485,11 @@ class CloudRequestEngine extends Engine {
       flowElement: this,
       contents: { properties: this.properties }
     });
+    if (humanConfidence.sealedResult(flowData.evidence) !== undefined) {
+      // A sealed result redeems once, so its answer is for this request
+      // alone (caching.md, "Values created for one request").
+      cacheableData.set(data, false);
+    }
     data.addLazyProperty('cloud', this.getData(flowData));
     flowData.setElementData(data);
   }
@@ -453,7 +508,7 @@ class CloudRequestEngine extends Engine {
   process (flowData) {
     reportUnloggedBuildFailure(this, flowData);
     if (this.keysAndPropertiesFetched) {
-      return super.process(flowData);
+      return this.processWithCache(flowData);
     }
     // One fetch at a time, shared by the requests that wait on it.
     if (this.discovery === undefined) {
@@ -461,7 +516,22 @@ class CloudRequestEngine extends Engine {
         this.discovery = undefined;
       });
     }
-    return this.discovery.then(() => super.process(flowData));
+    return this.discovery.then(() => this.processWithCache(flowData));
+  }
+
+  /**
+   * Processes through the cache, except for a request that carries a
+   * sealed Human Confidence result, which is neither served from the cache
+   * nor stored in it, so it always goes to the cloud service.
+   *
+   * @param {FlowData} flowData FlowData to process
+   * @returns {Promise} resolved once the FlowData is processed
+   */
+  processWithCache (flowData) {
+    if (humanConfidence.sealedResult(flowData.evidence) !== undefined) {
+      return Promise.resolve(this.processInternal(flowData));
+    }
+    return super.process(flowData);
   }
 
   /**
@@ -512,20 +582,44 @@ class CloudRequestEngine extends Engine {
   }
 
   /**
+   * Text for a log entry or an error message, with the License Key left out
+   * whole, and each key in it where the setting holds several. No part of
+   * the key is kept, as human-confidence.md asks for every message the
+   * engine builds from a request or a response:
+   * https://github.com/51Degrees/specifications/blob/main/pipeline-specification/features/human-confidence.md#what-a-package-never-exposes
+   *
+   * @param {*} text the text
+   * @param {Array<string|undefined>} [withheld] other values to leave out,
+   * such as a sealed Human Confidence result and its transaction
+   * @returns {string} the text without them
+   */
+  hideSecrets (text, withheld = []) {
+    const keys = this.licenseKey === ''
+      ? []
+      : [this.licenseKey].concat(this.licenseKey.split(/[,|]/)
+          .map((key) => key.trim())
+          .filter((key) => key !== ''));
+    return humanConfidence.hide(String(text), withheld.concat(keys));
+  }
+
+  /**
    * Logs each entry of the warnings array of a cloud response as a warning,
-   * with the license key masked as it is in the errors, because the cloud's
-   * text can name the key it was sent.
+   * with the License Key left out, because the cloud's text can name the
+   * key it was sent.
    *
    * @param {*} answer the response, parsed from JSON
    * @param {Array<object>} pipelines the pipelines to log to
+   * @param {Array<string|undefined>} [withheld] for a request that carries a
+   * sealed Human Confidence result, the other values the warnings must not
+   * hold
    */
-  logWarnings (answer, pipelines) {
+  logWarnings (answer, pipelines, withheld = []) {
     if (answer === null || typeof answer !== 'object' ||
       Array.isArray(answer.warnings) === false) {
       return;
     }
     for (const warning of answer.warnings) {
-      const text = LicenseKeys.mask(String(warning), this.licenseKey);
+      const text = this.hideSecrets(warning, withheld);
       for (const pipeline of pipelines || []) {
         pipeline.log('warn', text);
       }
@@ -547,13 +641,12 @@ class CloudRequestEngine extends Engine {
     }
 
     // The cloud's errors can name the license key it was sent, so the key
-    // is masked before the text goes into an error.
-    const licenseKey = this.licenseKey;
+    // is left out before the text goes into an error.
     const errors = this.getErrorMessages(content, url);
     const cloudErrors = [];
-    errors.forEach(function (errorText) {
+    errors.forEach((errorText) => {
       cloudErrors.push(new CloudRequestError(
-        LicenseKeys.mask(errorText, licenseKey),
+        this.hideSecrets(errorText),
         response.headers,
         response.statusCode));
     });
@@ -566,7 +659,7 @@ class CloudRequestEngine extends Engine {
           `'${response.statusCode}' with content ${content}`
         : 'Error parsing response - ' + content;
       cloudErrors.push(new CloudRequestError(
-        LicenseKeys.mask(message, licenseKey),
+        this.hideSecrets(message),
         response.headers,
         response.statusCode));
     }
@@ -576,7 +669,7 @@ class CloudRequestEngine extends Engine {
 
   /**
    * The errors an answer with a success status carries, being one for each
-   * entry of its errors array, with the license key masked, or one saying
+   * entry of its errors array, with the license key left out, or one saying
    * the answer is empty. An answer that is not JSON is left to its reader.
    *
    * @param {string} body the answer
@@ -598,9 +691,8 @@ class CloudRequestEngine extends Engine {
       Array.isArray(answer.errors) === false) {
       return [];
     }
-    const licenseKey = this.licenseKey;
     return answer.errors.map((text) => new CloudRequestError(
-      LicenseKeys.mask(String(text), licenseKey)));
+      this.hideSecrets(text)));
   }
 
   /**
@@ -714,6 +806,24 @@ class CloudRequestEngine extends Engine {
     // Only the Pipeline is kept, to log to once the response arrives.
     const logTo = { pipeline: flowData.pipeline };
 
+    // A sealed Human Confidence result is redeemed in this call, with the
+    // transaction kept for its page and the configured License Key.
+    const sealed = humanConfidence.sealedResult(flowData.evidence);
+    let transaction;
+    if (sealed !== undefined) {
+      transaction = transactionStores.get(this)
+        .take(humanConfidence.pageOf(flowData.evidence));
+    }
+    const redeems = sealed !== undefined && transaction !== undefined &&
+      this.licenseKey !== '';
+    // On a request that carries a sealed result, no message holds it or the
+    // transaction, as no message ever holds the License Key.
+    const withheld = sealed === undefined ? [] : [sealed, transaction];
+    messageSecrets.set(flowData, withheld);
+    const clean = (errors) => withheld.length === 0
+      ? errors
+      : errors.map((error) => hideIn(engine, error, withheld));
+
     // A resource key names the route. A license key on its own has no
     // resource key to put there, so it uses the route that takes none.
     const url = this.resourceKey !== ''
@@ -732,8 +842,22 @@ class CloudRequestEngine extends Engine {
       if (engine.licenseKey !== '') {
         content.license = engine.licenseKey;
       }
-      if (engine.requestedProperties.length > 0) {
-        content.values = engine.requestedProperties.join(',');
+      const values = engine.requestedProperties.slice();
+      if (redeems) {
+        // The sealed result is sent as it arrived, and only where it can be
+        // redeemed, with the one transaction the engine kept. getContent
+        // leaves out every other value under these names.
+        content.humanconfidence = sealed;
+        content.transaction = transaction;
+        // The added name is not in the configured list, so the report of
+        // the properties the answer left out does not change.
+        const wanted = humanConfidence.requestedProperty.toLowerCase();
+        if (values.every((name) => name.toLowerCase() !== wanted)) {
+          values.push(humanConfidence.requestedProperty);
+        }
+      }
+      if (values.length > 0) {
+        content.values = values.join(',');
       }
 
       engine.requestClient.post(
@@ -747,8 +871,8 @@ class CloudRequestEngine extends Engine {
           } catch (e) {
             answer = undefined;
           }
-          engine.logWarnings(answer, [logTo.pipeline]);
-          const failures = engine.answerErrors(body, url);
+          engine.logWarnings(answer, [logTo.pipeline], withheld);
+          const failures = clean(engine.answerErrors(body, url));
           if (failures.length > 0) {
             self.errors = failures;
             reject(failures);
@@ -757,9 +881,20 @@ class CloudRequestEngine extends Engine {
 
           engine.reportPropertiesNotCovered(logTo, body);
 
+          if (sealed !== undefined && answer !== undefined) {
+            // JSON that is not an object, such as null or a list, answers
+            // nothing, so the Values are set in an empty answer.
+            const answered = answer !== null && typeof answer === 'object' &&
+              Array.isArray(answer) === false
+              ? answer
+              : {};
+            humanConfidence.setValues(answered, redeems);
+            body = JSON.stringify(answered);
+          }
+
           resolve(body);
         }).catch(function (response) {
-          self.errors = engine.getErrorsFromResponse(response, url);
+          self.errors = clean(engine.getErrorsFromResponse(response, url));
           reject(self.errors);
         });
     });
@@ -963,7 +1098,7 @@ class CloudRequestEngine extends Engine {
           for (const [key, value] of Object.entries(allEvidence)) {
             if (key.toLowerCase() !== evidenceKey.toLowerCase() &&
               key.toLowerCase().includes(lowerSuffix)) {
-              conflicts[key] = value;
+              conflicts[key] = shownValue(key, value);
             }
           }
 
@@ -978,9 +1113,13 @@ class CloudRequestEngine extends Engine {
           const warningMessage = util.format(
             errorMessages.evidenceConflict,
             evidenceKey,
-            evidenceValue,
+            shownValue(evidenceKey, evidenceValue),
             conflictStr);
-          flowData.pipeline.log('warn', warningMessage);
+          // A value under any other name may still be the sealed result,
+          // the transaction or the License Key, so each is left out by its
+          // value as well.
+          flowData.pipeline.log('warn', this.hideSecrets(warningMessage,
+            messageSecrets.get(flowData) || []));
         }
         // Replace the existing field, name and value, so the name sent is
         // the winning key's.
@@ -1037,6 +1176,37 @@ class CloudRequestEngine extends Engine {
   hasKeyPrefix (itemKey, prefix) {
     return itemKey.toLowerCase().startsWith(prefix.toLowerCase() + '.');
   }
+}
+
+/**
+ * The value of an evidence key as a log entry shows it. A sealed Human
+ * Confidence result, a transaction and a License Key are never shown.
+ *
+ * @param {string} key the evidence key
+ * @param {*} value its value
+ * @returns {*} the value, or a placeholder for one that is never shown
+ */
+function shownValue (key, value) {
+  const separatorIndex = key.indexOf('.');
+  const name = (separatorIndex >= 0 ? key.substring(separatorIndex + 1) : key)
+    .toLowerCase();
+  return secretFields.includes(name) ? humanConfidence.hidden : value;
+}
+
+/**
+ * An error with the given values and the License Key left out of its
+ * message.
+ *
+ * @param {CloudRequestEngine} engine the engine
+ * @param {CloudRequestError} error the error
+ * @param {Array<string|undefined>} withheld the values to leave out
+ * @returns {CloudRequestError} an error with the same status and headers
+ */
+function hideIn (engine, error, withheld) {
+  return new CloudRequestError(
+    engine.hideSecrets(error.message, withheld),
+    error.responseHeaders,
+    error.httpStatusCode);
 }
 
 /**

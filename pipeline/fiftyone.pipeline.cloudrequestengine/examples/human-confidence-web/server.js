@@ -25,22 +25,24 @@
  *   node server.js    then open http://localhost:5151/
  *
  * Human Confidence says how likely it is that a person is looking at the
- * page. It comes in two ways, and this demo shows both.
+ * page. It comes in two ways, and this demo shows both. In both, this server
+ * only reads two Properties, HumanConfidence and HumanConfidenceSource, from
+ * the derived Element Data of a Pipeline that uses the cloud.
  *
- * 1. Passive. This server asks the cloud itself, sending the visitor's
- *    request headers and IP address. HumanConfidenceSource is Passive and
- *    HumanConfidence is a plain level. The server asks for it rather than
- *    reading it from the page, because a level a browser sends can be
- *    forged.
+ * 1. Passive. This server processes the visitor's request headers and IP
+ *    address. HumanConfidenceSource is Passive and HumanConfidence is a
+ *    plain level. The server reads it from its own Pipeline rather than
+ *    from the page, because a level a browser sends can be forged.
  * 2. Active. The page loads the 51Degrees client script, which runs the
  *    browser tests and sends the answers to the cloud. When the script
  *    completes, HumanConfidenceSource is Active and HumanConfidence holds
- *    a sealed value the browser can't read or change.
- * 3. Redeem. The page hands the sealed value to this server, which calls
- *    hc/redeem with it and the account's License Key, and gets the true
- *    level back. A sealed value redeems once, within ten seconds. This
- *    server is the only party holding the License Key, which the browser
- *    never sees.
+ *    a sealed result the browser can't read or change.
+ * 3. The page sends the sealed result to this server as the
+ *    humanconfidence parameter, with its page id as humanconfidencepage.
+ *    The Pipeline's Cloud Request Engine redeems it with the License Key
+ *    and the transaction it kept for the page, and the server reads the
+ *    two Properties again. A sealed result redeems once, within ten seconds, so
+ *    sending it again gives Medium. The License Key stays on this server.
  *
  * Environment variables:
  *   _51DEGREES_RESOURCE_KEY    the Resource Key, required
@@ -52,22 +54,31 @@
  *   _51DEGREES_EXAMPLE_HTTP_PORTS
  *                              the port to listen on, defaults to 5151
  *
- * Node 18 or later (built-in fetch), with no 51Degrees package needed.
+ * A Flow Data must not be used by two threads at once, so this example
+ * creates one for each request. Code that shares a Flow Data between tasks
+ * is responsible for any locking.
  */
 
 const { createServer } = require('http');
 const { readFileSync } = require('fs');
-const { join } = require('path');
+const { join, resolve } = require('path');
+const { PipelineBuilder } = require(
+  resolve(__dirname, '../../../fiftyone.pipeline.core'));
+// const { PipelineBuilder } = require('fiftyone.pipeline.core');
+const { CloudRequestEngine, DerivedCloudEngine } = require(
+  resolve(__dirname, '../..'));
+// const { CloudRequestEngine, DerivedCloudEngine } =
+//   require('fiftyone.pipeline.cloudrequestengine');
 
 // Read per request, so an edit to the page shows on the next load.
 const readPage = () => readFileSync(join(__dirname, 'page.html'), 'utf8');
 const readCss = () => readFileSync(join(__dirname, 'examples-main.min.css'));
 
-// A short limit on each call, so a slow cloud can't hang the demo.
-const TIMEOUT_MS = 10000;
-
-// The most the page may send to be redeemed.
+// The most the page may send.
 const MAX_FORM_LENGTH = 100000;
+
+// The two Properties the demo reads.
+const PROPERTIES = ['derived.HumanConfidence', 'derived.HumanConfidenceSource'];
 
 // Where to go next, printed when the demo ends with no Resource Key. The
 // page holds the same links when the server runs.
@@ -81,18 +92,21 @@ const FIND_OUT_MORE = [
   '\tContact us: https://51degrees.com/contact-us?utm_source=code&utm_medium=example&utm_campaign=51degrees-node&utm_content=fiftyone.pipeline.cloudrequestengine-examples-human-confidence-web-server.js&utm_term=find-out-more-contact'
 ].join('\n');
 
+// What the page is told when the Properties can't be read. The details go
+// to this server's log instead, because an error's text can name a
+// credential, and no page may receive any part of the License Key.
+const READ_FAILED = 'The Properties could not be read. See the log on the server.';
+
 /**
- * The text of an error, whatever was thrown. fetch wraps the cause of a
- * transport failure, and the cause is the useful part since fetch itself
- * only says that it failed, and anything else that is not an Error is
- * printed as it is.
+ * The text of an error, whatever was thrown. A Pipeline that fails gives
+ * an AggregateError, whose errors say what went wrong.
  *
  * @param {any} error whatever was thrown
  * @returns {string} the message
  */
 function messageOf (error) {
-  if (error && error.cause && error.cause.message) {
-    return error.cause.message;
+  if (error && Array.isArray(error.errors) && error.errors.length > 0) {
+    return error.errors.map(messageOf).join(' ');
   }
   if (error && error.message) {
     return error.message;
@@ -101,27 +115,18 @@ function messageOf (error) {
 }
 
 /**
- * The start of a body, short enough to show on the page.
+ * Logs an error on this server, with the License Key left out, and gives
+ * what the page is told in its place.
  *
- * @param {string} text a response body
- * @returns {string} at most its first 200 characters
+ * @param {any} error whatever was thrown
+ * @param {string} license the License Key, or an empty string
+ * @returns {{error: string}} the answer for the page
  */
-function trim (text) {
-  return text.length > 200 ? text.slice(0, 200) : text;
-}
-
-/**
- * A member of the cloud's answer, where it is there and is text.
- *
- * @param {any} parent the part of the answer that holds the member
- * @param {string} name the member's name
- * @returns {string|null} the text, or null
- */
-function read (parent, name) {
-  return parent !== null && typeof parent === 'object' &&
-    typeof parent[name] === 'string'
-    ? parent[name]
-    : null;
+function failed (error, license) {
+  const text = messageOf(error);
+  console.error('Human Confidence demo: ' +
+    (license ? text.split(license).join('[hidden]') : text));
+  return { error: READ_FAILED };
 }
 
 /**
@@ -137,78 +142,125 @@ function sendJson (response, status, body) {
 }
 
 /**
- * Builds the three routes that call the cloud. The License Key is held
- * here and only here, so the browser never sees it.
+ * The value of a Property of the derived Element Data, or null where it
+ * has none.
+ *
+ * @param {object} derived the derived Element Data
+ * @param {string} name the Property's name
+ * @returns {string|null} the value, or null
+ */
+function valueOf (derived, name) {
+  try {
+    const property = derived[name];
+    return property && property.hasValue ? property.value : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Builds the routes. The License Key is held by the Pipeline here and only
+ * here, so the browser never sees it.
  *
  * @param {object} settings the settings
  * @param {string} settings.resource the Resource Key
  * @param {string} settings.license a License Key of the same account, or
  * an empty string
  * @param {string} settings.api the API base, ending in one slash
- * @param {Function} [settings.fetch] the HTTP transport, defaulting to the
- * global fetch. Tests give one.
- * @returns {{check: Function, passive: Function, redeem: Function}} the
- * routes
+ * @param {object} [settings.requestClient] the Cloud Request Engine's HTTP
+ * client. Tests give one.
+ * @returns {{page: Function, check: Function, passive: Function,
+ * active: Function}} the routes
  */
-function demoRoutes ({ resource, license, api, fetch = globalThis.fetch }) {
-  const call = (url, options) => fetch(url, Object.assign(
-    { signal: AbortSignal.timeout(TIMEOUT_MS) }, options));
+function demoRoutes ({ resource, license, api, requestClient }) {
+  const engine = new CloudRequestEngine({
+    resourceKey: resource,
+    licenseKey: license,
+    requestedProperties: PROPERTIES,
+    baseURL: api,
+    requestClient
+  });
+  const pipeline = new PipelineBuilder({ addJavaScriptBuilder: false })
+    .add(engine)
+    .add(new DerivedCloudEngine())
+    .build();
 
-  // The request headers the cloud reads, from its own list, fetched once.
-  // Only these are passed on, so headers such as Authorization stay here.
-  let headerNames = null;
-  const cloudHeaders = async () => {
-    if (headerNames === null) {
-      const answer = await call(api + 'evidencekeys');
-      const body = await answer.text();
-      if (!answer.ok) {
-        throw new Error(`HTTP ${answer.status}: ${trim(body)}`);
+  /**
+   * Processes a Flow Data with the visitor's request headers the cloud
+   * reads, the visitor's address and any more evidence, and reads the two
+   * Properties.
+   *
+   * @param {import('http').IncomingMessage} request the visitor's request
+   * @param {object} more more evidence
+   * @returns {Promise<object>} the two Properties, or the error
+   */
+  const read = async (request, more) => {
+    await engine.ready();
+    const flowData = pipeline.createFlowData();
+    // Only the headers the cloud reads are passed on, so headers such as
+    // Authorization stay here.
+    for (const [name, value] of Object.entries(request.headers)) {
+      const key = 'header.' + name.toLowerCase();
+      if (engine.evidenceKeyFilter.filterEvidenceKey(key)) {
+        flowData.evidence.add(key, String(value));
       }
-      const keys = JSON.parse(body);
-      headerNames = new Set((Array.isArray(keys) ? keys : [])
-        .filter((key) => /^header\./i.test(key))
-        .map((key) => key.slice(7).toLowerCase()));
     }
-    return headerNames;
+    // Behind a load balancer or CDN, use the visitor's address it passes
+    // on.
+    const ip = request.socket && request.socket.remoteAddress;
+    if (ip) {
+      flowData.evidence.add('server.client-ip',
+        ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, ''));
+    }
+    for (const [key, value] of Object.entries(more)) {
+      flowData.evidence.add(key, value);
+    }
+    let failure;
+    await flowData.process().catch((error) => { failure = error; });
+    const derived = flowData.tryGet('derived');
+    if (derived === undefined) {
+      return failed(failure, license);
+    }
+    return {
+      source: valueOf(derived, 'humanconfidencesource'),
+      humanConfidence: valueOf(derived, 'humanconfidence')
+    };
   };
 
   return {
     /**
-     * Before the flow: this server asks the cloud which properties the
-     * Resource Key includes, and tells the page whether HumanConfidence
-     * is one of them.
+     * A new page: the engine gives it a page id and the address of the
+     * client script, which carries the transaction it keeps for the page.
+     *
+     * @returns {{page: string, script: string}} the page id and the script
+     * address
+     */
+    page () {
+      return engine.newHumanConfidencePage();
+    },
+
+    /**
+     * Before the flow: this server tells the page whether the Resource Key
+     * includes HumanConfidence, from the properties the engine found.
      *
      * @param {import('http').ServerResponse} response the response to
      * write
      */
     async check (response) {
       try {
-        const answer = await call(api + 'accessibleproperties?resource=' +
-          encodeURIComponent(resource));
-        const body = await answer.text();
-        if (!answer.ok) {
-          sendJson(response, 200,
-            { error: `HTTP ${answer.status}: ${trim(body)}` });
-          return;
-        }
-        const products = Object.values(JSON.parse(body).Products || {});
+        await engine.ready();
+        const derived = engine.flowElementProperties.derived || {};
         sendJson(response, 200, {
-          humanConfidence: products.some((product) =>
-            product !== null && typeof product === 'object' &&
-            Array.isArray(product.Properties) &&
-            product.Properties.some((property) =>
-              String(property && property.Name).toLowerCase() ===
-              'humanconfidence'))
+          humanConfidence: Object.keys(derived).includes('humanconfidence')
         });
       } catch (error) {
-        sendJson(response, 200, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     },
 
     /**
-     * Passive: this server asks the cloud for the visitor, with the
-     * visitor's headers and IP address, and reads the plain level from
-     * the answer.
+     * Passive: the Pipeline processes the visitor's request, and this
+     * server reads the two Properties.
      *
      * @param {import('http').IncomingMessage} request the visitor's
      * request
@@ -217,71 +269,32 @@ function demoRoutes ({ resource, license, api, fetch = globalThis.fetch }) {
      */
     async passive (request, response) {
       try {
-        const names = await cloudHeaders();
-        const evidence = {};
-        for (const [name, value] of Object.entries(request.headers)) {
-          if (names.has(name.toLowerCase())) {
-            evidence[name.toLowerCase()] = String(value);
-          }
-        }
-        // Behind a load balancer or CDN, use the visitor's address it
-        // passes on. Set last, so no header can replace it.
-        const ip = request.socket && request.socket.remoteAddress;
-        if (ip) {
-          evidence['client-ip'] = ip.replace(
-            /^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
-        }
-        const answer = await call(api + resource + '.json', {
-          method: 'POST',
-          body: new URLSearchParams(evidence)
-        });
-        const body = await answer.text();
-        if (!answer.ok) {
-          sendJson(response, 200,
-            { error: `HTTP ${answer.status}: ${trim(body)}` });
-          return;
-        }
-        const derived = JSON.parse(body).derived;
-        sendJson(response, 200, {
-          source: read(derived, 'humanconfidencesource'),
-          humanConfidence: read(derived, 'humanconfidence')
-        });
+        sendJson(response, 200, await read(request, {}));
       } catch (error) {
-        sendJson(response, 200, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     },
 
     /**
-     * Redeem: the page sends the sealed value, and this server redeems it
-     * with the License Key. The answer goes back to the page as the cloud
-     * gave it.
+     * Active: the page sends the sealed result and its page id, the
+     * Pipeline processes them as the Evidence query.humanconfidence and
+     * query.humanconfidencepage, and this server reads the two Properties.
      *
-     * @param {string} value the sealed value from the page
+     * @param {import('http').IncomingMessage} request the visitor's
+     * request
+     * @param {string} sealed the sealed result the page sent
+     * @param {string} page the page id the page sent
      * @param {import('http').ServerResponse} response the response to
      * write
      */
-    async redeem (value, response) {
-      const fields = { value };
-      if (license) {
-        fields.license = license;
-      }
+    async active (request, sealed, page, response) {
       try {
-        const answer = await call(api + 'hc/redeem', {
-          method: 'POST',
-          body: new URLSearchParams(fields)
-        });
-        const body = await answer.text();
-        if (answer.status === 404) {
-          sendJson(response, 200, {
-            error: `The service at ${api} doesn't redeem Human Confidence.`
-          });
-          return;
-        }
-        response.writeHead(answer.status,
-          { 'Content-Type': 'application/json' });
-        response.end(body);
+        sendJson(response, 200, await read(request, {
+          'query.humanconfidence': sealed,
+          'query.humanconfidencepage': page
+        }));
       } catch (error) {
-        sendJson(response, 502, { error: messageOf(error) });
+        sendJson(response, 200, failed(error, license));
       }
     }
   };
@@ -328,12 +341,13 @@ function main () {
   }
   if (!license) {
     console.log('No _51DEGREES_LICENSE_KEY set. The page still shows ' +
-      'Passive and Active, but an account that holds License Keys can\'t ' +
-      'redeem without one, so the redeemed level will be unreadable.');
+      'Passive and Active, but the Pipeline needs a License Key to redeem ' +
+      'a sealed result, so after the browser tests HumanConfidence will ' +
+      'be Medium.');
   }
 
   // The API base ends in exactly one slash, so every URL is the base plus
-  // a relative path. The page builds its own call from the same base.
+  // a relative path.
   const api = (endpoint || 'https://cloud.51degrees.com/api/v4/')
     .replace(/\/+$/, '') + '/';
   const routes = demoRoutes({ resource, license, api });
@@ -347,9 +361,11 @@ function main () {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store'
       });
+      // Each load is a new page, with its own page id and transaction.
+      const { page, script } = routes.page();
       response.end(readPage()
-        .replaceAll('__RESOURCE__', resource)
-        .replaceAll('__API__', api));
+        .replaceAll('__SCRIPT__', script)
+        .replaceAll('__PAGE__', page));
       return;
     }
     if (url.pathname === '/examples-main.min.css') {
@@ -365,14 +381,15 @@ function main () {
       await routes.passive(request, response);
       return;
     }
-    if (url.pathname === '/redeem' && request.method === 'POST') {
+    if (url.pathname === '/active' && request.method === 'POST') {
       const form = await readForm(request);
       if (form === null) {
         response.writeHead(413, { Connection: 'close' });
         response.end();
         return;
       }
-      await routes.redeem(form.get('value') || '', response);
+      await routes.active(request, form.get('humanconfidence') || '',
+        form.get('humanconfidencepage') || '', response);
       return;
     }
     response.writeHead(404);
@@ -384,7 +401,7 @@ function main () {
       `Human Confidence demo on http://localhost:${port}/, using ${api}`));
 }
 
-module.exports = { demoRoutes };
+module.exports = { demoRoutes, READ_FAILED };
 
 if (require.main === module) {
   main();
